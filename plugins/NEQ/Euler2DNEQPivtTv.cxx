@@ -101,17 +101,12 @@ void Euler2DNEQPivtTv::setThermodynamics(CFreal rho,
   const CFuint nbTv = getModel()->getNbScalarVars(1);
   const CFuint firstTv = getModel()->getFirstScalarVar(1);
   const CFuint startTv = nbSpecies + 3;
- 
-  CFLog(DEBUG_MIN, "nbTv=" << nbTv << ", ");
-  CFLog(DEBUG_MIN, "firstTv=" << firstTv << ", ");
-  CFLog(DEBUG_MIN, "startTv=" << startTv << "\n");
-
+  
   for (CFuint ie = 0; ie < nbTv; ++ie) {
     _tvDim[ie] = state[startTv + ie]*refData[EulerTerm::T];
-     CFLog(DEBUG_MIN, "tvDim[" << ie << "] = " << _tvDim[ie] << " ");
   }
-  CFLog(DEBUG_MIN, "tvDim= " << _tvDim << "\n");
- 
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => tvDim = " << _tvDim << "\n");
+  
   CFreal p = 0.0;
   for (CFuint ie = 0;  ie < nbSpecies; ++ie) {
     p += state[ie];
@@ -121,10 +116,10 @@ void Euler2DNEQPivtTv::setThermodynamics(CFreal rho,
   CFreal* Tvec = &const_cast<State&>(state)[TID];
   _library->setState(&_rhoi[0], Tvec);
   
-  CFLog(DEBUG_MIN, "rhodim=" << rhodim << ", ");
-  CFLog(DEBUG_MIN, "Tdim=" << Tdim << ", ");
-  CFLog(DEBUG_MIN, "p=" << p << "\n");
-   
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => rhodim =" << rhodim << ", ");
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => Tdim =" << Tdim << ", ");
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => p =" << p << "\n");
+  
   // unused //  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
   // unused //  const CFuint iEqSS = eqSS.getEqSS();
   // unused //  const CFuint nbEqSS = eqSS.getTotalNbEqSS();
@@ -139,16 +134,19 @@ void Euler2DNEQPivtTv::setThermodynamics(CFreal rho,
     
     const CFuint nbTe = _library->getNbTe();
     const CFuint nbTvH = nbTv - nbTe;
-
+    cf_assert(nbTvH >= 0);
+    
     // data stores the moleculare vibrational energy multiplied 
     // by the molecules mass fractions
-    if (nbTvH != 0) {
-       for (CFuint ie = 0; ie < nbTvH; ++ie) {
-           data[firstTv + ie] = _dhe[3 + ie]/refData[EulerTerm::H]; 
-       } 
+    if (nbTvH > 0) {
+      CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => nbTvH = " << nbTvH << "\n");
+      for (CFuint ie = 0; ie < nbTvH; ++ie) {
+	data[firstTv + ie] = _dhe[3 + ie]/refData[EulerTerm::H]; 
+      } 
     }
- 
+    
     if (nbTe == 1) {
+      CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => nbTe = " << nbTe << "\n");
       data[firstTv + nbTvH] = _dhe[3 + nbTvH]/refData[EulerTerm::H];
     }
     
@@ -160,23 +158,23 @@ void Euler2DNEQPivtTv::setThermodynamics(CFreal rho,
     data[EulerTerm::H] = _dhe[1]/refData[EulerTerm::H] + 0.5*V2;
     data[EulerTerm::E] = _dhe[2]/refData[EulerTerm::H] + 0.5*V2;
   }
- 
-  CFLog(DEBUG_MIN, "data=" << data << "\n");
+  
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() => data=" << data << "\n");
   CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setThermodynamics() END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Euler2DNEQPivtTv::computeStateFromPhysicalData(const RealVector& data,
-						 State& state)
+						    State& state)
 {
   throw Common::NotImplementedException (FromHere(),"Euler2DNEQPivtTv::computeStateFromPhysicalData()");
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+      
 void Euler2DNEQPivtTv::setDimensionalValues(const State& state,
-					      RealVector& result)
+					    RealVector& result)
 {
   // first call the parent
   Euler2DNEQPivt::setDimensionalValues(state,result);
@@ -193,7 +191,7 @@ void Euler2DNEQPivtTv::setDimensionalValues(const State& state,
 //////////////////////////////////////////////////////////////////////////////
 
 void Euler2DNEQPivtTv::setAdimensionalValues(const Framework::State& state,
-					       RealVector& result)
+					     RealVector& result)
 {
   // first call the parent
   Euler2DNEQPivt::setAdimensionalValues(state,result);
@@ -210,8 +208,7 @@ void Euler2DNEQPivtTv::setAdimensionalValues(const Framework::State& state,
 //////////////////////////////////////////////////////////////////////////////
 
 void Euler2DNEQPivtTv::setDimensionalValuesPlusExtraValues
-(const State& state, RealVector& result,
- RealVector& extra)
+(const State& state, RealVector& result, RealVector& extra)
 {
   Euler2DNEQPivtTv::setDimensionalValues(state,result);
       
@@ -221,6 +218,8 @@ void Euler2DNEQPivtTv::setDimensionalValuesPlusExtraValues
   // Set the mixture density (sum of the partial densities)
   const CFreal T = state[getTempID(nbSpecies)];
   const CFreal Te = getTe(state);
+
+  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::setDimensionalValuesPlusExtraValues() => Te = " << Te << "\n");
   
   CFreal rho = 0.0;
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
@@ -303,6 +302,7 @@ void Euler2DNEQPivtTv::computePressureDerivatives(const Framework::State& state,
   }
   
   if (_library->presenceElectron()) {
+    cf_assert(_library->getNbTe() == 0); // AL: needs to be fixed for nbTe=1
     const CFuint TeID = (_library->getNbTe() == 0) ? 
       TID + 1 + _library->getElectrEnergyID() : state.size() - 1;
     dp[TeID] = 0.;
@@ -349,7 +349,8 @@ CFreal Euler2DNEQPivtTv::getTe(const Framework::State& state)
   }
   
   const CFreal Te = _library->getTe(T, &_tvDim[0]);
-  CFLog(DEBUG_MIN, "Euler2DNEQPivtTv::getTe() => Te=" << Te << "\n"); 
+  CFLog(DEBUG_MAX, "Euler2DNEQPivtTv::getTe() => (T, _tvDim, Te) = ("
+	<< T << ", " << _tvDim << ", " << Te << ")\n");
   cf_assert(Te > 0.);
   
   return Te;

@@ -9,7 +9,7 @@
 template <int DIM>
 ICPNEQPhysicalModel<DIM>::ICPNEQPhysicalModel(const std::string& name)
   : NEQ::NavierStokesNEQ <DIM, Framework::MultiScalarTerm<NavierStokes::EulerTerm>, 
-      NavierStokes::NSTerm, ICPReactionTerm<NEQ::NEQReactionTerm> >(name)
+			  NavierStokes::NSTerm, ICPReactionTerm<NEQ::NEQReactionTerm> >(name)
 {
 }
 

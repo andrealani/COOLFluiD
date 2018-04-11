@@ -256,6 +256,7 @@ void NavierStokesNEQ<DIM, CTERM, DTERM, RTERM>::configure ( Config::ConfigArgs& 
   cf_assert(getNbEquations() > 0);
   
   PhysicalModelImpl::getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->setNbTempVib(_nbVibEnergyEqs);
+  PhysicalModelImpl::getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->setNbTe(_nbTe);
   
   // allocate jacobians
   this->_jacobians = std::vector<RealMatrix>(getDimension());

@@ -48,8 +48,8 @@ AUSMFlux<UPDATEVAR>::~AUSMFlux()
 
 template <class UPDATEVAR>
 RealVector& AUSMFlux<UPDATEVAR>::computeFlux(State& lState,
-                                 State& rState,
-                                 const RealVector& normal)
+					     State& rState,
+					     const RealVector& normal)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;

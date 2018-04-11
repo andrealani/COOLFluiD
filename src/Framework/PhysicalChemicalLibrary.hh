@@ -102,7 +102,13 @@ public:
   {
     _nbTvib = nbTv;
   }
-    
+
+  /// Set the number of electron temperature (0 or 1)
+  virtual void setNbTe(CFuint nbTe)
+  {
+    _nbTe = nbTe;
+  }
+  
   /// Get the number of vibrational temperatures
   CFuint getNbTe() const
   {

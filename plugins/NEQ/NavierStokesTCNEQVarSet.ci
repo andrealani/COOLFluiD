@@ -63,11 +63,10 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
     flux[this->_yID[is]] = -this->_rhoUdiff[is];
   }
   
-  cf_assert(this->_moleculeIdx.size() > 0);
-  
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   const CFuint nbTvib = nbTv - this->_library->getNbTe();
   if (nbTvib > 1) {
+    cf_assert(this->_moleculeIdx.size() > 0);
     // list of the molecule IDs corresponding to each vibrational energy equations 
     // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
     const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
@@ -86,27 +85,41 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
     }
   }
   else {
-    const RealVector& gradTv = *gradients[this->_TvibID[0]];
-    const CFreal qVib = this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
-    flux[this->_TID] += qVib;
-    flux[this->_TvibID[0]] = qVib;
-    
-    const CFuint nbMol = this->_moleculeIdx.size();
-    for (CFuint i = 0; i < nbMol; ++i) {
-      const CFuint ispecies = this->_moleculeIdx[i];
-      flux[this->_TvibID[0]] -= this->_hsVibBkp[ispecies]*this->_rhoUdiff[ispecies];
-      // flux[this->_TvibID[0]] -= this->_hsVibBkp[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+    if (nbTvib == 1) {
+      cf_assert(this->_moleculeIdx.size() > 0);
+      const RealVector& gradTv = *gradients[this->_TvibID[0]];
+      const CFreal qVib = this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
+      flux[this->_TID] += qVib;
+      flux[this->_TvibID[0]] = qVib;
+      
+      const CFuint nbMol = this->_moleculeIdx.size();
+      for (CFuint i = 0; i < nbMol; ++i) {
+	const CFuint ispecies = this->_moleculeIdx[i];
+	flux[this->_TvibID[0]] -= this->_hsVibBkp[ispecies]*this->_rhoUdiff[ispecies];
+	// flux[this->_TvibID[0]] -= this->_hsVibBkp[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+      }
+      
+      if (this->_library->getNbTe() == 0) {
+	flux[this->_TvibID[0]] -= MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+      }
+      
+      if (this->_library->getNbTe() == 1) {
+	const RealVector& gradTe = *gradients[this->_TvibID[1]];
+	const CFreal qe = this->_lambdaVib[1] *MathFunctions::innerProd(gradTe, normal);
+	flux[this->_TID] += qe;
+	flux[this->_TvibID[1]] = qe - MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+      }
     }
     
-    if (this->_library->getNbTe() == 0) {
-      flux[this->_TvibID[0]] -= MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
-    }
-    
-    if (this->_library->getNbTe() == 1) {
-      const RealVector& gradTe = *gradients[this->_TvibID[1]];
-      const CFreal qe = this->_lambdaVib[1] *MathFunctions::innerProd(gradTe, normal);
-      flux[this->_TID] += qe;
-      flux[this->_TvibID[1]] = qe - MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+    if (nbTvib == 0) {
+      CFLog(DEBUG_MIN, "NavierStokesTCNEQVarSet::getFlux() => nbTvib == 0, nbTe = 1\n");
+      // case in which there is only Te and not Tv
+      if (this->_library->getNbTe() == 1) {
+	const RealVector& gradTe = *gradients[this->_TvibID[0]];
+	const CFreal qe = this->_lambdaVib[0] *MathFunctions::innerProd(gradTe, normal);
+	flux[this->_TID] += qe;
+	flux[this->_TvibID[0]] = qe - MathFunctions::innerProd(this->_hsElBkp, this->_rhoUdiff);
+      }
     }
   }
   
@@ -134,7 +147,7 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
- using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Physics::NavierStokes;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
   
@@ -210,24 +223,33 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
     }
   }
   else {
-    const RealVector& gradTv = *gradients[this->_TvibID[0]];
-    heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
+    if (nbTv == 1) {
+      const RealVector& gradTv = *gradients[this->_TvibID[0]];
+      heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
+      
+      const CFuint nbMol = this->_moleculeIdx.size();
+      for (CFuint i = 0; i < nbMol; ++i) {
+	const CFuint ispecies = this->_moleculeIdx[i];
+	// heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
+	cf_assert(ispecies < nbSpecies);
+	heatFlux += this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
+      }
+      
+      if (this->_library->getNbTe() == 1) {
+	const RealVector& gradTe = *gradients[this->_TvibID[1]];
+	heatFlux -= this->_lambdaVib[1]*MathFunctions::innerProd(gradTe, normal);
+      }
+    }
     
-    const CFuint nbMol = this->_moleculeIdx.size();
-    for (CFuint i = 0; i < nbMol; ++i) {
-      const CFuint ispecies = this->_moleculeIdx[i];
-      // heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
-      cf_assert(ispecies < nbSpecies);
-      heatFlux += this->_hsVib[ispecies]*this->_rhoUdiff[ispecies];
+    if (nbTv == 0) {
+      if (this->_library->getNbTe() == 1) {
+	const RealVector& gradTe = *gradients[this->_TvibID[0]];
+	heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTe, normal);
+      }
     }
     
     if (this->_library->presenceElectron()) {
       heatFlux += MathFunctions::innerProd(this->_hsEl, this->_rhoUdiff);
-    }
-    
-    if (this->_library->getNbTe() == 1) {
-      const RealVector& gradTe = *gradients[this->_TvibID[1]];
-      heatFlux -= this->_lambdaVib[1]*MathFunctions::innerProd(gradTe, normal);
     }
   }
   

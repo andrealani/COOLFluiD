@@ -119,16 +119,19 @@ void Euler2DNEQPivtTvToCons::transform(const State& state, State& result)
     library->setDensityEnthalpyEnergy(Tdim, _tvDim, pdim,_dhe);
     const CFuint nbTe = library->getNbTe();
     const CFuint nbTvH = nbTv - nbTe; 
+    cf_assert(nbTvH >= 0);
     
     // data stores the molecular vibrational energy multiplied 
     // by the molecules mass fractions
-    if (nbTvH != 0) {
+    if (nbTvH > 0) {
+      CFLog(DEBUG_MAX, "Euler2DNEQPivtTvToCons::transform() => nbTvH > 0\n"); 
       for(CFuint i = 0; i < nbTvH; ++i) {
 	result[startTv + i] = rho*_dhe[3 + i]*ovHref; 
       }
     }
     
     if (nbTe == 1) {
+      CFLog(DEBUG_MAX, "Euler2DNEQPivtTvToCons::transform() => Te == 1\n"); 
       result[startTv + nbTvH] = rho*_dhe[3 + nbTvH]*ovHref;
     }
   }

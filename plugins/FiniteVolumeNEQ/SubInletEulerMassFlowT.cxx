@@ -60,6 +60,8 @@ void SubInletEulerMassFlowT::defineConfigOptions(Config::OptionList& options)
 
 void SubInletEulerMassFlowT::setGhostState(GeometricEntity *const face)
 {
+  CFLog(DEBUG_MIN, "SubInletEulerMassFlowT::setGhostState()\n");
+
   State *const innerState = face->getState(0);
   State *const ghostState = face->getState(1);	
   

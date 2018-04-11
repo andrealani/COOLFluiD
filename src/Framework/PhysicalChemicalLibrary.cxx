@@ -21,7 +21,7 @@ void PhysicalChemicalLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("freezeChemistry","Flag to freeze the chemistry.");
   options.addConfigOption< bool >("ShiftH0","Shift the formation enthalpy to have H(T=0K)=0.");
   options.addConfigOption< CFdouble, Config::DynamicOption<> >
-    ("MaxTe","Maximum value for the electrn temperature."); 
+    ("MaxTe","Maximum value for the electron temperature."); 
 }
     
 //////////////////////////////////////////////////////////////////////////////

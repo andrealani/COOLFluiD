@@ -173,7 +173,9 @@ void ICPplasmaFieldComputingBC<BASE,ST>::setGhostState
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbPrevEqs = totalNbEqs - 2;
   const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
-  
+ 
+  CFLog(DEBUG_MIN, "ICPplasmaFieldComputingBC::setGhostState() => nbEqs, nbPrevEqs = " << nbEqs << ", " << nbPrevEqs << "\n");
+ 
   if (nbEqs >= nbPrevEqs) {
     BASE::setGhostState(face);
   }

@@ -341,45 +341,45 @@ public:
   CFdouble soundSpeed(CFdouble& temp,
 		      CFdouble& pressure);
   
-     /**
-      * Sets the mole fractions of elements (nucleons) Xn for the Mutation
-      * environment (for variable elemental composition), this function
-      * should be called before getting properties related to the elemental
-      * fractions in case of LTE with Demixing
-      * @param yn the RealVector of the mass fractions of elements
-      */
-      void setElemFractions(const RealVector& yn);
+  /**
+   * Sets the mole fractions of elements (nucleons) Xn for the Mutation
+   * environment (for variable elemental composition), this function
+   * should be called before getting properties related to the elemental
+   * fractions in case of LTE with Demixing
+   * @param yn the RealVector of the mass fractions of elements
+   */
+  void setElemFractions(const RealVector& yn);
   
-   /**
-    * Sets the mole fractions of elements (nucleons) Xn for the Mutation
-    * environment (for variable elemental composition) starting from the given
-    * species mass fractions
-    * @param yn the RealVector of the mass fractions of species
-    */
-    void setElementXFromSpeciesY(const RealVector& ys);
+  /**
+   * Sets the mole fractions of elements (nucleons) Xn for the Mutation
+   * environment (for variable elemental composition) starting from the given
+   * species mass fractions
+   * @param yn the RealVector of the mass fractions of species
+   */
+  void setElementXFromSpeciesY(const RealVector& ys);
+  
+  /**
+   * Sets the species (molar) fractions. This function should be called before getting
+   * thermodynamic quantities or transport properties.
+   * @param ys the RealVector of the mass fractions of species
+   */
+  void setSpeciesFractions(const RealVector& ys);
+  
+  /**
+   * Sets the electron fractions in the mass composition according to charge
+   * neutrality.
+   * @param ys the RealVector of the mass fractions of species
+   */
+  void setElectronFraction(RealVector& ys);
 
-   /**
-    * Sets the species (molar) fractions. This function should be called before getting
-    * thermodynamic quantities or transport properties.
-    * @param ys the RealVector of the mass fractions of species
-    */
-    void setSpeciesFractions(const RealVector& ys);
-
-   /**
-    * Sets the electron fractions in the mass composition according to charge
-    * neutrality.
-    * @param ys the RealVector of the mass fractions of species
-    */
-    void setElectronFraction(RealVector& ys);
-
-   /**
-    * Gets the species (molar) fractions.
-    * @param ys the RealVector of the mass fractions of species
-    * @param xs the RealVector of the molar fractions of species
-    */
-    void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
-
-   /**
+  /**
+   * Gets the species (molar) fractions.
+   * @param ys the RealVector of the mass fractions of species
+   * @param xs the RealVector of the molar fractions of species
+   */
+  void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
+  
+  /**
     * Gets the species (mass) fractions.
     * @param xs the RealVector of the molar fractions of species
     * @param ys the RealVector of the mass fractions of species
