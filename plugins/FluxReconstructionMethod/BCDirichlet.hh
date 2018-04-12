@@ -20,6 +20,7 @@ namespace COOLFluiD {
  * This class represents a Dirichlet boundary condition
  *
  * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
  */
 class BCDirichlet : public BCStateComputer {
 

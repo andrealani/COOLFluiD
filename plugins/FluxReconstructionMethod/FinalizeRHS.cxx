@@ -39,12 +39,14 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_states("states"),
   socket_rhs("rhs"),
-  m_updateToSolutionVecTrans(CFNULL),
-  m_numJacob(CFNULL),
-  m_inverter(CFNULL), 
+  m_solPhysData(),
   m_jacobDummy(),
   m_invJacobDummy(),
-  m_state()
+  m_updateToSolutionVecTrans(CFNULL),
+  m_state(),
+  m_dState(),
+  m_inverter(CFNULL),
+  m_numJacob(CFNULL)
 {
   CFAUTOTRACE;
 
@@ -75,31 +77,39 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
 
 void FinalizeRHS::execute()
 {
+  // get the number of equations
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
 
+  // get the state socket
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
 
+  // get total nb of states and initialize vars
   const CFuint nbStates = states.size();
   RealVector tempRes(nbEqs);
   RealVector res(nbEqs);
 
+  // get rhs socket
   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   
-  for(CFuint iState = 0; iState < nbStates; ++iState) {
-
+  // loop over states to transform residual
+  for(CFuint iState = 0; iState < nbStates; ++iState) 
+  {
     // set and get the transformation matrix in the update variables
     const RealMatrix& matrix = computeNumericalTransMatrix(*states[iState]);
 
     // copy the rhs in a given temporary array
     const CFuint startID = iState*nbEqs;
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
+    {
       tempRes[iEq] = rhs[startID + iEq];
     }
 
     // compute the transformed residual
     res = matrix*tempRes;
     
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    // store transformed residual in rhs
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
+    {
       rhs[startID + iEq] = res[iEq];
     }
   }
@@ -114,13 +124,16 @@ RealMatrix& FinalizeRHS::computeNumericalTransMatrix(State& state)
   // the second call to transform()
   m_state = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(&state));
 
+  // get nb of equations
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  for (CFuint iVar = 0; iVar < nbEqs; ++iVar) {
+  
+  // loop over vars
+  for (CFuint iVar = 0; iVar < nbEqs; ++iVar) 
+  {
     // perturb the given component of the state vector
     m_numJacob->perturb(iVar, state[iVar]);
 
-    const RealVector& tPertState = static_cast<RealVector&>
-      (*m_updateToSolutionVecTrans->transform(&state));
+    const RealVector& tPertState = static_cast<RealVector&> (*m_updateToSolutionVecTrans->transform(&state));
 
     // compute the finite difference derivative of the flux
     m_numJacob->computeDerivative(m_state, tPertState, m_dState);
@@ -131,6 +144,7 @@ RealMatrix& FinalizeRHS::computeNumericalTransMatrix(State& state)
     m_numJacob->restore(state[iVar]);
   }
 
+  // invert the Jacobian
   m_inverter->invert(m_jacobDummy, m_invJacobDummy);
 
   return m_invJacobDummy;
@@ -161,6 +175,16 @@ void FinalizeRHS::setup()
   m_invJacobDummy.resize(nbEqs, nbEqs, 0.);
   
   m_inverter.reset(MatrixInverter::create(nbEqs, false));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FinalizeRHS::unsetup()
+{
+  CFAUTOTRACE;
+
+  // unsetup of the parent class
+  FluxReconstructionSolverCom::unsetup();
   
 }
 

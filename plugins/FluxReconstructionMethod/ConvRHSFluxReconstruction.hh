@@ -22,9 +22,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the (convective part of the) system using a FluxReconstruction solver
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This is a standard command to assemble the convective part of the system using a FluxReconstruction solver
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class ConvRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
 public: // functions
@@ -79,18 +82,13 @@ protected: //functions
   /// add the updates to the wave speed
   void updateWaveSpeed();
   
-  /// compute the correction -(FI-FD)divh of a neighbouring cell
+  /// compute the correction -(FI)divh of a neighbouring cell of the face
   void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
   
   /**
    * compute the wave speed updates for this face
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
-  
-  /**
-   * Divides by jacobian determinant
-   */
-  void divideByJacobDet();
   
   /**
    * Set the data for the current face necessary to calculate FI-FD
@@ -117,6 +115,9 @@ protected: //data
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
   
+  /// socket for gradientsAV
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
+  
   /// storage of the rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
   
@@ -133,6 +134,9 @@ protected: //data
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
   
+  /// builder of faces
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
+  
   /// index of element type
   CFuint m_iElemType;
   
@@ -144,9 +148,6 @@ protected: //data
   
   /// extrapolated states in the flux points of the cell
   std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
-  
-  /// vector containing pointers to the internal fluxes in a cell (fr each sol pnt)
-  std::vector< RealVector >* m_cellIntFlx;
   
   /// vector containing pointers to the fluxes in the flux points
   std::vector< std::vector< RealVector > > m_cellFlx;
@@ -165,9 +166,6 @@ protected: //data
   
   /// face connectivity per orient
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
-  
-  /// builder of faces
-  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
   
   /// number of equations in the physical model
   CFuint m_nbrEqs;
@@ -195,9 +193,6 @@ protected: //data
   
   /// Correction function computer
   Common::SafePtr< BaseCorrectionFunction > m_corrFctComputer;
-  
-  /// Correction function for current cell
-  std::vector< std::vector< RealVector > > m_corrFct;
   
   /// Divergence of the correction function for current cell
   std::vector< std::vector< CFreal > > m_corrFctDiv;
@@ -255,6 +250,9 @@ protected: //data
   
   /// the discontinuous flux extrapolated to the flux points
   std::vector< RealVector > m_extrapolatedFluxes;
+  
+  /// face local coordinates of the flux points on one face
+  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
   
   private:
 

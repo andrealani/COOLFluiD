@@ -104,7 +104,6 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    CFLog(NOTICE, "BaseFctFaceLineP1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       shapeFunc[0] = 0.5*(1.0 - mappedCoord[0]);
       shapeFunc[1] = 0.5*(1.0 + mappedCoord[0]);
   }

@@ -56,9 +56,8 @@ void NullPointDistribution::setup()
 {
   CFAUTOTRACE;
   
+  // setup parent class
   BasePointDistribution::setup();
-
-  CFLog(VERBOSE, "NullPointDistribution::setup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -67,9 +66,8 @@ void NullPointDistribution::unsetup()
 {
   CFAUTOTRACE;
   
+  // unsetup parent class
   BasePointDistribution::unsetup();
-  
-  CFLog(VERBOSE, "NullPointDistribution::unsetup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

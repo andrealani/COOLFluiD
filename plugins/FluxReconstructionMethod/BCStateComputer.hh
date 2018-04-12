@@ -18,14 +18,14 @@ namespace COOLFluiD {
  * to a boundary condition
  *
  * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
  * 
  */
 class BCStateComputer : public FluxReconstructionSolverStrategy {
 
 public:  // types
 
-  typedef Framework::BaseMethodStrategyProvider<
-      FluxReconstructionSolverData,BCStateComputer > PROVIDER;
+  typedef Framework::BaseMethodStrategyProvider< FluxReconstructionSolverData,BCStateComputer > PROVIDER;
 
 public:  // methods
 
@@ -53,7 +53,7 @@ public:  // methods
   /// Set up private data and data
   virtual void setup();
   
-  /// Set up private data and data
+  /// Unset up private data and data
   virtual void unsetup();
 
   /// function returning a boolean that is true if the boundary condition requires the spatial coordinates
@@ -66,13 +66,6 @@ public:  // methods
   bool needsExtraVariables()
   {
     return m_needsExtraVars;
-  }
-
-  /// set the global ID of the boundary face
-  void setFaceID(const CFuint faceID)
-  {
-    m_faceID = faceID;
-    setBndFaceData();
   }
 
   /// adds a trs name
@@ -116,11 +109,6 @@ protected: // methods
    */
   void configure ( Config::ConfigArgs& args );
 
-  /**
-   * set data related to the current boundary face
-   */
-  virtual void setBndFaceData() {}
-
 private: // methods
 
   /**
@@ -135,9 +123,6 @@ protected: // data
 
   /// boolean telling whether the boundary condition needs extra variables in the flux points
   bool m_needsExtraVars;
-
-  /// global ID of the boundary face
-  CFuint m_faceID;
 
   /// list of names of TRSs the BC applies to
   std::vector< std::string > m_trsNames;

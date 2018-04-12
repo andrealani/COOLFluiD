@@ -20,9 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent the base 1D point distribution for either flux or solution points
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent the base 1D point distribution for either flux or solution points
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class BasePointDistribution : public FluxReconstructionSolverStrategy {
 
 public:  // types

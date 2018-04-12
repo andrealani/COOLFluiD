@@ -21,9 +21,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent the base correction function computer
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent the null correction function computer
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class NullCorrectionFunction : public BaseCorrectionFunction {
 public:  // methods
 

@@ -19,7 +19,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a command that computes contribution of the boundary faces for the
-   * Flux Reconstruction schemes for convective terms to the RHS
+   * Flux Reconstruction schemes for diffusive terms to the RHS
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
@@ -123,6 +123,9 @@ protected: // data
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
   
+  /// socket for gradientsAV
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
+  
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
 
@@ -173,9 +176,6 @@ protected: // data
   
   /// number of flux pnts on a face
   CFuint m_nbrFaceFlxPnts;
-  
-  /// vector containing pointers to the face normals
-  Common::SafePtr< std::vector< RealVector > > m_faceNormals;
   
   /// solution point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;

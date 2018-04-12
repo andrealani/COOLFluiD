@@ -40,50 +40,52 @@ MethodCommandProvider< ConvRHSFluxReconstruction,FluxReconstructionSolverData,Fl
 ConvRHSFluxReconstruction::ConvRHSFluxReconstruction(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_gradients("gradients"),
+  socket_gradientsAV("gradientsAV"),
   socket_rhs("rhs"),
   socket_updateCoeff("updateCoeff"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
   m_updateVarSet(CFNULL),
   m_cellBuilder(CFNULL),
   m_faceBuilder(CFNULL),
-  m_solPntsLocalCoords(CFNULL),
-  m_faceIntegrationCoefs(CFNULL),
-  m_faceMappedCoordDir(CFNULL),
-  m_faceFlxPntConn(CFNULL),
-  m_faceFlxPntConnPerOrient(CFNULL),
-  m_riemannFluxComputer(CFNULL),
-  m_corrFctComputer(CFNULL),
-  m_faceConnPerOrient(CFNULL),
-  m_faceLocalDir(CFNULL),
-  m_solPolyValsAtFlxPnts(CFNULL),
-  m_solPolyDerivAtSolPnts(CFNULL),
-  m_flxPntFlxDim(CFNULL),
   m_iElemType(),
   m_cell(),
   m_cellStates(),
+  m_cellStatesFlxPnt(),
+  m_cellFlx(),
+  m_solPntsLocalCoords(CFNULL),
+  m_flxPntsLocalCoords(CFNULL),
+  m_faceFlxPntConnPerOrient(CFNULL),
+  m_faceFlxPntConn(CFNULL),
+  m_faceConnPerOrient(CFNULL),
   m_nbrEqs(),
   m_dim(),
   m_orient(),
+  m_nbrSolPnts(),
+  m_nbrFaceFlxPnts(),
   m_face(),
   m_cells(),
+  m_riemannFluxComputer(CFNULL),
+  m_corrFctComputer(CFNULL),
+  m_corrFctDiv(),
   m_states(),
   m_flxPntRiemannFlux(),
   m_contFlx(),
-  m_cellFlx(),
   m_divContFlx(),
-  m_corrFct(),
-  m_corrFctDiv(),
-  m_cellStatesFlxPnt(),
-  m_faceJacobVecAbsSizeFlxPnts(),
-  m_faceJacobVecSizeFlxPnts(),
-  m_unitNormalFlxPnts(),
-  m_cellFluxProjVects(),
-  m_flxPntCoords(),
   m_waveSpeedUpd(),
-  m_nbrSolPnts(),
+  m_faceJacobVecAbsSizeFlxPnts(),
+  m_faceIntegrationCoefs(CFNULL),
+  m_faceMappedCoordDir(CFNULL),
+  m_faceLocalDir(CFNULL),
+  m_unitNormalFlxPnts(),
+  m_faceJacobVecSizeFlxPnts(),
+  m_flxPntCoords(),
+  m_cellFluxProjVects(),
   m_gradUpdates(),
-  m_nbrFaceFlxPnts(),
-  m_extrapolatedFluxes()
+  m_solPolyValsAtFlxPnts(CFNULL),
+  m_solPolyDerivAtSolPnts(CFNULL),
+  m_flxPntFlxDim(CFNULL),
+  m_extrapolatedFluxes(),
+  m_flxLocalCoords(CFNULL)
   {
     addConfigOptionsTo(this);
   }
@@ -109,6 +111,7 @@ ConvRHSFluxReconstruction::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
   result.push_back(&socket_gradients);
+  result.push_back(&socket_gradientsAV);
   result.push_back(&socket_rhs);
   result.push_back(&socket_updateCoeff);
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
@@ -176,7 +179,7 @@ void ConvRHSFluxReconstruction::execute()
       m_states[LEFT ] = m_cells[LEFT ]->getStates();
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
 
-      // if one of the neighbouring cells is parallel updatable or if the gradients have to be computed, set the bnd face data and compute the discontinuous flx
+      // if one of the neighbouring cells is parallel updatable or if the gradients have to be computed, set the bnd face data
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable() || hasDiffTerm)
       {
 	// set the bnd face data
@@ -267,9 +270,6 @@ void ConvRHSFluxReconstruction::execute()
 	computeGradients();
       }
       
-      // divide by the Jacobian to transform the residuals back to the physical domain
-      //divideByJacobDet();
-      
       // print out the residual updates for debugging
       if(m_cell->getID() == 1220)
       {
@@ -314,10 +314,6 @@ void ConvRHSFluxReconstruction::execute()
       m_cellBuilder->releaseGE();
     }
   }
-  ///@warning set rhs to zero for plotting stuff 
-  //DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-  //rhs = 0.0;
-  // get the datahandle of the rhs
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -331,7 +327,7 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection()
     m_flxPntRiemannFlux[iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
 									  *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									  m_unitNormalFlxPnts[iFlxPnt]);
-    // compute the interface flux in the mapped coord frame
+    // compute the interface flux in the mapped coord frame and store
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
     m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
   }
@@ -340,15 +336,9 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection()
 //////////////////////////////////////////////////////////////////////////////
 
 void ConvRHSFluxReconstruction::setFaceData(CFuint faceID)
-{
-  // get the local FR data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-
-  // compute flux point coordinates
-  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-    
+{   
   // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
+  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -409,15 +399,6 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     // dereference the state
     State& stateSolPnt = *(*m_cellStates)[iSolPnt];
 
-    if ((*((*m_cellStates)[iSolPnt]))[0] < 0)
-    {
-      CFLog(NOTICE, "negative press cell: " << (*((*m_cellStates)[iSolPnt]))[0] << "!!!!!!!\n");
-      // Loop over solution points to calculate the discontinuous flux.
-  for (CFuint iSolPnt2 = 0; iSolPnt2 < m_nbrSolPnts; ++iSolPnt2)
-  {
-    CFLog(NOTICE, "sol " << iSolPnt2 << ": " << (*((*m_cellStates)[iSolPnt2]))[0] << "\n");
-  }
-    }
     m_updateVarSet->computePhysicalData(stateSolPnt, m_pData);
 
     // calculate the discontinuous flux projected on x, y, z-directions
@@ -437,7 +418,7 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
   // Loop over solution pnts to calculate the divergence of the discontinuous flux
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
-    // reset the divergence of FC
+    // reset the residual updates
     residuals[iSolPnt] = 0.0;
     
     // Loop over solution pnts to count the factor of all sol pnt polys
@@ -451,11 +432,6 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
         {
           // Store divFD in the vector that will be divFC
           residuals[iSolPnt][iEq] -= (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*(m_contFlx[jSolPnt][iDir][iEq]);
-       
-	  if (fabs(residuals[iSolPnt][iEq]) < MathTools::MathConsts::CFrealEps())
-          {
-            residuals[iSolPnt][iEq] = 0.0;
-	  }
 	}
       }
     }
@@ -491,8 +467,7 @@ void ConvRHSFluxReconstruction::setCellData()
     {
       dimList[iSolPnt] = iDim;
     }
-    m_cellFluxProjVects[iDim] = m_cell->computeMappedCoordPlaneNormalAtMappedCoords(dimList,
-                                                                            *m_solPntsLocalCoords);
+    m_cellFluxProjVects[iDim] = m_cell->computeMappedCoordPlaneNormalAtMappedCoords(dimList,*m_solPntsLocalCoords);
   }
 }
 
@@ -550,12 +525,12 @@ void ConvRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
     waveSpeedUpd[iSide] = 0.0;
     for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
-      const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                   (*m_faceIntegrationCoefs)[iFlx];
+      const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*(*m_faceIntegrationCoefs)[iFlx];
+      
       // transform update states to physical data to calculate eigenvalues
       m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iSide][iFlx]), m_pData);
-      waveSpeedUpd[iSide] += jacobXIntCoef*
-          m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
+      
+      waveSpeedUpd[iSide] += jacobXIntCoef * m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
     }
   }
 }
@@ -580,7 +555,7 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
       // divergence of the correction function
       const CFreal divh = m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]];
       
-      if (divh != 0.0)
+      if (fabs(divh) > MathTools::MathConsts::CFrealEps())
       {
         // the current correction factor corresponding to the interface flux (stored in cellFlx)
         const RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
@@ -596,38 +571,7 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
   }
   
   // in order to use updateRHS, m_cellStates should have the correct states
-  m_cellStates = m_cells[side]->getStates();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvRHSFluxReconstruction::divideByJacobDet()
-{
-  // this is achieved by multiplying the update coefs with the Jacobian determinant
-  // (and dividing by the cell volume)
-
-  // get the updateCoeff
-  DataHandle< CFreal > updateCoeff = socket_updateCoeff.getDataHandle();
-
-  // get the cell volume
-  const CFreal invCellVolume = 1.0/m_cell->computeVolume();
-
-  // get jacobian determinants at solution points
-  const std::valarray<CFreal> jacobDet =
-      m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
-
-  // get number of solution points
-  const CFuint nbrSolPnts = m_cellStates->size();
-
-  // loop over residuals
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-  {
-    // get solution point ID
-    const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-
-    // divide update coeff by volume
-    updateCoeff[solID] *= jacobDet[iSol]*invCellVolume;
-  }
+  m_cellStates = m_states[side];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -647,10 +591,15 @@ void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
       // compute the face corrections to the gradients
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
+	// average state in the flux point
         const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
+	
+	// gradient correction projected on the face normal, scaled with the geometric Jacobian, for both sides
 	const RealVector projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
 	const RealVector projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+	
 	/// @todo Check if this is also OK for triangles!!
+	// add gradient corrections
 	m_gradUpdates[LEFT][iSolPnt][iEq] += projectedCorrL*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx]];
 	m_gradUpdates[RIGHT][iSolPnt][iEq] += projectedCorrR*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx]];
       }
@@ -700,11 +649,6 @@ void ConvRHSFluxReconstruction::computeGradients()
 	  
           // compute the grad updates
           m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
-       
-	  if (fabs(m_gradUpdates[0][iSolPnt][iEq][iDir]) < MathTools::MathConsts::CFrealEps())
-          {
-            m_gradUpdates[0][iSolPnt][iEq][iDir] = 0.0;
-	  }
 	}
       }
     }
@@ -714,8 +658,7 @@ void ConvRHSFluxReconstruction::computeGradients()
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
   // get jacobian determinants at solution points
-  const std::valarray<CFreal> jacobDet =
-      m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+  const std::valarray<CFreal> jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
   // add the gradients to the socket and divide by the jacobian determinant
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -740,6 +683,8 @@ void ConvRHSFluxReconstruction::computeGradients()
 void ConvRHSFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup the parent class
   FluxReconstructionSolverCom::setup();
   
   // get the update varset
@@ -756,8 +701,6 @@ void ConvRHSFluxReconstruction::setup()
   
   // get the correction function computer
   m_corrFctComputer = getMethodData().getCorrectionFunction();
-  
-  m_waveSpeedUpd.resize(2);
   
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
@@ -811,6 +754,9 @@ void ConvRHSFluxReconstruction::setup()
   // get the dimension on which to project the flux in a flux point
   m_flxPntFlxDim = frLocalData[0]->getFluxPntFluxDim();
   
+  // get the face local coords of the flux points on one face
+  m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  
   // resize the physical data temporary vector
   SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm(); 
   convTerm->resizePhysicalData(m_pData);
@@ -836,6 +782,7 @@ void ConvRHSFluxReconstruction::setup()
   }
   
   // Resize vectors
+  m_waveSpeedUpd.resize(2);
   m_cells.resize(2);
   m_states.resize(2);
   m_cellFlx.resize(2);
@@ -849,8 +796,8 @@ void ConvRHSFluxReconstruction::setup()
   m_divContFlx.resize(m_nbrSolPnts);
   m_corrFctDiv.resize(m_nbrSolPnts);
   m_cellFluxProjVects.resize(m_dim);
-  
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
+  
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_flxPntCoords[iFlx].resize(m_dim);
@@ -914,6 +861,7 @@ void ConvRHSFluxReconstruction::unsetup()
   }
   m_cellStatesFlxPnt.clear();
   
+  // unsetup parent class
   FluxReconstructionSolverCom::unsetup();
 }
 

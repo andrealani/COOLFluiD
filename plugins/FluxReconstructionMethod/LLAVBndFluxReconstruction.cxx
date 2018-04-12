@@ -133,10 +133,7 @@ void LLAVBndFluxReconstruction::executeOnTrs()
 
         // if cell is parallel updatable or the gradients need to be computed, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
-        {
-	  // set the face ID in the BCStateComputer
-	  m_bcStateComputer->setFaceID(m_face->getID());
-	  
+        {  
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID 
 	  

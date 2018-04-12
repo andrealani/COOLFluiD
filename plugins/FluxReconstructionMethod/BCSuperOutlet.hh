@@ -18,6 +18,7 @@ namespace COOLFluiD {
  * This class represents a supersonic outlet boundary condition
  *
  * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
  */
 class BCSuperOutlet : public BCStateComputer {
 
@@ -35,8 +36,11 @@ public:  // methods
     return "BCSuperOutlet";
   }
 
-  /// Set up private data and data
+  /// Set up private data
   void setup();
+  
+  /// Unset up private data
+  void unsetup();
 
   /**
    * Sets the ghost states in all the boundary points (depends on the boundary condition type)

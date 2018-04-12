@@ -26,6 +26,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_polyOrder(),
   m_solPntsLocalCoord1D(),
   m_flxPntsLocalCoord1D(),
+  m_solPntDistribution(),
+  m_flxPntDistribution(),
   m_derivCoefsSolPnts1D(),
   m_solPolyDerivCoefsFlxPnts1D(),
   m_solPolyDerivCoefsSolPnts1D(),
@@ -47,6 +49,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_faceNodeConnPerOrient(),
   m_faceConnPerOrient(),
   m_faceMappedCoordDirPerOrient(),
+  m_faceNormals(),
   m_faceNodeCoordsPerOrient(),
   m_solPolyExponents(),
   m_solPolyCoefs(),
@@ -60,21 +63,18 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPolyExponents(),
   m_flxPolyCoefs(),
   m_coefSolPolyDerivInSolPnts(),
-  m_coefSolPolyDerivInNodes(),
   m_coefSolPolyDerivInFlxPnts(),
+  m_coefSolPolyInFlxPnts(),
+  m_coefSolPolyInNodes(),
   m_cflConvDiffRatio(),
   m_faceOutputPntCellMappedCoords(),
   m_faceOutputPntSolPolyCoef(),
   m_faceOutputPntSolDerivCoef(),
   m_faceOutputPntConn(),
-  m_solPntDistribution(),
-  m_flxPntDistribution(),
-  m_faceNormals(),
-  m_coefSolPolyInFlxPnts(),
   m_flxPntFlxDim(),
   m_vandermonde(),
   m_vandermondeInv(),
-  m_coefSolPolyInNodes()
+  m_coefSolPolyDerivInNodes()
 {
   CFAUTOTRACE;
 }
@@ -376,7 +376,6 @@ FluxReconstructionElementData::getNodePolyValsAtPnt(vector< RealVector > pntLoca
 vector< vector< vector< CFreal > > >
     FluxReconstructionElementData::getSolPolyDerivsAtNode(vector< RealVector > nodeLocalCoords)
 {
-  //CFLog(VERBOSE,"getSolPolyDerivsAtNode\n");
   cf_assert(nodeLocalCoords.size() > 0);
   cf_assert(nodeLocalCoords[0].size() == static_cast<CFuint>(m_dimensionality));
 
@@ -683,7 +682,6 @@ void FluxReconstructionElementData::computeNodePolyCoefs()
 
 void FluxReconstructionElementData::createCoefSolPolyDerivInSolPnts()
 {
-  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
   m_coefSolPolyDerivInSolPnts = getSolPolyDerivsAtNode(m_solPntsLocalCoords);
 }
 
@@ -691,7 +689,6 @@ void FluxReconstructionElementData::createCoefSolPolyDerivInSolPnts()
 
 void FluxReconstructionElementData::createCoefSolPolyDerivInNodes()
 {
-  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
   m_coefSolPolyDerivInNodes = getSolPolyDerivsAtNode(m_cellNodeCoords);
 }
 
@@ -699,7 +696,6 @@ void FluxReconstructionElementData::createCoefSolPolyDerivInNodes()
 
 void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
 {
-  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
   m_coefSolPolyInFlxPnts = getSolPolyValsAtNode(m_flxPntsLocalCoords);
 }
 
@@ -707,7 +703,6 @@ void FluxReconstructionElementData::createCoefSolPolyInFlxPnts()
 
 void FluxReconstructionElementData::createCoefSolPolyInNodes()
 {
-  //CFLog(VERBOSE,"createCoefSolPolyDerivInFlxPnts\n");
   m_coefSolPolyInNodes = getSolPolyValsAtNode(m_cellNodeCoords);
 }
 
@@ -716,7 +711,6 @@ void FluxReconstructionElementData::createCoefSolPolyInNodes()
 void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
 {
   CFAUTOTRACE;
-//   CFLog(VERBOSE,"createFaceFlxPntsCellLocalCoords\n");
   
   // number of face flux points
   const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
@@ -753,7 +747,6 @@ void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
 void FluxReconstructionElementData::createFaceOutputPntSolPolyAndDerivCoef()
 {
   CFAUTOTRACE;
-  //CFLog(VERBOSE,"createFaceOutputPntSolPolyAndDerivCoef\n");
 
   // get number of cell faces
   const CFuint nbrCellFaces = getNbrCellFaces();
@@ -886,6 +879,31 @@ CFreal FluxReconstructionElementData::evaluateLegendre(CFreal coord, CFuint orde
       case 5:
       {
 	result = 0.125*(63.0*pow(coord,5)-70.0*pow(coord,3)+15.0*coord);
+
+      } break;
+      case 6:
+      {
+	result = 1./16.*(231.*pow(coord,6)-315.*pow(coord,4)+105.*pow(coord,2)-5.);
+
+      } break;
+      case 7:
+      {
+	result = 1./16.*(429.*pow(coord,7)-693.*pow(coord,5)+315.*pow(coord,3)-35.*coord);
+
+      } break;
+      case 8:
+      {
+	result = 1./128.*(6435.*pow(coord,8)-12012.*pow(coord,6)+6930.*pow(coord,4)-1260.*pow(coord,2)+35.);
+
+      } break;
+      case 9:
+      {
+	result = 1./128.*(12155.*pow(coord,9)-25740.*pow(coord,7)+18018.*pow(coord,5)-4620.*pow(coord,3)+315.*coord);
+
+      } break;
+      case 10:
+      {
+	result = 1./256.*(46189.*pow(coord,10)-109395.*pow(coord,8)+90090.*pow(coord,6)-30030.*pow(coord,4)+3465.*pow(coord,2)-63.);
 
       } break;
       default:

@@ -3,8 +3,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 #include "Common/COOLFluiD.hh"
 #include "Framework/CFPolyOrder.hh"
 #include "Framework/CFGeoShape.hh"
@@ -838,11 +836,11 @@ protected: // protected data
   /// FR polynomial coefficients
   std::vector< std::vector< CFreal > > m_solPolyCoefs;
   
-  /// FR polynomial coefficients for the node basis functions
-  std::vector< std::vector< CFreal > > m_nodePolyCoefs;
-  
   /// polynomial exponents for the node basis functions
   std::vector< std::vector< CFint > > m_nodePolyExponents;
+  
+  /// FR polynomial coefficients for the node basis functions
+  std::vector< std::vector< CFreal > > m_nodePolyCoefs;
 
   /// local coordinates of points used for initialization of the solution
   std::vector< RealVector > m_initPntsCoords;

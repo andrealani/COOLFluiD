@@ -29,15 +29,20 @@ void BasePhysicality::defineConfigOptions(Config::OptionList& options)
 
 BasePhysicality::BasePhysicality(const std::string& name) :
   FluxReconstructionSolverCom(name),
+  socket_posPrev("posPrev"),
   m_cellBuilder(CFNULL),
   m_cell(),
   m_cellStates(),
   m_solPntsLocalCoords(),
   m_nbrEqs(),
+  m_dim(),
   m_nbrSolPnts(),
+  m_maxNbrFlxPnts(),
   m_order(),
   m_solPolyValsAtFlxPnts(CFNULL),
-  m_cellStatesFlxPnt()
+  m_cellStatesFlxPnt(),
+  m_nbLimits(),
+  m_totalNbLimits()
 {
   addConfigOptionsTo(this);
 }
@@ -57,6 +62,16 @@ void BasePhysicality::configure ( Config::ConfigArgs& args )
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::vector< Common::SafePtr< BaseDataSocketSink > >
+BasePhysicality::needsSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSink > > result;
+  result.push_back(&socket_posPrev);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BasePhysicality::execute()
 {
   CFTRACEBEGIN;
@@ -71,18 +86,30 @@ void BasePhysicality::execute()
   StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
   geoData.trs = cells;
   
+  // number of element types, should be 1 in non-mixed grids
   const CFuint nbrElemTypes = elemType->size();
   
-  CFuint nbLimits = 0;
+  // if there is artificial viscosity, reset the positivity preservation values
+  const bool hasArtVisc = getMethodData().hasArtificialViscosity();
   
-  // LOOP OVER ELEMENT TYPES, TO SET THE MINIMUM AND MAXIMUM CELL AVERAGED STATES IN THE NODES
+  if (hasArtVisc) 
+  {
+    DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+    
+    posPrev = MathTools::MathConsts::CFrealMax();
+  }
+  
+  // variable to store the number of limits done
+  m_nbLimits = 0;
+  
+  // loop over all elements to check physicality and if necessary enforce it
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     // get start and end indexes for this type of element
     const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[iElemType].getEndIdx  ();
 
-    // loop over cells, to put the minimum and maximum neighbouring cell averaged states in the nodes
+    // loop over cells
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
       // build the GeometricEntity
@@ -92,13 +119,17 @@ void BasePhysicality::execute()
       // get the states in this cell
       m_cellStates = m_cell->getStates();
       
+      // extrapolate states to flux points
       computeFlxPntStates(m_cellStatesFlxPnt);
 
+      // check physicality
       if (!checkPhysicality())
       {
+	// enforce physicality
 	enforcePhysicality();
 	
-	++nbLimits;
+	// add one to the nb of limits done
+	++m_nbLimits;
       }
 
       //release the GeometricEntity
@@ -106,7 +137,21 @@ void BasePhysicality::execute()
     }
   }
   
-  CFLog(NOTICE, "Number of times physicality enforced: " << nbLimits << "\n");
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+#ifdef CF_HAVE_MPI
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    const CFuint count = 1;
+    MPI_Allreduce(&m_nbLimits, &m_totalNbLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
+#endif
+    
+  if (PE::GetPE().GetRank(nsp) == 0) 
+  {
+    // print number of limits
+    CFLog(NOTICE, "Number of times physicality enforced: " << m_totalNbLimits << "\n");
+  }
+
+  PE::GetPE().setBarrier(nsp);
   
   CFTRACEEND;
 }
@@ -115,11 +160,13 @@ void BasePhysicality::execute()
 
 void BasePhysicality::computeFlxPntStates(std::vector< RealVector >& statesFlxPnt)
 {
+  // loop over flx pnts
   for (CFuint iFlxPnt = 0; iFlxPnt < m_maxNbrFlxPnts; ++iFlxPnt)
   {        
+    // reset extrapolate state
     statesFlxPnt[iFlxPnt] = 0.0;
 
-    // extrapolate the left and right states to the flx pnts
+    // extrapolate all states to the current flx pnt
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
       statesFlxPnt[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*(*((*m_cellStates)[iSol]));
@@ -133,16 +180,14 @@ void BasePhysicality::setup()
 {
   CFAUTOTRACE;
 
-  // get number of equations
+  // get number of equations and dimensions
   m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
   m_dim    = PhysicalModelStack::getActive()->getDim ();
-
-  // resize variables
 
   // get cell builder
   m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
 
-  // get the local spectral FD data
+  // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   const CFuint nbrElemTypes = frLocalData.size();
   cf_assert(nbrElemTypes > 0);
@@ -160,6 +205,7 @@ void BasePhysicality::setup()
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
   
+  // this is only necessary for mixed grids and is a bit superfluous for now
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     const CFuint nbrFlxPnts = frLocalData[iElemType]->getNbrOfFlxPnts();
@@ -169,6 +215,7 @@ void BasePhysicality::setup()
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
   
+  // initialize extrapolated states
   for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
   {
     RealVector temp(m_nbrEqs);

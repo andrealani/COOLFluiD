@@ -22,7 +22,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a hexahedral spectral finite difference element
+ * This class represents a hexahedral flux reconstruction element
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen

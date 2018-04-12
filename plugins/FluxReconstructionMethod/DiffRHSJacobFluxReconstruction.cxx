@@ -69,20 +69,20 @@ DiffRHSJacobFluxReconstruction::DiffRHSJacobFluxReconstruction(const std::string
   m_currCellSide(),
   m_faceOrients(),
   m_faceBCIdx(),
+  m_bcStateComputers(CFNULL),
+  m_flxPntGhostSol(),
+  m_divContFlxL(),
+  m_divContFlxR(),
+  m_resUpdates(),
+  m_cellGradsBackUp(),
+  m_pertDivContFlx(),
+  m_pertCorrections(),
   m_isFaceOnBoundaryCell(CFNULL),
   m_nghbrCellSideCell(CFNULL),
   m_currCellSideCell(CFNULL),
   m_faceOrientsCell(CFNULL),
   m_faceBCIdxCell(CFNULL),
-  m_resUpdates(),
-  m_cellGradsBackUp(),
-  m_bcStateComputers(CFNULL),
-  m_divContFlxL(),
-  m_divContFlxR(),
-  m_pertDivContFlx(),
-  m_flxPntGhostSol(),
   m_flxPntGhostGrads(),
-  m_pertCorrections(),
   m_currFlx()
   {
   }
@@ -224,7 +224,7 @@ void DiffRHSJacobFluxReconstruction::execute()
             m_cellGradsBackUp[RIGHT][iState][iVar] = (*m_cellGrads[RIGHT][iState])[iVar];
           }
         }
-	
+
 	for (CFuint iSide = 0; iSide < 2; ++iSide)
         {
           // compute solution points Jacobian determinants
@@ -1821,6 +1821,7 @@ void DiffRHSJacobFluxReconstruction::computeUnpertCellDiffResiduals()
       }
       else
       {
+
         // compute the internal face contribution to the diffusive residuals
         // using m_pertResUpdates because the values stored in m_resUpdates should be preserved
         // cell side with respect to this face
@@ -2158,6 +2159,8 @@ void DiffRHSJacobFluxReconstruction::computeFlux(const RealVector& sol, const st
 void DiffRHSJacobFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup parent class
   DiffRHSFluxReconstruction::setup();
   
   // get CellToFaceGeBuilders
@@ -2407,6 +2410,7 @@ void DiffRHSJacobFluxReconstruction::unsetup()
   m_flxPntGhostSol.clear();
   m_flxPntGhostGrads.clear();
   
+  // unsetup parent class
   DiffRHSFluxReconstruction::unsetup();
 }
 

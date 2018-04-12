@@ -15,6 +15,8 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Command to add the time residual
+ * 
  * @author Kris Van den Abeele
  */
 class PseudoSteadyStdTimeRHSJacob : public FluxReconstructionSolverCom {
@@ -35,6 +37,12 @@ public:
    * in this command before processing phase
    */
   virtual void setup();
+  
+  /**
+   * Unset up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void unsetup();
 
   /**
    * Execute Processing actions

@@ -20,9 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent the base interface flux computer
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent a null point distribution
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class NullPointDistribution : public BasePointDistribution {
 public:  // methods
 

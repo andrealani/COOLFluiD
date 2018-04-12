@@ -3,8 +3,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 #include "Common/NonCopyable.hh"
 
 #include "Framework/CFSide.hh"
@@ -25,6 +23,7 @@ namespace COOLFluiD {
  * This class builds Cell's. Each Cell has pointers to the neighbouring Face's.
  *
  * @author Kris Van Den Abeele
+ * @author Ray Vandenhoeck
  */
 class CellToFaceGEBuilder {
 public:
@@ -64,7 +63,7 @@ public:
   ~CellToFaceGEBuilder();
 
   /**
-   * Set up the pool
+   * Set up the data
    */
   void setup();
 

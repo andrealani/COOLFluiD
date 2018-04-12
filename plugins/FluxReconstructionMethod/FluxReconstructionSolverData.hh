@@ -40,9 +40,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represents data object accessed by different FluxReconstructionSolverCom's
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represents data object accessed by different FluxReconstructionSolverCom's
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class FluxReconstructionSolverData : public Framework::SpaceMethodData {
 
 public: // functions
@@ -130,22 +133,22 @@ public: // functions
   /// Gets the flux point distribution
   Common::SafePtr< BasePointDistribution > getFluxPntDistribution() const
   {
-    cf_assert(m_fluxpntdistribution.isNotNull());
-    return m_fluxpntdistribution.getPtr();
+    cf_assert(m_fluxPntDistribution.isNotNull());
+    return m_fluxPntDistribution.getPtr();
   }
   
   /// Gets the solution point distribution
   Common::SafePtr< BasePointDistribution > getSolPntDistribution() const
   {
-    cf_assert(m_solpntdistribution.isNotNull());
-    return m_solpntdistribution.getPtr();
+    cf_assert(m_solPntDistribution.isNotNull());
+    return m_solPntDistribution.getPtr();
   }
   
   /// Gets the correction function computation strategy
   Common::SafePtr< BaseCorrectionFunction > getCorrectionFunction() const
   {
-    cf_assert(m_correctionfunction.isNotNull());
-    return m_correctionfunction.getPtr();
+    cf_assert(m_correctionFunction.isNotNull());
+    return m_correctionFunction.getPtr();
   }
   
   /// Gets the correction function computation strategy
@@ -343,22 +346,22 @@ private:  // data
   Common::SelfRegistPtr< ReconstructStatesFluxReconstruction > m_statesReconstructor;
   
   /// Flux point distribution
-  Common::SelfRegistPtr< BasePointDistribution > m_fluxpntdistribution;
+  Common::SelfRegistPtr< BasePointDistribution > m_fluxPntDistribution;
 
   /// String to configure flux point distribution
-  std::string m_fluxpntdistributionStr;
+  std::string m_fluxPntDistributionStr;
   
   /// Solution point distribution
-  Common::SelfRegistPtr< BasePointDistribution > m_solpntdistribution;
+  Common::SelfRegistPtr< BasePointDistribution > m_solPntDistribution;
 
   /// String to configure solution point distribution
-  std::string m_solpntdistributionStr;
+  std::string m_solPntDistributionStr;
     
   /// Correction function computation strategy
-  Common::SelfRegistPtr< BaseCorrectionFunction > m_correctionfunction;
+  Common::SelfRegistPtr< BaseCorrectionFunction > m_correctionFunction;
     
   /// String to configure correction function computation strategy
-  std::string m_correctionfunctionStr;
+  std::string m_correctionFunctionStr;
   
   /// String for the linear variable name (for instance, the Roe average variables)
   std::string m_linearVarStr;

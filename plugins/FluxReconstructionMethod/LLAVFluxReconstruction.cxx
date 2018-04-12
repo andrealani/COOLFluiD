@@ -41,7 +41,28 @@ LLAVFluxReconstructionFluxReconstructionProvider("LLAV");
 LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   DiffRHSFluxReconstruction(name),
   m_updateVarSet(CFNULL),
+  m_order(),
+  m_transformationMatrix(),
+  m_statesPMinOne(),
+  m_epsilon(),
+  m_solEpsilons(),
+  m_epsilonLR(),
+  m_epsilon0(),
+  m_s0(),
+  m_s(),
+  m_kappa(),
+  m_peclet(),
+  m_nodeEpsilons(),
+  m_nbNodeNeighbors(),
+  m_cellEpsilons(),
+  m_cellNodes(),
+  m_faceNodes(),
+  m_nbrCornerNodes(),
+  m_flagComputeNbNghb(),
+  m_nodePolyValsAtFlxPnts(),
+  m_nodePolyValsAtSolPnts(),
   m_cellNodesConn(CFNULL),
+  m_elemIdx(),
   m_cellBuilder(CFNULL),
   m_isFaceOnBoundaryCell(CFNULL),
   m_nghbrCellSideCell(CFNULL),
@@ -49,34 +70,16 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_faceOrientsCell(CFNULL),
   m_faceBCIdxCell(CFNULL),
   m_faces(),
-  m_order(),
-  m_transformationMatrix(),
-  m_statesPMinOne(),
-  m_epsilon(),
-  m_s0(),
-  m_s(),
-  m_epsilon0(),
-  m_kappa(),
-  m_peclet(),
-  m_cellNodes(),
-  m_faceNodes(),
-  m_nbrCornerNodes(),
-  m_nodeEpsilons(),
-  m_nbNodeNeighbors(),
-  m_cellEpsilons(),
-  m_epsilonLR(),
-  m_flagComputeNbNghb(),
-  m_nodePolyValsAtFlxPnts(),
-  m_nodePolyValsAtSolPnts(),
-  m_solEpsilons(),
-  m_elemIdx(),
-  m_flxPntGhostGrads(),
   m_bcStateComputers(CFNULL),
+  m_flxPntGhostGrads(),
   m_freezeLimiterRes(),
   m_freezeLimiterIter(),
   m_useMax(),
   m_totalEps(),
-  m_jacob(false)
+  m_totalEpsGlobal(),
+  m_jacob(false),
+  m_nbPosPrev(),
+  m_nbPosPrevGlobal()
   {
     addConfigOptionsTo(this);
     
@@ -91,6 +94,19 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   
     m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
     setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
+    
+    m_addPosPrev = false;
+    setParameter( "AddPositivityPreservation", &m_addPosPrev);
+    
+    m_minValue = 1.0e-12;
+    setParameter( "MinValue", &m_minValue);
+    cf_assert(m_minValue > 0.0);
+    
+    m_monitoredVar = 0;
+    setParameter( "MonitoredVar", &m_monitoredVar);
+    
+    m_viscFactor = 2.0;
+    setParameter( "ViscFactor", &m_viscFactor);
   }
   
   
@@ -105,6 +121,14 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
   options.addConfigOption< CFuint >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+  
+  options.addConfigOption< bool >("AddPositivityPreservation","Bool telling whether extra viscosity needs to be added for positivity preservation.");
+  
+  options.addConfigOption< CFreal >("MinValue","Minimum value at which point positivity preservation is added.");
+  
+  options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
+  
+  options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -156,6 +180,8 @@ void LLAVFluxReconstruction::execute()
   
   m_nodeEpsilons = 0.0;
   
+  m_nbPosPrev = 0;
+  
   //// Loop over the elements to compute the artificial viscosities
   
   // loop over element types, for the moment there should only be one
@@ -199,7 +225,22 @@ void LLAVFluxReconstruction::execute()
     }
   }
   
-  CFLog(INFO, "total eps: " << m_totalEps << "\n");
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+#ifdef CF_HAVE_MPI
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    const CFuint count = 1;
+    MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(&m_nbPosPrev, &m_nbPosPrevGlobal, count, MPI_UNSIGNED, MPI_SUM, comm);
+#endif
+    
+  if (PE::GetPE().GetRank(nsp) == 0) 
+  {
+    // print total artificial viscosity and number of positivity preservations
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+  }
+
+  PE::GetPE().setBarrier(nsp);
   
   m_flagComputeNbNghb = false;
   
@@ -455,9 +496,6 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
-    // dereference the state
-    State& stateSolPnt = *(*m_cellStates)[iSolPnt];
-
     vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
     vector< RealVector* > grad;
     grad.resize(m_nbrEqs);
@@ -608,7 +646,20 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       }
 	
       // compute ghost gradients
-      (*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,unitNormalFlxPnts,m_flxPntCoords);
+      if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+      {
+	for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+        {
+	  for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+	    *(m_flxPntGhostGrads[iFlxPnt][iVar]) = *(m_cellGradFlxPnt[0][iFlxPnt][iVar]);
+	  }
+	}
+      }
+      else
+      {
+	(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,unitNormalFlxPnts,m_flxPntCoords);
+      }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
@@ -725,6 +776,13 @@ void LLAVFluxReconstruction::setCellData()
       m_solEpsilons[iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
       //CFLog(VERBOSE, "solEps: " << m_solEpsilons[iSol] << ", nodeEps: " << m_nodeEpsilons[nodeIdx] << ", nghb: " << m_nbNodeNeighbors[nodeIdx] << "\n");
     }
+    
+//       CFuint ID = m_cell->getID();
+//   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
+//   if (cond)
+//   {
+//     CFLog(INFO, "nodal eps = " << m_solEpsilons[iSol] << "\n");
+//   }
   }
 }
 
@@ -794,6 +852,14 @@ void LLAVFluxReconstruction::computeEpsilon()
   {
     m_epsilon = m_epsilon0*0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
   }
+  cf_assert(m_epsilon > -1e-8);
+  //if (m_epsilon >= m_epsilon0*0.0001) CFLog(INFO, "eps0 = " << m_epsilon0 << ", DS: " << m_s-m_s0 << "\n");
+//   CFuint ID = m_cell->getID();
+//   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
+//   if (cond)
+//   {
+//     CFLog(INFO, "eps = " << m_epsilon << ", DS: " << m_s-m_s0 << ", eps0: " << m_epsilon0 << "\n");
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -808,7 +874,53 @@ void LLAVFluxReconstruction::computeEpsilon0()
   const CFreal deltaKsi = 1.0/(m_order+2.0);
   
   m_epsilon0 = wavespeed*(2.0/m_peclet - deltaKsi/m_peclet);
+  
+  if (m_addPosPrev) addPositivityPreservation();
 
+  //CFLog(INFO, "lambda: " << wavespeed << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void LLAVFluxReconstruction::addPositivityPreservation()
+{ 
+  //CFreal minState = MathTools::MathConsts::CFrealMax();
+  
+  DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+  
+  const CFreal posPrevValue = posPrev[m_cell->getID()];
+  
+//   for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+//   {
+//     RealVector extrapolatedState;
+//     extrapolatedState.resize(m_nbrEqs);
+//     extrapolatedState = 0.0;
+// 
+//     // loop over the sol pnts to compute the states and grads in the flx pnts
+//     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//     {
+//       extrapolatedState += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*(*((*(m_cellStates))[iSol]));
+//     }
+//     
+//     CFreal rho = extrapolatedState[0];
+//     CFreal rhoU = extrapolatedState[1];
+//     CFreal rhoV = extrapolatedState[2];
+//     CFreal rhoE = extrapolatedState[3];
+//     CFreal press = 0.4*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+//       
+//     minState = min(minState, press);
+//   }
+//   
+//   cf_assert(minState > 0.0);
+  
+  if (posPrevValue < m_minValue)  //minState < m_minValue
+  {
+    //m_epsilon0 *= m_minValue/minState;
+    //m_epsilon0 *= (m_viscFactor - 1.0)/(m_minValue*m_minValue)*minState*minState - 2.0*(m_viscFactor - 1.0)/m_minValue*minState + m_viscFactor;
+    const CFreal factor = min(10*m_viscFactor, (m_viscFactor - 1.0)/(m_minValue*m_minValue)*posPrevValue*posPrevValue - 2.0*(m_viscFactor - 1.0)/m_minValue*posPrevValue + m_viscFactor);
+    m_epsilon0 *= factor;
+    m_nbPosPrev++;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -834,7 +946,12 @@ void LLAVFluxReconstruction::computeSmoothness()
   {
     m_s = log10(sNum/sDenom);
   }
-  CFLog(VERBOSE, "S = " << m_s << ", num = " << sNum << ", denom = " << sDenom << "\n");
+//   CFuint ID = m_cell->getID();
+//   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
+//   if (cond)
+//   {
+//     CFLog(INFO, "S = " << m_s << ", num = " << sNum << ", denom = " << sDenom << "\n");
+//   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -875,6 +992,8 @@ void LLAVFluxReconstruction::storeEpsilon()
 void LLAVFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup parent class
   DiffRHSFluxReconstruction::setup();
 
   // get the update varset
@@ -968,6 +1087,8 @@ void LLAVFluxReconstruction::setup()
       m_flxPntGhostGrads[iFlx].push_back(new RealVector(m_dim));
     }
   }
+  
+  cf_assert(m_monitoredVar < m_nbrEqs);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -986,6 +1107,7 @@ void LLAVFluxReconstruction::unsetup()
   }
   m_flxPntGhostGrads.clear();
   
+  // unsetup parent class
   DiffRHSFluxReconstruction::unsetup();
 }
 

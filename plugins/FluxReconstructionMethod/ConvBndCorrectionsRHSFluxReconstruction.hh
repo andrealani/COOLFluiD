@@ -121,6 +121,9 @@ protected: // data
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
   
+  /// socket for gradientsAV
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
+  
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
   
@@ -160,9 +163,6 @@ protected: // data
   /// number of flux pnts on a face
   CFuint m_nbrFaceFlxPnts;
   
-  /// vector containing pointers to the face normals
-  Common::SafePtr< std::vector< RealVector > > m_faceNormals;
-  
   /// solution point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
   
@@ -189,9 +189,6 @@ protected: // data
   
   /// extrapolated states in the flux points of the cell
   std::vector< Framework::State* > m_cellStatesFlxPnt;
-  
-  /// vector containing pointers to the fluxes in the flux points
-  std::vector< RealVector > m_cellFlx;
   
   /// ghost flux point solutions
   std::vector< Framework::State* > m_flxPntGhostSol;
@@ -225,6 +222,9 @@ protected: // data
   
   /// coefs to extrapolate the states to the flx pnts
   Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// local coordinates of the flux points on one face
+  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
   
   private:
 

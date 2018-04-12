@@ -18,7 +18,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a Vincent-Castonguay-Jameson-Huyn Correction Function
+ * This class represents a Vincent-Castonguay-Jameson-Huyn Correction Function (also called Energy Stable FR schemes)
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen
@@ -38,11 +38,29 @@ public:  // methods
 
   /// Destructor
   ~VCJH();
+  
+  /// Gets the Class name
+  static std::string getClassName()
+  {
+    return "VCJH";
+  }
+  
+  /// Set up private data and data
+  virtual void setup();
+  
+  /// Unset up private data and data
+  virtual void unsetup();
     
-  /// Compute the VCJH correction function of an instance of FluxReconstructionElementData
+  /**
+   * Compute the VCJH correction function of an instance of FluxReconstructionElementData. 
+   * corrfcts contains for each solution point the contrbution of each flux point (being a realvector with the dimensionality of the test case)
+   */
   void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > >& corrcts);
     
-  /// Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData
+  /**
+   * Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData. 
+   * corrfcts contains for each solution point the contrbution of each flux point
+   */
   void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts);
     
 private : // helper functions
@@ -55,19 +73,6 @@ private : // helper functions
 private : // private data
   /// Value of the C factor for VCJH 1D correction function
   CFreal  m_cfactor;
-    
-  /// Gets the Class name
-  static std::string getClassName()
-  {
-    return "VCJH";
-  }
-
-  /// Set up private data and data
-  virtual void setup();
-  
-  /// Unset up private data and data
-  virtual void unsetup();
-
 
 }; // class VCJH
 

@@ -18,9 +18,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to deallocate data specific to a FluxReconstruction method
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This is a standard command to deallocate data specific to a FluxReconstruction method
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class StdUnSetup : public FluxReconstructionSolverCom {
 
 public: // functions
@@ -56,6 +59,12 @@ protected: // protected data
     
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+  /// socket for gradientsAV
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
+  
+  /// socket for positivity preservation values
+  Framework::DataSocketSink< CFreal > socket_posPrev;
 
 }; // class StdUnSetup
 

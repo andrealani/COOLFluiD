@@ -49,16 +49,17 @@ public: // functions
 private: // data
 
   /// socket for Rhs
-  Framework::DataSocketSink<
-                              CFreal> socket_rhs;
+  Framework::DataSocketSink< CFreal > socket_rhs;
 
   /// socket for updateCoeff
   /// denominators of the coefficients for the update
-  Framework::DataSocketSink<
-                              CFreal> socket_updateCoeff;
+  Framework::DataSocketSink< CFreal > socket_updateCoeff;
 
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+  /// socket for gradientsAV
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
 
 }; // class Prepare
 

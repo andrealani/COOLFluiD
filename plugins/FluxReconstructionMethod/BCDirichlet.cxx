@@ -85,12 +85,13 @@ void BCDirichlet::computeGhostStates(const vector< State* >& intStates,
     State& intSol   = *intStates  [iState];
     State& ghostSol = *ghostStates[iState];
 
-  // compute input variables depending on space and time
-      for (CFuint i=0; i<coords[iState].size(); ++i)
-  	space_time[i]=coords[iState][i];  
-      space_time[coords[iState].size()]= time; // time
-      m_vFunction.evaluate(space_time, *m_inputState);
-
+    // compute input variables depending on space and time
+    for (CFuint i=0; i<coords[iState].size(); ++i)
+    {
+      space_time[i]=coords[iState][i];  
+    }
+    space_time[coords[iState].size()] = time; // time
+    m_vFunction.evaluate(space_time, *m_inputState);
   
     // transform to update variables
     State dimState = *m_inputToUpdateVar->transform(m_inputState);
@@ -175,24 +176,21 @@ void BCDirichlet::configure ( Config::ConfigArgs& args )
   // get the physical model that we are dealing with
   // to pass it to the variable transformer
   std::string namespc = getMethodData().getNamespace();
-  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
-    (SubSystemStatusStack::getCurrentName()).getNamespace(namespc);
+  SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(namespc);
   SafePtr<PhysicalModel> physModel = PhysicalModelStack::getInstance().getEntryByNamespace(nsp);
 
   // get the name of the update variable set
-  std::string _updateVarStr = getMethodData().getUpdateVarStr();
+  std::string updateVarStr = getMethodData().getUpdateVarStr();
 
   // create the transformer from input to update variables
-  if (m_inputVarStr.empty()) {
-    m_inputVarStr = _updateVarStr;
+  if (m_inputVarStr.empty()) 
+  {
+    m_inputVarStr = updateVarStr;
   }
 
-  std::string provider =
-    VarSetTransformer::getProviderName(physModel->getNameImplementor(), m_inputVarStr, _updateVarStr);
+  std::string provider = VarSetTransformer::getProviderName(physModel->getNameImplementor(), m_inputVarStr, updateVarStr);
 
-  m_inputToUpdateVar =
-    Environment::Factory<VarSetTransformer>::getInstance()
-    .getProvider(provider)->create(physModel->getImplementor());
+  m_inputToUpdateVar = Environment::Factory<VarSetTransformer>::getInstance().getProvider(provider)->create(physModel->getImplementor());
   cf_assert(m_inputToUpdateVar.isNotNull());
 
   // parsing the functions that the user inputed
@@ -202,10 +200,12 @@ void BCDirichlet::configure ( Config::ConfigArgs& args )
   if (m_vars.size() == 2 && m_vars[0] == "x" && m_vars[1] == "y") {m_vars.push_back("t");}
   if (m_vars.size() == 3 && m_vars[0] == "x" && m_vars[1] == "y" && m_vars[2] == "z") {m_vars.push_back("t");}
   m_vFunction.setVariables(m_vars);
-  try {
+  try 
+  {
     m_vFunction.parse();
   }
-  catch (Common::ParserException& e) {
+  catch (Common::ParserException& e) 
+  {
     CFout << e.what() << "\n";
     throw; // retrow the exception to signal the error to the user
   }

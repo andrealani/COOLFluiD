@@ -29,9 +29,12 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////  
     
 
-/// This class implements a FluxReconstruction solver
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class implements a FluxReconstruction solver
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class FluxReconstructionSolver : public Framework::SpaceMethod {
 
 public: // functions
@@ -120,7 +123,7 @@ protected: // interface implementation functions
   /// Apply boundary conditions for diffusive terms
   virtual void applyBCDiffImpl();
   
-  /// add source terms
+  /// Add source terms
   virtual void addSourceTermsImpl();
 
   /// Prepare to compute
@@ -180,6 +183,9 @@ private: // data
   
   /// Command used to finalize the computation of the RHS
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_finalizeRHS;
+  
+  /// The commands to use for initializing the solution.
+  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;
 
   ///The Setup string for configuration
   std::string m_setupStr;
@@ -220,9 +226,6 @@ private: // data
   
   ///The finalizeRHS string for configuration
   std::string m_finalizeRHSStr;
-  
-  /// The commands to use for initializing the solution.
-  std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;
 
   /// The solution initializing command types
   std::vector<std::string> m_initTypeStr;

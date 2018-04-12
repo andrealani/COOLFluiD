@@ -75,7 +75,7 @@ protected: //functions
    * @pre setOtherFacesLocalIdxs()
    * @pre setFaceNeighbourStates()
    */
-  void setFaceNeighbourGradients();
+  virtual void setFaceNeighbourGradients();
 
   /**
    * compute the unperturbed gradients minus the current face term

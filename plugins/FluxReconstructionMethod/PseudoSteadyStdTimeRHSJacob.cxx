@@ -57,6 +57,7 @@ PseudoSteadyStdTimeRHSJacob::~PseudoSteadyStdTimeRHSJacob()
 
 void PseudoSteadyStdTimeRHSJacob::setup()
 {
+  // setup parent class
   FluxReconstructionSolverCom::setup();
 
   // get number of equations in the physical model
@@ -80,6 +81,14 @@ void PseudoSteadyStdTimeRHSJacob::setup()
 
   // resize m_diagValues
   m_diagValues.resize(maxNbrSolPnts);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PseudoSteadyStdTimeRHSJacob::unsetup()
+{
+  // unsetup parent class
+  FluxReconstructionSolverCom::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -65,17 +65,18 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_prepare(),
   m_convSolve(),
   m_diffSolve(),
-  m_limiter(),
-  m_srcTerms(),
-  m_inits(),
-  m_bcs(),
   m_timeRHSJacob(),
-  m_bcsComs(),
-  m_bcsDiff(),
-  m_bcsDiffComs(),
+  m_limiter(),
+  m_artificialVisc(),
+  m_physicality(),
   m_computeError(),
   m_finalizeRHS(),
-  m_artificialVisc()
+  m_inits(),
+  m_bcs(),
+  m_bcsComs(),
+  m_srcTerms(),
+  m_bcsDiff(),
+  m_bcsDiffComs()
 {
   addConfigOptionsTo(this);
   m_data.reset(new FluxReconstructionSolverData(this));
@@ -479,11 +480,8 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
     m_finalizeRHS->execute();
   }
   
-  cf_assert(m_limiter.isNotNull());
+  //cf_assert(m_limiter.isNotNull());
   //m_limiter->execute();
-
-//   // divide by volume/Jacobian determinant
-//   m_divideRHSByCellVol->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////

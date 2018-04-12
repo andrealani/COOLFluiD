@@ -41,56 +41,59 @@ diffRHSFluxReconstructionProvider("DiffRHS");
 DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_gradients("gradients"),
+  socket_gradientsAV("gradientsAV"),
+  socket_posPrev("posPrev"),
   socket_rhs("rhs"),
   socket_updateCoeff("updateCoeff"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
   m_diffusiveVarSet(CFNULL),
   m_cellBuilder(CFNULL),
-  m_faceBuilder(CFNULL),
-  m_solPntsLocalCoords(CFNULL),
-  m_faceIntegrationCoefs(CFNULL),
-  m_faceMappedCoordDir(CFNULL),
-  m_faceFlxPntConn(CFNULL),
-  m_faceFlxPntConnPerOrient(CFNULL),
-  m_riemannFluxComputer(CFNULL),
-  m_corrFctComputer(CFNULL),
-  m_faceConnPerOrient(CFNULL),
-  m_faceLocalDir(CFNULL),
-  m_solPolyValsAtFlxPnts(CFNULL),
-  m_solPolyDerivAtSolPnts(CFNULL),
-  m_faceFlxPntCellMappedCoords(CFNULL),
-  m_flxPntFlxDim(CFNULL),
-  m_flxPntRiemannFlux(),
   m_iElemType(),
   m_cell(),
   m_cellStates(),
+  m_cellStatesFlxPnt(),
+  m_cellFlx(),
+  m_solPntsLocalCoords(CFNULL),
+  m_flxPntsLocalCoords(CFNULL),
+  m_faceFlxPntConnPerOrient(CFNULL),
+  m_faceFlxPntConn(CFNULL),
+  m_faceConnPerOrient(CFNULL),
+  m_faceBuilder(CFNULL),
   m_nbrEqs(),
   m_dim(),
   m_orient(),
+  m_nbrSolPnts(),
+  m_nbrFaceFlxPnts(),
   m_face(),
   m_cells(),
-  m_states(),
-  m_contFlx(),
-  m_cellFlx(),
-  m_divContFlx(),
+  m_riemannFluxComputer(CFNULL),
+  m_corrFctComputer(CFNULL),
   m_corrFct(),
   m_corrFctDiv(),
-  m_cellStatesFlxPnt(),
-  m_faceJacobVecAbsSizeFlxPnts(),
-  m_faceJacobVecSizeFlxPnts(),
-  m_unitNormalFlxPnts(),
-  m_cellFluxProjVects(),
-  m_flxPntCoords(),
+  m_states(),
+  m_flxPntRiemannFlux(),
+  m_contFlx(),
+  m_divContFlx(),
   m_waveSpeedUpd(),
-  m_nbrSolPnts(),
+  m_faceJacobVecAbsSizeFlxPnts(),
+  m_faceIntegrationCoefs(CFNULL),
+  m_faceMappedCoordDir(CFNULL),
+  m_faceLocalDir(CFNULL),
+  m_unitNormalFlxPnts(),
+  m_faceJacobVecSizeFlxPnts(),
+  m_flxPntCoords(),
+  m_cellFluxProjVects(),
   m_cellGrads(),
   m_cellGradFlxPnt(),
-  m_cflConvDiffRatio(),
-  m_cellVolume(),
+  m_solPolyValsAtFlxPnts(CFNULL),
+  m_solPolyDerivAtSolPnts(CFNULL),
   m_faceInvCharLengths(),
-  m_nbrFaceFlxPnts(),
+  m_cellVolume(),
+  m_cflConvDiffRatio(),
+  m_faceFlxPntCellMappedCoords(CFNULL),
   m_freezeGrads(),
   m_extrapolatedFluxes(),
+  m_flxPntFlxDim(CFNULL),
   m_avgSol(),
   m_avgGrad()
   {
@@ -118,6 +121,8 @@ DiffRHSFluxReconstruction::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
   result.push_back(&socket_gradients);
+  result.push_back(&socket_gradientsAV);
+  result.push_back(&socket_posPrev);
   result.push_back(&socket_rhs);
   result.push_back(&socket_updateCoeff);
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
@@ -438,6 +443,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     {
       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
     }
+    //if (m_cell->getID() == 1220) CFLog(VERBOSE, "state: " << m_avgSol << ", grad: " << *(grad[1]) << ", flx: " << m_contFlx[iSolPnt][1] << "\n");
 
     for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
     {
@@ -656,6 +662,8 @@ void DiffRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
 void DiffRHSFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup parent class
   FluxReconstructionSolverCom::setup();
   
   // boolean telling whether there is a diffusive term
@@ -862,6 +870,7 @@ void DiffRHSFluxReconstruction::unsetup()
   m_cellGradFlxPnt[RIGHT].clear();
   m_cellGradFlxPnt.clear();
   
+  // unsetup parent class
   FluxReconstructionSolverCom::unsetup();
 }
 

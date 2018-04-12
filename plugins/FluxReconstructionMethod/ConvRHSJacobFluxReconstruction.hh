@@ -90,11 +90,11 @@ protected: // data
   /// accumulator for LSSMatrix for the loop over faces
   std::auto_ptr<Framework::BlockAccumulator> m_accFace;
   
-  /// unperturbed updates to the residuals
-  std::vector< RealVector > m_resUpdates;
-
   /// perturbed updates to the residuals
   std::vector< RealVector > m_pertResUpdates;
+  
+  /// unperturbed updates to the residuals
+  std::vector< RealVector > m_resUpdates;
 
   /// derivative of update to one CV-residual
   RealVector m_derivResUpdates;

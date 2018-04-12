@@ -21,9 +21,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent the base correction function computer
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/** 
+ * This class represent the base correction function computer
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class BaseCorrectionFunction : public FluxReconstructionSolverStrategy {
 
 public:  // types
@@ -48,10 +51,16 @@ public:  // methods
   /// Gets the polymorphic type name
   virtual std::string getPolymorphicTypeName() {return getClassName();}
     
-  /// Compute the VCJH correction function of an instance of FluxReconstructionElementData
+  /**
+   * Compute the correction function of an instance of FluxReconstructionElementData. 
+   * corrfcts contains for each solution point the contrbution of each flux point (being a realvector with the dimensionality of the test case)
+   */
   virtual void computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< RealVector > >& corrcts) = 0;
     
-  /// Compute the divergence of the VCJH correction function of an instance of FluxReconstructionElementData
+  /**
+   * Compute the divergence of the correction function of an instance of FluxReconstructionElementData. 
+   * corrfcts contains for each solution point the contrbution of each flux point
+   */
   virtual void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts) = 0;
 
   /// Set up private data and data

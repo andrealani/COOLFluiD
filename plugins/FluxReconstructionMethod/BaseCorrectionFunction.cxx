@@ -36,6 +36,7 @@ void BaseCorrectionFunction::setup()
 {
   CFAUTOTRACE;
   
+  // setup parent class
   FluxReconstructionSolverStrategy::setup();
 }
 
@@ -45,6 +46,7 @@ void BaseCorrectionFunction::unsetup()
 {
   CFAUTOTRACE;
   
+  // unsetup parent class
   FluxReconstructionSolverStrategy::unsetup();
 }
 

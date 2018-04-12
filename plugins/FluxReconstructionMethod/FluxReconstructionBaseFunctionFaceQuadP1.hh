@@ -104,7 +104,6 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-    CFLog(NOTICE, "BaseFctFaceQuadP1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     const CFreal ksiM = (1.0 - mappedCoord[0]);
     const CFreal ksiP = (1.0 + mappedCoord[0]);
     const CFreal etaM = (1.0 - mappedCoord[1]);

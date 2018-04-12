@@ -44,6 +44,8 @@ StdSetup::StdSetup(const std::string& name) :
   socket_isUpdated("isUpdated"),
   socket_nodes("nodes"),
   socket_gradients("gradients"),
+  socket_gradientsAV("gradientsAV"),
+  socket_posPrev("posPrev"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
   socket_normals("normals")
 {
@@ -76,6 +78,8 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   result.push_back(&socket_nstatesProxy);
   result.push_back(&socket_nstates);
   result.push_back(&socket_gradients);
+  result.push_back(&socket_gradientsAV);
+  result.push_back(&socket_posPrev);
   result.push_back(&socket_isUpdated);
   result.push_back(&socket_normals);
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
@@ -142,13 +146,42 @@ void StdSetup::execute()
 
     // resize gradients
     gradients.resize(nbStates);
-    for (CFuint iState = 0; iState < nbStates; ++iState) {
+    for (CFuint iState = 0; iState < nbStates; ++iState) 
+    {
       gradients[iState].resize(nbrGrads);
-      for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad) {
+      for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad) 
+      {
         gradients[iState][iGrad].resize(dim);
       }
     }
+    
+    // get datahandle
+    DataHandle< std::vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    // resize gradients
+    gradientsAV.resize(nbStates);
+    for (CFuint iState = 0; iState < nbStates; ++iState) 
+    {
+      gradientsAV[iState].resize(nbrGrads);
+      for (CFuint iGrad = 0; iGrad < nbrGrads; ++iGrad) 
+      {
+        gradientsAV[iState][iGrad].resize(dim);
+      }
+    }
+  
+    // get the elementTypeData
+    SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  
+    // loop over element types, for the moment there should only be one
+    const CFuint nbrElemTypes = elemType->size();
+    const CFuint nbrElems = (*elemType)[nbrElemTypes-1].getEndIdx();
+
+    // initialize the positivity preservation values
+    DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+    
+    posPrev.resize(nbrElems);
   }
+  
   // CREATE ADDITIONAL MESH DATASTRUCTURE
 
   // get the start indexes of the range of faces with a certain orientation

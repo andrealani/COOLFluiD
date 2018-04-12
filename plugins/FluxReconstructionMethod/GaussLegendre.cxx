@@ -93,6 +93,66 @@ std::vector<CFreal> GaussLegendre::getLocalCoords1D(CFPolyOrder::Type solOrder)
 	coords[4] = 0.6612093864662645;
 	coords[5] = 0.9324695142031521;
       } break;
+      case CFPolyOrder::ORDER6:
+      {
+        coords[0] = -0.949107912342759;
+	coords[1] = -0.741531185599394;
+	coords[2] = -0.405845151377397;
+	coords[3] = 0.0;
+	coords[4] = 0.405845151377397;
+	coords[5] = 0.741531185599394;
+	coords[6] = 0.949107912342759;
+      } break;
+      case CFPolyOrder::ORDER7:
+      {
+        coords[0] = -0.960289856497536;
+	coords[1] = -0.796666477413627;
+	coords[2] = -0.525532409916329;
+	coords[3] = -0.183434642495650;
+	coords[4] = 0.183434642495650;
+	coords[5] = 0.525532409916329;
+	coords[6] = 0.796666477413627;
+	coords[7] = 0.960289856497536;
+      } break;
+      case CFPolyOrder::ORDER8:
+      {
+        coords[0] = -0.968160239507626;
+	coords[1] = -0.836031107326636;
+	coords[2] = -0.613371432700590;
+	coords[3] = -0.324253423403809;
+	coords[4] = 0.0;
+	coords[5] = 0.324253423403809;
+	coords[6] = 0.613371432700590;
+	coords[7] = 0.836031107326636;
+	coords[8] = 0.968160239507626;
+      } break;
+      case CFPolyOrder::ORDER9:
+      {
+        coords[0] = -0.973906528517172;
+	coords[1] = -0.865063366688985;
+	coords[2] = -0.679409568299024;
+	coords[3] = -0.433395394129247;
+	coords[4] = -0.148874338981631;
+	coords[5] = 0.148874338981631;
+	coords[6] = 0.433395394129247;
+	coords[7] = 0.679409568299024;
+	coords[8] = 0.865063366688985;
+	coords[9] = 0.973906528517172;
+      } break;
+      case CFPolyOrder::ORDER10:
+      {
+        coords[0] = -0.978228658146057;
+	coords[1] = -0.887062599768095;
+	coords[2] = -0.730152005574049;
+	coords[3] = -0.519096129110681;
+	coords[4] = -0.269543155952345;
+	coords[5] = 0.0;
+	coords[6] = 0.269543155952345;
+	coords[7] = 0.519096129110681;
+	coords[8] = 0.730152005574049;
+	coords[9] = 0.887062599768095;
+	coords[10] = 0.978228658146057;
+      } break;
       default:
       {
         throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
@@ -109,9 +169,8 @@ void GaussLegendre::setup()
 {
   CFAUTOTRACE;
   
+  // setup parent class
   BasePointDistribution::setup();
-
-  CFLog(VERBOSE, "GaussLegendre::setup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -120,9 +179,8 @@ void GaussLegendre::unsetup()
 {
   CFAUTOTRACE;
   
+  // unsetup parent class
   BasePointDistribution::unsetup();
-  
-  CFLog(VERBOSE, "GaussLegendre::unsetup()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

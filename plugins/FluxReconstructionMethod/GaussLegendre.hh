@@ -20,9 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent a Gauss-Legendre distribution of points
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent a Gauss-Legendre distribution of points
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class GaussLegendre : public BasePointDistribution {
 public:  // methods
 

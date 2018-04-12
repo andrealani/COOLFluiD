@@ -56,7 +56,7 @@ RealVector& CentredFlux::computeFlux(State& lState,
   m_sumFlux  = updateVarSet->getFlux()(m_pData[LEFT], normal);
   m_sumFlux += updateVarSet->getFlux()(m_pData[RIGHT], normal);
   
-  // compute the Centred Riemann flux
+  // compute the centred Riemann flux
   m_rFlux = 0.5*(m_sumFlux);
   
   return m_rFlux;

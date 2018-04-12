@@ -128,6 +128,8 @@ void AnalyticalSourceTerm::configure ( Config::ConfigArgs& args )
 void AnalyticalSourceTerm::setup()
 {
   CFAUTOTRACE;
+  
+  // setup the parent class
   StdSourceTerm::setup();
 
   // get dimensionality
@@ -145,6 +147,8 @@ void AnalyticalSourceTerm::setup()
 void AnalyticalSourceTerm::unsetup()
 {
   CFAUTOTRACE;
+  
+  // unsetup the parent class
   StdSourceTerm::unsetup();
 }
 

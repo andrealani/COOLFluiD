@@ -41,32 +41,37 @@ LLAVJacobFluxReconstructionFluxReconstructionProvider("LLAVJacob");
 LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name) :
   DiffRHSJacobFluxReconstruction(name),
   m_updateVarSet(CFNULL),
-  m_cellNodesConn(CFNULL),
-  m_facesCell(),
   m_order(),
   m_transformationMatrix(),
   m_statesPMinOne(),
   m_epsilon(),
+  m_solEpsilons(),
+  m_epsilonLR(),
+  m_epsilon0(),
   m_s0(),
   m_s(),
-  m_epsilon0(),
   m_kappa(),
   m_peclet(),
+  m_nodeEpsilons(),
+  m_nbNodeNeighbors(),
+  m_cellEpsilons(),
   m_cellNodes(),
   m_nbrCornerNodes(),
-  m_nbNodeNeighbors(),
-  m_nodeEpsilons(),
-  m_cellEpsilons(),
-  m_epsilonLR(),
+  m_faceNodes(),
   m_flagComputeNbNghb(),
   m_nodePolyValsAtFlxPnts(),
   m_nodePolyValsAtSolPnts(),
-  m_solEpsilons(),
+  m_cellNodesConn(CFNULL),
   m_elemIdx(),
+  m_facesCell(),
   m_jacob(),
-  m_useMax(),
   m_freezeLimiterRes(),
-  m_freezeLimiterIter()
+  m_freezeLimiterIter(),
+  m_useMax(),
+  m_totalEps(),
+  m_totalEpsGlobal(),
+  m_nbPosPrev(),
+  m_nbPosPrevGlobal()
   {
     addConfigOptionsTo(this);
     
@@ -81,6 +86,19 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
   
     m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
     setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
+    
+    m_addPosPrev = false;
+    setParameter( "AddPositivityPreservation", &m_addPosPrev);
+    
+    m_minValue = 1.0e-12;
+    setParameter( "MinValue", &m_minValue);
+    cf_assert(m_minValue > 0.0);
+    
+    m_monitoredVar = 0;
+    setParameter( "MonitoredVar", &m_monitoredVar);
+    
+    m_viscFactor = 2.0;
+    setParameter( "ViscFactor", &m_viscFactor);
   }
   
   
@@ -95,6 +113,14 @@ void LLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& option
   options.addConfigOption< CFreal >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
   options.addConfigOption< CFuint >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+  
+  options.addConfigOption< bool >("AddPositivityPreservation","Bool telling whether extra viscosity needs to be added for positivity preservation.");
+  
+  options.addConfigOption< CFreal >("MinValue","Minimum value at which point positivity preservation is added.");
+  
+  options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
+  
+  options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -150,6 +176,8 @@ void LLAVJacobFluxReconstruction::execute()
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   
   m_useMax = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
+  m_totalEps = 0.0;
+  m_nbPosPrev = 0;
   
   //// Loop over the elements to compute the artificial viscosities
   
@@ -193,6 +221,23 @@ void LLAVJacobFluxReconstruction::execute()
       m_cellBuilder->releaseGE();
     }
   }
+  
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+#ifdef CF_HAVE_MPI
+    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    const CFuint count = 1;
+    MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(&m_nbPosPrev, &m_nbPosPrevGlobal, count, MPI_UNSIGNED, MPI_SUM, comm);
+#endif
+    
+  if (PE::GetPE().GetRank(nsp) == 0) 
+  {
+    // print total artificial viscosity and number of positivity preservations
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+  }
+
+  PE::GetPE().setBarrier(nsp);
   
   m_flagComputeNbNghb = false;
   
@@ -555,9 +600,6 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
-    // dereference the state
-    State& stateSolPnt = *(*m_cellStates)[iSolPnt];
-
     vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
     vector< RealVector* > grad;
     grad.resize(m_nbrEqs);
@@ -907,7 +949,61 @@ void LLAVJacobFluxReconstruction::computeEpsilon0()
   const CFreal deltaKsi = 1.0/(m_order+2.0);
   
   m_epsilon0 = wavespeed*(2.0/m_peclet - deltaKsi/m_peclet);
+  
+  if (m_addPosPrev) addPositivityPreservation();
+}
 
+//////////////////////////////////////////////////////////////////////////////
+
+void LLAVJacobFluxReconstruction::addPositivityPreservation()
+{ 
+  //CFreal minState = MathTools::MathConsts::CFrealMax();
+  
+  DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+  
+  const CFreal posPrevValue = posPrev[m_cell->getID()];
+  
+//   for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+//   {
+//     RealVector extrapolatedState;
+//     extrapolatedState.resize(m_nbrEqs);
+//     extrapolatedState = 0.0;
+// 
+//     // loop over the sol pnts to compute the states and grads in the flx pnts
+//     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//     {
+//       extrapolatedState += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSol]*(*((*(m_cellStates))[iSol]));
+//     }
+//     
+//     CFreal rho = extrapolatedState[0];
+//     CFreal rhoU = extrapolatedState[1];
+//     CFreal rhoV = extrapolatedState[2];
+//     CFreal rhoE = extrapolatedState[3];
+//     CFreal press = 0.4*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+//       
+//     minState = min(minState, press);
+//   }
+//   
+//   cf_assert(minState > 0.0);
+  
+  if (true)  //minState < m_minValue
+  {
+    //m_epsilon0 *= m_minValue/minState;
+    //m_epsilon0 *= (m_viscFactor - 1.0)/(m_minValue*m_minValue)*minState*minState - 2.0*(m_viscFactor - 1.0)/m_minValue*minState + m_viscFactor;
+    //const CFreal factor = min(100.0*m_viscFactor, (m_viscFactor - 1.0)/(m_minValue*m_minValue)*posPrevValue*posPrevValue - 2.0*(m_viscFactor - 1.0)/m_minValue*posPrevValue + m_viscFactor);
+    const CFreal a =  0.;//2.*m_minValue; //m_viscFactor*m_minValue;
+    const CFreal k = (m_minValue + a)/(tan(3.1415927/(1.0 - m_viscFactor)*(1.1 - (1.0 + m_viscFactor)/2.0)));
+    const CFreal factor = (1.0 - m_viscFactor)/3.1415927 * atan((posPrevValue + a)/k) + (1.0 + m_viscFactor)/2.0;
+    m_epsilon0 *= factor;
+    if (factor > 1.1) m_nbPosPrev++;
+    //if (factor > 1.1) CFLog(INFO, "posPrev: " << posPrevValue << ", factor: " << factor << "\n");
+    
+//     // only needed to plot where extra viscosity is added
+//     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//     {
+//       (*((*(m_cellStates))[iSol]))[0] = 10.0;
+//     }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -948,12 +1044,14 @@ void LLAVJacobFluxReconstruction::storeEpsilon()
     {
       m_nodeEpsilons[nodeID] += m_epsilon;
       m_cellEpsilons[m_cell->getID()] = m_epsilon;
+      m_totalEps += m_epsilon;
     }
     else
     {
       const CFreal maxEps = max(m_epsilon, m_cellEpsilons[m_cell->getID()]);
       m_nodeEpsilons[nodeID] += maxEps;
       m_cellEpsilons[m_cell->getID()] = maxEps;
+      m_totalEps += maxEps;
     }
     
     if (m_flagComputeNbNghb)
@@ -1227,6 +1325,8 @@ void LLAVJacobFluxReconstruction::computePertCellDiffResiduals(const CFuint side
 void LLAVJacobFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup parent class
   DiffRHSJacobFluxReconstruction::setup();
 
   // get the update varset
@@ -1307,6 +1407,7 @@ void LLAVJacobFluxReconstruction::unsetup()
 {
   CFAUTOTRACE;
   
+  // unsetup parent class
   DiffRHSJacobFluxReconstruction::unsetup();
 }
 

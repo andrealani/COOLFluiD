@@ -15,11 +15,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * A base command for adding an analytically defined source term
+ * A command for adding an analytically defined source term
  *
  * @author Ray Vandenhoeck
- *
- *
  */
 class AnalyticalSourceTerm : public StdSourceTerm {
 public:

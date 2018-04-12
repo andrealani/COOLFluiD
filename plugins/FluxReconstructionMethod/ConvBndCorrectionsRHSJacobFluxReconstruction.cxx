@@ -64,7 +64,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   // get InnerCells TopologicalRegionSet
   SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
 
-  // get current QuadFreeBCFluxReconstruction TRS
+  // get current bnd face TRS
   SafePtr<TopologicalRegionSet> faceTrs = getCurrentTRS();
   
   CFLog(VERBOSE,"ConvBndCorrectionRHSJacobFluxReconstruction::executeOnTRS: " << faceTrs->getName() << "\n");
@@ -125,12 +125,9 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
         CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
 	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 
-        // if cell is parallel updatable or the gradients have to be computed, compute states and ghost states in the flx pnts
+        // if cell is parallel updatable or the gradients have to be computed, compute the necessary data
         if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
-        {
-	  // set the face ID in the BCStateComputer
-	  m_bcStateComputer->setFaceID(m_face->getID());
-	  
+        {  
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID
 	  
@@ -138,7 +135,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
           computeFlxPntStates();
 	}
 	
-	// if the cell is parallel updatable,compute the flx correction
+	// if the cell is parallel updatable, compute the flx correction
 	if ((*m_cellStates)[0]->isParUpdatable())
 	{
 	  // compute FI-FD
@@ -271,6 +268,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::setup()
 {
   CFAUTOTRACE;
 
+  // setup parent class
   ConvBndCorrectionsRHSFluxReconstruction::setup();
   
   // get the linear system solver
@@ -301,6 +299,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::unsetup()
 {
   CFAUTOTRACE;
 
+  // unsetup parent class
   ConvBndCorrectionsRHSFluxReconstruction::unsetup();
 }
 //////////////////////////////////////////////////////////////////////////////

@@ -16,7 +16,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represent a command to check and enforce the physicality of the solution
+ * This class represent a command to check and enforce the physicality of the solution in each cell
  *
  * @author Ray Vandenhoeck
  *
@@ -55,6 +55,11 @@ public:
    * @param options a OptionList where to add the Option's
    */
   static void defineConfigOptions(Config::OptionList& options);
+  
+  /// Returns the DataSocket's that this command needs as sinks
+  /// @return a vector of SafePtr with the DataSockets
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+    needsSockets();
 
   /**
    * Execute Processing actions
@@ -79,6 +84,9 @@ protected: // functions
   void computeFlxPntStates(std::vector< RealVector >& statesFlxPnt);
 
 protected: // data
+  
+  /// socket for positivity preservation values
+  Framework::DataSocketSink< CFreal > socket_posPrev;
 
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -112,6 +120,12 @@ protected: // data
   
   /// extrapolated states in the flux points of the cell
   std::vector< RealVector > m_cellStatesFlxPnt;
+  
+  /// number of times a cell was limited
+  CFuint m_nbLimits;
+  
+  /// total number of times a cell was limited for all processors
+  CFuint m_totalNbLimits;
 
 }; // class BasePhysicality
 

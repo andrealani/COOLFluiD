@@ -42,23 +42,23 @@ DiffBndCorrectionsRHSJacobFluxReconstruction::DiffBndCorrectionsRHSJacobFluxReco
   m_faceNghbrStates(),
   m_pertResUpdates(),
   m_derivResUpdates(),
-  m_pertCorrections(),
-  m_resUpdates(),
   m_gradUpdates(),
   m_pertGrads(),
   m_solJacobDet(),
-  m_cellGradsBackUp(),
   m_otherFaceLocalIdxs(),
-  m_pertCellStatesFlxPnt(),
-  m_faceMappedCoordDirPO(CFNULL),
-  m_faceFlxPntConnPerOrient(CFNULL),
   m_isFaceOnBoundary(CFNULL),
   m_nghbrCellSide(CFNULL),
   m_currCellSide(CFNULL),
   m_faceOrients(CFNULL),
   m_faceBCIdx(CFNULL),
+  m_bcStateComputers(CFNULL),
+  m_pertCorrections(),
+  m_resUpdates(),
+  m_cellGradsBackUp(),
   m_solPolyDerivAtSolPnts(CFNULL),
-  m_bcStateComputers(CFNULL)
+  m_faceFlxPntConnPerOrient(CFNULL),
+  m_pertCellStatesFlxPnt(),
+  m_faceMappedCoordDirPO(CFNULL)
 {
 }
 
@@ -150,10 +150,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
           const CFuint cellID = m_face->getNeighborGeo(0)->getID();
           geoDataCB.idx = cellID;
           m_intCell = m_cellBuilder->buildGE();
-
-	  // set the face ID in the BCStateComputer
-	  m_bcStateComputer->setFaceID(m_face->getID());
-
+	  
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID
 
@@ -679,6 +676,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::setup()
 {
   CFAUTOTRACE;
 
+  // setup parent class
   DiffBndCorrectionsRHSFluxReconstruction::setup();
   
   // get CellToFaceGeBuilder
@@ -781,7 +779,6 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::setup()
     m_pertCellStatesFlxPnt[LEFT][iFlx]->setLocalID(iFlx);
     m_pertCellStatesFlxPnt[RIGHT][iFlx]->setLocalID(iFlx);
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -803,6 +800,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::unsetup()
   }
   m_pertCellStatesFlxPnt.clear();
 
+  // unsetup parent class
   DiffBndCorrectionsRHSFluxReconstruction::unsetup();
 }
 //////////////////////////////////////////////////////////////////////////////

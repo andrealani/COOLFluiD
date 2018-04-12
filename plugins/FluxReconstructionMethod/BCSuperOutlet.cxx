@@ -95,6 +95,16 @@ void BCSuperOutlet::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSuperOutlet::unsetup()
+{
+  CFAUTOTRACE;
+
+  // unsetup of the parent class
+  BCStateComputer::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   }  // namespace FluxReconstructionMethod
 
 }  // namespace COOLFluiD

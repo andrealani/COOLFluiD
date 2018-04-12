@@ -20,9 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent a Lobatto distribution of points
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent a Lobatto distribution of points
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class Lobatto : public BasePointDistribution {
 public:  // methods
 

@@ -43,11 +43,11 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_nodeNghbCellMinAvgStates("nodeNghbCellMinAvgStates"),
   socket_nodeNghbCellMaxAvgStates("nodeNghbCellMaxAvgStates"),
+  m_limiterValues(),
   m_cellBuilder(CFNULL),
-  m_solPolyValsAtNodes(CFNULL),
-  m_solPolyDerivAtNodes(CFNULL),
   m_cell(),
   m_cellStates(),
+  m_cellStatesBackup(),
   m_cellNodes(),
   m_cellAvgSolCoefs(),
   m_cellCenterDerivCoefs(),
@@ -61,26 +61,28 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   m_minAvgStateAll(),
   m_maxAvgStateAll(),
   m_nbrEqs(),
+  m_dim(),
   m_nbrFlxPnts(),
   m_nbrSolPnts(),
   m_nbrCornerNodes(),
   m_applyLimiter(),
   m_applyLimiterToPhysVar(),
   m_tvbLimitFactor(),
+  m_freezeLimiterRes(),
+  m_freezeLimiterIter(),
   m_lengthScaleExp(),
   m_cellStatesNodes(),
   m_cellStatesNodesP1(),
+  m_maxNbrFlxPnts(),
+  m_solPolyValsAtNodes(CFNULL),
   m_transformationMatrices(),
   m_statesP1(),
   m_states2(),
   m_nbrNodesElem(),
+  m_solPolyDerivAtNodes(CFNULL),
   m_order(),
-  m_freezeLimiterRes(),
-  m_freezeLimiterIter(),
-  m_limiterValues(),
   m_solPolyValsAtFlxPnts(CFNULL),
   m_cellStatesFlxPnt(),
-  m_cellStatesBackup(),
   m_prevStates()
 {
   addConfigOptionsTo(this);
@@ -1178,7 +1180,7 @@ void MLPLimiter::setup()
   
   m_applyLimiter.resize(m_nbrNodesElem);
   
-  for (CFuint iOrder = 0; iOrder < order; ++iOrder)
+  for (CFuint iOrder = 0; iOrder < m_order; ++iOrder)
   {
     RealMatrix temp(nbrSolPnts,nbrSolPnts);
     temp = 0.0;

@@ -22,9 +22,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to setup the FluxReconstruction method
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This is a standard command to setup the FluxReconstruction method
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class StdSetup : public FluxReconstructionSolverCom {
 
 public: // functions
@@ -95,6 +98,12 @@ protected: // data
   
   /// socket for gradients
   Framework::DataSocketSource< std::vector< RealVector > > socket_gradients;
+  
+  /// socket for the gradients needed for artificial viscosity
+  Framework::DataSocketSource< std::vector< RealVector > > socket_gradientsAV;
+  
+  /// socket for the values needed for the positivity preservation
+  Framework::DataSocketSource< CFreal > socket_posPrev;
   
   /// socket for size of face normal jacobian in face flux points
   Framework::DataSocketSource< std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;

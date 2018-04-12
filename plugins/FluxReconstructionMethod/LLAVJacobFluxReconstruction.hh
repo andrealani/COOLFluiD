@@ -129,6 +129,11 @@ protected: //functions
    * @pre reconstructOtherFacesAndCellGradients()
    */
   void computePertCellDiffResiduals(const CFuint side);
+  
+  /**
+   * Add extra viscosity to regions where positivity is almost violated, using the minValue option comparing to the state of the monitoredVar option
+   */
+  void addPositivityPreservation();
 
 protected: //data
   
@@ -215,6 +220,30 @@ protected: //data
   
   /// boolean telling whether to use max artificial viscosity wrt previous iteration
   bool m_useMax;
+  
+  /// total artificial viscosity added
+  CFreal m_totalEps;
+  
+  /// total artificial viscosity added over all CPUs
+  CFreal m_totalEpsGlobal;
+  
+  /// bool telling whether to add viscosity for positivity preservation
+  bool m_addPosPrev;
+  
+  /// value at which point positivity preservation is added
+  CFreal m_minValue;
+  
+  /// index of the monitored variable for positivity preservation
+  CFuint m_monitoredVar;
+  
+  /// number of times positivity preservation activated
+  CFuint m_nbPosPrev;
+  
+  /// number of times positivity preservation activated over all CPUs
+  CFuint m_nbPosPrevGlobal;
+  
+  /// maximum factor applied to viscosity for positivity preservation
+  CFreal m_viscFactor;
   
   private:
 

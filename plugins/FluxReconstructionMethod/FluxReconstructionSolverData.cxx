@@ -59,29 +59,26 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
 FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Framework::Method> owner) :
   SpaceMethodData(owner),
   m_numJacob(CFNULL),
-  m_cellBuilder(),
   m_lss(),
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
   m_faceBuilder(),
-  m_statesReconstructor(),
+  m_cellBuilder(),
+  m_cellBuilder2nd(),
+  m_frLocalData(),
   m_linearVarStr(),
-  m_riemannFluxStr(),
-  m_riemannFlux(),
   m_bcs(),
   m_bcsSP(),
   m_bcTypeStr(),
   m_bcNameStr(),
   m_bcTRSNameStr(),
-  m_innerFacesStartIdxs(),
-  m_bndFacesStartIdxs(),
-  m_partitionFacesStartIdxs(),
-  m_frLocalData(),
-  m_maxNbrStatesData(),
   m_maxNbrRFluxPnts(),
+  m_maxNbrStatesData(),
   m_resFactor(),
   m_hasDiffTerm(),
-  m_cellBuilder2nd(),
+  m_bndFacesStartIdxs(),
+  m_innerFacesStartIdxs(),
+  m_partitionFacesStartIdxs(),
   m_updateToSolutionVecTrans()
 {
   addConfigOptionsTo(this);
@@ -92,14 +89,14 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_riemannFluxStr = "RoeFlux";
   setParameter("RiemannFlux", &m_riemannFluxStr);
   
-  m_fluxpntdistributionStr = "Null";
-  setParameter( "FluxPointDistribution", &m_fluxpntdistributionStr );
+  m_fluxPntDistributionStr = "Null";
+  setParameter( "FluxPointDistribution", &m_fluxPntDistributionStr );
   
-  m_solpntdistributionStr = "Null";
-  setParameter( "SolutionPointDistribution", &m_solpntdistributionStr );
+  m_solPntDistributionStr = "Null";
+  setParameter( "SolutionPointDistribution", &m_solPntDistributionStr );
   
-  m_correctionfunctionStr = "Null";
-  setParameter( "CorrectionFunctionComputer", &m_correctionfunctionStr );
+  m_correctionFunctionStr = "Null";
+  setParameter( "CorrectionFunctionComputer", &m_correctionFunctionStr );
   
   m_freezeGrads = false;
   setParameter( "FreezeGradients", &m_freezeGrads );
@@ -216,15 +213,15 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
   SharedPtr< FluxReconstructionSolverData > thisPtr(this);
   
   // Configure flux point distribution
-  CFLog(INFO,"Configure flux point distribution: " << m_fluxpntdistributionStr << "\n");
+  CFLog(INFO,"Configure flux point distribution: " << m_fluxPntDistributionStr << "\n");
   try {
 
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
       prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider(
-        m_fluxpntdistributionStr );
+        m_fluxPntDistributionStr );
     cf_assert(prov.isNotNull());
-    m_fluxpntdistribution = prov->create(m_fluxpntdistributionStr,thisPtr);
-    configureNested ( m_fluxpntdistribution.getPtr(), args );
+    m_fluxPntDistribution = prov->create(m_fluxPntDistributionStr,thisPtr);
+    configureNested ( m_fluxPntDistribution.getPtr(), args );
 
   } catch (Common::NoSuchValueException& e) {
 
@@ -233,21 +230,21 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
       prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider("Null");
     cf_assert(prov.isNotNull());
-    m_fluxpntdistribution = prov->create("Null", thisPtr);
+    m_fluxPntDistribution = prov->create("Null", thisPtr);
 
   }
-  cf_assert(m_fluxpntdistribution.isNotNull());
+  cf_assert(m_fluxPntDistribution.isNotNull());
   
   // Configure solution point distribution
-  CFLog(INFO,"Configure solution point distribution: " << m_solpntdistributionStr << "\n");
+  CFLog(INFO,"Configure solution point distribution: " << m_solPntDistributionStr << "\n");
   try {
 
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
       prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider(
-        m_solpntdistributionStr );
+        m_solPntDistributionStr );
     cf_assert(prov.isNotNull());
-    m_solpntdistribution = prov->create(m_solpntdistributionStr,thisPtr);
-    configureNested ( m_solpntdistribution.getPtr(), args );
+    m_solPntDistribution = prov->create(m_solPntDistributionStr,thisPtr);
+    configureNested ( m_solPntDistribution.getPtr(), args );
 
   } catch (Common::NoSuchValueException& e) {
 
@@ -256,20 +253,20 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BasePointDistribution > >
       prov = Environment::Factory< BasePointDistribution >::getInstance().getProvider("Null");
     cf_assert(prov.isNotNull());
-    m_solpntdistribution = prov->create("Null", thisPtr);
+    m_solPntDistribution = prov->create("Null", thisPtr);
 
   }
-  cf_assert(m_solpntdistribution.isNotNull());
+  cf_assert(m_solPntDistribution.isNotNull());
 
-  CFLog(INFO,"Configure strategy type: " << m_correctionfunctionStr << "\n");
+  CFLog(INFO,"Configure strategy type: " << m_correctionFunctionStr << "\n");
   try {
         
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseCorrectionFunction > >
       prov = Environment::Factory< BaseCorrectionFunction >::getInstance().getProvider(
-        m_correctionfunctionStr );
+        m_correctionFunctionStr );
     cf_assert(prov.isNotNull());
-    m_correctionfunction = prov->create(m_correctionfunctionStr,thisPtr);
-    configureNested ( m_correctionfunction.getPtr(), args );
+    m_correctionFunction = prov->create(m_correctionFunctionStr,thisPtr);
+    configureNested ( m_correctionFunction.getPtr(), args );
         
   } catch (Common::NoSuchValueException& e) {
         
@@ -278,10 +275,10 @@ void FluxReconstructionSolverData::configure ( Config::ConfigArgs& args )
     SafePtr< BaseMethodStrategyProvider< FluxReconstructionSolverData, BaseCorrectionFunction > >
       prov = Environment::Factory< BaseCorrectionFunction >::getInstance().getProvider("Null");
     cf_assert(prov.isNotNull());
-    m_correctionfunction = prov->create("Null", thisPtr);
+    m_correctionFunction = prov->create("Null", thisPtr);
         
   }
-  cf_assert(m_correctionfunction.isNotNull());
+  cf_assert(m_correctionFunction.isNotNull());
   
   // Configure BC state computers
   CFLog(INFO,"Configure BC state computers\n");

@@ -191,7 +191,7 @@ void TriagFluxReconstructionElementData::createSolPolyExponents()
 
   // define exponents
   m_solPolyExponents.resize(0);
-  for (CFuint iKsi = 0; iKsi < m_polyOrder+1; ++iKsi)
+  for (CFuint iKsi = 0; iKsi < static_cast< CFuint >(m_polyOrder)+1; ++iKsi)
   {
     for (CFuint iEta = 0; iEta < m_polyOrder+1-iKsi; ++iEta)
     {
@@ -201,7 +201,8 @@ void TriagFluxReconstructionElementData::createSolPolyExponents()
       m_solPolyExponents.push_back(solPolyExps);
     }
   }
-  cf_assert(m_solPolyExponents.size() == (m_polyOrder+1)*(m_polyOrder+2)/2);
+
+  cf_assert(m_solPolyExponents.size() == static_cast<CFuint>((m_polyOrder+1)*(m_polyOrder+2)/2));
 }
 
 //////////////////////////////////////////////////////////////////////

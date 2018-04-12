@@ -48,10 +48,10 @@ ConvRHSJacobFluxReconstruction::ConvRHSJacobFluxReconstruction(const std::string
   m_pertResUpdates(),
   m_resUpdates(),
   m_derivResUpdates(),
+  m_pertCorrections(),
   m_divContFlxL(),
   m_divContFlxR(),
-  m_pertDivContFlx(),
-  m_pertCorrections()
+  m_pertDivContFlx()
   {
   }
   
@@ -581,6 +581,8 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
 void ConvRHSJacobFluxReconstruction::setup()
 {
   CFAUTOTRACE;
+  
+  // setup parent class
   ConvRHSFluxReconstruction::setup();
   
   // get the linear system solver
@@ -604,10 +606,8 @@ void ConvRHSJacobFluxReconstruction::setup()
   m_resUpdates [LEFT ].resize(resSize);
   m_resUpdates [RIGHT].resize(resSize);
   m_derivResUpdates.resize(resSize);
-  
   m_divContFlxL.resize(m_nbrSolPnts);
   m_divContFlxR.resize(m_nbrSolPnts);
-  
   m_pertCorrections.resize(m_nbrSolPnts);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
@@ -618,7 +618,6 @@ void ConvRHSJacobFluxReconstruction::setup()
     m_pertDivContFlx [LEFT ][iSolPnt].resize(m_nbrEqs);
     m_pertDivContFlx [RIGHT][iSolPnt].resize(m_nbrEqs);
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -626,6 +625,8 @@ void ConvRHSJacobFluxReconstruction::setup()
 void ConvRHSJacobFluxReconstruction::unsetup()
 {
   CFAUTOTRACE;
+  
+  // unsetup parent class
   ConvRHSFluxReconstruction::unsetup();
 }
 

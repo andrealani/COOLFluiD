@@ -30,7 +30,6 @@ BCStateComputer::BCStateComputer(const std::string& name) :
   FluxReconstructionSolverStrategy(name),
   m_needsSpatCoord(),
   m_needsExtraVars(false),
-  m_faceID(),
   m_trsNames(),
   m_extraVars(CFNULL),
   m_useDomainModel()

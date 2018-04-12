@@ -18,7 +18,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class is used to calculate the error of the solution of FR for Euler
+ * This class is used to compute the transformed residual
  *
  * @author Ray Vandenhoeck
  */
@@ -51,6 +51,9 @@ public:  // methods
 
   /// Set up private data and data
   void setup();
+  
+  /// Unset up private data and data
+  void unsetup();
 
   /**
    * Finalize computation RHS
@@ -65,14 +68,14 @@ private: // helper functions
 
 protected: // data
   
-  /// variable for physical data
-  RealVector m_solPhysData;
-  
   /// socket for state's
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
   
   /// storage of the rhs
   Framework::DataSocketSink<CFreal> socket_rhs;
+  
+  /// variable for physical data
+  RealVector m_solPhysData;
   
   // dummy jacobian
   RealMatrix m_jacobDummy;

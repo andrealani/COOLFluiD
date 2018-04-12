@@ -20,9 +20,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This class represent a Equidistant distribution of points
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represent a Equidistant distribution of points
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class Equidistant : public BasePointDistribution {
 public:  // methods
 
