@@ -81,6 +81,9 @@ protected:
   virtual void configure ( Config::ConfigArgs& args );
 
 protected: // data
+  
+  /// socket for gradients
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
 
   /// the source term for one state
   RealVector m_srcTerm;
@@ -103,9 +106,6 @@ protected: // data
   /// the gradients in the neighbouring cell
   std::vector< std::vector< RealVector >* > m_cellGrads;
   
-  /// socket for gradients
-  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
-
 }; // class NS2DAxiSourceTerm
 
 //////////////////////////////////////////////////////////////////////////////

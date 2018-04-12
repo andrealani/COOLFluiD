@@ -269,17 +269,17 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
         for (CFuint iScale = 0; iScale < 10; ++iScale)
         {
           phi /= 2.0;
-          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
           {
 	    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 	    {
-	      (*((*m_cellStates)[iSol]))[iEq] = (1.0-phi)*m_cellAvgState[iEq] + phi*m_statesP1[iSol][iEq];
+	      (*((*m_cellStates)[jSol]))[iEq] = (1.0-phi)*m_cellAvgState[iEq] + phi*m_statesP1[jSol][iEq];
 	    }
           }
         
-          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
           {
-	    m_states2[iSol] = (*((*m_cellStates)[iSol]));
+	    m_states2[jSol] = (*((*m_cellStates)[jSol]));
           }
 
           press  = computeLimitingValue(m_states2[iSol]);
@@ -291,11 +291,11 @@ void MLPLimiterEuler2D::applyChecks(CFreal phi)
         }
         if (press < m_minPressure)
         {
-	  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+	  for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
           {
 	    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 	    {
-  	      (*((*m_cellStates)[iSol]))[iEq] = m_cellAvgState[iEq];
+  	      (*((*m_cellStates)[jSol]))[iEq] = m_cellAvgState[iEq];
 	    }
           }
         }
@@ -394,7 +394,7 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
       }
       else
       {
-	const CFreal currM = pow(v2/a2,0.5);
+	currM = pow(v2/a2,0.5);
       }
       
       M = max(currM, M);

@@ -34,6 +34,11 @@ AUSMFlux<UPDATEVAR>::AUSMFlux(const std::string& name) :
   m_p12(0.0)
 {
   CFAUTOTRACE;
+  
+  addConfigOptionsTo(this);
+
+  m_choiceA12 = 1;
+  this->setParameter("choiceA12",&m_choiceA12);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -42,6 +47,15 @@ template <class UPDATEVAR>
 AUSMFlux<UPDATEVAR>::~AUSMFlux()
 {
   CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+    ("choiceA12","Way of computing the interface sound speed a12.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -116,53 +130,53 @@ RealVector& AUSMFlux<UPDATEVAR>::computeFlux(State& lState,
     const CFuint nbEulerEqs = eulerVarIDs.size();
     
     //  the following applies only if we are dealing with multi-scalar cases 
-//     if (totalNbEqs > nbEulerEqs) {
-//       // this works properly with MultiScalarVarSet but not with just EulerVarSet
-//       const vector<EquationSetData>& eqsData = EulerVarSet::getEqSetData();
-//       const CFuint nbEqsData  = eqsData.size();
-//       // const vector<CFuint>& eqSSIDs = eqSSD.getEqVarPatterns()[iEqSS];   
-//       // assert(eqSSIDs.size() == nbEqs);
-//       
-//       CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbEqsData = " << nbEqsData << "\n");
-//       
-//       // loop over the multi-scalar equation set data
-//       for (CFuint i = 0; i < nbEqsData; ++i) {
-// 	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
-// 	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
-// 	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
-// 	CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars << 
-// 	      ", varIDs.size() = " << varIDs.size() << "\n");
-// 	
-// 	// exclude case where MultiScalarVarSet is not present
-// 	if (varIDs.size() == nbVars) {
-// 	  CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars 
-// 		<< ", firstVar = " << firstVar << ", " 
-// 		<< Common::CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
-// 	  
-// 	  const RealVector *const upwindData = (m_mflux12 > 0.0) ? m_lData : m_rData;
-// 	  for (CFuint ie = 0; ie < nbVars; ++ie) {
-// 	    const CFuint maID = varIDs[ie];
-// 	    if (maskArray[maID]) { 
-// 	      CFLog(DEBUG_MIN, "varIDs[" << ie << "] = " <<  varIDs[ie] << "\n");
-// 	      result[maID] = m_mflux12*(*upwindData)[firstVar + ie];
-// 	    }
-// 	  }
-// 	  
-// 	  // add the correction for treating incompressible flows 
+    if (totalNbEqs > nbEulerEqs) {
+      // this works properly with MultiScalarVarSet but not with just EulerVarSet
+      const vector<EquationSetData>& eqsData = UPDATEVAR::getEqSetData();
+      const CFuint nbEqsData  = eqsData.size();
+      // const vector<CFuint>& eqSSIDs = eqSSD.getEqVarPatterns()[iEqSS];   
+      // assert(eqSSIDs.size() == nbEqs);
+      
+      CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbEqsData = " << nbEqsData << "\n");
+      
+      // loop over the multi-scalar equation set data
+      for (CFuint i = 0; i < nbEqsData; ++i) {
+	const CFuint nbVars = m_updateVarSet->getModel()->getNbScalarVars(i);
+	const CFuint firstVar = m_updateVarSet->getModel()->getFirstScalarVar(i);
+	const vector<CFuint>& varIDs = eqsData[i].getEqSetVarIDs();
+	CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars << 
+	      ", varIDs.size() = " << varIDs.size() << "\n");
+	
+	// exclude case where MultiScalarVarSet is not present
+	if (varIDs.size() == nbVars) {
+	  CFLog(DEBUG_MIN, "AUSMFlux::compute() => nbVars = " << nbVars 
+		<< ", firstVar = " << firstVar << ", " 
+		<< Common::CFPrintContainer<const vector<CFuint> >("varIDs  = ", &varIDs));
+	  
+	  const RealVector upwindData = (m_mflux12 > 0.0) ? m_pData[LEFT] : m_pData[RIGHT];
+	  for (CFuint ie = 0; ie < nbVars; ++ie) {
+	    const CFuint maID = varIDs[ie];
+	    if (maskArray[maID]) { 
+	      CFLog(DEBUG_MIN, "varIDs[" << ie << "] = " <<  varIDs[ie] << "\n");
+	      m_rFlux[maID] = m_mflux12*(upwindData)[firstVar + ie];
+	    }
+	  }
+	  
+	  // add the correction for treating incompressible flows 
 // 	  if (addIncompCorrection()) {
 // 	    const CFreal halfMincomp = 0.5*m_mincomp;
 // 	    for (CFuint ie = 0; ie < nbVars; ++ie) {
 // 	      const CFuint maID = varIDs[ie];
 // 	      const CFuint varID = firstVar + ie;
 // 	      if (maskArray[maID]) { 
-// 		result[maID] += halfMincomp*((*m_lData)[varID]+(*m_rData)[varID]);
+// 		m_rFlux[maID] += halfMincomp*((*m_lData)[varID]+(*m_rData)[varID]);
 // 	      }
 // 	    }
 // 	  }
-// 	}
-//       }
-//     }
-//     
+	}
+      }
+    }
+    
 //     if (!this->getMethodData().isPerturb()) {
 //       if (!m_useLiouUpdateCoeff) {
 // 	computeUpdateCoeff();
@@ -265,8 +279,7 @@ void AUSMFlux<UPDATEVAR>::computeInterfaceSoundSpeed()
   // the user must choose one of the following 5 ways of calculation of the
   // interface speed of sound, a12
   this->m_a12 = 0.0;
-  CFuint choiceA12 = 1;
-  switch(choiceA12) {
+  switch(m_choiceA12) {
   case 1:
     computeSoundSpeed1();
     break;

@@ -7,6 +7,8 @@
 #include "NavierStokes/Euler2DVarSet.hh"
 #include "NavierStokes/Euler3DVarSet.hh"
 
+#include "NavierStokes/MultiScalarVarSet.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Physics::NavierStokes;
@@ -31,6 +33,18 @@ Framework::MethodStrategyProvider< AUSMPlusFlux<Euler3DVarSet>,
 				   RiemannFlux,
 				   FluxReconstructionNavierStokesModule > 
 				   AUSMPlusFlux3DProvider("AUSMPlusFlux3D");
+				   
+Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler2DVarSet> >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusFluxMS2DProvider("AUSMPlusFluxMS2D");
+    
+Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler3DVarSet> >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusFluxMS3DProvider("AUSMPlusFluxMS3D");
 				   
 // AUSM+Up
 Framework::MethodStrategyProvider< AUSMPlusUpFlux<Euler2DVarSet>,

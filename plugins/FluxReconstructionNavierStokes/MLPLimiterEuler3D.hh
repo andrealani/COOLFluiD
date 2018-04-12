@@ -24,10 +24,9 @@ namespace COOLFluiD {
 
 /**
  * This class represent a command that applies an elementwise MLP limiter to the solution,
- * taking into account the requirement of pressure positivty
+ * taking into account the requirement of pressure positivty for 3D NS
  *
  * @author Ray Vandenhoeck
- *
  */
 class MLPLimiterEuler3D : public MLPLimiter {
 public:

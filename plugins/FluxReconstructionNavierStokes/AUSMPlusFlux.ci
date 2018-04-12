@@ -14,10 +14,14 @@ namespace COOLFluiD {
 template <class UPDATEVAR>
 AUSMPlusFlux<UPDATEVAR>::AUSMPlusFlux(const std::string& name) :
   AUSMFlux<UPDATEVAR>(name)
-{
+{ 
+  this->addConfigOptionsTo(this);
+  
   m_beta = 1./8.;
+  this->setParameter("beta",&m_beta);
   
   m_alpha = 3./16.;
+  this->setParameter("alpha",&m_alpha);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -25,6 +29,18 @@ AUSMPlusFlux<UPDATEVAR>::AUSMPlusFlux(const std::string& name) :
 template <class UPDATEVAR>
 AUSMPlusFlux<UPDATEVAR>::~AUSMPlusFlux()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("beta"," -1/16 <= beta coefficient <= 1/2.");
+  
+  options.template addConfigOption< CFreal >
+    ("alpha"," -3/4 <= beta coefficient <= 3/16.");
 }
 
 //////////////////////////////////////////////////////////////////////////////

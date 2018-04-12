@@ -24,7 +24,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represent a command that checks and enforces the physicality of an Euler 2D state, particularly the positivity of the pressure
+ * This class represent a command that checks and enforces the physicality of 
+ * an Euler/NS 2D state, particularly the positivity of the 
+ * pressure/density/temperature
  *
  * @author Ray Vandenhoeck
  *
@@ -72,7 +74,7 @@ protected: // functions
   virtual void enforcePhysicality();
   
   /**
-   * Check if the states are physical
+   * Check if the states are physical: for cons rho and p is checked, for puvt p and T is checked
    */
   virtual bool checkPhysicality();
 
@@ -83,6 +85,9 @@ protected: // data
 
   /// minimum allowable value for pressure
   CFreal m_minPressure;
+  
+  /// minimum allowable value for temperature
+  CFreal m_minTemperature;
   
   /// boolean telling wether to also check the internal solution for physicality
   bool m_checkInternal;
@@ -96,11 +101,11 @@ protected: // data
   /// variable for physical data of sol
   RealVector m_solPhysData;
   
-  /// coefficients for the computation of the cell averaged solution
-  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
-  
   /// cell averaged state
   RealVector m_cellAvgState;
+  
+  /// coefficients for the computation of the cell averaged solution
+  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
 
 }; // class PhysicalityEuler2D
 

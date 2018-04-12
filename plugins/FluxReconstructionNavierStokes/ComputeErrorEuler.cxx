@@ -41,12 +41,12 @@ ComputeErrorEuler::ComputeErrorEuler(const std::string& name) :
   socket_states("states"),
   m_eulerVarSet(CFNULL),
   m_cellAvgSolCoefs(),
+  m_cellBuilder(CFNULL),
   m_cell(),
   m_cellStates(),
   m_tpIntegrator(),
   m_quadPntCoords(),
-  m_quadCoefs(),
-  m_cellBuilder(CFNULL)
+  m_quadCoefs()
 {
   CFAUTOTRACE;
 
@@ -204,7 +204,7 @@ void ComputeErrorEuler::execute()
         m_eulerVarSet->computePhysicalData((*((*m_cellStates)[iSol])),m_solPhysData);
 	//m_eulerVarSet->computePhysicalData(*(quadStates[iSol]),m_solPhysData);
 
-        const CFreal M2 = m_solPhysData[EulerTerm::V]/m_solPhysData[EulerTerm::A];
+        //const CFreal M2 = m_solPhysData[EulerTerm::V]/m_solPhysData[EulerTerm::A];
         const CFreal p2 = m_solPhysData[EulerTerm::P];
         const CFreal T2 = m_solPhysData[EulerTerm::T];
         const CFreal rho2 = m_solPhysData[EulerTerm::RHO];
@@ -242,7 +242,7 @@ void ComputeErrorEuler::execute()
         // set the physical data starting from the inner state
         m_eulerVarSet->computePhysicalData((*((*m_cellStates)[iState])),m_solPhysData);
 
-        const CFreal M2 = m_solPhysData[EulerTerm::V]/m_solPhysData[EulerTerm::A];
+        //const CFreal M2 = m_solPhysData[EulerTerm::V]/m_solPhysData[EulerTerm::A];
         const CFreal p2 = m_solPhysData[EulerTerm::P];
         const CFreal T2 = m_solPhysData[EulerTerm::T];
         const CFreal rho2 = m_solPhysData[EulerTerm::RHO];

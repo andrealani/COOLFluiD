@@ -51,6 +51,12 @@ public:  // methods
   {
     return "AUSMFlux";
   }
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
 
   /// Set up private data and data
   virtual void setup();
@@ -141,6 +147,9 @@ protected: // data
   
   /// acquaintance of the concrete variable set
   Common::SafePtr<UPDATEVAR> m_updateVarSet;
+  
+  /// user defined coefficient for the calculation method of a12
+  CFuint m_choiceA12;
   
   /// normal velocity left
   CFreal m_unL;

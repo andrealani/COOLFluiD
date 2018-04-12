@@ -47,6 +47,9 @@ BCNoSlipWallHeatFluxNS3D::BCNoSlipWallHeatFluxNS3D(const std::string& name) :
 
   m_heatFlux= true;
    setParameter("HeatFlux",&m_heatFlux);
+   
+   m_changeToIsoT = MathTools::MathConsts::CFuintMax();
+   setParameter("ChangeToIsoT",&m_changeToIsoT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -63,6 +66,7 @@ void BCNoSlipWallHeatFluxNS3D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("T","wall static temperature");
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux, default true.");
+  options.addConfigOption< CFuint >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,6 +80,13 @@ void BCNoSlipWallHeatFluxNS3D::computeGhostStates(const vector< State* >& intSta
   const CFuint nbrStates = ghostStates.size();
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  if (iter >= m_changeToIsoT && m_heatFlux)
+  {
+    m_heatFlux = false;
+  }
 
   // get some physical data from the model
   const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
@@ -93,25 +104,53 @@ void BCNoSlipWallHeatFluxNS3D::computeGhostStates(const vector< State* >& intSta
 
     // set the physical data starting from the inner state
     m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
-
-    // set the physical data for the ghost state
-    m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
-    m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-    m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
-    m_ghostSolPhysData[EulerTerm::VZ]  = -m_intSolPhysData[EulerTerm::VZ];// negate velocity )-- average = 0
-    m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P];
-    m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
+    
+    if (m_heatFlux)
+    {
+      // set the physical data for the ghost state
+      m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
+      m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VZ]  = -m_intSolPhysData[EulerTerm::VZ];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]+m_ghostSolPhysData[EulerTerm::VZ]*m_ghostSolPhysData[EulerTerm::VZ]);
+      m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P];
+      m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
                                             + 0.5*m_ghostSolPhysData[EulerTerm::RHO]*
                                                   m_intSolPhysData[EulerTerm::V]*
                                                   m_intSolPhysData[EulerTerm::V]
                                          )/m_ghostSolPhysData[EulerTerm::RHO];
-    if (m_heatFlux)
-    {
+      m_ghostSolPhysData[EulerTerm::A] = sqrt(gamma*m_intSolPhysData[EulerTerm::P]/m_intSolPhysData[EulerTerm::RHO]);
       m_ghostSolPhysData[EulerTerm::T] = m_intSolPhysData[EulerTerm::T];
     }
     else
     {
-      m_ghostSolPhysData[EulerTerm::T] = 2.0*m_wallT - m_intSolPhysData[EulerTerm::T];
+      const CFreal R = m_eulerVarSet->getModel()->getR();
+      const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
+      const CFreal ghostT = 2.0*m_wallT - innerT;
+      CFreal ghostP;
+      if (getMethodData().getUpdateVarStr() == "Cons")
+      {
+	ghostP = m_intSolPhysData[EulerTerm::RHO]*R*ghostT;
+      }
+      else
+      {
+	ghostP = m_intSolPhysData[EulerTerm::P];
+      }
+
+      // set the physical data for the ghost state
+      m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
+      m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VZ]  = -m_intSolPhysData[EulerTerm::VZ];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]+m_ghostSolPhysData[EulerTerm::VZ]*m_ghostSolPhysData[EulerTerm::VZ]);
+      m_ghostSolPhysData[EulerTerm::P]   = ghostP;
+      m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
+                                            + 0.5*m_ghostSolPhysData[EulerTerm::RHO]*
+                                                  m_intSolPhysData[EulerTerm::V]*
+                                                  m_intSolPhysData[EulerTerm::V]
+                                         )/m_ghostSolPhysData[EulerTerm::RHO];
+      m_ghostSolPhysData[EulerTerm::A] = sqrt(gamma*ghostP/m_ghostSolPhysData[EulerTerm::RHO]);
+      m_ghostSolPhysData[EulerTerm::T] = ghostT;
     }
 
     // set the ghost state from its physical data
@@ -150,12 +189,19 @@ void BCNoSlipWallHeatFluxNS3D::computeGhostGradients(const std::vector< std::vec
     *ghostGrads[iState][1] = *intGrads[iState][1];
     *ghostGrads[iState][2] = *intGrads[iState][2];
     *ghostGrads[iState][3] = *intGrads[iState][3];
-
-    // temperature
-    RealVector& tempGradI = *intGrads  [iState][4];
-    RealVector& tempGradG = *ghostGrads[iState][4];
-    const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY] + tempGradI[ZZ]*normal[ZZ];
-    tempGradG = tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal; 
+    
+    if (m_heatFlux)
+    {
+      // temperature
+      RealVector& tempGradI = *intGrads  [iState][4];
+      RealVector& tempGradG = *ghostGrads[iState][4];
+      const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY];
+      tempGradG = tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
+    }
+    else
+    {
+      *ghostGrads[iState][4] = *intGrads[iState][4];
+    }
   }
 }
 

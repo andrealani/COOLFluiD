@@ -22,10 +22,10 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a no-slip-wall boundary condition with imposed heat flux
+ * This class represents a no-slip-wall boundary condition with imposed heat flux or wall temperature
  * for the 3D Euler/Navier-Stokes equations.
  *
- * @author Kris Van den Abeele
+ * @author Ray Vandenhoeck
  */
 class BCNoSlipWallHeatFluxNS3D : public BCStateComputer {
 
@@ -88,8 +88,8 @@ protected: // data
   /// wall heat flux
   CFreal m_wallQ;
 
-  /// imposed heat flux
-  /// @todo add option for this variable, with imposed function for heat flux as a function of coordinates
+  /// iteration after which is changed to an isothermal wall BC
+  CFuint m_changeToIsoT;
 
 }; // class BCNoSlipWallHeatFluxNS3D
 

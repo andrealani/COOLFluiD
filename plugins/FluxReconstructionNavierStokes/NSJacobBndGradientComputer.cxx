@@ -103,6 +103,46 @@ void NSJacobBndGradientComputer::computeGradientBndFaceCorrections()
       gradients[solID][iGrad] += m_gradUpdates[iSol][iGrad];
     }
   }
+  
+  // if needed, compute the gradients for the artificial viscosity
+  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasArtificialViscosity())
+  {
+    // Loop over solution pnts to calculate the grad updates
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+    {
+      // Loop over  variables
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        //set the grad updates to 0 
+        m_gradUpdates[iSolPnt][iEq] = 0.0;
+      
+        // compute the face corrections to the gradients
+        for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+        {
+          const CFreal avgSol = ((*(m_cellStatesFlxPnt[iFlx]))[iEq]+(*(m_flxPntGhostSol[iFlx]))[iEq])/2.0;
+	  const RealVector projectedCorr = (avgSol-(*(m_cellStatesFlxPnt[iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
+	
+	  /// @todo Check if this is also OK for triangles!!
+	  m_gradUpdates[iSolPnt][iEq] += projectedCorr*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlx]];
+        }
+      }
+    }
+  
+    // get the gradients
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      // get state ID
+      const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
+
+      // update gradients
+      for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+      {
+        gradientsAV[solID][iGrad] += m_gradUpdates[iSol][iGrad];
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

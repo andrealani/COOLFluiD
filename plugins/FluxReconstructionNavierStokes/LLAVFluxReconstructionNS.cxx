@@ -44,8 +44,8 @@ LLAVFluxReconstructionNSFluxReconstructionProvider("LLAVNS");
 LLAVFluxReconstructionNS::LLAVFluxReconstructionNS(const std::string& name) :
   LLAVFluxReconstruction(name),
   m_diffVarSet(CFNULL),
-  m_pData(),
-  m_gradsBackUp()
+  m_gradsBackUp(),
+  m_pData()
   {
   }
 
@@ -62,43 +62,55 @@ void LLAVFluxReconstructionNS::setFaceData(CFuint faceID)
 {
   LLAVFluxReconstruction::setFaceData(faceID);
 
-  m_diffVarSet = getMethodData().getDiffusiveVar();
-
-  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokesVarSet >();
+//   m_diffVarSet = getMethodData().getDiffusiveVar();
+// 
+//   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokesVarSet >();
+// 
+//   for (CFuint iSide = 0; iSide < 2; ++iSide)
+//   {
+//     vector< vector< RealVector* > > grads;
+//     vector< RealVector* > tempStates;
+//     vector< vector< RealVector > > temp;
+//     temp.resize(m_nbrSolPnts);
+//     grads.resize(m_nbrSolPnts);
+// 
+//     // make a back up of the grads
+//     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//     {
+//       tempStates.push_back((*(m_states[iSide]))[iState]->getData());
+// 
+//       temp[iState] = *(m_cellGrads[iSide][iState]);
+//       
+//       grads[iState].resize(m_nbrEqs);
+// 
+//       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//       {
+//         cf_assert(temp[iState].size() == m_nbrEqs);
+//         grads[iState][iVar] = & (temp[iState][iVar]);
+//       }
+//     }
+// 
+//     navierStokesVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[iSide],m_nbrSolPnts);
+// 
+//     // make store the correct gradients
+//     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//     {    
+//       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//       { 
+//         (*m_cellGrads[iSide][iState])[iVar] = *(m_gradsBackUp[iSide][iState][iVar]);
+//       }
+//     }
+//   }
+  
+  // get the gradients datahandle
+  DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
 
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
-    vector< vector< RealVector* > > grads;
-    vector< RealVector* > tempStates;
-    vector< vector< RealVector > > temp;
-    temp.resize(m_nbrSolPnts);
-    grads.resize(m_nbrSolPnts);
-
-    // make a back up of the grads
     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
     {
-      tempStates.push_back((*(m_states[iSide]))[iState]->getData());
-
-      temp[iState] = *(m_cellGrads[iSide][iState]);
-      
-      grads[iState].resize(m_nbrEqs);
-
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        cf_assert(temp[iState].size() == m_nbrEqs);
-        grads[iState][iVar] = & (temp[iState][iVar]);
-      }
-    }
-
-    navierStokesVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[iSide],m_nbrSolPnts);
-
-    // make store the correct gradients
-    for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-    {    
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      { 
-        (*m_cellGrads[iSide][iState])[iVar] = *(m_gradsBackUp[iSide][iState][iVar]);
-      }
+      const CFuint stateID = (*(m_states[iSide]))[iState]->getLocalID();
+      m_cellGrads[iSide][iState] = &gradientsAV[stateID];
     }
   }
 }
@@ -109,41 +121,51 @@ void LLAVFluxReconstructionNS::setCellData()
 {
   LLAVFluxReconstruction::setCellData();
   
-  m_diffVarSet = getMethodData().getDiffusiveVar();
+//   m_diffVarSet = getMethodData().getDiffusiveVar();
+//   
+//   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokesVarSet >();
+//   
+//   vector< vector< RealVector* > > grads;
+//   vector< RealVector* > tempStates;
+//   vector< vector< RealVector > > temp;
+//   temp.resize(m_nbrSolPnts);
+//   grads.resize(m_nbrSolPnts);
+//   
+//   // make a back up of the grads
+//   for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//   {
+//     tempStates.push_back((*m_cellStates)[iState]->getData());
+//     
+//     temp[iState] = *(m_cellGrads[0][iState]);
+//       
+//     grads[iState].resize(m_nbrEqs);
+//     
+//     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//     {
+//       cf_assert(temp[iState].size() == m_nbrEqs);
+//       grads[iState][iVar] = & (temp[iState][iVar]);
+//     }
+//   }
+//   
+//   navierStokesVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[0],m_nbrSolPnts);
+//     
+//   // make store the correct gradients
+//   for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//   {    
+//     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//     { 
+//       (*m_cellGrads[0][iState])[iVar] = *(m_gradsBackUp[0][iState][iVar]);
+//     }
+//   }
   
-  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokesVarSet >();
-  
-  vector< vector< RealVector* > > grads;
-  vector< RealVector* > tempStates;
-  vector< vector< RealVector > > temp;
-  temp.resize(m_nbrSolPnts);
-  grads.resize(m_nbrSolPnts);
-  
-  // make a back up of the grads
+  // get the gradients datahandle
+  DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+  // get the grads in the current cell
   for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
   {
-    tempStates.push_back((*m_cellStates)[iState]->getData());
-    
-    temp[iState] = *(m_cellGrads[0][iState]);
-      
-    grads[iState].resize(m_nbrEqs);
-    
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    {
-      cf_assert(temp[iState].size() == m_nbrEqs);
-      grads[iState][iVar] = & (temp[iState][iVar]);
-    }
-  }
-  
-  navierStokesVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[0],m_nbrSolPnts);
-    
-  // make store the correct gradients
-  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
-  {    
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    { 
-      (*m_cellGrads[0][iState])[iVar] = *(m_gradsBackUp[0][iState][iVar]);
-    }
+    const CFuint stateID = (*(m_cellStates))[iState]->getLocalID();
+    m_cellGrads[0][iState] = &gradientsAV[stateID];
   }
 }
 
@@ -153,6 +175,7 @@ void LLAVFluxReconstructionNS::setup()
 {
   CFAUTOTRACE;
   
+  // setup parent class
   LLAVFluxReconstruction::setup();
   
   m_gradsBackUp.resize(2);
@@ -189,6 +212,7 @@ void LLAVFluxReconstructionNS::unsetup()
   m_gradsBackUp[RIGHT].clear();
   m_gradsBackUp.clear();
   
+  // unsetup parent class
   LLAVFluxReconstruction::unsetup();
 }
 

@@ -18,9 +18,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// Daughterclass of ConvRHSFluxReconstruction, needed to calculate the gradients
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * Daughterclass of ConvRHSFluxReconstruction, needed to calculate the 
+ * gradients for NS
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class NSGradientComputer : public ConvRHSFluxReconstruction {
 
 public: // functions

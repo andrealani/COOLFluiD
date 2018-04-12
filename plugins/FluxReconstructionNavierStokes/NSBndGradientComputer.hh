@@ -18,9 +18,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// Daughterclass of ConvBndCorrectionsRHSFluxReconstruction, needed to calculate the gradients
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * Daughterclass of ConvBndCorrectionsRHSFluxReconstruction, needed to 
+ * calculate the bnd gradients for NS
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class NSBndGradientComputer : public ConvBndCorrectionsRHSFluxReconstruction {
 
 public: // functions

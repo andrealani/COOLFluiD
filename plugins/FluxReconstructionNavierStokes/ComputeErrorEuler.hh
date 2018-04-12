@@ -66,15 +66,15 @@ public:  // methods
 
 
 protected: // data
+  
+  /// socket for state's
+  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
 
   /// physical model (in conservative variables)
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;//3D
   
   /// variable for physical data
   RealVector m_solPhysData;
-  
-  /// socket for state's
-  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
   
   /// coefficients for the computation of the cell averaged solution
   Common::SafePtr< RealVector > m_cellAvgSolCoefs;

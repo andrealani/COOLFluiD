@@ -36,8 +36,8 @@ MLPLimiterEuler3D.cxx
 MLPLimiterEuler3D.hh
 LLAVFluxReconstructionNS.cxx
 LLAVFluxReconstructionNS.hh
-LLAVJacobFluxReconstructionNS2D.cxx
-LLAVJacobFluxReconstructionNS2D.hh
+LLAVJacobFluxReconstructionNS.cxx
+LLAVJacobFluxReconstructionNS.hh
 PhysicalityEuler2D.cxx
 PhysicalityEuler2D.hh
 PhysicalityEuler3D.cxx

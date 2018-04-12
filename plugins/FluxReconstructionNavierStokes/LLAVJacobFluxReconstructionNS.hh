@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS2D_hh
-#define COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS2D_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS_hh
+#define COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,18 +28,21 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// Command to add Localized Laplacian Artificial Viscosity near discontinuities for implicit schemes
-/// @author Ray Vandenhoeck
-    
-class LLAVJacobFluxReconstructionNS2D : public LLAVJacobFluxReconstruction {
+/**
+ * Command to add Localized Laplacian Artificial Viscosity near discontinuities 
+ * for implicit schemes for NS
+ * 
+ * @author Ray Vandenhoeck
+ */
+class LLAVJacobFluxReconstructionNS : public LLAVJacobFluxReconstruction {
 
 public: // functions
 
   /// Constructor
-  explicit LLAVJacobFluxReconstructionNS2D(const std::string& name);
+  explicit LLAVJacobFluxReconstructionNS(const std::string& name);
 
   /// Destructor
-  virtual ~LLAVJacobFluxReconstructionNS2D() {}
+  virtual ~LLAVJacobFluxReconstructionNS() {}
   
   /**
    * Configures the command.
@@ -60,34 +63,25 @@ public: // functions
 protected: //functions
 
   /**
-   * compute the terms for the gradient computation for a bnd face
+   * Set the data for the current face necessary to calculate FI
    */
-  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+  virtual void setFaceData(CFuint faceID);
   
   /**
-   * compute the term for the gradient computation for the cell
+   * Set the data for the current cell necessary to calculate the residual update
    */
-  virtual void computeCellGradTerm(RealMatrix& gradTerm);
+  virtual void setCellData();
   
   /**
-   * compute the terms for the gradient computation for a face
+   * set the face neighbour gradients
+   * @pre setOtherFacesLocalIdxs()
+   * @pre setFaceNeighbourStates()
    */
-  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
-  
-  /**
-   * set the necessary variables to compute gradients
-   */
-  virtual void setNecGradientVars(const std::vector<RealVector*>& states, RealMatrix& values, const CFuint stateSize);
+  virtual void setFaceNeighbourGradients();
+
 
 protected: //data
   
-  /// physical model (in conservative variables)
-  Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
-  
-  private:
-
-  /// Physical data temporary vector
-  RealVector m_pData;
   
 }; // class Solve
 
@@ -98,5 +92,5 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS2D_hh
+#endif // COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionNS_hh
 

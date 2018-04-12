@@ -18,9 +18,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// Daughterclass of ConvRHSJacobFluxReconstruction, needed to calculate the gradients
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * Daughterclass of ConvRHSJacobFluxReconstruction, needed to calculate the 
+ * gradients for implicit schemes for NS
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class NSJacobGradientComputer : public ConvRHSJacobFluxReconstruction {
 
 public: // functions

@@ -18,9 +18,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the system using a FluxReconstruction solver
-/// @author Alexander Papen
-/// @author Ray Vandenhoeck
+/**
+ * This class represents a command that computes the contribution of the 
+ * diffusive tems to the RHS for a Flux Recosntruction scheme for NS
+ * 
+ * @author Alexander Papen
+ * @author Ray Vandenhoeck
+ */
 class DiffRHSFluxReconstructionNS : public DiffRHSFluxReconstruction {
 
 public: // functions

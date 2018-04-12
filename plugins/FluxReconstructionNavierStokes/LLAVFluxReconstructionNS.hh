@@ -23,9 +23,12 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// Command to add Localized Laplacian Artificial Viscosity near discontinuities for implicit schemes
-/// @author Ray Vandenhoeck
-    
+/**
+ * Command to add Localized Laplacian Artificial Viscosity near discontinuities 
+ * for NS
+ * 
+ * @author Ray Vandenhoeck
+ */
 class LLAVFluxReconstructionNS : public LLAVFluxReconstruction {
 
 public: // functions

@@ -34,6 +34,12 @@ public:
    */
   virtual ~AUSMPlusFlux();
   
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
 
 protected:
 

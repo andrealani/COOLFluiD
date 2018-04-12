@@ -15,16 +15,22 @@ AUSMPlusUpFlux<UPDATEVAR>::AUSMPlusUpFlux(const std::string& name) :
   m_fa(0.0),
   m_P5Plus(0.),
   m_P5Minus(0.)
-{
+{ 
+  this->addConfigOptionsTo(this);
   m_coeffKu = 0.75;
+  this->setParameter("coeffKu",&m_coeffKu);
 
   m_coeffKp = 0.25;
+  this->setParameter("coeffKp",&m_coeffKp);
 
   m_coeffSigma = 1.0;
+  this->setParameter("sigma",&m_coeffSigma);
 
-  m_machInf = 0.5;
+  m_machInf = 0.;
+  this->setParameter("machInf",&m_machInf);
 
   m_beta = 1./8.;
+  this->setParameter("beta",&m_beta);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -32,6 +38,23 @@ AUSMPlusUpFlux<UPDATEVAR>::AUSMPlusUpFlux(const std::string& name) :
 template <class UPDATEVAR>
 AUSMPlusUpFlux<UPDATEVAR>::~AUSMPlusUpFlux()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMPlusUpFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFreal >
+    ("coeffKu","Coefficient for Ku.");
+  options.template addConfigOption< CFreal >
+    ("coeffKp","Way of computing the pressure.");
+  options.template addConfigOption< CFreal >
+    ("sigma","Coefficient for sigma.");
+  options.template addConfigOption< CFreal >
+    ("machInf","Free stream Mach number.");
+  options.template addConfigOption< CFreal >
+    ("beta"," -1/16 <= beta coefficient <= 1/2.");
 }
 
 //////////////////////////////////////////////////////////////////////////////

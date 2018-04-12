@@ -47,6 +47,9 @@ BCNoSlipWallHeatFluxNS2D::BCNoSlipWallHeatFluxNS2D(const std::string& name) :
 
   m_heatFlux= true;
    setParameter("HeatFlux",&m_heatFlux);
+   
+  m_changeToIsoT = MathTools::MathConsts::CFuintMax();
+   setParameter("ChangeToIsoT",&m_changeToIsoT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,7 +65,8 @@ void BCNoSlipWallHeatFluxNS2D::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("T","wall static temperature");
   options.addConfigOption< CFreal >("q","wall heat flux");
-  options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux, default true.");
+  options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly initially), default true.");
+  options.addConfigOption< CFuint >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,6 +80,13 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
   const CFuint nbrStates = ghostStates.size();
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  if (iter >= m_changeToIsoT && m_heatFlux)
+  {
+    m_heatFlux = false;
+  }
 
   // get some physical data from the model
   const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
@@ -112,32 +123,60 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
     }
     else
     {
+//       const CFreal R = m_eulerVarSet->getModel()->getR();
+//       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
+//       CFreal ghostT = 2.0*m_wallT - innerT;
+//       
+//       CFreal factor = 1.0;
+//       while (ghostT < 0.) 
+//       {
+//         factor *= 2.;
+//         ghostT = ((factor + 1.)*m_wallT - innerT)/factor;
+//       }
+//       cf_assert(ghostT > 0.);
+//       
+//       const CFreal ghostP = m_intSolPhysData[EulerTerm::P];
+//       
+//       m_ghostSolPhysData[EulerTerm::RHO] = ghostP/(R*ghostT);
+//       m_ghostSolPhysData[EulerTerm::VX] = -m_intSolPhysData[EulerTerm::VX]/factor;
+//       m_ghostSolPhysData[EulerTerm::VY] = -m_intSolPhysData[EulerTerm::VY]/factor;
+//       m_ghostSolPhysData[EulerTerm::V] = m_intSolPhysData[EulerTerm::V]/factor;
+//       m_ghostSolPhysData[EulerTerm::P] = ghostP;
+//       m_ghostSolPhysData[EulerTerm::H] = (gammaDivGammaMinus1*ghostP +
+// 				   0.5*m_ghostSolPhysData[EulerTerm::RHO]*
+// 				   m_ghostSolPhysData[EulerTerm::V]*
+// 				   m_ghostSolPhysData[EulerTerm::V])/m_ghostSolPhysData[EulerTerm::RHO];
+//       m_ghostSolPhysData[EulerTerm::A] = sqrt(gamma*ghostP/m_ghostSolPhysData[EulerTerm::RHO]);
+//       m_ghostSolPhysData[EulerTerm::T] = ghostT;
+
       const CFreal R = m_eulerVarSet->getModel()->getR();
       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
-      CFreal ghostT = 2.0*m_wallT - innerT;
-      
-      CFreal factor = 1.0;
-      while (ghostT < 0.) 
+      const CFreal ghostT = 2.0*m_wallT - innerT;
+      CFreal ghostP;
+      if (getMethodData().getUpdateVarStr() == "Cons")
       {
-        factor *= 2.;
-        ghostT = ((factor + 1.)*m_wallT - innerT)/factor;
+	ghostP = m_intSolPhysData[EulerTerm::RHO]*R*ghostT;
       }
-      cf_assert(ghostT > 0.);
-      
-      const CFreal ghostP = m_intSolPhysData[EulerTerm::P];
-      
-      m_ghostSolPhysData[EulerTerm::RHO] = ghostP/(R*ghostT);
-      m_ghostSolPhysData[EulerTerm::VX] = -m_intSolPhysData[EulerTerm::VX]/factor;
-      m_ghostSolPhysData[EulerTerm::VY] = -m_intSolPhysData[EulerTerm::VY]/factor;
-      m_ghostSolPhysData[EulerTerm::V] = m_intSolPhysData[EulerTerm::V]/factor;
-      m_ghostSolPhysData[EulerTerm::P] = ghostP;
-      m_ghostSolPhysData[EulerTerm::H] = (gammaDivGammaMinus1*ghostP +
-				   0.5*m_ghostSolPhysData[EulerTerm::RHO]*
-				   m_ghostSolPhysData[EulerTerm::V]*
-				   m_ghostSolPhysData[EulerTerm::V])/m_ghostSolPhysData[EulerTerm::RHO];
+      else
+      {
+	ghostP = m_intSolPhysData[EulerTerm::P];
+      }
+
+      // set the physical data for the ghost state
+      m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
+      m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
+      m_ghostSolPhysData[EulerTerm::P]   = ghostP;
+      m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
+                                            + 0.5*m_ghostSolPhysData[EulerTerm::RHO]*
+                                                  m_intSolPhysData[EulerTerm::V]*
+                                                  m_intSolPhysData[EulerTerm::V]
+                                         )/m_ghostSolPhysData[EulerTerm::RHO];
       m_ghostSolPhysData[EulerTerm::A] = sqrt(gamma*ghostP/m_ghostSolPhysData[EulerTerm::RHO]);
       m_ghostSolPhysData[EulerTerm::T] = ghostT;
     }
+    //CFLog(INFO, "Twall: " << m_intSolPhysData[EulerTerm::T] << "\n");
 
   
 
