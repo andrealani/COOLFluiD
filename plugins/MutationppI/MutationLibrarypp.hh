@@ -197,8 +197,8 @@ public:
    */
   CFdouble eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   {
+    //AL: here make sure that if Te is present, viscosity() uses that one 
     CFreal mu = m_gasMixture->viscosity();
-    // RESET_TO_ZERO(mu);
     CFLog(DEBUG_MAX, "Mutation::eta() => mu = " << mu << "\n");
     return mu;
   }
@@ -571,6 +571,9 @@ protected:
   
   /// state model type enumerator 
   MutationLibrarypp::StateModelType m_smType;
+
+  /// local number of Tv (to be removed)
+  CFuint _nbTvibLocal;
   
   /// mass fractions
   RealVector m_y;

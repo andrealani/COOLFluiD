@@ -49,6 +49,7 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name) :
   m_gasMixture(CFNULL),
   m_gasMixtureEquil(CFNULL),
   m_smType(),
+  _nbTvibLocal(0),
   m_y(),
   m_x(),
   m_yn(),
@@ -138,13 +139,14 @@ void MutationLibrarypp::setup()
   if (_stateModelName == "ChemNonEqTTv") m_smType = TCNEQ;
   
   // AL: check this for LTE
-  _nbTvib = m_gasMixture->nEnergyEqns()-1;
+  // AL: this needs to be fixed and double checked for the case T-Te
+  _nbTvibLocal = m_gasMixture->nEnergyEqns()-1;
 
   _hasElectrons = m_gasMixture->hasElectrons();  
   
-  m_Tstate.resize(_nbTvib+1);
+  m_Tstate.resize(_nbTvibLocal+1);
   
-  CFLog(VERBOSE, "MutationLibrarypp::setup() => _nbTvib = " << _nbTvib << "\n");
+  CFLog(VERBOSE, "MutationLibrarypp::setup() => _nbTvibLocal = " << _nbTvibLocal << "\n");
   
   // Setup the charge array
   for (CFint i = 0; i < _NS; ++i) {
@@ -221,11 +223,11 @@ void MutationLibrarypp::lambdaVibNEQ(CFreal& temperature,
 				     CFreal& lambdaTrRo,
 				     RealVector& lambdaInt)
 {
-  RealVector lambdaTRV(_nbTvib+1);
+  RealVector lambdaTRV(_nbTvibLocal+1);
   m_gasMixture->frozenThermalConductivityVector(&lambdaTRV[0]);
   
   lambdaTrRo = lambdaTRV[0];
-  for (CFuint i = 0; i < _nbTvib; ++i) {
+  for (CFuint i = 0; i < _nbTvibLocal; ++i) {
     lambdaInt[i] = lambdaTRV[i+1];
   }
   
@@ -240,6 +242,8 @@ CFdouble MutationLibrarypp::sigma(CFdouble& temp, //electrical conductivity
 				  CFreal* tVec)
 {
   if (temp < 100.) {temp = 100.;}
+  //AL: here make sure that if Te is present, electricConductivity() uses that one 
+  
   // we are assuming here that setState() has been called before!
   // this way we don't care about given pressure and temperature
   return m_gasMixture->electricConductivity();
@@ -678,8 +682,9 @@ void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					RealVector& omegav,
 					CFdouble& omegaRad)
 {
+  // AL: I guess that even the case T-Te should be treated with the same function
   m_gasMixture->energyTransferSource(&omegav[0]);
-    
+  
   CFLog(DEBUG_MAX, "Mutation::getSourceTermVT() => omegav = " << omegav << "\n");
 }
       

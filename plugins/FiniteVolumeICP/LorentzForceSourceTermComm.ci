@@ -217,7 +217,10 @@ void LorentzForceSourceTerm<ST>::execute()
   geoBuilderPtr->setDataSockets(socket_states, socket_gstates, socket_nodes);
   CellTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
   geoData.trs = cells;
-  
+
+  // const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  // const CFuint nbTs = m_library->getNbTempVib() + m_library->getNbTe();
+  // const CFuint TvID = nbEqs-nbTs-2;
   
   // ---------------------------------------[ size: nbCells ]
   const CFuint nbCells = cells->getLocalNbGeoEnts();
@@ -391,16 +394,14 @@ void LorentzForceSourceTerm<ST>::execute()
        cellsRadius[iCell] = r;
 
      /*UNCOMMENT THIS TO COMPUTE elConductivity EVERY ITERATION
-       pdim = getModel()->getPressureFromState(currState[0]); // *getModel()->getPressRef(); watch out with this reference pressure
-       Tdim = currState[3]*refData[EulerTerm::T];
-      
-       // AL: this WOULD NOT WORK in nonequilibrium 
-       m_library->setComposition(Tdim,pdim);
-
-        cout << "Lorentz:: T, p => " << Tdim << ", " << pdim << endl;
-
-       elConductivity = m_library->sigma(Tdim, pdim, CFNULL);
-
+       
+       // computePhysicalData() calls setComposition() for LTE cases
+        updateVarSet->computePhysicalData(*currState, m_physicalData);
+        CFreal Tdim = m_physicalData[EulerTerm::T]*refData[EulerTerm::T]; 
+        CFreal pdim = eulerTerm->getPressureFromState(m_physicalData[EulerTerm::P])*refData[EulerTerm::P];
+	CFreal* tVec = (nbTs > 0) ? &currState[TvID] : CFNULL;
+	elConductivity = m_library->sigma(Tdim, pdim, tVec);
+	
        if(isnan(elConductivity))  ///test
        {
            CF_DEBUG_OBJ(Tdim);

@@ -282,7 +282,7 @@ public: // functions
     CF_CHKERRCONTINUE(MatSetValues(m_mat,1,(const PetscInt*)&row,ncols,cols,val,INSERT_VALUES));
     finalAssembly();
     CF_CHKERRCONTINUE(MatRestoreRow(m_mat,row,&ncols,(const PetscInt**)&cols,0));
-    delete(val);
+    deletePtr(val);
   }
   
   /**

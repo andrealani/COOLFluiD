@@ -235,7 +235,8 @@ void ThermNEQST<UPDATEVAR>::computeSource
 					     this->useAnalyticalJacob(), this-> _omega, jacobian);      
       
       // compute energy relaxation and excitation term 
-      if (nbEvEqs != 0) { 
+      if (nbEvEqs > 0) {
+	// this can include all source terms for the electron energy equation if there is no vibration
 	this-> _library->getSourceTermVT(Tdim, this-> _tvDim, pdim, rhodim, _omegaTv, _omegaRad); 
       }
     }    
@@ -300,9 +301,12 @@ void ThermNEQST<UPDATEVAR>::computeSource
     if (this->_library->presenceElectron()) {
       computePeDivV(element,source,jacobian);
       
+      // the following part needs to be rechecked for cases with T-Te
       if (this->useAnalyticalJacob()) {
 	const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-	const CFuint TeID = (this->_library->getNbTe() == 0) ? TID + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+	const CFuint TeID = (this->_library->getNbTe() == 0) ? 
+	  nbSpecies + dim + 1 + this->_library->getElectrEnergyID() :
+	  nbSpecies + dim + this->_library->getNbTempVib() + 1;
 	cf_assert(TeID < nbEqs);
 	
 	NumericalJacobian& numJacob = this->getMethodData().getNumericalJacobian();
@@ -431,8 +435,12 @@ void ThermNEQST<UPDATEVAR>::computePeDivV
   const CFuint nbNodesInElem = nodes.size();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_assert(this->_library->getElectrEnergyID() >= 0);
+  
   const CFuint TeID = (this->_library->getNbTe() == 0) ? 
-    nbSpecies + dim + 1 + this->_library->getElectrEnergyID() : currState->size() - 1;
+    nbSpecies + dim + 1 + this->_library->getElectrEnergyID() :
+    nbSpecies + dim + this->_library->getNbTempVib() + 1;
+  
+  CFLog(DEBUG_MAX, "ThermNEQST::computePeDivV() => TeID = " << TeID << "\n");
   
   CFreal dudX = 0.;
   CFreal dvdY = 0.;
