@@ -78,6 +78,9 @@ void SubOutletEulerP<UPDATEVAR>::setGhostState(Framework::GeometricEntity *const
     const CFuint startTv = nbSpecies+dim+1;
     if (this->_library->presenceElectron()) {
       Te = innerState[startTv];
+      if (this->_library->getNbTe() == 1) {
+	Te = innerState[nbSpecies+dim+nbTv]; // Te is always the last temperature
+      }
     }
     for (CFuint k = 0; k < nbTv; ++k) {
       ghostState[startTv+k] = innerState[startTv+k]; 
@@ -99,8 +102,9 @@ void SubOutletEulerP<UPDATEVAR>::setGhostState(Framework::GeometricEntity *const
   if (_stateHasPartialDensities) {
     CFreal ysum = 0.;
     for (CFuint is = 0; is < nbSpecies; ++is) {
-      ghostState[is] = rhoGhost*_dataInnerState[firstSpecies + is]; // rho_i = rho*y_i 
-      ysum += _dataInnerState[firstSpecies + is];
+      const CFreal yi = _dataInnerState[firstSpecies + is];
+      ghostState[is] = rhoGhost*yi; // rho_i = rho*y_i 
+      ysum += yi;
     }
     cf_assert(ysum > 0.99999 && ysum < 1.0001);
   } 
