@@ -140,7 +140,7 @@ void SubInletEulerMassFlowT::setGhostState(GeometricEntity *const face)
      
       CFreal Ti = (*ghostState)[TID];  
       if (nbTs > 0) {  
-        Ti = (i > 0) ? (*ghostState)[TID] : (*ghostState)[TID+1];
+	Ti = (i > 0) ? (*ghostState)[TID] : (*ghostState)[TID+nbTs]; // Te is always the last temperature
       }
       (*ghostState)[i] = rhoG*yi*Ri*Ti; // rho_i
     } 
