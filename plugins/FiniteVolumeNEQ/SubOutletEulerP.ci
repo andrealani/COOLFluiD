@@ -114,7 +114,7 @@ void SubOutletEulerP<UPDATEVAR>::setGhostState(Framework::GeometricEntity *const
     }
   }
   
-  const CFuint rest = PhysicalModelStack::getActive()->getNbEq() - nbSpecies; 
+  const CFuint rest = dim + 1 + nbTv;
   for (CFuint is = 0; is < rest; ++is) {
     ghostState[nbSpecies+is] = innerState[nbSpecies+is];
   } 
