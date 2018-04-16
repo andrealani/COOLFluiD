@@ -75,7 +75,7 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
 
     CFLog(VERBOSE, "PetscMatrix::createSeqAIJ() on GPU["<< m_useGPU << "]\n" );   
  
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
     CF_CHKERRCONTINUE(MatSeqAIJSetPreallocation(m_mat, nz, nnz));
     CFLog(DEBUG_MIN, "PetscMatrix::createSeqBAIJ() => MatSeqAIJSetPreallocation() \n" );
@@ -86,7 +86,7 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
   }
   else {
     CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQBAIJ));
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
 #endif
     CF_CHKERRCONTINUE(MatSeqBAIJSetPreallocation(m_mat, blockSize, nz, nnz));
@@ -130,7 +130,7 @@ void PetscMatrix::createParAIJ(MPI_Comm comm,
                                const CFint* onnz,
                                const char* name)
 {
- #if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
+ #if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
    CF_CHKERRCONTINUE(MatCreateAIJ(comm, m, n, M, N, dnz, dnnz,  onz, onnz, &m_mat));
 #else
   CF_CHKERRCONTINUE(MatCreateMPIAIJ(comm, m, n, M, N, dnz, dnnz,  onz, onnz, &m_mat));
@@ -170,7 +170,7 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
 
     CFLog(VERBOSE, "PetscMatrix::createParAIJ() on GPU["<< m_useGPU << "]\n" );
     
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
     CF_CHKERRCONTINUE(MatMPIAIJSetPreallocation(m_mat, dnz, dnnz, onz, onnz));
 #else
@@ -180,7 +180,7 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
   }
   else {
     CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIBAIJ));
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
     CF_CHKERRCONTINUE(MatSetBlockSize(m_mat, blockSize));
 #endif
     CF_CHKERRCONTINUE(MatMPIBAIJSetPreallocation(m_mat, blockSize, dnz, dnnz, onz, onnz));
