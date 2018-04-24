@@ -89,6 +89,9 @@ private: // member data
   
   /// flag telling to run at setup time
   bool m_runAtSetup;
+
+  /// flag telling to run at setup time and after use process rate
+  bool m_runAtSetupAndAfter; 
   
 }; // class DataProcessing
 

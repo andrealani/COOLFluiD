@@ -35,6 +35,7 @@ void DataProcessing::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::vector<std::string> >("Names","Names for the configuration of the Data Processing commands.");
    options.addConfigOption< bool >("SkipFirstIteration","Skip the processing after first iteration.");
    options.addConfigOption< bool >("RunAtSetup","Run at setup time.");
+   options.addConfigOption< bool >("RunAtSetupAndAfter","Run at setup time and after use process rate.");  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -59,6 +60,9 @@ DataProcessing::DataProcessing(const std::string& name)
   
   m_runAtSetup = false;
   setParameter("RunAtSetup",&m_runAtSetup);
+  
+  m_runAtSetupAndAfter = false;
+  setParameter("RunAtSetupAndAfter",&m_runAtSetupAndAfter);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,15 +111,17 @@ void DataProcessing::processDataImpl()
   CFAUTOTRACE;
   
   // AL: this is needed at least when calculating the distance to the wall
-  if (m_runAtSetup && SubSystemStatusStack::getActive()->isSetup()) {
+  if ((m_runAtSetup || m_runAtSetupAndAfter) && SubSystemStatusStack::getActive()->isSetup()) {
     for(CFuint i = 0; i < m_dataprocessing.size(); ++i) {
       cf_assert(m_dataprocessing[i].isNotNull()); 
       CFLog(VERBOSE, "DataProcessing " << m_dataprocessing[i]->getClassName() << "->execute() during setup()\n");
       m_dataprocessing[i]->execute();
     }
+
+    if (m_runAtSetup) return;
   }
-  else {
-    if ((!SubSystemStatusStack::getActive()->isSetup()) && (!m_runAtSetup)) {
+    
+  if ((!SubSystemStatusStack::getActive()->isSetup()) && (!m_runAtSetup)) {
     // AL: big change here : tell Tiago!!!
     const CFuint rest = (SubSystemStatusStack::getActive()->getNbIter()-1) % m_processRate; 
     if ((SubSystemStatusStack::getActive()->getNbIter() == 0 && !m_skipFirstIteration) ||
@@ -135,8 +141,7 @@ void DataProcessing::processDataImpl()
 	  m_dataprocessing[i]->execute();
 	}
       }
-    } 
-  }
+  } 
 }
     
 //////////////////////////////////////////////////////////////////////////////
