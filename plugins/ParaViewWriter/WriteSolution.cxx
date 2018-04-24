@@ -435,6 +435,45 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   // close PointData element
   fout << "      </PointData>\n";
 
+  // print datahandles with state based data
+  {
+    SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+    datahandle_output->getDataHandles();
+    std::vector< std::string > dh_varnames = datahandle_output->getCCVarNames();
+    // loop over the state based variables
+    
+    if (dh_varnames.size() > 0) {
+      // cell-based data
+      // open CellData element
+      fout << "   <CellData Scalars=\"" << dh_varnames[0] << "\">\n";
+      
+      for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar)
+	{
+	  // open DataArray element
+	  fout << "        <DataArray Name=\"" << dh_varnames[iVar] << "\" type=\"Float32\" format=\"ascii\">\n";
+	  fout << "          ";
+	  
+	  DataHandleOutput::DataHandleInfo var_info = datahandle_output->getCCData(iVar);
+	  CFuint var_var = var_info.first;
+	  CFuint var_nbvars = var_info.second;
+	  DataHandle<CFreal> var = var_info.third;
+	  
+	  for (CFuint iState = 0; iState < nbrCells; ++iState) {
+	    fout << scientific << setprecision(12) <<
+	      var(iState, var_var, var_nbvars) << " ";
+	  }
+	  
+	  fout << "\n";
+	  
+	  // close DataArray element
+	  fout << "        </DataArray>\n";
+	}
+      
+      // close CellData element
+      fout << "      </CellData>\n";
+    }
+  }
+  
   // open Points element
   fout << "      <Points>\n";
 
