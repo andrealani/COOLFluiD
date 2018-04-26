@@ -62,10 +62,10 @@ void AeroForcesFR::defineConfigOptions(Config::OptionList& options)
 
 AeroForcesFR::AeroForcesFR(const std::string& name) :
   DataProcessingCom(name),
-  m_sockets(),
-  socket_states("states"), 
   socket_gradients("gradients"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
+  m_sockets(),
+  socket_states("states"), 
   m_updateVarSet(CFNULL),
   m_frData(CFNULL),
   m_mapTrsFaceToID(),
@@ -115,23 +115,23 @@ AeroForcesFR::AeroForcesFR(const std::string& name) :
   m_faceBCIdx(CFNULL),
   m_orient(),
   m_intCell(CFNULL),
-  m_nbrFaceFlxPnts(),
   m_cellStates(CFNULL),
+  m_nbrFaceFlxPnts(),
   m_flxLocalCoords(CFNULL),
-  m_solPolyValsAtFlxPnts(CFNULL),
+  m_cellGrads(),
+  m_cellGradFlxPnt(),
   m_faceFlxPntConn(CFNULL),
   m_faceConnPerOrient(CFNULL),
   m_faceIntegrationCoefs(CFNULL),
-  m_faceMappedCoordDir(CFNULL),
-  m_faceJacobVecAbsSizeFlxPnts(),
-  m_faceJacobVecSizeFlxPnts(),
-  m_dim(),
   m_cellStatesFlxPnt(),
-  m_nbrEqs(),
   m_unitNormalFlxPnts(),
+  m_solPolyValsAtFlxPnts(CFNULL),
+  m_nbrEqs(),
   m_nbrSolPnts(),
-  m_cellGrads(),
-  m_cellGradFlxPnt()
+  m_dim(),
+  m_faceJacobVecAbsSizeFlxPnts(),
+  m_faceMappedCoordDir(CFNULL),
+  m_faceJacobVecSizeFlxPnts()
 {
   addConfigOptionsTo(this);
 
@@ -775,9 +775,9 @@ void AeroForcesFR::computeAero()
 
   SafePtr<TopologicalRegionSet> trs = getCurrentTRS();
 
-  // this is redundant but allows to adapt all the subclasses
-  const vector<Node*>& nodesInFace = *m_currFace->getNodes();
-  const CFuint nbNodesInFace = nodesInFace.size();
+//   // this is redundant but allows to adapt all the subclasses
+//   const vector<Node*>& nodesInFace = *m_currFace->getNodes();
+//   const CFuint nbNodesInFace = nodesInFace.size();
 
 //   // compute all physical values corresponding to the given states
 //   m_midFaceNode = 0.0;
@@ -1074,7 +1074,6 @@ void AeroForcesFR::initSurfaceResiduals()
 {
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbVariables = m_varNames.size() - dim;
-  const CFuint nbFaceFlxPnts = m_nbrFaceFlxPnts;
   if (nbVariables < 1) 
   {
     CFLog(WARN, "AeroForcesFR::initSurfaceResiduals() needs nbVariables > 0 => you must use derived class\n");

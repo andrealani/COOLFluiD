@@ -331,6 +331,8 @@ void NavierStokesSkinFrictionHeatFluxFR::computeTauWall(CFuint flxIdx)
   //const CFreal mu_ref = m_diffVar->getModel().getDynViscosityDim
   //(m_updateVarSet->getModel()->getPressRef(), m_updateVarSet->getModel()->getTempRef());
   
+  m_muWall = m_diffVar->getDynViscosity(*(m_cellStatesFlxPnt[flxIdx]), m_cellGradFlxPnt[flxIdx]);
+  
   // this will not work adimensional
   // const CFreal tauRef = 1.0; // mu_ref*Uref/refLength;
   const CFreal gamma = m_updateVarSet->getModel()->getGamma();
@@ -546,10 +548,42 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
   const CFuint PID = 0;
   const CFreal rhoRef = (m_updateVarSet->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
   
-  pDim = m_updateVarSet->getModel()->getPressureFromState((*(m_cellStatesFlxPnt[flxIdx]))[PID]) * 
-    (m_updateVarSet->getModel()->getPressRef());
-  TDim = (*(m_cellStatesFlxPnt[flxIdx]))[m_TID] * (m_updateVarSet->getModel()->getTempRef());
-  rhoDim = m_rhoWall * rhoRef;
+  const bool Puvt = m_frData->getUpdateVarStr() == "Puvt";
+  
+  if (Puvt)
+  {
+    pDim = m_updateVarSet->getModel()->getPressureFromState((*(m_cellStatesFlxPnt[flxIdx]))[PID]) * 
+      (m_updateVarSet->getModel()->getPressRef());
+    TDim = (*(m_cellStatesFlxPnt[flxIdx]))[m_TID] * (m_updateVarSet->getModel()->getTempRef());
+    rhoDim = m_rhoWall * rhoRef;
+  }
+  else
+  {
+    // get some data needed further
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    const CFuint nbEqsM1 = nbEqs - 1;
+    const CFreal R = m_updateVarSet->getModel()->getR();
+    const CFreal gamma = m_updateVarSet->getModel()->getGamma();
+    const CFreal gammaMinus1 = gamma - 1.;
+  
+    const CFreal rho = (*(m_cellStatesFlxPnt[flxIdx]))[0];
+    const CFreal invRho = 1./rho;
+    CFreal rhoK2 = 0.0;
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      rhoK2 += (*(m_cellStatesFlxPnt[flxIdx]))[iDim+1]*(*(m_cellStatesFlxPnt[flxIdx]))[iDim+1];
+    }
+    rhoK2 *= 0.5*invRho;
+    const CFreal p = gammaMinus1*((*(m_cellStatesFlxPnt[flxIdx]))[nbEqsM1] - rhoK2);
+
+    // temperature
+    const CFreal T = p*invRho/R;
+
+    // dimensional values
+    TDim   = T   * m_updateVarSet->getModel()->getTempRef();
+    pDim   = p   * m_updateVarSet->getModel()->getPressRef();
+    rhoDim = rho * (m_updateVarSet->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
+  }      
   
   const CFreal rhoInf = m_pInf / (m_updateVarSet->getModel()->getRdim() * m_TInf);
   //const CFreal rhoInf = 1.0;
@@ -582,12 +616,12 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     updateValuesMatAndResidual(1, index, TDim);    
     updateValuesMatAndResidual(2, index, rhoDim);    
     updateValuesMatAndResidual(3, index, Cp);    
-    updateValuesMatAndResidual(4, index, -heatFlux);    
-    updateValuesMatAndResidual(5, index, -stantonNumber);
+    updateValuesMatAndResidual(4, index, heatFlux);    
+    updateValuesMatAndResidual(5, index, stantonNumber);
     updateValuesMatAndResidual(6, index, this->m_yPlus);
     updateValuesMatAndResidual(7, index, this->m_Cf);
     updateValuesMatAndResidual(8, index, m_muWall);
-    updateValuesMatAndResidual(9, index, -m_heatFluxRad);
+    updateValuesMatAndResidual(9, index, m_heatFluxRad);
   }
   else{
     throw Common::NotImplementedException (FromHere(),"NavierStokesSkinFrictionHeatFluxFR::updateOutputFile() is only 2D");
