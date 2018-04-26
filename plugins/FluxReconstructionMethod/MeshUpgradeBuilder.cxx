@@ -10,6 +10,10 @@
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/MeshUpgradeBuilder.hh"
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -40,6 +44,7 @@ void MeshUpgradeBuilder::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("PolynomialOrder","Flux Reconstruction polynomial order.");
   options.addConfigOption< std::string >("GeoPolynomialOrder","Geometrical polynomial order.");
   options.addConfigOption< CFuint >("DivideElements","Divide elements on equal parts to form new cells. This number is equal to te number of element adjescend to an old element face, so for 1 nothing happens.");
+  options.addConfigOption< bool >("UpgradeInit","Flag telling whether the initialization needs to be upgraded too.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,16 +52,17 @@ void MeshUpgradeBuilder::defineConfigOptions(Config::OptionList& options)
 MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   FluxReconstructionBuilder(name),
   m_solPolyOrder(),
-  m_geoPolyOrder(),
   m_elementDivision(),
+  m_geoPolyOrder(),
   m_prevGeoPolyOrder(),
   m_bndFacesNodes(),
+  m_updatables(),
   m_globalIDs(),
-  m_elemLocalIDOfState(),
   m_elemIDOfState(),
+  m_elemLocalIDOfState(),
   m_elemFirstStateLocalID(),
   m_newToOldNodeID(),
-  m_updatables()
+  m_newStatesVal()
 {
   addConfigOptionsTo(this);
 
@@ -68,6 +74,9 @@ MeshUpgradeBuilder::MeshUpgradeBuilder(const std::string& name) :
   
   m_elementDivision = 1;
   setParameter( "DivideElements", &m_elementDivision);
+  
+  m_upgradeInit = false;
+  setParameter( "UpgradeInit", &m_upgradeInit);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -630,7 +639,7 @@ void MeshUpgradeBuilder::divideElements()
 	      bool isInNghbrs = false;
 	      for (CFuint iNghb = 0; iNghb < 4; ++iNghb)
 	      {
-		if (currCellIdx == faceNeighbors[iNghb])
+		if (currCellIdx == static_cast< CFuint >(faceNeighbors[iNghb]))
 		{
 		  isInNghbrs = true;
 		}
@@ -1139,6 +1148,8 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   // get the connectivity that we will change
   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
   
+  MeshData::ConnTable cellStatesOld = *cellStates;
+  
   // get the old states
   DataHandle < Framework::State*, Framework::GLOBAL > oldStates = getCFmeshData().getStatesHandle();
 
@@ -1208,6 +1219,57 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   }
   // then resize the connectivity
   cellStates->resize(columnPattern);
+  SafePtr< vector< RealVector > > newSolPntCoords;
+  std::vector< std::vector< CFreal > > solPolyValsOld;
+  
+  if (m_upgradeInit) 
+  {
+    FluxReconstructionElementData* frElemData;
+    FluxReconstructionElementData* frElemData2;
+    
+    m_newStatesVal.resize(cellStates->size());
+    const CFGeoShape::Type cellShape = ((*elementType)[0]).getGeoShape();
+    CFuint oldOrder;
+    CFPolyOrder::Type oldOrder2;
+  
+    switch (cellShape)
+    {
+      case CFGeoShape::LINE:
+      {
+        throw Common::NotImplementedException (FromHere(),"Flux Reconstruction has not been implemented for 1D");
+      } break;
+      case CFGeoShape::QUAD:
+      {
+	oldOrder = static_cast<CFuint> (sqrt(oldNbStatesPerElem)+0.5) - 1;
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
+        frElemData = new QuadFluxReconstructionElementData(oldOrder2);
+	frElemData2 = new QuadFluxReconstructionElementData(m_solPolyOrder);
+      } break;
+      case CFGeoShape::HEXA:
+      {
+	oldOrder = static_cast<CFuint> (pow(oldNbStatesPerElem,1./3.)+0.5) - 1;
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder2);
+        frElemData = new HexaFluxReconstructionElementData(oldOrder2);
+	frElemData2 = new HexaFluxReconstructionElementData(m_solPolyOrder);
+      } break;
+      case CFGeoShape::TRIAG:
+      {
+	oldOrder = static_cast<CFuint> (sqrt(oldNbStatesPerElem)+0.5) - 1;
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder2);
+        frElemData = new TriagFluxReconstructionElementData(oldOrder2);
+	frElemData2 = new TriagFluxReconstructionElementData(m_solPolyOrder);
+      } break;
+      default:
+      {
+        throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
+      }
+    }
+    newSolPntCoords = frElemData2->getSolPntsLocalCoords();
+    solPolyValsOld = frElemData->getSolPolyValsAtNode(*newSolPntCoords);
+    
+    delete frElemData;
+    delete frElemData2;
+  }
 
   // loop on all the elements and reassign the IDs of the states
   CFuint stateID = 0;
@@ -1225,6 +1287,28 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
     // loop over elements of this type
     for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++globalIdx)
     {
+      // if needed upgrade the low-order initialization
+      if (m_upgradeInit)
+      {
+	cf_assert(solPolyValsOld.size() == nbStatesPerElem);
+	
+	const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
+	
+	for (CFuint iNewState = 0; iNewState < nbStatesPerElem; ++iNewState)
+        {
+	  m_newStatesVal[stateID+iNewState].resize(nbeq);
+	  m_newStatesVal[stateID+iNewState] = 0.0;
+          for (CFuint iOldState = 0; iOldState < oldNbStatesPerElem; ++iOldState)
+          {
+	    const CFuint oldID = (cellStatesOld)(globalIdx,iOldState);
+	    RealVector tempState = *(oldStates[oldID]);  
+
+	    m_newStatesVal[stateID+iNewState] += solPolyValsOld[iNewState][iOldState]*tempState;
+	    
+	    cf_assert((solPolyValsOld[iNewState]).size() == oldNbStatesPerElem);
+          }
+        }
+      }
       for (CFuint jState = 0; jState < nbStatesPerElem; ++jState, ++stateID)
       {
         (*cellStates)(globalIdx,jState) = stateID;
@@ -1263,7 +1347,7 @@ void MeshUpgradeBuilder::recreateStates()
 
   const CFuint newNbStates = cellStates->size();
   const CFuint oldNbStates = states.size();
-  const CFuint oldNbGlobalStates = states.getGlobalSize();
+  //const CFuint oldNbGlobalStates = states.getGlobalSize();
 
   // delete the existing states
   for (CFuint i = 0; i < oldNbStates; ++i)
@@ -1280,7 +1364,6 @@ void MeshUpgradeBuilder::recreateStates()
 
   // allocate the new states
   const CFuint nbeq = PhysicalModelStack::getActive()->getNbEq();
-  RealVector stateData (nbeq);
   
   for (CFuint iState = 0; iState < newNbStates; ++iState)
   {
@@ -1311,7 +1394,15 @@ void MeshUpgradeBuilder::recreateStates()
       localID = iState;
     }
 
-    getCFmeshData().createState(localID,stateData);
+    if (!m_upgradeInit)
+    {
+      RealVector stateData (nbeq);
+      getCFmeshData().createState(localID,stateData);
+    }
+    else
+    {
+      getCFmeshData().createState(localID,m_newStatesVal[localID]);
+    }
     states[localID]->setParUpdatable(m_updatables[iState]);
     states[localID]->setGlobalID(globalID);
     
@@ -1323,6 +1414,7 @@ void MeshUpgradeBuilder::recreateStates()
   m_elemLocalIDOfState.clear();
   m_elemIDOfState.clear();
   m_elemFirstStateLocalID.clear();
+  m_newStatesVal.clear();
     
   //   CFuint localID = 0;
 //     bool isGhost = false;

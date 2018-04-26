@@ -79,7 +79,8 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_totalEpsGlobal(),
   m_jacob(false),
   m_nbPosPrev(),
-  m_nbPosPrevGlobal()
+  m_nbPosPrevGlobal(),
+  m_subcellRes()
   {
     addConfigOptionsTo(this);
     
@@ -871,13 +872,22 @@ void LLAVFluxReconstruction::computeEpsilon0()
   
   const CFreal wavespeed = updateCoeff[(*m_cellStates)[0]->getLocalID()];
   
-  const CFreal deltaKsi = 1.0/(m_order+2.0);
+  //const CFreal deltaKsi = 2.0/(m_order+2.0);
   
-  m_epsilon0 = wavespeed*(2.0/m_peclet - deltaKsi/m_peclet);
+  const CFreal peclet = computePeclet();
+  
+  m_epsilon0 = wavespeed*(2.0/peclet - m_subcellRes/peclet);
   
   if (m_addPosPrev) addPositivityPreservation();
 
   //CFLog(INFO, "lambda: " << wavespeed << "\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal LLAVFluxReconstruction::computePeclet()
+{
+  return m_peclet;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1020,6 +1030,8 @@ void LLAVFluxReconstruction::setup()
   cf_assert(frLocalData.size() == 1);
   
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_subcellRes = frLocalData[0]->getSubcellResolution();
   
   // get the coefs for extrapolation of the node artificial viscosities to the flx pnts
   m_nodePolyValsAtFlxPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getFlxPntsLocalCoords()));

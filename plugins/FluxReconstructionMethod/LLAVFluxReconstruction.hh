@@ -115,6 +115,11 @@ protected: //functions
    * Add extra viscosity to regions where positivity is almost violated, using the minValue option comparing to the state of the monitoredVar option
    */
   void addPositivityPreservation();
+  
+  /**
+   * command to compute the peclet number based on user input
+   */
+  virtual CFreal computePeclet(); 
 
 protected: //data
   
@@ -249,6 +254,9 @@ protected: //data
   
   /// maximum factor applied to viscosity for positivity preservation
   CFreal m_viscFactor;
+  
+  /// subcell resolution
+  CFreal m_subcellRes;
   
   private:
 

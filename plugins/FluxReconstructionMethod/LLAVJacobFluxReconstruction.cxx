@@ -71,7 +71,8 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
   m_totalEps(),
   m_totalEpsGlobal(),
   m_nbPosPrev(),
-  m_nbPosPrevGlobal()
+  m_nbPosPrevGlobal(),
+  m_subcellRes()
   {
     addConfigOptionsTo(this);
     
@@ -946,11 +947,20 @@ void LLAVJacobFluxReconstruction::computeEpsilon0()
   
   const CFreal wavespeed = updateCoeff[(*m_cellStates)[0]->getLocalID()];
   
-  const CFreal deltaKsi = 1.0/(m_order+2.0);
+  //const CFreal deltaKsi = 2.0/(m_order+2.0);
   
-  m_epsilon0 = wavespeed*(2.0/m_peclet - deltaKsi/m_peclet);
+  const CFreal peclet = computePeclet();
+  
+  m_epsilon0 = wavespeed*(2.0/peclet - m_subcellRes/peclet);
   
   if (m_addPosPrev) addPositivityPreservation();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal LLAVJacobFluxReconstruction::computePeclet()
+{
+  return m_peclet;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1342,6 +1352,8 @@ void LLAVJacobFluxReconstruction::setup()
   cf_assert(frLocalData.size() == 1);
   
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_subcellRes = frLocalData[0]->getSubcellResolution();
   
   m_order = static_cast<CFuint>(order);
   

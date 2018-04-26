@@ -74,7 +74,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPntFlxDim(),
   m_vandermonde(),
   m_vandermondeInv(),
-  m_coefSolPolyDerivInNodes()
+  m_coefSolPolyDerivInNodes(),
+  m_subcellRes()
 {
   CFAUTOTRACE;
 }
@@ -107,6 +108,7 @@ void FluxReconstructionElementData::setFlxPntDistribution(Common::SafePtr< BaseP
 void FluxReconstructionElementData::setSolPntDistribution(Common::SafePtr< BasePointDistribution > solPntDist)
 {
   m_solPntsLocalCoord1D = solPntDist->getLocalCoords1D(m_polyOrder);
+  m_subcellRes = solPntDist->getSubcellResolution(m_polyOrder);
   resetFluxReconstructionElementData();
 }
 

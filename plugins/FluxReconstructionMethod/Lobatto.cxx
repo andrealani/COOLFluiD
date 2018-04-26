@@ -165,6 +165,70 @@ std::vector<CFreal> Lobatto::getLocalCoords1D(CFPolyOrder::Type solOrder)
 
 //////////////////////////////////////////////////////////////////////////////
 
+CFreal Lobatto::getSubcellResolution(CFPolyOrder::Type solOrder)
+{
+  CFAUTOTRACE;
+  
+  CFreal result;
+
+  switch(solOrder)
+    {
+      case CFPolyOrder::ORDER0:
+      {
+	result = 1.;
+      } break;
+      case CFPolyOrder::ORDER1:
+      {
+	result = 2.;
+      } break;
+      case CFPolyOrder::ORDER2:
+      {
+	result = 1.;
+      } break;
+      case CFPolyOrder::ORDER3:
+      {
+	result = 2.*0.4472135954999579392818;
+      } break;
+      case CFPolyOrder::ORDER4:
+      {
+	result = 0.6546536707079771437983;
+      } break;
+      case CFPolyOrder::ORDER5:
+      {
+	result = 2.*0.2852315164806450963142;
+      } break;
+      case CFPolyOrder::ORDER6:
+      {
+	result = 0.4688487934707142138038;
+      } break;
+      case CFPolyOrder::ORDER7:
+      {
+	result = 2.*0.2092992179024788687687;
+      } break;
+      case CFPolyOrder::ORDER8:
+      {
+	result = 0.3631174638261781587108;
+      } break;
+      case CFPolyOrder::ORDER9:
+      {
+	result = 2.*0.1652789576663870246262;
+      } break;
+      case CFPolyOrder::ORDER10:
+      {
+	result = 0.2957581355869393914319;
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+                                      + StringOps::to_str(solOrder) + ".");
+      }
+    }
+
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void Lobatto::setup()
 {
   CFAUTOTRACE;

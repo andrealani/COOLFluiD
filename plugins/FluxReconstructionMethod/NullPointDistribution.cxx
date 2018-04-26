@@ -44,10 +44,16 @@ std::vector<CFreal> NullPointDistribution::getLocalCoords1D(CFPolyOrder::Type so
 {
   CFAUTOTRACE;
 
-  CFLog(VERBOSE, "NullPointDistribution::getLocalCoords1D()\n");
   std::vector<CFreal> coords;
   coords.resize(solOrder);
   return coords;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal NullPointDistribution::getSubcellResolution(CFPolyOrder::Type solOrder)
+{
+  return 2.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

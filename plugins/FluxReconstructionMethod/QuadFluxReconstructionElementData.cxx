@@ -822,47 +822,47 @@ void QuadFluxReconstructionElementData::setCFLConvDiffRatio()
   {
     case CFPolyOrder::ORDER0:
     {
-      m_cflConvDiffRatio = 4.0; // check this!
+      m_cflConvDiffRatio = 2.0; //4.0; // check this!
     } break;
     case CFPolyOrder::ORDER1:
     {
-      m_cflConvDiffRatio = 6.5; //6.5; // check this!
+      m_cflConvDiffRatio = 4.0; //6.5; // check this!
     } break;
     case CFPolyOrder::ORDER2:
     {
-      m_cflConvDiffRatio = 17.0; //17.0; // check this!
+      m_cflConvDiffRatio = 6.0; //17.0; // check this!
     } break;
     case CFPolyOrder::ORDER3:
     {
-      m_cflConvDiffRatio = 25.0; // check this!
+      m_cflConvDiffRatio = 8.0; //25.0; // check this!
     } break;
     case CFPolyOrder::ORDER4:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 10.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER5:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 12.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER6:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 14.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER7:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 16.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER8:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 18.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER9:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 20.0; //50.0; // check this!
     } break;
     case CFPolyOrder::ORDER10:
     {
-      m_cflConvDiffRatio = 50.0; // check this!
+      m_cflConvDiffRatio = 22.0; //50.0; // check this!
     } break;
     default:
     {

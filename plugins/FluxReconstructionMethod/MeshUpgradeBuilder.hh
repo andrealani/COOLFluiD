@@ -203,6 +203,12 @@ protected: // data
   /// map of new nodeIDs to old nodeIDs
   std::vector< std::vector< CFuint > > m_newToOldNodeID;
   
+  /// new state values based on upgraded low-order state
+  std::vector< RealVector > m_newStatesVal;
+  
+  /// flag telling whether the initialized solution must be upgraded too
+  bool m_upgradeInit;
+  
 
 };  // end of class MeshUpgradeBuilder
 

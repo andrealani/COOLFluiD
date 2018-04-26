@@ -48,7 +48,6 @@ GaussLegendre::~GaussLegendre()
 std::vector<CFreal> GaussLegendre::getLocalCoords1D(CFPolyOrder::Type solOrder)
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE, "GaussLegendre::getLocalCoords1D()\n");
   
   std::vector<CFreal> coords;
   coords.resize(solOrder+1);
@@ -161,6 +160,70 @@ std::vector<CFreal> GaussLegendre::getLocalCoords1D(CFPolyOrder::Type solOrder)
     }
 
   return coords;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal GaussLegendre::getSubcellResolution(CFPolyOrder::Type solOrder)
+{
+  CFAUTOTRACE;
+  
+  CFreal result;
+
+  switch(solOrder)
+    {
+      case CFPolyOrder::ORDER0:
+      {
+	result = 1.;
+      } break;
+      case CFPolyOrder::ORDER1:
+      {
+	result = 2./sqrt(3.);
+      } break;
+      case CFPolyOrder::ORDER2:
+      {
+	result = sqrt(3./5.);
+      } break;
+      case CFPolyOrder::ORDER3:
+      {
+	result = 2.*sqrt((3.-2.*sqrt(6./5.))/7.);
+      } break;
+      case CFPolyOrder::ORDER4:
+      {
+	result = sqrt(5.-2.*sqrt(10./7.))/3.;
+      } break;
+      case CFPolyOrder::ORDER5:
+      {
+	result = 2.*0.2386191860831969;
+      } break;
+      case CFPolyOrder::ORDER6:
+      {
+	result = 0.405845151377397;
+      } break;
+      case CFPolyOrder::ORDER7:
+      {
+	result = 2.*0.183434642495650;
+      } break;
+      case CFPolyOrder::ORDER8:
+      {
+	result = 0.324253423403809;
+      } break;
+      case CFPolyOrder::ORDER9:
+      {
+	result = 2.*0.148874338981631;
+      } break;
+      case CFPolyOrder::ORDER10:
+      {
+	result = 0.269543155952345;
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"Gauss Legendre not implemented for order "
+                                      + StringOps::to_str(solOrder) + ".");
+      }
+    }
+
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////

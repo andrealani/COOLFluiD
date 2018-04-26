@@ -150,6 +150,14 @@ public:
   {
     return &m_solPntsLocalCoords;
   }
+  
+  /**
+   * @return m_subcellRes
+   */
+  CFreal getSubcellResolution()
+  {
+    return m_subcellRes;
+  }
 
   /**
    * @return m_flxPntsLocalCoords
@@ -904,6 +912,9 @@ protected: // protected data
   
   /// coefficients for derivatives of solution polynomials in the nodes
   std::vector< std::vector< std::vector< CFreal > > > m_coefSolPolyDerivInNodes;
+  
+  /// subcell resolution
+  CFreal m_subcellRes;
 
 }; // end of class FluxReconstructionElementData
 

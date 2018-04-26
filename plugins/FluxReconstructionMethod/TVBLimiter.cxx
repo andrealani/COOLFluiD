@@ -40,7 +40,6 @@ TVBLimiter::TVBLimiter(const std::string& name) :
   socket_nodeNghbCellMinAvgStates("nodeNghbCellMinAvgStates"),
   socket_nodeNghbCellMaxAvgStates("nodeNghbCellMaxAvgStates"),
   m_cellBuilder(CFNULL),
-  m_solPolyValsAtFlxPnts(CFNULL),
   m_cell(),
   m_cellStates(),
   m_cellNodes(),
@@ -56,6 +55,7 @@ TVBLimiter::TVBLimiter(const std::string& name) :
   m_minAvgStateAll(),
   m_maxAvgStateAll(),
   m_nbrEqs(),
+  m_dim(),
   m_nbrFlxPnts(),
   m_nbrSolPnts(),
   m_nbrCornerNodes(),
@@ -63,7 +63,9 @@ TVBLimiter::TVBLimiter(const std::string& name) :
   m_applyLimiterToPhysVar(),
   m_tvbLimitFactor(),
   m_lengthScaleExp(),
-  m_cellStatesFlxPnt()
+  m_cellStatesFlxPnt(),
+  m_maxNbrFlxPnts(),
+  m_solPolyValsAtFlxPnts(CFNULL)
 {
   addConfigOptionsTo(this);
 

@@ -38,6 +38,9 @@ public:  // methods
   /// Get the 1D coordinates of the point distribution
   std::vector<CFreal> getLocalCoords1D(CFPolyOrder::Type solOrder);
   
+  /// Get the maximum distance in 1D between two subsequent points
+  CFreal getSubcellResolution(CFPolyOrder::Type solOrder);
+  
   /// Set up private data and data
   void setup();
   

@@ -48,7 +48,6 @@ Equidistant::~Equidistant()
 std::vector<CFreal> Equidistant::getLocalCoords1D(CFPolyOrder::Type solOrder)
 {
   CFAUTOTRACE;
-  CFLog(VERBOSE, "Equidistant::getLocalCoords1D()\n");
   
   // initialize return variable
   const CFuint orderPlus1 = solOrder+1;
@@ -62,6 +61,15 @@ std::vector<CFreal> Equidistant::getLocalCoords1D(CFPolyOrder::Type solOrder)
   }
 
   return coords;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal Equidistant::getSubcellResolution(CFPolyOrder::Type solOrder)
+{
+  CFAUTOTRACE;
+
+  return 2./(solOrder + 2.);
 }
 
 //////////////////////////////////////////////////////////////////////////////

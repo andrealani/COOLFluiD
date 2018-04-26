@@ -43,6 +43,9 @@ public:  // methods
 
   /// Get the 1D coordinates of the point distribution 
   virtual std::vector<CFreal> getLocalCoords1D(CFPolyOrder::Type solOrder) = 0;
+  
+  /// Get the maximum distance in 1D between two subsequent points
+  virtual CFreal getSubcellResolution(CFPolyOrder::Type solOrder) = 0;
 
   /// Gets the Class name
   static std::string getClassName()
