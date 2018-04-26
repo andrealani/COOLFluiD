@@ -21,7 +21,7 @@ namespace COOLFluiD {
   
   namespace Physics {
     namespace NavierStokes {
-      class Euler2DVarSet;
+      class EulerVarSet;
     }
   }
   namespace FluxReconstructionMethod {
@@ -78,9 +78,17 @@ protected: //functions
    * @pre setFaceNeighbourStates()
    */
   virtual void setFaceNeighbourGradients();
+  
+  /**
+   * Compute the Peclet number based on the user input
+   */
+  virtual CFreal computePeclet();
 
 
 protected: //data
+  
+  /// physical model (in conservative variables)
+  Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
   
   
 }; // class Solve

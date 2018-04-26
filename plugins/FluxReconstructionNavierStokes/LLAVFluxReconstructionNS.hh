@@ -19,6 +19,12 @@
 
 namespace COOLFluiD {
   
+  namespace Physics {
+    namespace NavierStokes {
+      class EulerVarSet;
+    }
+  }
+  
   namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -66,6 +72,11 @@ protected: //functions
    * Set the data for the current cell necessary to calculate the residual update
    */
   virtual void setCellData();
+  
+  /**
+   * Compute the Peclet number based on the user input
+   */
+  virtual CFreal computePeclet();
 
 protected: //data
   
@@ -74,6 +85,9 @@ protected: //data
   
   /// backup of the gradients in the neighbouring cell
   std::vector< std::vector< std::vector< RealVector* > > > m_gradsBackUp;
+  
+  /// physical model (in conservative variables)
+  Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
   
   private:
 

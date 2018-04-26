@@ -13,6 +13,7 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/EulerVarSet.hh"
 
 #include "FluxReconstructionNavierStokes/LLAVFluxReconstructionNS.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
@@ -45,6 +46,7 @@ LLAVFluxReconstructionNS::LLAVFluxReconstructionNS(const std::string& name) :
   LLAVFluxReconstruction(name),
   m_diffVarSet(CFNULL),
   m_gradsBackUp(),
+  m_eulerVarSet(CFNULL),
   m_pData()
   {
   }
@@ -101,16 +103,18 @@ void LLAVFluxReconstructionNS::setFaceData(CFuint faceID)
 //       }
 //     }
 //   }
-  
-  // get the gradients datahandle
-  DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
-
-  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
   {
-    for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+    // get the gradients datahandle
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
     {
-      const CFuint stateID = (*(m_states[iSide]))[iState]->getLocalID();
-      m_cellGrads[iSide][iState] = &gradientsAV[stateID];
+      for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+      {
+        const CFuint stateID = (*(m_states[iSide]))[iState]->getLocalID();
+        m_cellGrads[iSide][iState] = &gradientsAV[stateID];
+      }
     }
   }
 }
@@ -158,15 +162,42 @@ void LLAVFluxReconstructionNS::setCellData()
 //     }
 //   }
   
-  // get the gradients datahandle
-  DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
-
-  // get the grads in the current cell
-  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
   {
-    const CFuint stateID = (*(m_cellStates))[iState]->getLocalID();
-    m_cellGrads[0][iState] = &gradientsAV[stateID];
+    // get the gradients datahandle
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    // get the grads in the current cell
+    for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+    {
+      const CFuint stateID = (*(m_cellStates))[iState]->getLocalID();
+      m_cellGrads[0][iState] = &gradientsAV[stateID];
+    }
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal LLAVFluxReconstructionNS::computePeclet()
+{
+  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
+  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
+  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
+  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
+  
+//   cf_assert(machInf > 1.0);
+//   cf_assert(velInf > 0.0);
+//   cf_assert(pressInf > 0.0);
+  
+  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
+  
+  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
+  
+  //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
+  
+  CFreal result = m_peclet;
+  
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -177,6 +208,9 @@ void LLAVFluxReconstructionNS::setup()
   
   // setup parent class
   LLAVFluxReconstruction::setup();
+  
+  // get Euler varset
+  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
   
   m_gradsBackUp.resize(2);
   m_gradsBackUp[LEFT].resize(m_nbrSolPnts);

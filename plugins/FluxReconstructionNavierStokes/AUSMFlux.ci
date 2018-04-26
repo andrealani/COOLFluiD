@@ -54,8 +54,7 @@ AUSMFlux<UPDATEVAR>::~AUSMFlux()
 template <class UPDATEVAR>
 void AUSMFlux<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
 {
-  options.template addConfigOption< CFuint >
-    ("choiceA12","Way of computing the interface sound speed a12.");
+  options.template addConfigOption< CFuint > ("choiceA12","Way of computing the interface sound speed a12.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -226,7 +225,7 @@ void AUSMFlux<UPDATEVAR>::computeMassFluxImpl(RealVector& result, const RealVect
   const EquationSetData& eulerEqSet = UPDATEVAR::EULERSET::getEqSetData()[0];
   const vector<CFuint>& eulerVarIDs = eulerEqSet.getEqSetVarIDs();
   const CFuint nbEulerEqs = eulerVarIDs.size() ;
-  const CFuint eulerID = eulerEqSet.getEqSetID();
+  //const CFuint eulerID = eulerEqSet.getEqSetID();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const RealVector upwindData = (m_mflux12 > 0.0) ? m_pData[LEFT] : m_pData[RIGHT];
   
