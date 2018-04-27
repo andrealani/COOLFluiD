@@ -357,6 +357,8 @@ RoeSAFlux.hh
 RoeSAFlux.cxx
 RoeSAFluxGhost.hh
 RoeSAFluxGhost.cxx
+SphericalDerivatives.cxx
+SphericalDerivatives.hh
 UpwindBiasedMUSCLPolyRec.hh
 UpwindBiasedMUSCLPolyRec.cxx
 )
