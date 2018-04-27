@@ -3,3 +3,5 @@ cf_add_case( MPI 8        CASEDIR Benchmarks PCASE test1_RDS.CFcase CASEFILES sq
 cf_add_case( MPI 8        CASEDIR Benchmarks PCASE test2_FV.CFcase CASEFILES square100.msh )
 cf_add_case( MPI 8        CASEDIR Benchmarks PCASE testOT_FV.CFcase CASEFILES square.thor square.SP )
 cf_add_case( MPI 8        CASEDIR Benchmarks PCASE testOT_RDS.CFcase CASEFILES square.thor square.SP )
+cf_add_case( MPI 8        CASEDIR Benchmarks PCASE corona2D_FV.CFcase CASEFILES corona_360_triag.neu )
+cf_add_case( MPI 1        CASEDIR Benchmarks PCASE corona2D_FV_radial.CFcase CASEFILES corona_360_triag.neu ) 
