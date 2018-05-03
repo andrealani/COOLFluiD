@@ -25,7 +25,7 @@
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libParaViewWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI 
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libParaViewWriter libTecplotWriter libNavierStokes libPoisson libMaxwell libMultiFluidMHD libFiniteVolume libFiniteVolumePoisson libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI libBackwardEuler
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
@@ -41,7 +41,8 @@ Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/corona.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 1000
 
-Simulator.SubSystem.Namespaces = FlowNamespace
+Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace 
+
 Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
 Simulator.SubSystem.FlowMeshData.listTRS = Inlet Outlet
 Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
@@ -49,7 +50,7 @@ Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
 Simulator.SubSystem.FlowNamespace.PhysicalModelType = MultiFluidMHD2D
 Simulator.SubSystem.FlowNamespace.PhysicalModelName = MultiFluidMHD2D
 
-# Physical model settings
+# Multi-Fluid MHD model settings
 Simulator.SubSystem.MultiFluidMHD2D.refValues = 0.112099824326 0.112099824326 1e-12 1e-12 1e-12 11.21 1e-8 1e-5 1. 100. 100. 605.
 Simulator.SubSystem.MultiFluidMHD2D.refLength = 1.0
 #Simulator.SubSystem.MultiFluidMHD2D.Is2DHalf = true
@@ -68,10 +69,20 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst = 10.
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMax = 1e4  #2.7590285e3 #299792458
 Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMF = 1e4 #2.7590285e3 #299792458
 
+# Poisson model settings
+Simulator.SubSystem.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystem.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystem.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystem.EMNamespace.PhysicalModelType = Poisson2D
+Simulator.SubSystem.EMNamespace.PhysicalModelName = Poisson2D
+Simulator.SubSystem.Poisson2D.refValues    = 1.0
+Simulator.SubSystem.Poisson2D.refLength    = 1.0
+
 ###############################################################################
 # Output
-Simulator.SubSystem.OutputFormat        = Tecplot CFmesh ParaView
-Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 ParaView1
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh ParaView Tecplot ParaView
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 ParaView1 Tecplot2 ParaView2
 
 Simulator.SubSystem.CFmesh1.FileName     = corona.CFmesh
 Simulator.SubSystem.CFmesh1.SaveRate     = 1000
@@ -104,7 +115,28 @@ Simulator.SubSystem.ParaView1.AppendIter = false
 Simulator.SubSystem.ParaView1.Namespace = FlowNamespace
 Simulator.SubSystem.ParaView1.Data.CollaboratorNames = Flow
 
+Simulator.SubSystem.Tecplot2.FileName    = corona_poisson.plt
+Simulator.SubSystem.Tecplot2.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot2.SaveRate = 10
+Simulator.SubSystem.Tecplot2.AppendTime = false
+Simulator.SubSystem.Tecplot2.AppendIter = false
+Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.ParaView2.FileName    = corona_poisson.vtu
+#Simulator.SubSystem.ParaView2.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView2.Data.updateVar = Cons
+Simulator.SubSystem.ParaView2.SaveRate = 10
+Simulator.SubSystem.ParaView2.AppendTime = false
+Simulator.SubSystem.ParaView2.AppendIter = false
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta #uX uY
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta #ux1 uy1
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1
+Simulator.SubSystem.ParaView2.Namespace = EMNamespace
+Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
+
 ###############################################################################
+
 # Time Marching
 
 # Stop Condition
@@ -115,9 +147,12 @@ Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -20.0
 
+###############################################################################
+
 # Linear System
-Simulator.SubSystem.LinearSystemSolver = PETSC
-Simulator.SubSystem.LSSNames = FlowLSS
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = FlowLSS EMLSS
+
 Simulator.SubSystem.FlowLSS.Data.PCType = PCASM
 Simulator.SubSystem.FlowLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
@@ -127,13 +162,29 @@ Simulator.SubSystem.FlowLSS.Data.RelativeTolerance = 1e-4
 Simulator.SubSystem.FlowLSS.Namespace = FlowNamespace
 Simulator.SubSystem.FlowLSS.Data.CollaboratorNames = Flow
 
-# Implicit first Order
-Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.ConvergenceMethodNames = FlowIterator
+Simulator.SubSystem.EMLSS.Data.KSPType = KSPGMRES #KSPBICG
+Simulator.SubSystem.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.EMLSS.Data.MaxIter = 1000
+Simulator.SubSystem.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.EMLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
+#Simulator.SubSystem.EMLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.EMLSS.Data.UseAIJ = true
+#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.EMLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.EMLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.EMLSS.Namespace = EMNamespace
+Simulator.SubSystem.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Implicit time integration
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator NewtonIterator 
+Simulator.SubSystem.ConvergenceMethodNames = EMIterator FlowIterator # This order decides whether EM comes before Flow  
+
+Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
 Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
 Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
 #Simulator.SubSystem.FlowIterator.StdUpdateSol.Relaxation= 1.
-
 # CFL definition
 Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
@@ -147,27 +198,67 @@ Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 9
 #Simulator.SubSystem.FlowIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 0 0 0 1 
 #Simulator.SubSystem.FlowIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 5.
 
+Simulator.SubSystem.EMIterator.Namespace = EMNamespace
+Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.EMIterator.Data.PrintHistory = true
+
 ###############################################################################
+
 # Mesh Reader
-Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1
-Simulator.SubSystem.CFmeshFileReader1.Namespace = FlowNamespace
-Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = Flow
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona_360_triag.CFmesh
-Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1.
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader~2
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader@2
+Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
+Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.CFmeshFileReader&2.Data.FileName = corona_360_triag.CFmesh
+Simulator.SubSystem.CFmeshFileReader&2.Data.ScalingFactor = 1.
 # comment this out to Restart
-Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.Discontinuous = true
-Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.SolutionOrder = P0
-Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gambit2CFmesh
+Simulator.SubSystem.CFmeshFileReader&2.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader&2.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader&2.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader&2.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+#Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader 
+#Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
+
+#Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
+#Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
+#Simulator.SubSystem.CFmeshFileReader0.Data.FileName = corona_360_triag.CFmesh
+#Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1.
+# comment this out to Restart
+#Simulator.SubSystem.CFmeshFileReader0.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader0.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystem.CFmeshFileReader0.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+#Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
+#Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
+#Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona_360_triag.CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1.
+# comment this out to Restart
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader1.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gambit2CFmesh
 #Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 ###############################################################################
+
 # Space Method
-Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.SpaceMethodNames = Flow
+Simulator.SubSystem.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystem.SpaceMethodNames = Flow EM
+
+###############################################################################
+###############################################################################
+# Flow solver
+###############################################################################
+###############################################################################
+
 Simulator.SubSystem.Flow.Namespace = FlowNamespace
 Simulator.SubSystem.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
-
 Simulator.SubSystem.Flow.ComputeRHS = NumJacob
 #Simulator.SubSystem.Flow.NumJacob.FreezeDiffCoeff = true
 
@@ -251,3 +342,69 @@ Simulator.SubSystem.Flow.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
 #Simulator.SubSystem.DataProcessing.ProcessRate = 50
 #Simulator.SubSystem.DataProcessing.DivMonitoring.OutputFileDivMonitoring = ./DivMonitoring.plt
 
+###############################################################################
+###############################################################################
+# EM solver
+###############################################################################
+###############################################################################
+
+Simulator.SubSystem.EM.Namespace = EMNamespace
+Simulator.SubSystem.EM.Data.CollaboratorNames = EMLSS EMIterator
+Simulator.SubSystem.EM.ComputeRHS = NumJacob
+
+Simulator.SubSystem.EM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.EM.SetupNames = Setup1
+Simulator.SubSystem.EM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.EM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.EM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.EM.Data.FluxSplitter = Null
+
+Simulator.SubSystem.EM.Data.UpdateVar  = Cons
+Simulator.SubSystem.EM.Data.SolutionVar = Cons
+Simulator.SubSystem.EM.Data.DiffusiveVar = Cons
+Simulator.SubSystem.EM.Data.DiffusiveFlux = PureDiffFlux
+#Simulator.SubSystem.EM.Data.SourceTerm = FunctionST
+#Simulator.SubSystem.EM.Data.FunctionST.Vars = x y phi
+#Simulator.SubSystem.EM.Data.FunctionST.Def = 0.
+
+#Simulator.SubSystem.EM.Data.NodalExtrapolation = HolmesConnell
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = StateDiff
+Simulator.SubSystem.EM.Data.DerivativeStrategy = Corrected2D
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = CorrectedGG2D
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = DiamondVolume2D
+
+Simulator.SubSystem.EM.Data.PolyRec = LinearLS2D
+
+Simulator.SubSystem.EM.InitComds = InitState
+Simulator.SubSystem.EM.InitNames = InField
+Simulator.SubSystem.EM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.EM.InField.Vars = x y
+Simulator.SubSystem.EM.InField.Def = 0.
+
+Simulator.SubSystem.EM.BcComds = NeumannBCFVMCC NeumannBCFVMCC
+Simulator.SubSystem.EM.BcNames = Inlet Outlet
+
+Simulator.SubSystem.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.EM.Inlet.Vars = x y
+Simulator.SubSystem.EM.Inlet.Def = 0.01*x/(x^2+y^2)^4 
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+
+Simulator.SubSystem.EM.Outlet.applyTRS = Outlet
+Simulator.SubSystem.EM.Outlet.OnlyRadialGradient = true
+
+#Simulator.SubSystem.EM.Outlet.Vars = x y
+#Simulator.SubSystem.EM.Outlet.Def = 0.
+#Simulator.SubSystem.EM.Outlet.ZeroGradientFlags = 1
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing1
+
+Simulator.SubSystem.DataProcessing1.Namespace = EMNamespace
+Simulator.SubSystem.DataProcessing1.Data.CollaboratorNames = EM
+Simulator.SubSystem.DataProcessing1.Comds = SphericalDerivatives
+Simulator.SubSystem.DataProcessing1.Names = BrThetaPhi
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 1
