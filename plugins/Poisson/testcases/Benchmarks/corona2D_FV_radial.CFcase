@@ -53,7 +53,7 @@ Simulator.SubSystem.ParaView.Data.DataHandleOutput.CCVariableNames = Br Btheta #
 Simulator.SubSystem.ParaView.Data.DataHandleOutput.CCBlockSize = 1 1
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -8.0
@@ -82,7 +82,7 @@ Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
 Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 80
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 2
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 #Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
 ##Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
