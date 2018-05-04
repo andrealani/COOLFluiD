@@ -36,6 +36,8 @@ ComputeFaceVertexNeighbors.cxx
 ComputeFaceVertexNeighbors.hh
 ComputeFaceVertexNeighborsPlusGhost.cxx
 ComputeFaceVertexNeighborsPlusGhost.hh
+ComputeFieldFromPotential.cxx
+ComputeFieldFromPotential.hh
 ComputeSourceTermFVMCC.cxx
 ComputeSourceTermFVMCC.hh
 ComputeVariablesDerivatives.cxx

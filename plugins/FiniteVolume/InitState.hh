@@ -6,7 +6,7 @@
 #include "Framework/VectorialFunction.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/VarSetTransformer.hh"
-#include "CellCenterFVMData.hh"
+#include "FiniteVolume/CellCenterFVMData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 

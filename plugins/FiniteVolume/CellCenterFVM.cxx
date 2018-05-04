@@ -39,10 +39,12 @@ void CellCenterFVM::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::vector<std::string> >("UnSetupCom","UnSetup Command to run. This command seldomly needs overriding.");
    options.addConfigOption< std::vector<std::string> >("InitComds","Types of the initializing commands.");
    options.addConfigOption< std::vector<std::string> >("SetupCom","Setup Command to run. This command seldomly needs overriding.");
+   options.addConfigOption< std::vector<std::string> >("PreProcessCom","Pre-process Command to run. This command seldomly needs overriding.");
    options.addConfigOption< std::string >("AfterMeshUpdateCom","Command to run after mesh update.");
    options.addConfigOption< std::string >("BeforeMeshUpdateCom","Command to run before mesh update.");
    options.addConfigOption< std::vector<std::string> >("BcComds","Types of the boundary conditions commands.");
    options.addConfigOption< std::vector<std::string> >("SetupNames","Names of the setup commands.");
+   options.addConfigOption< std::vector<std::string> >("PreProcessNames","Names of the preprocess commands.");
    options.addConfigOption< std::vector<std::string> >("BcNames","Names for the configuration of the boundary conditions commands.");
    options.addConfigOption< bool >("OnlyInitComs","Use only init commands to initialize.");
    options.addConfigOption< std::string >("SpaceRHSForGivenCell","Command for the computation of the space discretization contibution to RHS for one cell.");
@@ -56,6 +58,7 @@ CellCenterFVM::CellCenterFVM(const std::string& name)
     _data(new CellCenterFVMData(this)),
     _setups(),
     _unSetups(),
+    _preProcess(),
     _extrapolateStates(),
     _computeSpaceRHS(),
     _computeTimeRHS(),
@@ -91,7 +94,19 @@ CellCenterFVM::CellCenterFVM(const std::string& name)
 
   _unSetupNameStr = vector<std::string>();
   setParameter("UnSetupNames",&_unSetupNameStr);
+  
+  _unSetupStr = vector<std::string>();
+  setParameter("UnSetupCom",&_unSetupStr);
+  
+  _unSetupNameStr = vector<std::string>();
+  setParameter("UnSetupNames",&_unSetupNameStr);
 
+   _preProcessStr = vector<std::string>();
+  setParameter("PreProcessCom",&_preProcessStr);
+  
+  _preProcessNameStr = vector<std::string>();
+  setParameter("PreProcessNames",&_preProcessNameStr);
+  
   _extrapolateStatesStr = "StdSetNodalStates";
   setParameter("SetNodalStatesCom",&_extrapolateStatesStr);
 
@@ -136,6 +151,7 @@ CellCenterFVM::~CellCenterFVM()
 
   clearSetupComs();
   clearUnSetupComs();
+  clearPreProcessComs();
   clearInitComs();
   clearBCComs();
 }
@@ -208,6 +224,15 @@ void CellCenterFVM::clearUnSetupComs()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void CellCenterFVM::clearPreProcessComs()
+{
+  CFAUTOTRACE;
+
+  vector<SelfRegistPtr<CellCenterFVMCom> >().swap(_preProcess);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void CellCenterFVM::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
@@ -223,6 +248,7 @@ void CellCenterFVM::configure ( Config::ConfigArgs& args )
   // add here configures to the CellCenterFVM
   clearSetupComs();
   clearUnSetupComs();
+  clearPreProcessComs();
   
   cf_assert(_setupStr.size() == _setupNameStr.size());
   if(_setupStr.size() == 0){
@@ -270,6 +296,30 @@ void CellCenterFVM::configure ( Config::ConfigArgs& args )
     cf_assert(_unSetups[i].isNotNull());
   }
 
+  cf_assert(_preProcessStr.size() == _preProcessNameStr.size());
+  if(_preProcessStr.size() == 0){
+    _preProcessStr.resize(1);
+    _preProcessNameStr.resize(1);
+    _preProcessStr[0] = "Null";
+    _preProcessNameStr[0] = "PreProcess1";
+  }
+  
+  _preProcess.resize(_preProcessStr.size());
+
+  for(CFuint i = 0; i < _preProcess.size(); ++i) {
+
+    CFLog(INFO, "PREPROCESS type = " << _preProcessStr[i] << "\n");
+    CFLog(INFO, "PREPROCESS name = " << _preProcessNameStr[i] << "\n");
+
+    configureCommand<CellCenterFVMCom,
+      CellCenterFVMData,
+      CellCenterFVMComProvider>
+      (args, _preProcess[i], _preProcessStr[i],_preProcessNameStr[i], _data);
+
+    cf_assert(_preProcess[i].isNotNull());
+  }
+  
+  
   configureCommand<CellCenterFVMData,CellCenterFVMComProvider>(args, _extrapolateStates,
                                                               _extrapolateStatesStr,
                                                               _data);
@@ -400,12 +450,24 @@ void CellCenterFVM::initializeSolutionImpl(bool isRestart)
 void CellCenterFVM::computeSpaceResidualImpl(CFreal factor)
 {
   CFAUTOTRACE;
-
+  
+  // pre-process commands
+  for(CFuint i=0; i < _preProcess.size();i++){
+    cf_assert(_preProcess[i].isNotNull());
+    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing start"
+	  << _preProcess[i]->getName() << " \n");
+    _preProcess[i]->execute();
+    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing end"
+	  << _preProcess[i]->getName() << " \n");
+  }
+  
   // set the residual factor for which residual and jacobian have to
   // be multiplied
   _data->setResFactor(factor);
 
+  // apply the BC
   applyBC();
+  
   // BC should actually be applied after the computeResidual
   // and after the update of the states !!!
   _computeSpaceRHS->execute();
@@ -603,7 +665,7 @@ void CellCenterFVM::computeSpaceRhsForStatesSetImpl(CFreal factor)
 //////////////////////////////////////////////////////////////////////////////
 
 void CellCenterFVM::computeTimeRhsForStatesSetImpl(CFreal factor)
-{
+{ 
   // set the residual factor in the MethodData
   _data->setResFactor(factor);
 

@@ -38,12 +38,12 @@ public:
   /**
    * Destructor.
    */
-  ~InitStateAddVar();
+  virtual ~InitStateAddVar();
   
   /**
    * Set up private data
    */
-  void setup();
+  virtual void setup();
   
 protected:
 

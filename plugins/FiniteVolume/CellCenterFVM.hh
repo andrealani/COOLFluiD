@@ -46,7 +46,7 @@ public:
   /// @pre the pointer to LinearSystemSolver is not constant to
   ///      allow dynamic_casting
   void setCollaborator(Framework::MultiMethodHandle<Framework::LinearSystemSolver> lss);
-
+  
   /// Sets the ConvergenceMethod for this SpaceMethod to use
   /// @pre the pointer to ConvergenceMethod is not constant to
   ///      allow dynamic_casting
@@ -142,6 +142,9 @@ protected: //  helper functions
   /// Clears (deletes) the stored dynamic data for UnSetup commands
   void clearUnSetupComs();
 
+  /// Clears (deletes) the stored dynamic data for Pre-process commands
+  void clearPreProcessComs();
+  
   /// Checks if the system matrix shouldbe frozen
   void checkMatrixFrozen() const;
 
@@ -152,6 +155,9 @@ private: // member data
 
   /// The UnSetup command to use
   std::vector<Common::SelfRegistPtr<CellCenterFVMCom> > _unSetups;
+
+  /// The pre-process command to use
+  std::vector<Common::SelfRegistPtr<CellCenterFVMCom> > _preProcess;
 
   /// This command sets the nodal states
   Common::SelfRegistPtr<CellCenterFVMCom> _extrapolateStates;
@@ -200,12 +206,18 @@ private: // member data
   /// The UnSetup string for configuration
   std::vector<std::string> _unSetupStr;
 
-  /// The string for configuration of the _extrapolateStates command
-  std::string _extrapolateStatesStr;
-
   /// The UnSetup Name string for configuration
   std::vector<std::string> _unSetupNameStr;
-
+  
+  /// The Pre-process string for configuration
+  std::vector<std::string> _preProcessStr;
+  
+  /// The Pre-process Name string for configuration
+  std::vector<std::string> _preProcessNameStr;
+  
+  /// The string for configuration of the _extrapolateStates command
+  std::string _extrapolateStatesStr;
+  
   /// The CompRHS string for configuration
   std::string _computeSpaceRHSStr;
 

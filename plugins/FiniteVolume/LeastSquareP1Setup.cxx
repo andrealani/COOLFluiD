@@ -109,6 +109,9 @@ void LeastSquareP1Setup::execute()
   
   DataHandle<CFreal> uY = socket_uY.getDataHandle();
   uY.resize(nbStates*nbEqs);
+
+  CFLog(VERBOSE, "LeastSquareP1Setup::execute() => (ux.size(), nbEqs, nbState) = (" <<
+	uX.size() << ", " << nbEqs  << ", " << nbStates << ")\n");
   
   if (PhysicalModelStack::getActive()->getDim() == DIM_3D) {
     DataHandle<CFreal> uZ = socket_uZ.getDataHandle();
