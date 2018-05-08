@@ -1,0 +1,148 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, Poisson3D, BackwardEuler, mesh with quads, second-order 
+# reconstruction without limiter, Neumann BC, PETSc 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -6.513637
+#
+
+# Simulation Modules
+Simulator.Modules.Libs = libPetscI libGambit2CFmesh libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libPoisson libFiniteVolume libFiniteVolumePoisson libNewtonMethod libTHOR2CFmesh
+
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+#CFEnv.ErrorOnUnusedConfig = true
+#
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType   = Poisson3D
+Simulator.SubSystem.Poisson3D.refValues    = 1.0
+Simulator.SubSystem.Poisson3D.refLength    = 1.0
+
+Simulator.SubSystem.OutputFormat    = ParaView Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = corona3D_FV.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = corona3D_FV.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName    = corona3D_FV.vtu
+#Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi #uX uY
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi #ux1 uy1
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.CCBlockSize = 1 1 1
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+Simulator.SubSystem.Default.listTRS = Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = corona3D_60_tet_full.CFmesh 
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES #KSPBICG #KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1000
+Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
+#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+#Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 80
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+#Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
+##Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
+##Simulator.SubSystem.NewtonIterator.InitCom = ResetSystem
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Null
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Cons
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = PureDiffFlux
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = FunctionST
+#Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Vars = x y phi
+#Simulator.SubSystem.CellCenterFVM.Data.FunctionST.Def = 0.
+
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = HolmesConnell
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = StateDiff
+Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected3D
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = CorrectedGG3D
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = DiamondVolume3D
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS3D
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NeumannBCFVMCC NeumannBCFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Inlet Outlet
+
+Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Inlet.Def = 0.01*x/(x^2+y^2+z^2)^4 
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+
+Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = Outlet
+#Simulator.SubSystem.CellCenterFVM.Outlet.OnlyRadialGradient = true
+
+Simulator.SubSystem.CellCenterFVM.Outlet.Vars = x y z
+Simulator.SubSystem.CellCenterFVM.Outlet.Def = 0.
+Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 1
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = SphericalDerivatives
+Simulator.SubSystem.DataProcessing1.Names = BrThetaPhi
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 1
+
+
+
