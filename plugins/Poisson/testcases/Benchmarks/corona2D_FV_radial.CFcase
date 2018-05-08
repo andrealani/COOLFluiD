@@ -115,6 +115,10 @@ Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
 
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 
+#Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.FileNameTw = MAGNETOGRAM.dat
+#Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TemperatureID = 0
+
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
@@ -122,6 +126,7 @@ Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
 Simulator.SubSystem.CellCenterFVM.InField.Def = 0.
 
 Simulator.SubSystem.CellCenterFVM.BcComds = NeumannBCFVMCC NeumannBCFVMCC
+# NeumannBCFromFileFVMCC
 Simulator.SubSystem.CellCenterFVM.BcNames = Inlet Outlet
 
 Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = Inlet
