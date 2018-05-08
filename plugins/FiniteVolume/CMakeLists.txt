@@ -244,6 +244,8 @@ MUSCLSetup.hh
 MUSCLSetup.cxx
 NeumannBC.hh
 NeumannBC.cxx
+NeumannBCFromFile.hh
+NeumannBCFromFile.cxx
 NullBC.hh
 NullBC.cxx
 NullComputeSourceTerm.cxx
