@@ -61,6 +61,8 @@ DiffRHSFluxReconstructionNS.hh
 DiffRHSJacobFluxReconstructionNS.cxx
 DiffRHSJacobFluxReconstructionNS.hh
 FluxReconstructionNavierStokes.hh
+BCNoSlipWallrvt.cxx
+BCNoSlipWallrvt.hh
 )
 
 LIST ( APPEND FluxReconstructionNavierStokes_cflibs FluxReconstructionMethod NavierStokes Framework)
