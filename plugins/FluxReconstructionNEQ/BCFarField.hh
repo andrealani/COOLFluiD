@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FluxReconstructionNEQ_BCFarField_hh
-#define COOLFluiD_Numerics_FluxReconstructionNEQ_BCFarField_hh
+#ifndef COOLFluiD_FluxReconstructionNEQ_BCFarField_hh
+#define COOLFluiD_FluxReconstructionNEQ_BCFarField_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -131,4 +131,4 @@ std::vector<CFuint> V_Pairing;
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FluxReconstructionNEQ_BCFarField_hh
+#endif // COOLFluiD_FluxReconstructionNEQ_BCFarField_hh

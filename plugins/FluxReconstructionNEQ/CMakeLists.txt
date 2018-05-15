@@ -2,6 +2,10 @@ LIST( APPEND FluxReconstructionNEQ_files
 BCFarField.cxx
 BCFarField.hh
 FluxReconstructionNEQ.hh
+CNEQSourceTerm.cxx
+CNEQSourceTerm.hh
+TNEQSourceTerm.cxx
+TNEQSourceTerm.hh
 )
 
 LIST ( APPEND FluxReconstructionNEQ_cflibs FluxReconstructionMethod NEQ Framework)
