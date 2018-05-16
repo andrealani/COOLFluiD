@@ -62,6 +62,7 @@ public:
 
     result.push_back(&socket_wallDistance);
     result.push_back(&socket_volumes);
+    result.push_back(&socket_faceCenters);
     
     return result;
   }
@@ -93,6 +94,9 @@ protected: // data
   
   /// socket for the cell volumes storage
   Framework::DataSocketSink<CFreal> socket_volumes;
+
+  /// socket for the face centers storage
+  Framework::DataSocketSink<CFreal> socket_faceCenters;
   
   /// data handle cashed for efficiency  reasons
   Framework::DataHandle<CFreal> _wallDistance;
@@ -123,7 +127,7 @@ protected: // data
   
   // array of average state in update variables
   RealVector _avState;
-  
+    
   /// flag telling if the radius is needed
   bool _isRadiusNeeded;
   

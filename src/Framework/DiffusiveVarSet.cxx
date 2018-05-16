@@ -22,6 +22,7 @@ DiffusiveVarSet::DiffusiveVarSet
   Config::ConfigObject(name),
   Common::NullableObject(),
   _varNames(),
+  _faceCoord(CFNULL),
   _flux(),
   _fluxVec(),
   _iState(0),

@@ -91,17 +91,18 @@ public:
     CFAUTOTRACE;
     _flux.resize(PhysicalModelStack::getActive()->getNbEq());
     _flux = 0.;
-    _fluxVec.resize(PhysicalModelStack::getActive()->getNbEq(),PhysicalModelStack::getActive()->getDim());
+    _fluxVec.resize(PhysicalModelStack::getActive()->getNbEq(),
+		    PhysicalModelStack::getActive()->getDim());
     _fluxVec = 0.;
   }
 
   /// Compute physical data associated to the given states
   virtual void computeStatesData(const std::vector<State*>& states,
-         const CFuint nbStatesInVec)
+				 const CFuint nbStatesInVec)
   {
     throw Common::NotImplementedException (FromHere(),"VarSet::computeStatesData()");
   }
-
+  
   /// Compute the left perturbed states data
   virtual void computePerturbedStatesData
   (const std::vector<Framework::State*>& states,
@@ -135,7 +136,14 @@ public:
   {
     return _freezeDiffCoeff;
   }
-
+  
+  /// set the coordinate of the current face to be processed
+  /// @pre faceCoord must be used as an array with size equal to the space dimension
+  void setFluxCoord(CFreal *const faceCoord)
+  {
+    _faceCoord = faceCoord; 
+  }
+  
 protected: // methods
 
   /// Set the list of the variable names
@@ -165,6 +173,9 @@ protected:
   /// list of the variables names
   std::vector<std::string> _varNames;
 
+  /// space coordinates of the face center
+  CFreal* _faceCoord;
+  
   /// flux
   RealVector _flux;
 

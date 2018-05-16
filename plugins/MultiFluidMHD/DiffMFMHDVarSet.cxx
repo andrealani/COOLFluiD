@@ -207,22 +207,23 @@ void DiffMFMHDVarSet::computeTransportProperties(const RealVector& state,
   } // End of if Braginskii==true
 
   /// Implementation to increase the value of the viscosity in the extended domain
-  //if(getModel().isExtendedDomain() == true){
-    //const RealVector& mu_0 = getDynViscosityVec(state, gradients);
-    //const RealVector& mu_f = getModel().getIncreasedDynViscosityDim();
-    //const CFreal y_boundary = getModel().getTopHeight();
-    //const CFreal y_0 = getModel().getDampingHeight();
-    //const CFreal Delta_y = std::abs(y_0 - y_boundary)/5;   // It's taken 5 since tanh(5) is almost 1
-    //const CFreal y_coord = (state).getCoordinates()[YY];
-    //for (CFuint i = 0; i < nbSpecies; ++i) {
-      //if(y_coord >= y_boundary){ //If the coordinate of the state is in the extended domain, it increases the viscosity
-        //diffMFMHDData[i] =  0.5*mu_f[i]*std::tanh((y_coord - y_0)/Delta_y) + mu_0[i] - 0.5*mu_f[i]*std::tanh((y_boundary - y_0)/Delta_y); 						//reads the dimensional value imposed in the options
-      //}
-      //else{//If not, it uses the same viscosity
-        //diffMFMHDData[i] = mu_0[i];
-      //}
-    //}
-  //}
+  if(getModel().isExtendedDomain()){
+    const RealVector& mu_0 = getDynViscosityVec(state, gradients);
+    const RealVector& mu_f = getModel().getIncreasedDynViscosityDim();
+    const CFreal y_boundary = getModel().getTopHeight();
+    const CFreal y_0 = getModel().getDampingHeight();
+    const CFreal Delta_y = std::abs(y_0 - y_boundary)/5;   // It's taken 5 since tanh(5) is almost 1
+    const CFreal y_coord = _faceCoord[YY];
+    for (CFuint i = 0; i < nbSpecies; ++i) {
+      if(y_coord >= y_boundary){ //If the coordinate of the state is in the extended domain, it increases the viscosity
+	//reads the dimensional value imposed in the options
+        diffMFMHDData[i] =  0.5*mu_f[i]*std::tanh((y_coord - y_0)/Delta_y) + mu_0[i] - 0.5*mu_f[i]*std::tanh((y_boundary - y_0)/Delta_y); 
+      }
+      else{//If not, it uses the same viscosity
+        diffMFMHDData[i] = mu_0[i];
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

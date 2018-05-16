@@ -24,6 +24,7 @@ NSFlux<DIFFVS>::NSFlux(const std::string& name) :
   ComputeDiffusiveFlux(name),
   socket_wallDistance("wallDistance",false),
   socket_volumes("volumes",false),
+  socket_faceCenters("faceCenters", false),
   _wallDistance(CFNULL),
   _diffVar(CFNULL),
   _nbCVStates(0),
@@ -100,6 +101,9 @@ void NSFlux<DIFFVS>::computeFlux(RealVector& result)
   const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
   
   // set the flux
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  CFreal *const faceCoord = &socket_faceCenters.getDataHandle()[geo.getID()*dim];
+  _diffVar->setFluxCoord(faceCoord);
   result = _diffVar->getFlux(_avState, _gradients, getMethodData().getUnitNormal(), _radius);
   result *= faceArea;
   
