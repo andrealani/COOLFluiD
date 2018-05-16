@@ -294,6 +294,8 @@ BCSuperOutlet.cxx
 BCSuperOutlet.hh
 BCDirichlet.cxx
 BCDirichlet.hh
+BCMirrorVelocity.cxx
+BCMirrorVelocity.hh
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )
