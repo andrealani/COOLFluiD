@@ -142,6 +142,8 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 	
 	// compute volume
         m_cellVolume = m_face->getNeighborGeo(0)->computeVolume();
+	
+	cf_assert(m_cellVolume > 0.0);
 
         // if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())

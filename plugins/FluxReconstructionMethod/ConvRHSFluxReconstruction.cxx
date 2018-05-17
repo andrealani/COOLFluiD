@@ -532,6 +532,7 @@ void ConvRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
       
       waveSpeedUpd[iSide] += jacobXIntCoef * m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
     }
+    //if (waveSpeedUpd[iSide] > 10.0) CFLog(INFO, "wvspConv: " << waveSpeedUpd[iSide] << "\n");
   }
 }
 

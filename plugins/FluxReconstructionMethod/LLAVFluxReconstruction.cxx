@@ -350,7 +350,12 @@ void LLAVFluxReconstruction::execute()
       
 //       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 //       {
-//         (*((*m_cellStates)[iSol]))[0] = m_solEpsilons[iSol];
+//         (*((*m_cellStates)[iSol]))[1] = m_solEpsilons[iSol];
+//       }
+//       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+//       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//       {
+//         (*((*m_cellStates)[iSol]))[3] = updateCoeff[(*m_cellStates)[iSol]->getLocalID()];
 //       }
       
       // print out the residual updates for debugging
@@ -474,13 +479,15 @@ void LLAVFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSpeed
                                          m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                          (*m_faceIntegrationCoefs)[iFlx]*
                                          m_cflConvDiffRatio;
-      const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
+      //const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
       const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlx]+m_epsilonLR[RIGHT][iFlx]);
-      visc = epsilon/rho;
+      const CFreal viscCoef = computeViscCoef(m_cellStatesFlxPnt[iSide][iFlx]);
+      visc = epsilon*viscCoef;
       
       // transform update states to physical data to calculate eigenvalues
       waveSpeedUpd[iSide] += visc*jacobXJacobXIntCoef/m_cellVolume[iSide];
     }
+    //if (waveSpeedUpd[iSide] > 10.0) CFLog(INFO, "wvspLLAV: " << waveSpeedUpd[iSide] << "\n");
   }
 }
 
@@ -695,8 +702,9 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
                                              faceJacobVecSizeFlxPnts[iFlxPnt]*
                                              (*m_faceIntegrationCoefs)[iFlxPnt]*
                                              m_cflConvDiffRatio;
-          const CFreal rho = (*(m_cellStatesFlxPnt[0][iFlxPnt]))[0];
-          visc = epsilon/rho;
+          //const CFreal rho = (*(m_cellStatesFlxPnt[0][iFlxPnt]))[0];
+          const CFreal viscCoef = computeViscCoef(m_cellStatesFlxPnt[0][iFlxPnt]);
+          visc = epsilon*viscCoef;
       
           // transform update states to physical data to calculate eigenvalues
           m_waveSpeedUpd[0] += visc*jacobXJacobXIntCoef/m_cell->computeVolume();
@@ -707,6 +715,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
             const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
             updateCoeff[solID] += m_waveSpeedUpd[0];
           }
+          //if (m_waveSpeedUpd[0] > 10.0) CFLog(INFO, "wvspLLAVBnd: " << m_waveSpeedUpd[0] << "\n");
 	}
 	
         // compute the average sol and grad to use the BR2 scheme
@@ -748,6 +757,13 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       }
     }
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal LLAVFluxReconstruction::computeViscCoef(RealVector* state)
+{
+  return 1./(*state)[0];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -853,7 +869,13 @@ void LLAVFluxReconstruction::computeEpsilon()
   {
     m_epsilon = m_epsilon0*0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
   }
-  cf_assert(m_epsilon > -1e-8);
+  
+//   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//       {
+//         (*((*m_cellStates)[iSol]))[2] = m_epsilon0;
+//       }
+  
+  cf_assert(m_epsilon > -1.0e-8);
   //if (m_epsilon >= m_epsilon0*0.0001) CFLog(INFO, "eps0 = " << m_epsilon0 << ", DS: " << m_s-m_s0 << "\n");
 //   CFuint ID = m_cell->getID();
 //   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
@@ -876,7 +898,9 @@ void LLAVFluxReconstruction::computeEpsilon0()
   
   const CFreal peclet = computePeclet();
   
-  m_epsilon0 = wavespeed*(2.0/peclet - m_subcellRes/peclet);
+  m_epsilon0 = max(wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
+  
+  //if (m_epsilon0 < -1.0e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
   
   if (m_addPosPrev) addPositivityPreservation();
 
@@ -943,8 +967,8 @@ void LLAVFluxReconstruction::computeSmoothness()
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    CFreal stateP = (*((*m_cellStates)[iSol]))[0];
-    CFreal diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][0];
+    CFreal stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
+    CFreal diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
     sNum += diffStatesPPMinOne*diffStatesPPMinOne;
     sDenom += stateP*stateP;
   }

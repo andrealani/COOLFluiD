@@ -394,10 +394,13 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
     const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                    (*m_faceIntegrationCoefs)[iFlx];
 				   
+				   
     // transform update states to physical data to calculate eigenvalues
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlx]), m_pData);
     waveSpeedUpd += jacobXIntCoef*m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
+    //if (waveSpeedUpd > 10.0) CFLog(INFO, "wvspConvBnd: " << waveSpeedUpd << "\n");
   }
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

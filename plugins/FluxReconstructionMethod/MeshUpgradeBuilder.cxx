@@ -1248,14 +1248,14 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       case CFGeoShape::HEXA:
       {
 	oldOrder = static_cast<CFuint> (pow(oldNbStatesPerElem,1./3.)+0.5) - 1;
-	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder2);
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         frElemData = new HexaFluxReconstructionElementData(oldOrder2);
 	frElemData2 = new HexaFluxReconstructionElementData(m_solPolyOrder);
       } break;
       case CFGeoShape::TRIAG:
       {
 	oldOrder = static_cast<CFuint> (sqrt(oldNbStatesPerElem)+0.5) - 1;
-	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder2);
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         frElemData = new TriagFluxReconstructionElementData(oldOrder2);
 	frElemData2 = new TriagFluxReconstructionElementData(m_solPolyOrder);
       } break;

@@ -300,6 +300,9 @@ protected: //data
   
   /// the current flux pnt number
   CFuint m_currFlx;
+  
+  /// list of the vectors to which to calculate the derivative
+  std::vector< std::vector< CFuint > > m_dimList;
 
   
 }; // class Solve

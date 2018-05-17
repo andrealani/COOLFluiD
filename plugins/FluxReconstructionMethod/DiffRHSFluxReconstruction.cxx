@@ -191,6 +191,9 @@ void DiffRHSFluxReconstruction::execute()
       m_cellVolume[LEFT] = m_cells[LEFT]->computeVolume();
       m_cellVolume[RIGHT] = m_cells[RIGHT]->computeVolume();
       
+      cf_assert(m_cellVolume[LEFT] > 0.0);
+      cf_assert(m_cellVolume[RIGHT] > 0.0);
+      
       // if one of the neighbouring cells is parallel updatable, compute the correction flux
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
       {
@@ -654,6 +657,7 @@ void DiffRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
       // transform update states to physical data to calculate eigenvalues
       waveSpeedUpd[iSide] += visc*jacobXJacobXIntCoef/m_cellVolume[iSide];
     }
+    //if (waveSpeedUpd[iSide] > 10.0) CFLog(INFO, "wvspDiff: " << waveSpeedUpd[iSide] << "\n");
   }
 }
 

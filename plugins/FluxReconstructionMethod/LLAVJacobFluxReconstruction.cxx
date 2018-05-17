@@ -1026,8 +1026,8 @@ void LLAVJacobFluxReconstruction::computeSmoothness()
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    CFreal stateP = (*((*m_cellStates)[iSol]))[0];
-    CFreal diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][0];
+    CFreal stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
+    CFreal diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
     sNum += diffStatesPPMinOne*diffStatesPPMinOne;
     sDenom += stateP*stateP;
   }

@@ -175,6 +175,8 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	
 	// compute volume
         m_cellVolume = m_intCell->computeVolume();
+	
+	cf_assert(m_cellVolume > 0.0);
 
         // if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
@@ -429,6 +431,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
     // transform update states to physical data to calculate eigenvalues
     waveSpeedUpd += visc*jacobXJacobXIntCoef/m_cellVolume;
   }
+  //if (waveSpeedUpd > 10.0) CFLog(INFO, "wvspDiffBnd: " << waveSpeedUpd << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
