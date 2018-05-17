@@ -228,7 +228,7 @@ void BCNoSlipWallrvt::computeGhostGradients(const std::vector< std::vector< Real
     // normal
     const RealVector& normal = normals[iState];
 
-    for (CFuint iGrad = 0; iState < m_nbrEqs; ++iGrad)
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
     {
       *ghostGrads[iState][iGrad] = *intGrads[iState][iGrad];
     }

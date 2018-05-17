@@ -151,7 +151,7 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       const CFreal R = m_eulerVarSet->getModel()->getR();
       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
-      const CFreal ghostT = 2.0*m_wallT - innerT;
+      const CFreal ghostT = max(2.0*m_wallT - innerT,10.0);
       CFreal ghostP;
       if (getMethodData().getUpdateVarStr() == "Cons")
       {
@@ -175,6 +175,8 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
                                          )/m_ghostSolPhysData[EulerTerm::RHO];
       m_ghostSolPhysData[EulerTerm::A] = sqrt(gamma*ghostP/m_ghostSolPhysData[EulerTerm::RHO]);
       m_ghostSolPhysData[EulerTerm::T] = ghostT;
+      
+      //if (ghostT <= 0) CFLog(INFO, "state: " << intState << ", ghostT: " << ghostT << ", innerT: " << innerT << ", wallT: " << m_wallT << "\n");
     }
     //CFLog(INFO, "Twall: " << m_intSolPhysData[EulerTerm::T] << "\n");
 

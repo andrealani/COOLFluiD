@@ -457,7 +457,6 @@ void PhysicalityEuler2D::enforcePhysicality()
       }
     }
   }
-  
 //   // only needed to plot the physicality check!!!!!
 //   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 //   {

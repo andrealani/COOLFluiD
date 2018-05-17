@@ -172,6 +172,53 @@ void NSGradientComputer::computeGradients()
       }
     }
   }
+  else if (getMethodData().getUpdateVarStr() == "Puvt")
+  { 
+    // Loop over solution pnts to calculate the grad updates
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+    {
+      // Loop over  variables
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        //set the grad updates to 0 
+        m_gradUpdates[0][iSolPnt][iEq] = 0.0;
+
+        // Loop over gradient directions
+        for (CFuint iDir = 0; iDir < m_dim; ++iDir)
+        {
+          // Loop over solution pnts to count factor of all sol pnt polys
+          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
+          {
+	    const RealVector transformedState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform((*m_cellStates)[jSolPnt]));
+	    
+	    const RealVector projectedState = transformedState[iEq] * m_cellFluxProjVects[iDir][jSolPnt];
+	  
+            // compute the grad updates
+            m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
+	  }
+        }
+      }
+    }
+  
+    // get the gradientsAV
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      // get state ID
+      const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
+
+      // inverse Jacobian determinant
+      const CFreal invJacobDet = 1.0/jacobDet[iSol];
+
+      // update gradientsAV
+      for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+      {
+        gradientsAV[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
+        gradientsAV[solID][iGrad] *= invJacobDet;
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -282,6 +329,66 @@ void NSGradientComputer::computeGradientFaceCorrections()
       }
     }
   }
+  else if (getMethodData().getUpdateVarStr() == "Puvt")
+  {
+    // Loop over solution pnts to calculate the grad updates
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+    {
+      // Loop over  variables
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        //set the grad updates to 0 
+        m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
+        m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
+      
+        // compute the face corrections to the gradients
+        for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+        {
+	  const RealVector transformededStateL = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[LEFT][iFlx]));
+	  const RealVector transformededStateR = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[RIGHT][iFlx]));
+	  const CFreal avgSol = (transformededStateL[iEq]+transformededStateR[iEq])/2.0;
+	  const RealVector projectedCorrL = (avgSol-transformededStateL[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+	  const RealVector projectedCorrR = (avgSol-transformededStateR[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+	  /// @todo Check if this is also OK for triangles!!
+	  m_gradUpdates[LEFT][iSolPnt][iEq] += projectedCorrL*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx]];
+	  m_gradUpdates[RIGHT][iSolPnt][iEq] += projectedCorrR*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx]];
+        }
+      }
+    }
+  
+    // get the gradientsAV
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        // get state ID
+        const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
+
+        // update gradientsAV
+        for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+        {
+          gradientsAV[solID][iGrad] += m_gradUpdates[iSide][iSol][iGrad];
+        }
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NSGradientComputer::setup()
+{
+  CFAUTOTRACE;
+  
+  // setup parent class
+  ConvRHSFluxReconstruction::setup();
+  
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  
+  m_updateToSolutionVecTrans->setup(2);
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

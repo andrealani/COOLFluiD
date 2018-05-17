@@ -34,6 +34,12 @@ public: // functions
 
   /// Destructor
   virtual ~NSBndGradientComputer() {}
+  
+  /**
+   * Set up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void setup();
 
 protected: //functions
   
@@ -46,6 +52,9 @@ protected: //data
   
   /// diffusive variable set
   Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
+  
+  /// Vector transformer from update to solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
     
 }; // class Solve
 

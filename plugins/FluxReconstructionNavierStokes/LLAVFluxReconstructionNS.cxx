@@ -103,7 +103,7 @@ void LLAVFluxReconstructionNS::setFaceData(CFuint faceID)
 //       }
 //     }
 //   }
-  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+  if (getMethodData().hasDiffTerm())
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -162,7 +162,7 @@ void LLAVFluxReconstructionNS::setCellData()
 //     }
 //   }
   
-  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+  if (getMethodData().hasDiffTerm())
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -175,6 +175,26 @@ void LLAVFluxReconstructionNS::setCellData()
     }
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal LLAVFluxReconstructionNS::computeViscCoef(RealVector* state)
+{
+  CFreal result;
+  
+  if (getMethodData().getUpdateVarStr() == "Cons")
+  {
+    result = 1./(*state)[0];
+  }
+  else
+  {
+    const CFreal R = m_eulerVarSet->getModel()->getR();
+    result = (*state)[m_nbrEqs-1]/(*state)[0]*R;
+  }
+  
+  return result;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 

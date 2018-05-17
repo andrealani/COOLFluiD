@@ -77,6 +77,11 @@ protected: //functions
    * Compute the Peclet number based on the user input
    */
   virtual CFreal computePeclet();
+  
+  /**
+   * command to compute the coefficient to be multiplied with epsilon for the wavespeedupdates
+   */
+  virtual CFreal computeViscCoef(RealVector* state);
 
 protected: //data
   
