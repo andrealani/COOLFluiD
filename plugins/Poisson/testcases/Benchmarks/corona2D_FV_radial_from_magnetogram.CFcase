@@ -119,7 +119,7 @@ Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TRSName = Inlet
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.FileNameTw = plugins/Poisson/testcases/Benchmarks/MAGNETOGRAM2D.dat
 Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TemperatureID = 0
-Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.NbClosestPoints = 1 #2
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.NbClosestPoints = 2 #1 #2
 
 Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField
