@@ -85,11 +85,11 @@ Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
 #Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 #Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
-Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 150
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 2
-Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -7.
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 10
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -1.
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 #Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
 ##Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
@@ -145,7 +145,6 @@ Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = Inlet
 
 Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = Outlet
 Simulator.SubSystem.CellCenterFVM.Outlet.OnlyRadialGradient = true
-
 #Simulator.SubSystem.CellCenterFVM.Outlet.Vars = x y
 #Simulator.SubSystem.CellCenterFVM.Outlet.Def = 0.
 #Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 1
