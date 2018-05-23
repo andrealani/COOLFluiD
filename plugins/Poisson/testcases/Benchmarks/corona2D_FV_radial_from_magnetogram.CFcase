@@ -43,9 +43,9 @@ Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = uR uTheta #uX uY
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Br Btheta #ux1 uy1
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = uR uTheta uX uY
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Br Btheta ux1 uy1
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
 
 Simulator.SubSystem.ParaView.FileName    = corona2D_FV.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
@@ -72,7 +72,7 @@ Simulator.SubSystem.CFmeshFileReader.Data.FileName = corona_360_triag.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.4374e-6 #1/695700 (Sun radius)
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.4374e-9 #1/695700 (Sun radius)
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BwdEulerLSS
@@ -85,11 +85,11 @@ Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
 #Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 #Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
-Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 150
+#Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 150
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 10
-Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -1.
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.AbsNorm = -7.
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
 #Simulator.SubSystem.NewtonIterator.Data.SaveSystemToFile = true
 ##Simulator.SubSystem.NewtonIterator.UpdateSol = CopySol
