@@ -245,6 +245,9 @@ protected: //data
   /// bool telling whether to add viscosity for positivity preservation
   bool m_addPosPrev;
   
+  /// boolean telling whether to add the contribution of the artificial flux to the update coefficients
+  bool m_addUpdCoeff;
+  
   /// value at which point positivity preservation is added
   CFreal m_minValue;
   

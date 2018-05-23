@@ -108,6 +108,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
     
     m_viscFactor = 2.0;
     setParameter( "ViscFactor", &m_viscFactor);
+    
+    m_addUpdCoeff = true;
+    setParameter( "AddUpdateCoeff", &m_addUpdCoeff);
   }
   
   
@@ -130,6 +133,8 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
   
   options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
+  
+  options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -286,11 +291,14 @@ void LLAVFluxReconstruction::execute()
 	// compute the common interface flux
 	computeInterfaceFlxCorrection();
 
-	// compute the wave speed updates
-        computeWaveSpeedUpdates(m_waveSpeedUpd);
+	if (m_addUpdCoeff)
+	{
+	  // compute the wave speed updates
+          computeWaveSpeedUpdates(m_waveSpeedUpd);
 
-        // update the wave speed
-        updateWaveSpeed();
+          // update the wave speed
+          updateWaveSpeed();
+	}
 
 	// compute the correction for the left neighbour
 	computeCorrection(LEFT, m_divContFlx);
@@ -691,7 +699,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
 	  }
         }
 	
-	if (!m_jacob)
+	if (!m_jacob && m_addUpdCoeff)
 	{
 	  // adding updateCoeff
 	  CFreal visc = 1.0;
