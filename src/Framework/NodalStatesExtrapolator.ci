@@ -9,6 +9,8 @@
 #include "Framework/TrsNotFoundException.hh"
 #include "MathTools/MathChecks.hh"
 #include "Common/SwapEmpty.hh"
+#include "Common/FileSystemException.hh"
+#include "Environment/DirPaths.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -109,17 +111,6 @@ NodalStatesExtrapolator<DATA>::NodalStatesExtrapolator(const std::string& name) 
 template <typename DATA>
 NodalStatesExtrapolator<DATA>::~NodalStatesExtrapolator()
 {
-  for (CFuint i = 0; i < _mapTrs2NodalValues.size(); ++i) {
-    for (CFuint j = 0; j < _mapTrs2NodalValues[i]->size(); ++j) {
-      deletePtr((*_mapTrs2NodalValues[i])[j]);
-    }
-    deletePtr(_mapTrs2NodalValues[i]);
-  }
-
-  for (CFuint i = 0; i < _mapNodeID2TrsNodeID.size(); ++i) {
-    deletePtr(_mapNodeID2TrsNodeID[i]);
-  }
-
   CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::~NodalStatesExtrapolator()\n");
 }
 
@@ -186,8 +177,9 @@ void NodalStatesExtrapolator<DATA>::setup()
     // account only if it shares at least a second one with the face
     for (CFuint iNode = 0; iNode < nbNodesInCell; ++iNode) {
       const CFuint nodeID = cells->getNodeID(iCell, iNode);
+      cf_assert(nodeID < bFacesPerNode.size());
       const CFuint nbBFacesPerNode = bFacesPerNode[nodeID].size();
-
+      
       // this will have to be changed in 3D
       if (nbBFacesPerNode > 0) {
         for (CFuint i = 0; i < nbBFacesPerNode; ++i) {
@@ -196,17 +188,19 @@ void NodalStatesExtrapolator<DATA>::setup()
           // identify the i-th boundary face referencing the current node
           const CFuint faceID = bFacesPerNode[nodeID][i];
           SafePtr<TopologicalRegionSet> faceTrs = mapGeoToTrs->getTrs(faceID);
-          const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(faceID);
+	  cf_assert(faceTrs.isNotNull());
+	  const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(faceID);
           cf_assert(mapGeoToTrs->isBGeo(faceID));
-
+	  
           // number of nodes in the current face
           const CFuint nbFaceNodes = faceTrs->getNbNodesInGeo(faceIdx);
+	  cf_assert(nbFaceNodes >= 2);
           faceNodeIDs.resize(nbFaceNodes);
           // build a list of all the local nodeIDs in the current face
           for (CFuint jn = 0; jn < nbFaceNodes; ++jn) {
             faceNodeIDs[jn] = faceTrs->getNodeID(faceIdx, jn);
           }
-
+	  
           // check if the current face shares more than 1 node with the
           // current cell
           for (CFuint jNode = 0; jNode < nbNodesInCell; ++jNode) {
@@ -222,7 +216,7 @@ void NodalStatesExtrapolator<DATA>::setup()
           }
 
           // this should work also in 3D but you better check ...
-          if (countNodes >= PhysicalModelStack::getActive()->getDim()) {
+          if (countNodes >= dim) {
             if (mapFaceTrsID.find(faceID) == trsID[nodeID]) {
               _neighborStates[nodeID].push_back(currState);
             }
@@ -397,29 +391,32 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
-
+  
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => START\n");
+  
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
-
+  
   vector<SurfaceData*> surfaces;
   readSurfaceData(surfaces);
-
+  
   const CFuint nbSurf = surfaces.size();
-
+  cf_assert(nbSurf >= 1);
+  
   // Get the TRS list
   vector< SafePtr<TopologicalRegionSet> > trsList;
   for (CFuint i = 0; i < _trsName.size(); ++i) {
     trsList.push_back(MeshDataStack::getActive()->getTrs(_trsName[i]));
-  }
-
+  }  
+  
   // build the mapTrs2NodalValues storage
   SafePtr<vector<MapTrs2NodalValues*> > mapTrs2NodalValues = getMapTrs2NodalValues();
 
   // ideally this should be handled by NodalStatesExtrapolator but unfortunately its setup()
-  // is called after this function ...
+  // is called after this function ... AL: ?? recheck this comment
   mapTrs2NodalValues->resize(PhysicalModelStack::getActive()->getNbEq());
   // resize the mapping TRS to nodal values with the number of equations
   // you have one map for each variable
-
+  
   // allocate storage for mapping TRS to nodal values (temperature in this case)
   (*mapTrs2NodalValues)[m_tempID] = new MapTrs2NodalValues();
   for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
@@ -429,7 +426,7 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
     (*mapTrs2NodalValues)[m_tempID]->insert(&*trs, tWall);
   }
   (*mapTrs2NodalValues)[m_tempID]->sortKeys();
-
+  
   // allocate storage for mapping TRS to a mapping local (in the local mesh) nodeIDs
   // and local TRS nodeIDs
   SafePtr<MapTrsNodeIDs> mapNodeID2TrsNodeID = getMapTrs2NodeIDs();
@@ -446,7 +443,7 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
     mapNodeID2TrsNodeID->insert(&*trs, mapNodeIDs);
   }
   mapNodeID2TrsNodeID->sortKeys();
-
+  
   RealVector tmpNode(dim);
   DataHandle<Node*,GLOBAL> nodes = socket_nodes.getDataHandle();
     
@@ -462,7 +459,6 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
     const CFuint nbTrsNodes = trsNodeIDs->size();
     for (CFuint iNode = 0; iNode < nbTrsNodes; ++iNode) {
       const Node& currNode = *nodes[(*trsNodeIDs)[iNode]];
-      
       // during this preprocessing m_nbClosestPoints closest neighbors are sought
       closestPoint.reset();
       
@@ -472,69 +468,87 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
 	const CFuint nbPoints = sf.Tw.size();
 	for (CFuint ip = 0; ip < nbPoints; ++ip) {
 	  sf.xyz.putRow(ip,tmpNode);
-	  
+	  // CFLog(INFO, "is = " << is << ", ip = " << ip << ", node = " << tmpNode << "\n");
 	  const CFreal distance = MathFunctions::getDistance(currNode, tmpNode);
+	  // CFLog(INFO, "distance = " << distance << "\n");
 	  if (distance < 1e-8) {
 	    // in this case we assume that the current node coincides with the mapping node
 	    // set the matching Twall in the array
+	    cf_assert(iNode < nodalTwall.size());
+	    cf_assert(ip < sf.Tw.size());
 	    nodalTwall[iNode] = sf.Tw[ip]; 
 	    flagOut = true;
 	    break;
 	  }
-	  
-	  CFint counter = -1;
-	  for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
-	    if (distance < closestPoint.r[n]) {
-	      counter++;
-	    }
-	  }
-	  
-	  if (counter >= 0) {
-	    // counter == (m_nbClosestPoints-1) corresponds to the point with min distance within the stencil
-	    // counter == 0                      corresponds to the point with max distance within the stencil
-	    
-	    for (CFuint i = 0; i < static_cast<CFuint>(counter); ++i) {
-	      closestPoint.regressionFromTo(i+1, i);
+	  else {
+	    CFint counter = -1;
+	    for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
+	      cf_assert(n < closestPoint.r.size());
+	      if (distance < closestPoint.r[n]) {
+		counter++;
+	      }
 	    }
 	    
-	    closestPoint.surfaceIDs[counter] = is; 
-	    closestPoint.pointsIDs[counter] = ip; 
-	    closestPoint.r[counter] = distance;
-	    
-	    // sanity check
-	    // const CFuint nbN = m_nbClosestPoints -1;
-	    // 	    for (CFuint i = 0; i < nbN; ++i) {
-	    // 	      cf_always_assert (closestPoint.r[i+1] <= closestPoint.r[i]);
-	    // 	    }
+	    if (counter >= 0) {
+	      // counter == (m_nbClosestPoints-1) corresponds to the point with min distance within the stencil
+	      // counter == 0                     corresponds to the point with max distance within the stencil
+	      for (CFuint i = 0; i < static_cast<CFuint>(counter); ++i) {
+		closestPoint.regressionFromTo(i+1, i);
+	      }
+	      
+	      cf_assert(counter < closestPoint.surfaceIDs.size());
+	      // CFLog(INFO, "IN is = " << is << ", counter = " << counter << ", ip = " << ip << ", distance   = " << distance << "\n");
+	      closestPoint.surfaceIDs[counter] = is;
+	      cf_assert(counter < closestPoint.pointsIDs.size());
+	      closestPoint.pointsIDs[counter] = ip;
+	      cf_assert(counter < closestPoint.r.size());
+	      closestPoint.r[counter] = distance;
+	      
+	      // sanity check
+	      // const CFuint nbN = m_nbClosestPoints -1;
+	      // 	    for (CFuint i = 0; i < nbN; ++i) {
+	      // 	      cf_always_assert (closestPoint.r[i+1] <= closestPoint.r[i]);
+	      // 	    }
+	    }
 	  }
 	}
       }
-      
-      CFreal matchingTw = 0.0;
-      CFreal sumWeights = 0.0;
-      for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
-	const SurfaceData& sf = *surfaces[closestPoint.surfaceIDs[n]];
-	const CFreal weight = 1./closestPoint.r[n]; 
-	sumWeights += weight;
-	matchingTw += weight*sf.Tw[closestPoint.pointsIDs[n]]; 
+
+      if (!flagOut) {
+	CFreal matchingTw = 0.0;
+	CFreal sumWeights = 0.0;
+	for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
+	  const CFuint idxs = closestPoint.surfaceIDs[n];
+	  cf_assert(idxs < surfaces.size());
+	  const SurfaceData& sf = *surfaces[idxs];
+	  cf_assert(closestPoint.r[n] > 0.);
+	  const CFreal weight = 1./closestPoint.r[n]; 
+	  sumWeights += weight;
+	  const CFuint idxp = closestPoint.pointsIDs[n];
+	  cf_assert(idxp < sf.Tw.size());
+	  matchingTw += weight*sf.Tw[idxp]; 
+	}
+	matchingTw /= sumWeights;
+	
+	// set the matching Twall in the array
+	nodalTwall[iNode] = matchingTw;
+	// cf_assert(matchingTw > 0.0);
       }
-      matchingTw /= sumWeights;
-      
-      // set the matching Twall in the array
-      nodalTwall[iNode] = matchingTw;
-      cf_assert(matchingTw > 0.0);
     }
-  } 
+  }
   
   // cleanup the memory
   for (CFuint is = 0; is < nbSurf; ++is) {
     deletePtr(surfaces[is]);
   }
-
+  
   // array of flags telling which interpolated or previously computed nodal values are available
   _nodalValuesIDFlags.resize(PhysicalModelStack::getActive()->getNbEq());
+  cf_assert(_nodalValuesIDFlags.size() > 0);
   _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
   _nodalValuesIDFlags[m_tempID] = true;
+  
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -546,10 +560,22 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
-
-  const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
   
-  ifstream fin(m_fileNameTw.c_str());
+  const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
+
+  boost::filesystem::path fname;
+  if (Common::StringOps::startsWith(m_fileNameTw,"."))
+  {
+    fname = boost::filesystem::path(m_fileNameTw);
+  }
+  else
+  {
+    fname = Environment::DirPaths::getInstance().getBaseDir() / boost::filesystem::path(m_fileNameTw);
+  }
+
+  // check the file type
+  std::ifstream fin(fname.string().c_str());
+  if(!fin) throw Common::FilesystemException (FromHere(),"Could not open file: " + fname.string());
   // The format is as follows:
   
   // NumberOfSurfaces
@@ -560,11 +586,11 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
   // x y z T
   // ...
   
-  CFLogInfo("START reading file " << m_fileNameTw << "\n");
+  CFLogInfo("NodalStatesExtrapolator::readSurfaceData() => START reading file " <<
+	    m_fileNameTw << "\n");
   
   CFuint nbSurf = 0;
   fin >> nbSurf;
-  
   surfaces.resize(nbSurf);
   
   // store all the surface data
@@ -574,8 +600,8 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
     CFuint nbPoints = 0;
     fin >> nbPoints;
     
-    
-    CFLogInfo("NameSurf = " << nameSurf << ", nbPoints = " << nbPoints << "\n");
+    CFLogInfo("nbSurf = " << is << "/" << nbSurf << ", NameSurf = " <<
+	      nameSurf << ", nbPoints = " << nbPoints << "\n");
     SurfaceData* sf = new SurfaceData();
     sf->xyz.resize(nbPoints,dim);
     sf->Tw.resize(nbPoints);
@@ -600,9 +626,10 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
     surfaces[is] = (m_extractCoordZID < 0) ?  sf : extractLineData(sf);
   }
   
-  CFLogInfo("END reading file " << m_fileNameTw << "\n");
+  CFLogInfo("NodalStatesExtrapolator::readSurfaceData() => END reading file " <<
+	    m_fileNameTw << "\n"); 
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
@@ -613,7 +640,7 @@ NodalStatesExtrapolator<DATA>::extractLineData(SurfaceData* surface)
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
-
+  
   /// @TODO here there might be a BUG: be careful !!!
 
   // if m_extractCoordZID >= 0 a line distribution is extracted from a {x y z T} distribution for z=0

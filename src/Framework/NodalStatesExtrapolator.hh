@@ -186,8 +186,16 @@ protected: // helper function
     
     void regressionFromTo(CFuint start, CFuint end)
     {
+      cf_assert(end < surfaceIDs.size());
+      cf_assert(start < surfaceIDs.size());
       surfaceIDs[end] = surfaceIDs[start]; 
-      pointsIDs[end] = pointsIDs[start]; 
+
+      cf_assert(end < pointsIDs.size());
+      cf_assert(start < pointsIDs.size());
+      pointsIDs[end] = pointsIDs[start];
+
+      cf_assert(end < r.size());
+      cf_assert(start < r.size());
       r[end] = r[start];
     }
   };

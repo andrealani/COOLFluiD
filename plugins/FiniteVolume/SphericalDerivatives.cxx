@@ -110,6 +110,8 @@ void SphericalDerivatives::setup()
 
 void SphericalDerivatives::execute()
 {
+  CFLog(VERBOSE, "SphericalDerivatives::execute() => START\n");
+  
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle<CFreal> uR = socket_uR.getDataHandle();
   DataHandle<CFreal> uTheta = socket_uTheta.getDataHandle();
@@ -149,6 +151,8 @@ void SphericalDerivatives::execute()
       }
     }
   }
+
+  CFLog(VERBOSE, "SphericalDerivatives::execute() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
