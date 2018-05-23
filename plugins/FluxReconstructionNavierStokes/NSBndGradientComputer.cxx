@@ -65,11 +65,11 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
   {
     tempStates.push_back(m_cellStatesFlxPnt[iFlx]->getData());
     tempGhostStates.push_back(m_flxPntGhostSol[iFlx]->getData());
-    if (m_intCell->getID() == 191)
-    {
+    //if (m_intCell->getID() == 191)
+    //{
       CFLog(VERBOSE,"BndState " << iFlx << ": " << *(m_cellStatesFlxPnt[iFlx]->getData()) << "\n");
       CFLog(VERBOSE,"GstState " << iFlx << ": " << *(m_flxPntGhostSol[iFlx]->getData()) << "\n");
-    }
+      //}
   }
   
   navierStokesVarSet->setGradientVars(tempStates,tempGradTerm,m_nbrFaceFlxPnts);
@@ -112,6 +112,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
     {
       gradients[solID][iGrad] += m_gradUpdates[iSol][iGrad];
+     
     }
   }
   
@@ -154,7 +155,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       }
     }
   }
-  else if (getMethodData().getUpdateVarStr() == "Puvt" && getMethodData().hasArtificialViscosity())
+  else if ((getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasArtificialViscosity())
   {
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)

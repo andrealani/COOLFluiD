@@ -142,11 +142,12 @@ bool PhysicalityEuler2D::checkPhysicality()
 	CFreal rho  = m_cellStatesFlxPnt[iFlx][i];
 	if (rho < m_minDensity)
 	  {
+	    //cout<< " rho  "<< rho << endl;
 	    physical = false;
 	    break;
 	  }	
       }
-      for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+      for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	CFreal T = m_cellStatesFlxPnt[iFlx][i];
 	if( T <  m_minTemperature ){
 	  physical = false;
@@ -192,12 +193,14 @@ bool PhysicalityEuler2D::checkPhysicality()
       else if (RhoivtTv){
 	for (CFuint i = 0 ; i<m_nbSpecies ; ++i){
 	  if((*((*m_cellStates)[iSol]))[i] < m_minDensity){
+	    cout<< " rhoInternal  "<< (*((*m_cellStates)[iSol]))[i]  << endl;
 	    physical = false;
 	    break;
 	  }
 	}
-	for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+	for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	  if((*((*m_cellStates)[iSol]))[i] < m_minTemperature){
+	    cout<< " T internal  "<< (*((*m_cellStates)[iSol]))[i] << endl;
 	    physical = false;
 	    break;
 	  }
@@ -255,7 +258,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 	needsLim = true;
       }
     }
-    for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+    for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
       if(m_cellAvgState[i] < m_minTemperature){
 	needsLim = true;
       }
@@ -306,11 +309,14 @@ void PhysicalityEuler2D::enforcePhysicality()
       for (CFuint i = 0 ; i<m_nbSpecies ; ++i){
 	if(m_cellAvgState[i] < m_minDensity){
 	  m_cellAvgState[i] = m_minDensity;
+	  cout << " enforce rho   " <<  m_cellAvgState[i] << endl;
 	}
       }
-      for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+      for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	if(m_cellAvgState[i] < m_minTemperature){
 	  m_cellAvgState[i] = m_minTemperature;
+	  cout << " enforce T   " <<  m_cellAvgState[i] << endl;
+
 	}
       }
     }
@@ -372,7 +378,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 	  needsLimFlags[i] = true;
 	}	
       }
-      for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+      for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	if(m_cellStatesFlxPnt[iFlx][i] <  m_minTemperature ){
 	  needsLim = true;
 	  needsLimFlags[i] = true;
@@ -445,7 +451,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 	      needsLimFlags[i] = true;
 	    }	
 	  }
-	  for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+	  for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	    if(m_cellStatesFlxPnt[iFlx][i] <  m_minTemperature ){
 	      needsLim = true;
 	      needsLimFlags[i] = true;
@@ -466,7 +472,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 	    {
 	      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 		{
-		  if ( needsLimFlags[iEq] || m_limCompleteState || true)
+		  if ( needsLimFlags[iEq] || m_limCompleteState)
 		  {
 		    (*((*m_cellStates)[iSol]))[iEq] = m_cellAvgState[iEq];
 		  }
@@ -522,7 +528,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 	    needsLimFlags[i] = true;
 	  }	
 	}
-	for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+	for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	  if((*((*m_cellStates)[iSol]))[i] <  m_minTemperature ){
 	    needsLim = true;
 	    needsLimFlags[i] = true;
@@ -590,7 +596,7 @@ void PhysicalityEuler2D::enforcePhysicality()
 		needsLimFlags[i] = true;
 	      }	
 	    }
-	    for(CFuint i = m_nbSpecies+nbDims-1 ; i<m_nbrEqs; ++i){
+	    for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	      if((*((*m_cellStates)[iSol]))[i] <  m_minTemperature ){
 		needsLim = true;
 		needsLimFlags[i] = true;
@@ -612,7 +618,7 @@ void PhysicalityEuler2D::enforcePhysicality()
           {
 	    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 	    {
-	      if ( needsLimFlags[iEq] || m_limCompleteState || true)
+	      if ( needsLimFlags[iEq] || m_limCompleteState )
 	      {
   	        (*((*m_cellStates)[jSol]))[iEq] = m_cellAvgState[iEq];
 	      }
