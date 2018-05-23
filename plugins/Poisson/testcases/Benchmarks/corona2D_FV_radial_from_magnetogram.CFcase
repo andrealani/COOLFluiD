@@ -85,7 +85,8 @@ Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
 #Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
 #Simulator.SubSystem.BwdEulerLSS.Data.PreconditionerRate = 5
-#Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 150
+# AL: default is 30
+#Simulator.SubSystem.BwdEulerLSS.Data.NbKrylovSpaces = 50 #150
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 10
