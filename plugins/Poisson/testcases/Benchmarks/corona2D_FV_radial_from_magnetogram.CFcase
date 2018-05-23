@@ -44,7 +44,7 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet
 Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = uR uTheta uX uY
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Br Btheta ux1 uy1
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Br Btheta Bx By
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
 
 Simulator.SubSystem.ParaView.FileName    = corona2D_FV.vtu
