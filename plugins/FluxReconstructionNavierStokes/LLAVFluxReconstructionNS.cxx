@@ -12,6 +12,8 @@
 
 #include "MathTools/MathFunctions.hh"
 
+#include "NavierStokes/EulerTerm.hh"
+
 #include "NavierStokes/NavierStokesVarSet.hh"
 #include "NavierStokes/EulerVarSet.hh"
 
@@ -47,6 +49,8 @@ LLAVFluxReconstructionNS::LLAVFluxReconstructionNS(const std::string& name) :
   m_diffVarSet(CFNULL),
   m_gradsBackUp(),
   m_eulerVarSet(CFNULL),
+  m_msEulerTerm(CFNULL),
+  m_nbrSpecies(),
   m_pData()
   {
   }
@@ -103,7 +107,7 @@ void LLAVFluxReconstructionNS::setFaceData(CFuint faceID)
 //       }
 //     }
 //   }
-  if (getMethodData().hasDiffTerm())
+  if (getMethodData().hasDiffTerm() || getMethodData().getUpdateVarStr() == "Puvt")
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -162,7 +166,7 @@ void LLAVFluxReconstructionNS::setCellData()
 //     }
 //   }
   
-  if (getMethodData().hasDiffTerm())
+  if (getMethodData().hasDiffTerm() || getMethodData().getUpdateVarStr() == "Puvt")
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -180,17 +184,25 @@ void LLAVFluxReconstructionNS::setCellData()
 
 CFreal LLAVFluxReconstructionNS::computeViscCoef(RealVector* state)
 {
-  CFreal result;
+  CFreal result = 1.0;
   
-  if (getMethodData().getUpdateVarStr() == "Cons")
-  {
-    result = 1./(*state)[0];
-  }
-  else
-  {
-    const CFreal R = m_eulerVarSet->getModel()->getR();
-    result = (*state)[m_nbrEqs-1]/(*state)[0]*R;
-  }
+//   if (getMethodData().getUpdateVarStr() == "Cons")
+//   {
+//     result = 1./(*state)[0];
+//   }
+//   else if (getMethodData().getUpdateVarStr() == "Puvt")
+//   {
+//     const CFreal R = m_eulerVarSet->getModel()->getR();
+//     result = (*state)[m_nbrEqs-1]/(*state)[0]*R;
+//   }
+//   else if (getMethodData().getUpdateVarStr() == "RhoivTv")
+//   {
+//     for (CFuint iSpecies = 0; iSpecies < m_nbrSpecies; ++iSpecies)
+//     {
+//       result += (*state)[iSpecies];
+//     }
+//     result = 1.0/result;
+//   }
   
   return result;
 }
@@ -229,8 +241,28 @@ void LLAVFluxReconstructionNS::setup()
   // setup parent class
   LLAVFluxReconstruction::setup();
   
-  // get Euler varset
-  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
+  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  
+  if(!RhoivtTv)
+  {
+    // get Euler varset
+    m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
+  } 
+  else
+  {
+    m_msEulerTerm = PhysicalModelStack::getActive()-> getImplementor()->getConvectiveTerm().d_castTo< MultiScalarTerm< EulerTerm > >();
+    if (m_msEulerTerm.isNull())
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MultiScalar EulerTerm in BCNoSlipWallrvt!");
+    }
+  
+    m_nbrSpecies = m_msEulerTerm->getNbScalarVars(0);
+  }
+  
+  
+
+  
+  // if needed, get the MS 
   
   m_gradsBackUp.resize(2);
   m_gradsBackUp[LEFT].resize(m_nbrSolPnts);

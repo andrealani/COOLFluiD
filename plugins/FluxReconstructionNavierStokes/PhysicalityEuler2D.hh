@@ -91,8 +91,11 @@ protected: // data
   /// minimum allowable value for temperature
   CFreal m_minTemperature;
   
-  /// boolean telling wether to also check the internal solution for physicality
+  /// boolean telling whether to also check the internal solution for physicality
   bool m_checkInternal;
+  
+  /// boolean to tell whether the complete state is limited or a single variable
+  bool m_limCompleteState;
   
   /// physical model 
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;

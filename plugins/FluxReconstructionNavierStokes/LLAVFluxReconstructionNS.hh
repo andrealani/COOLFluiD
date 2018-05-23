@@ -15,6 +15,8 @@
 
 #include "FluxReconstructionMethod/LLAVFluxReconstruction.hh"
 
+#include "Framework/MultiScalarTerm.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -22,6 +24,7 @@ namespace COOLFluiD {
   namespace Physics {
     namespace NavierStokes {
       class EulerVarSet;
+      class EulerTerm;
     }
   }
   
@@ -91,8 +94,14 @@ protected: //data
   /// backup of the gradients in the neighbouring cell
   std::vector< std::vector< std::vector< RealVector* > > > m_gradsBackUp;
   
-  /// physical model (in conservative variables)
+  /// physical model
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
+  
+  /// physical model MS
+  Common::SafePtr< Framework::MultiScalarTerm< Physics::NavierStokes::EulerTerm > > m_msEulerTerm;
+  
+  /// number of species
+  CFuint m_nbrSpecies;
   
   private:
 
