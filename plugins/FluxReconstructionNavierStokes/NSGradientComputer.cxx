@@ -172,7 +172,7 @@ void NSGradientComputer::computeGradients()
       }
     }
   }
-  else if (getMethodData().getUpdateVarStr() == "Puvt" && getMethodData().hasArtificialViscosity())
+  else if ( (getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasArtificialViscosity())
   { 
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
@@ -329,7 +329,7 @@ void NSGradientComputer::computeGradientFaceCorrections()
       }
     }
   }
-  else if (getMethodData().getUpdateVarStr() == "Puvt" && getMethodData().hasArtificialViscosity())
+  else if ((getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasArtificialViscosity())
   {
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
