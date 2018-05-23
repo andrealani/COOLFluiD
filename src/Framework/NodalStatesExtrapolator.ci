@@ -9,7 +9,7 @@
 #include "Framework/TrsNotFoundException.hh"
 #include "MathTools/MathChecks.hh"
 #include "Common/SwapEmpty.hh"
-#include "Common/FileSystemException.hh"
+#include "Common/FilesystemException.hh"
 #include "Environment/DirPaths.hh"
 
 //////////////////////////////////////////////////////////////////////////////
