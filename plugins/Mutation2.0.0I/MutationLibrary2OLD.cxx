@@ -522,10 +522,12 @@ void MutationLibrary2OLD::deleteDataFiles()
 
 void MutationLibrary2OLD::setLibrarySequentially()
 {
+  CFLog(VERBOSE, "MutationLibrary2OLD::setLibrarySequentially() => start\n");	 
+ 
   // calculate the needed size for the work vectors
   FORTRAN_NAME(lengthcf)(&_LWR1,&_LWR2,&_LWR3,&_LWR4,&_LWI,&_LWC,&_NS,&_NE,&_NC,
                          &_NREA, &_NV, &_nbTvib, &_nbTe, &_IBINIJ);
-  
+ 
   // _extraData vector inizialization
  /* _extraData.enthalpyTt.resize(_NS);
   _extraData.energyTr.resize(_NS);
@@ -681,8 +683,8 @@ void MutationLibrary2OLD::setLibrarySequentially()
   if (_iimol < 0) {
     _iimol = (presenceElectron()) ? 3 : 2;
   }
-  
-  setMoleculesIDs(_molecIDs);
+ 
+  MutationLibrary2OLD::setMoleculesIDs(_molecIDs);
   _flagMoleculesIDs.resize(_NS,false);
   for (CFuint i = 0; i < _molecIDs.size(); ++i) {
     _flagMoleculesIDs[_molecIDs[i]] = true;
@@ -729,6 +731,8 @@ void MutationLibrary2OLD::setLibrarySequentially()
    if (_mixtureName == "air11") {
    _molecTvID = 3;
    }
+  
+   CFLog(VERBOSE, "MutationLibrary2OLD::setLibrarySequentially() => end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -348,7 +348,7 @@ IF (CF_ENABLE_OMP)
 ENDIF()
 
 # mutation++
-IF ( CF_ENABLE_MUTATIONPP )
+IF ( CF_ENABLE_MUTATIONPP OR CF_ENABLE_MUTATIONPP_DEBUG )
 FIND_PACKAGE(Mutationpp)    # mutation++ library
 # define CF_HAVE_MUTATIONPP only if enabled to do so
 ADD_DEFINITIONS  ( -DCF_HAVE_MUTATIONPP )
@@ -500,6 +500,13 @@ LOG ( "---------------------------------------------------------" )
 
 # applications directory (Solver & co)
 ADD_SUBDIRECTORY ( apps )
+
+# AL: this could mess up the testcases
+#IF (NOT CF_ENABLE_STATIC)
+#  SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE  "Full path to coolfluid-solver" INTERNAL )
+#  MESSAGE ("###### coolfluid_solver_exe is ${coolfluid_solver_exe}")
+#  MARK_AS_ADVANCED ( coolfluid_solver_exe )
+#ENDIF()
 
 #config file generation (at the end, so everything is detected)
 ADD_SUBDIRECTORY ( config )

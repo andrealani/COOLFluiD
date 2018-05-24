@@ -95,6 +95,7 @@ my %default_options = (
     'withcurl'        => 0,
     'with_craystatic' => 0,
     'with_mutationpp' => 0,
+    'with_mutationpp_debug' => 0,
     'with_plato'      => 0,
     'with_paralution' => 0,
     'paralution_dir'  => "", 
@@ -968,6 +969,7 @@ sub setup_cfgoptions()
   setup_option('withcurl',            'CF_ENABLE_CURL');
   setup_option('with_craystatic',     'CF_ENABLE_CRAYSTATIC');
   setup_option('with_mutationpp',     'CF_ENABLE_MUTATIONPP');
+  setup_option('with_mutationpp_debug', 'CF_ENABLE_MUTATIONPP_DEBUG');
   setup_option('with_plato',          'CF_ENABLE_PLATO');
   setup_option('with_paralution',     'CF_ENABLE_PARALUTION'); 
   setup_option('with_gsl',            'CF_ENABLE_GSL');

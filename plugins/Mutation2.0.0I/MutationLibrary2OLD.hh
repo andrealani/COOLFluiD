@@ -53,17 +53,17 @@ public:
   /**
    * Get the catalycity factor for N
    **/
-  void getGammaN(CFreal& m_GN);
+  virtual void getGammaN(CFreal& m_GN);
 
   /**
    * Get the catalycity factor for O
    **/
-  void getGammaO(CFreal& m_GO);
+  virtual  void getGammaO(CFreal& m_GO);
   
   /**
    * Setups the mixture name
    */
-  void setMixtureName(const std::string& mixtureName)
+  virtual void setMixtureName(const std::string& mixtureName)
   {
     _mixtureName = mixtureName;
   }
@@ -91,15 +91,15 @@ public:
   /**
    * Compute and get the electron pressure
    */
-  CFdouble electronPressure(CFreal rhoE,
-			    CFreal tempE);
+  virtual CFdouble electronPressure(CFreal rhoE,
+				    CFreal tempE);
   
   /**
    * Get the translational-rotational cv
    * @pre it assumes that the mass fractions
    *      have been already set
    */
-  CFdouble getCvTr() const
+  virtual CFdouble getCvTr() const
   {
     CFdouble sumCvTr = 1.5;
     for (CFint i = 0; i < _NS; ++i) {
@@ -114,7 +114,7 @@ public:
    * Get the mixture molar mass 
    * @pre it assumes that the mass fractionshave been already set
    */
-  CFdouble getMMass() const
+  virtual CFdouble getMMass() const
   {
     CFdouble tmpMass = 0.0;
     for(CFint is = 0; is < _NS; ++is) {
@@ -126,7 +126,7 @@ public:
   /**
    * Set the constant of gases in J/(Kg*K)
    */
-  void setRiGas(RealVector& Ri)
+  virtual void setRiGas(RealVector& Ri)
   {
     assert(Ri.size() == static_cast<CFuint>(_NS));
     for(CFint is = 0; is < _NS; ++is) {
@@ -137,7 +137,7 @@ public:
   /**
    * Set the IDs of the molecules in the mixture
    */
-  void setMoleculesIDs(std::vector<CFuint>& v)
+  virtual void setMoleculesIDs(std::vector<CFuint>& v)
   {
     v.reserve(_NV);
     for (CFint i = 0; i < _NS; ++i) {
@@ -157,9 +157,9 @@ public:
    * @param rho  density
    * @param temp temperature
    */
-  CFdouble pressure(CFdouble& rho,
-		    CFdouble& temp,
-		    CFreal* tVec);
+  virtual CFdouble pressure(CFdouble& rho,
+			    CFdouble& temp,
+			    CFreal* tVec);
   
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
@@ -167,7 +167,7 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  CFdouble lambdaNEQ(CFdouble& temp, CFdouble& pressure);
+  virtual CFdouble lambdaNEQ(CFdouble& temp, CFdouble& pressure);
 
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
@@ -175,12 +175,12 @@ public:
    * @param temp temperature
    * @param pressure pressure
    */
-  void lambdaVibNEQ(CFreal& temp,
-        RealVector& tVec,
-        CFdouble& pressure,
-        CFreal& lambdaTrRo,
-        RealVector& lambdaInt);
-
+  virtual void lambdaVibNEQ(CFreal& temp,
+			    RealVector& tVec,
+			    CFdouble& pressure,
+			    CFreal& lambdaTrRo,
+			    RealVector& lambdaInt);
+  
   /**
    * Calculates the dynamic viscosity, given temperature and pressure
    * @param temp temperature
@@ -253,9 +253,9 @@ public:
    * @pre this function ALWAYS computes the composition
    *      (no lookup table based results...)
    */
- virtual void setComposition(CFdouble& temp,
-			     CFdouble& pressure,
-			     RealVector* x);
+  virtual void setComposition(CFdouble& temp,
+			      CFdouble& pressure,
+			      RealVector* x);
   
   /**
    * Reset the composition
@@ -266,7 +266,7 @@ public:
       _X[i] = x[i];
     }
   }
-
+  
   /**
    * Calculates the density, the enthalpy and the internal energy
    * This function is supplied for convenience, as it calls
@@ -322,8 +322,8 @@ public:
    * @param pressure  pressure
    * @param intEnergy computed internal energy
    */
-  virtual  CFdouble enthalpy(CFdouble& temp,
-			     CFdouble& pressure);
+  virtual CFdouble enthalpy(CFdouble& temp,
+			    CFdouble& pressure);
   
   /**
    * Calculates the speed of sound in
@@ -341,7 +341,7 @@ public:
    * fractions in case of LTE with Demixing
    * @param yn the RealVector of the mass fractions of elements
    */
-  void setElemFractions(const RealVector& yn);
+  virtual void setElemFractions(const RealVector& yn);
   
   /**
    * Sets the mole fractions of elements (nucleons) Xn for the Mutation
@@ -349,41 +349,41 @@ public:
    * species mass fractions
    * @param yn the RealVector of the mass fractions of species
    */
-  void setElementXFromSpeciesY(const RealVector& ys);
+  virtual void setElementXFromSpeciesY(const RealVector& ys);
 
   /**
    * Sets the species (molar) fractions. This function should be called before getting
    * thermodynamic quantities or transport properties.
    * @param ys the RealVector of the mass fractions of species
    */
-  void setSpeciesFractions(const RealVector& ys);
-
+  virtual void setSpeciesFractions(const RealVector& ys);
+  
   /**
    * Sets the electron fractions in the mass composition according to charge
    * neutrality.
    * @param ys the RealVector of the mass fractions of species
    */
-  void setElectronFraction(RealVector& ys);
-
+  virtual void setElectronFraction(RealVector& ys);
+  
   /**
    * Gets the species (molar) fractions.
    * @param ys the RealVector of the mass fractions of species
    * @param xs the RealVector of the molar fractions of species
    */
-  void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
-
+  virtual void getSpeciesMolarFractions(const RealVector& ys, RealVector& xs);
+  
   /**
    * Gets the species (mass) fractions.
    * @param xs the RealVector of the molar fractions of species
    * @param ys the RealVector of the mass fractions of species
    */
-  void getSpeciesMassFractions(const RealVector& xs, RealVector& ys);
-
+  virtual void getSpeciesMassFractions(const RealVector& xs, RealVector& ys);
+  
   /**
    * Gets the species mass fractions.
    * @param ys the RealVector of the mass fractions of species
    */
-  void getSpeciesMassFractions(RealVector& ys);
+  virtual void getSpeciesMassFractions(RealVector& ys);
   
   /**
    * Returns the source terms species continuity equations, 
@@ -399,16 +399,16 @@ public:
    * @param omegav the source term
    * @param jacobian the Jacobian matrix of the mass production terms
    */
-  void getSource(CFdouble& temp,
-		 RealVector& tVec,
-		 CFdouble& pressure,
-		 CFdouble& rho,
-		 const RealVector& ys,
-		 bool flagJac,
-		 RealVector& omega,
-		 RealVector& omegav,
-		 CFdouble& omegaRad,
-		 RealMatrix& jacobian);
+  virtual void getSource(CFdouble& temp,
+			 RealVector& tVec,
+			 CFdouble& pressure,
+			 CFdouble& rho,
+			 const RealVector& ys,
+			 bool flagJac,
+			 RealVector& omega,
+			 RealVector& omegav,
+			 CFdouble& omegaRad,
+			 RealMatrix& jacobian);
   
   /**
    * Returns the source terms species continuity equations, 
@@ -422,24 +422,24 @@ public:
    * @param rho the mixture density
    * @param omegaEE the source term
    */
-  void getSourceEE(CFdouble& temp,
-		   RealVector& tVec,
-		   CFdouble& pressure,
-		   CFdouble& rho,
-		   const RealVector& ys,
-		   bool flagJac,
-		   CFdouble& omegaEE);
+  virtual void getSourceEE(CFdouble& temp,
+			   RealVector& tVec,
+			   CFdouble& pressure,
+			   CFdouble& rho,
+			   const RealVector& ys,
+			   bool flagJac,
+			   CFdouble& omegaEE);
   
   /// Computes all transport coefficients for TCNEQ case
-  void transportCoeffNEQ(CFreal& temp, 
-			 CFdouble& pressure,
-			 CFreal* tVec, 
-			 RealVector& normConcGradients,
-			 RealVector& normTempGradients,
-			 CFreal& eta,
-			 CFreal& lambdaTrRo, 
-			 RealVector& lambdaInt,
-			 RealVector& rhoUdiff);
+  virtual void transportCoeffNEQ(CFreal& temp, 
+				 CFdouble& pressure,
+				 CFreal* tVec, 
+				 RealVector& normConcGradients,
+				 RealVector& normTempGradients,
+				 CFreal& eta,
+				 CFreal& lambdaTrRo, 
+				 RealVector& lambdaInt,
+				 RealVector& rhoUdiff);
   
   /**
    * Returns the transport coefficients for the diffusive fluxes used in
@@ -454,13 +454,13 @@ public:
    * @param eltdifcoef the elemental thermal demixing coefficients
    *        times mixture density
    */
-  void getTransportCoefs(CFdouble& temp,
-			 CFdouble& pressure,
-			 CFdouble& lambda,
-			 CFdouble& lambdacor,
-			 RealVector& lambdael,
-			 RealMatrix& eldifcoef,
-			 RealVector& eltdifcoef);
+  virtual void getTransportCoefs(CFdouble& temp,
+				 CFdouble& pressure,
+				 CFdouble& lambda,
+				 CFdouble& lambdacor,
+				 RealVector& lambdael,
+				 RealMatrix& eldifcoef,
+				 RealVector& eltdifcoef);
   
   /**
    * Returns the mass production/destruction terms [kg m^-3 s^-1] in CHEMICAL
@@ -474,15 +474,15 @@ public:
    * @param omega the mass production terms
    * @param jacobian the Jacobian matrix of the mass production terms
    */
-  void getMassProductionTerm(CFdouble& temp,
-			     RealVector& tVec,
-			     CFdouble& pressure,
-			     CFdouble& rho,
-			     const RealVector& ys,
-			     bool flagJac,
-			     RealVector& omega,
-                             RealMatrix& jacobian);
-
+  virtual void getMassProductionTerm(CFdouble& temp,
+				     RealVector& tVec,
+				     CFdouble& pressure,
+				     CFdouble& rho,
+				     const RealVector& ys,
+				     bool flagJac,
+				     RealVector& omega,
+				     RealMatrix& jacobian);
+  
   /**
    * Returns the source term for the vibrational relaxation with VT transfer
    * @param temp the mixture temperature
@@ -491,12 +491,12 @@ public:
    * @param rho the mixture density
    * @param omegav the source term
    */
-  void getSourceTermVT(CFdouble& temp,
-		       RealVector& tVec,
-		       CFdouble& pressure,
-		       CFdouble& rho,
-		       RealVector& omegav,
-		       CFdouble& omegaRad);
+  virtual void getSourceTermVT(CFdouble& temp,
+			       RealVector& tVec,
+			       CFdouble& pressure,
+			       CFdouble& rho,
+			       RealVector& omegav,
+			       CFdouble& omegaRad);
   
   /**
    * Returns the diffusion velocities of species multiplied by the species
@@ -505,13 +505,13 @@ public:
    * @param pressure the mixture pressure
    * @param normConcGradients the cell normal gradients of species mass fractions
    */
-  void getRhoUdiff(CFdouble& temp,
-                   CFdouble& pressure,
-                   RealVector& normConcGradients,
-		   RealVector& normTempGradients,
-		   CFreal* tVec,
-                   RealVector& rhoUdiff,
-		   bool fast);
+  virtual void getRhoUdiff(CFdouble& temp,
+			   CFdouble& pressure,
+			   RealVector& normConcGradients,
+			   RealVector& normTempGradients,
+			   CFreal* tVec,
+			   RealVector& rhoUdiff,
+			   bool fast);
   
   /**
    * Returns the diffusion flux
@@ -520,51 +520,49 @@ public:
    * It returns as well the diffusive flux 
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
-
    */
-  void getDij_fick(RealVector& dx,
-		   CFdouble& pressure,
-		   CFdouble& temperature,
-		   RealMatrix& Dij,
-		   RealVector& rhoUdiff);
+  virtual void getDij_fick(RealVector& dx,
+			   CFdouble& pressure,
+			   CFdouble& temperature,
+			   RealMatrix& Dij,
+			   RealVector& rhoUdiff);
   
-				  
-/**
+  /**
    * Sets the species (molar) fractions. This function should be called before getting
    * thermodynamic quantities or transport properties.
    * @param xs the RealVector of the molar fractions of species
    */
-  void setSpeciesMolarFractions(const RealVector& xs);
-
+  virtual void setSpeciesMolarFractions(const RealVector& xs);
+  
   /**
    * Returns the total enthalpies per unit mass of species
    * @param temp the mixture temperature
    * @param pressure the mixture pressure
    */
-  void getSpeciesTotEnthalpies(CFdouble& temp,
-                               RealVector& tVec,
-             CFdouble& pressure,
-                               RealVector& hsTot,
-             RealVector* hsVib,
-             RealVector* hsEl);
-
-protected: // helper function
+  virtual void getSpeciesTotEnthalpies(CFdouble& temp,
+				       RealVector& tVec,
+				       CFdouble& pressure,
+				       RealVector& hsTot,
+				       RealVector* hsVib,
+				       RealVector* hsEl);
+  
+private: // helper function
   
   /**
-    * Copy data files
-    */
-    void copyDataFiles();
-
-   /**
-    * Delete data files
-    */
-    void deleteDataFiles();
-
+   * Copy data files
+   */
+  void copyDataFiles();
+  
+  /**
+   * Delete data files
+   */
+  void deleteDataFiles();
+  
   /**
    * Test and write thermodynamic and transport properties
    */
   void testAndWriteProperties();
-
+  
   /**
    * Test and write the source terms
    */
@@ -585,7 +583,7 @@ protected: // helper function
       }
     }
   }
-
+  
   /**
    * Set the working temperature vector
    */
@@ -629,9 +627,9 @@ protected: // helper function
    * @param pressure pressure
    */
   CFdouble etaD(CFdouble& temp,
-    CFdouble& pressure,
-    CFreal* tVec);
-
+		CFdouble& pressure,
+		CFreal* tVec);
+  
   /**
    * Calculates the dynamic viscosity by conjugate gradient method
    * given temperature and pressure
@@ -639,9 +637,9 @@ protected: // helper function
    * @param pressure pressure
    */
   CFdouble etaCG(CFdouble& temp,
-     CFdouble& pressure,
-     CFreal* tVec);
-
+		 CFdouble& pressure,
+		 CFreal* tVec);
+  
   /**
    * Calculates the thermal conductivity by direct method method
    * given temperature and pressure
@@ -649,8 +647,8 @@ protected: // helper function
    * @param pressure pressure
    */
   CFdouble lambdaD(CFdouble& temp,
-       CFdouble& pressure);
-
+			   CFdouble& pressure);
+  
   /**
    * Calculates the thermal conductivity by conjugate gradient method method
    * given temperature and pressure
@@ -658,16 +656,16 @@ protected: // helper function
    * @param pressure pressure
    */
   CFdouble lambdaCG(CFdouble& temp,
-        CFdouble& pressure);
-
+		    CFdouble& pressure);
+  
 protected: // data to use to interface FORTRAN77
   
   /// mixture name
   std::string _mixtureName;
-
+  
   /// reaction name
   std::string _reactionName;
-
+  
   /// transfer file name
   std::string _transfName;
   
@@ -679,10 +677,10 @@ protected: // data to use to interface FORTRAN77
 
   /// include the electronic energy
   bool _includeElectronicEnergy;
-
+  
   /// Lagrange-Sonine computation option (polynom order???)
   int _sonine;
-
+  
   /// Where to compute transport properties
   int _imod;
 
