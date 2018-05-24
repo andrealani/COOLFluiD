@@ -1797,7 +1797,7 @@ void MutationLibrary2OLD::setSpeciesFractions(const RealVector& ys)
   // test this !!!!
   
   if (presenceElectron()) {
-    setElectronFraction(const_cast<RealVector&>(ys));
+    MutationLibrary2OLD::setElectronFraction(const_cast<RealVector&>(ys));
   }
   
   for (int is = 0; is < _NS; ++is) {

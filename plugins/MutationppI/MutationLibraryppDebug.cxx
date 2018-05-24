@@ -464,6 +464,8 @@ CFdouble MutationLibraryppDebug::enthalpy(CFdouble& temp,
 
 void MutationLibraryppDebug::setSpeciesFractions(const RealVector& ys)
 {
+  MutationLibrary2OLD::setSpeciesFractions(ys);
+
   if (presenceElectron()) {
     setElectronFraction(const_cast<RealVector&>(ys));
   }
