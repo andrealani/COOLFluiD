@@ -2342,7 +2342,10 @@ void MutationLibrary2OLD::getSourceTermVT(CFdouble& temperature,
   // omegaI overwritten
   if (_boltzmannIDs.size() == static_cast<CFuint>(_NS)) {
     //  // I have checked the dimensions MARCO
-    _OMEGAI = -_OMEGA[8]*4.05e8*_MOLARMASSP[8] - _OMEGA[10]*4.30e8*_MOLARMASSP[10];
+ 
+   if (_mixtureName == "air11") {	   
+     _OMEGAI = -_OMEGA[8]*4.05e8*_MOLARMASSP[8] - _OMEGA[10]*4.30e8*_MOLARMASSP[10];
+    }
   }
 /*
   I COMMENT THIS FOR CR TO USE THE SELF CONSISTENT MODEL !!!!
