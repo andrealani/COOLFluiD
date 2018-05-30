@@ -111,6 +111,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
     
     m_addUpdCoeff = true;
     setParameter( "AddUpdateCoeff", &m_addUpdCoeff);
+    
+    m_monitoredPhysVar = MathTools::MathConsts::CFuintMax();
+    setParameter( "MonitoredPhysVar", &m_monitoredPhysVar);
   }
   
   
@@ -135,6 +138,8 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
   
   options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
+  
+  options.addConfigOption< CFuint >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
 }
 
 //////////////////////////////////////////////////////////////////////////////

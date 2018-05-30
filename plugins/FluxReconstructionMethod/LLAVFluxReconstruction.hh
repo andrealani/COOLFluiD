@@ -104,7 +104,7 @@ protected: //functions
   /**
    * Compute the smoothness indicator
    */
-  void computeSmoothness();
+  virtual void computeSmoothness();
   
   /**
    * Store the computed artificial viscosity
@@ -265,6 +265,9 @@ protected: //data
   
   /// subcell resolution
   CFreal m_subcellRes;
+  
+  /// index of the monitored physical variable for positivity preservation
+  CFuint m_monitoredPhysVar;
   
   private:
 
