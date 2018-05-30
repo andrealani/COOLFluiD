@@ -104,6 +104,11 @@ protected:
    */
   void computeTauWall(CFuint flxIdx);
   
+  /**
+   * Compute dimensional pressure, density and temperature
+   */
+  virtual void computeDimensionalPressDensTemp(CFreal& pDim, CFreal& rhoDim, CFreal& TDim, CFuint flxIdx);
+  
 protected:
   
   /// storage of the distance to the wall
