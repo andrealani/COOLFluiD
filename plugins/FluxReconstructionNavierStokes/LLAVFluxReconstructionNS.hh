@@ -17,6 +17,8 @@
 
 #include "Framework/MultiScalarTerm.hh"
 
+#include "NavierStokes/MultiScalarVarSet.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -25,6 +27,7 @@ namespace COOLFluiD {
     namespace NavierStokes {
       class EulerVarSet;
       class EulerTerm;
+      class Euler2DVarSet;
     }
   }
   
@@ -85,6 +88,11 @@ protected: //functions
    * command to compute the coefficient to be multiplied with epsilon for the wavespeedupdates
    */
   virtual CFreal computeViscCoef(RealVector* state);
+  
+  /**
+   * Compute the smoothness indicator
+   */
+  virtual void computeSmoothness();
 
 protected: //data
   
@@ -103,10 +111,15 @@ protected: //data
   /// number of species
   CFuint m_nbrSpecies;
   
+  /// physical model (in conservative variables)
+  Common::SafePtr< Physics::NavierStokes::MultiScalarVarSet< Physics::NavierStokes::Euler2DVarSet > > m_eulerVarSet2;
+  
   private:
 
   /// Physical data temporary vector
   RealVector m_pData;
+  /// Physical data temporary vector
+  RealVector m_pData2;
   
 }; // class Solve
 

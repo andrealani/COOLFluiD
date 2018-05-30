@@ -21,6 +21,8 @@
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
+#include "NavierStokes/Euler2DVarSet.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -51,7 +53,9 @@ LLAVFluxReconstructionNS::LLAVFluxReconstructionNS(const std::string& name) :
   m_eulerVarSet(CFNULL),
   m_msEulerTerm(CFNULL),
   m_nbrSpecies(),
-  m_pData()
+  m_pData(),
+  m_pData2(),
+  m_eulerVarSet2(CFNULL)
   {
   }
 
@@ -207,6 +211,47 @@ CFreal LLAVFluxReconstructionNS::computeViscCoef(RealVector* state)
   return result;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void LLAVFluxReconstructionNS::computeSmoothness()
+{ 
+  CFreal sNum = 0.0;
+  
+  CFreal sDenom = 0.0;
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    CFreal stateP = 0.0;
+    CFreal diffStatesPPMinOne = 0.0;
+    
+    if (m_monitoredPhysVar < m_pData.size())
+    {
+      RealVector statePMinOne = *((*m_cellStates)[iSol]->getData()) - m_statesPMinOne[iSol];
+      State tempState = static_cast< State > (statePMinOne);
+      m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
+      m_eulerVarSet2->computePhysicalData(statePMinOne,m_pData2);
+      
+      diffStatesPPMinOne = m_pData2[m_monitoredPhysVar];
+      stateP = m_pData[m_monitoredPhysVar];
+    }
+    else
+    {
+      stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
+      diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
+    }
+    
+    sNum += diffStatesPPMinOne*diffStatesPPMinOne;
+    sDenom += stateP*stateP;
+  }
+  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
+  {
+    m_s = -100.0;
+  }
+  else
+  {
+    m_s = log10(sNum/sDenom);
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -250,6 +295,7 @@ void LLAVFluxReconstructionNS::setup()
   } 
   else
   {
+    m_eulerVarSet2 = getMethodData().getUpdateVar().d_castTo< MultiScalarVarSet< Euler2DVarSet > >();
     m_msEulerTerm = PhysicalModelStack::getActive()-> getImplementor()->getConvectiveTerm().d_castTo< MultiScalarTerm< EulerTerm > >();
     if (m_msEulerTerm.isNull())
     {
@@ -257,6 +303,9 @@ void LLAVFluxReconstructionNS::setup()
     }
   
     m_nbrSpecies = m_msEulerTerm->getNbScalarVars(0);
+    
+    m_eulerVarSet2->getModel()->resizePhysicalData(m_pData);
+    m_eulerVarSet2->getModel()->resizePhysicalData(m_pData2);
   }
   
   
