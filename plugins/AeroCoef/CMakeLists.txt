@@ -139,4 +139,17 @@ LIST ( APPEND AeroCoefSpectralFV_libs SpectralFV NavierStokes Framework )
 CF_ADD_PLUGIN_LIBRARY ( AeroCoefSpectralFV )
 
 ##################################################################
+
+LIST ( APPEND AeroCoefFRNEQ_files
+AeroCoefFRNEQ.hh
+NavierStokesSkinFrictionHeatFRNEQ.hh
+NavierStokesSkinFrictionHeatFRNEQ.cxx
+
+)
+
+LIST ( APPEND AeroCoefFRNEQ_requires_mods FluxReconstruction NEQ )
+LIST ( APPEND AeroCoefFRNEQ_libs FluxReconstructionMethod NEQ AeroCoefFR )
+CF_ADD_PLUGIN_LIBRARY ( AeroCoefFRNEQ )
+
+##################################################################
 CF_WARN_ORPHAN_FILES()
