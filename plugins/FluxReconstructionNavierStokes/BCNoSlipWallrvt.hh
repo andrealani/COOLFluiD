@@ -118,6 +118,9 @@ protected: // data
   /// wall static temperature
   CFreal m_wallT;
 
+  /// iteration after which is changed to an isothermal wall BC
+  CFuint m_changeToIsoT;
+
 }; // class BCNoSlipWallrvt
 
 //////////////////////////////////////////////////////////////////////////////

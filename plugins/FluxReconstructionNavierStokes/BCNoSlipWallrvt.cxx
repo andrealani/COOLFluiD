@@ -53,6 +53,9 @@ BCNoSlipWallrvt::BCNoSlipWallrvt(const std::string& name) :
 
   m_wallT = 0.0;
   setParameter("T",&m_wallT);
+
+  m_changeToIsoT = 0; //MathTools::MathConsts::CFuintMax();
+  setParameter("ChangeToIsoT",&m_changeToIsoT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -67,6 +70,7 @@ BCNoSlipWallrvt::~BCNoSlipWallrvt()
 void BCNoSlipWallrvt::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("T","wall static temperature");
+  options.addConfigOption< CFuint >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -129,6 +133,8 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
 
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+
   // loop over the states
   for (CFuint iState = 0; iState < nbrStates; ++iState)
   {
@@ -141,8 +147,21 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
     CFuint iTemp = m_tempID;
     for (CFuint i = 0; i < m_innerTTvib.size(); ++i, ++iTemp) {
       m_innerTTvib[i] = (*(intStates[iState]))[iTemp];
-      (*(ghostStates[iState]))[iTemp] = 2.*m_wallT - m_innerTTvib[i];
+      if (iter >= m_changeToIsoT)
+      {
+        (*(ghostStates[iState]))[iTemp] = 2.*m_wallT - m_innerTTvib[i];
+        if (m_ghostTTvib[i] < 10.0) 
+        {
+          CFLog(VERBOSE, "negative ghost T: " << m_ghostTTvib[i] << ", inner T:" << m_innerTTvib[i] << "\n");
+          (*(ghostStates[iState]))[iTemp] = 10.0;
+        }
+      }
+      else
+      {
+        (*(ghostStates[iState]))[iTemp] = (*(intStates[iState]))[iTemp];
+      }
       m_ghostTTvib[i] = (*(ghostStates[iState]))[iTemp];
+
     }
     
 //     CFLog(DEBUG_MED, "NoSlipWallIsothermalNSrvt::setGhostStateImpl() => [Tw Ti Tg] = [" << this->m_wallTemp 
@@ -222,6 +241,8 @@ void BCNoSlipWallrvt::computeGhostGradients(const std::vector< std::vector< Real
   cf_assert(nbrStateGrads == ghostGrads.size());
   cf_assert(nbrStateGrads == normals.size());
 
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+
   // set the ghost gradients
   for (CFuint iState = 0; iState < nbrStateGrads; ++iState)
   {
@@ -233,18 +254,18 @@ void BCNoSlipWallrvt::computeGhostGradients(const std::vector< std::vector< Real
       *ghostGrads[iState][iGrad] = *intGrads[iState][iGrad];
     }
 
-//     if (m_heatFlux)
-//     {
-//       // temperature
-//       RealVector& tempGradI = *intGrads  [iState][3];
-//       RealVector& tempGradG = *ghostGrads[iState][3];
-//       const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY];
-//       tempGradG = tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
-//     }
-//     else
-//     {
-//       *ghostGrads[iState][3] = *intGrads[iState][3];
-//     }
+    if (iter < m_changeToIsoT)
+    {
+      CFuint iTemp = m_tempID;
+      for (CFuint i = 0; i < m_innerTTvib.size(); ++i, ++iTemp) 
+      {
+        RealVector& tempGradI = *intGrads  [iState][iTemp];
+        RealVector& tempGradG = *ghostGrads[iState][iTemp];
+        const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY];
+
+        tempGradG = tempGradI - 2.0*nTempGrad*normal;
+      }
+    }
   }
 }
 
