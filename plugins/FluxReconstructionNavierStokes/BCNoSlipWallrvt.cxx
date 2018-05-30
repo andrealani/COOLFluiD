@@ -149,7 +149,7 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
       m_innerTTvib[i] = (*(intStates[iState]))[iTemp];
       if (iter >= m_changeToIsoT)
       {
-        (*(ghostStates[iState]))[iTemp] = 2.*m_wallT - m_innerTTvib[i];
+        (*(ghostStates[iState]))[iTemp] = m_wallT; //2.*m_wallT - m_innerTTvib[i];
         if (m_ghostTTvib[i] < 10.0) 
         {
           CFLog(VERBOSE, "negative ghost T: " << m_ghostTTvib[i] << ", inner T:" << m_innerTTvib[i] << "\n");
