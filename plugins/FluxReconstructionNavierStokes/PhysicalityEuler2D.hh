@@ -97,6 +97,9 @@ protected: // data
   /// boolean to tell whether the complete state is limited or a single variable
   bool m_limCompleteState;
   
+  /// boolean telling whether to use the experimental limiter
+  bool m_expLim;
+  
   /// physical model 
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
 

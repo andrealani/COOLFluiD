@@ -41,6 +41,7 @@ void PhysicalityEuler2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("MinTemperature","Minimum allowable value for temperature (only used for Puvt).");
   options.addConfigOption< bool >("CheckInternal","Boolean to tell wether to also check internal solution for physicality.");
   options.addConfigOption< bool >("LimCompleteState","Boolean to tell wether to limit complete state or single variable.");
+  options.addConfigOption< bool >("ExpLim","Boolean to tell wether to use the experimental limiter.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -72,8 +73,11 @@ PhysicalityEuler2D::PhysicalityEuler2D(const std::string& name) :
   m_checkInternal = false;
   setParameter( "CheckInternal", &m_checkInternal );
   
-  m_limCompleteState = false;
+  m_limCompleteState = true;
   setParameter( "LimCompleteState", &m_limCompleteState );
+  
+  m_expLim = false;
+  setParameter( "ExpLim", &m_expLim );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -223,7 +227,7 @@ void PhysicalityEuler2D::enforcePhysicality()
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
 
   // compute average state
-  m_cellAvgState =0.;
+  m_cellAvgState = 0.;
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     m_cellAvgState += (*m_cellAvgSolCoefs)[iSol]*(*(*m_cellStates)[iSol]);
@@ -268,6 +272,9 @@ void PhysicalityEuler2D::enforcePhysicality()
   // if average state is unphysical, modify the unphysical variable
   if (needsLim)
   {    
+    m_nbAvLimits += 1;
+    
+    // subtract the average solution from the state
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
@@ -309,13 +316,13 @@ void PhysicalityEuler2D::enforcePhysicality()
       for (CFuint i = 0 ; i<m_nbSpecies ; ++i){
 	if(m_cellAvgState[i] < m_minDensity){
 	  m_cellAvgState[i] = m_minDensity;
-	  cout << " enforce rho   " <<  m_cellAvgState[i] << endl;
+	  //cout << " enforce rho   " <<  m_cellAvgState[i] << endl;
 	}
       }
       for(CFuint i = m_nbSpecies+nbDims ; i<m_nbrEqs; ++i){
 	if(m_cellAvgState[i] < m_minTemperature){
 	  m_cellAvgState[i] = m_minTemperature;
-	  cout << " enforce T   " <<  m_cellAvgState[i] << endl;
+	  //cout << " enforce T   " <<  m_cellAvgState[i] << endl;
 
 	}
       }
@@ -337,9 +344,14 @@ void PhysicalityEuler2D::enforcePhysicality()
   // flags telling which state needs to be limited
   vector<bool> needsLimFlags(m_nbrEqs);
    
+  if (!m_expLim)
+  {
+      
   // check each flux point for unphysical states 
   for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
   { 
+    
+    
     // reset limit flags
     needsLim = false;
     for (CFuint iFlag = 0; iFlag < m_nbrEqs; ++iFlag)
@@ -482,6 +494,161 @@ void PhysicalityEuler2D::enforcePhysicality()
 	}
     }
   }
+  }
+  else
+  {
+    if (Cons)
+    {
+      CFreal rhoAv = m_cellAvgState[0];
+      CFreal rhoUAv = m_cellAvgState[1];
+      CFreal rhoVAv = m_cellAvgState[2];
+      CFreal rhoEAv = m_cellAvgState[3];
+      CFreal pressAv = m_gammaMinusOne*(rhoEAv - 0.5*(rhoUAv*rhoUAv+rhoVAv*rhoVAv)/rhoAv);
+      
+      CFreal epsilon = min(rhoAv,pressAv);
+      epsilon = min(1.0e-13,epsilon);
+      CFreal epsilonP = 0.5*pressAv;
+      
+    
+      CFreal rhoMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][0]);
+      }
+    
+      CFreal coeff = min((rhoAv-epsilon)/(rhoAv-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          (*((*m_cellStates)[iSol]))[0] = (1.0-coeff)*m_cellAvgState[0] + coeff*((*((*m_cellStates)[iSol]))[0]);
+        }
+      }
+    
+      // recompute the states in the flux points
+      computeFlxPntStates(m_cellStatesFlxPnt);
+    
+      CFreal t = 1.0;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {
+        CFreal rho  = m_cellStatesFlxPnt[iFlx][0];
+        CFreal rhoU = m_cellStatesFlxPnt[iFlx][1];
+        CFreal rhoV = m_cellStatesFlxPnt[iFlx][2];
+        CFreal rhoE = m_cellStatesFlxPnt[iFlx][3];
+        CFreal press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+      
+        if (press < epsilonP)
+        {
+	  CFreal A = rho*rhoE+rhoAv*rhoEAv-rhoAv*rhoE-rho*rhoEAv-0.5*(rhoUAv*rhoUAv+rhoU*rhoU-2.0*rhoU*rhoUAv+rhoVAv*rhoVAv+rhoV*rhoV-2.0*rhoV*rhoVAv);
+	  CFreal B = rhoAv*rhoE+rho*rhoEAv-2.0*rhoAv*rhoEAv-epsilonP/m_gammaMinusOne*(rho-rhoAv)-0.5*(2.0*rhoU*rhoUAv-2.0*rhoUAv*rhoUAv+2.0*rhoV*rhoVAv-2.0*rhoVAv*rhoVAv);
+	  CFreal C = rhoAv*rhoEAv-0.5*(rhoUAv*rhoUAv+rhoVAv*rhoVAv)-epsilonP/m_gammaMinusOne*rhoAv;
+	  CFreal D = B*B-4.0*A*C;
+	  CFreal sol1 = (-B+sqrt(D))/(2.0*A);
+	  if (sol1 < 0.0 || sol1 > 1.0)
+	  {
+	    sol1 = (-B-sqrt(D))/(2.0*A);
+	  }
+	  cf_assert(sol1>-1.0e-13 && sol1<1.000001);
+	  
+	  t = min(t,sol1);
+        }
+      }
+    
+      if (t < 1.0)
+      {
+	//CFLog(INFO, "t: " << t << "\n");
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+          {
+            (*((*m_cellStates)[iSol]))[iEq] = (1.0-t)*m_cellAvgState[iEq] + t*((*((*m_cellStates)[iSol]))[iEq]);
+          }
+        }
+//         computeFlxPntStates(m_cellStatesFlxPnt);
+// 	CFreal minPressFound = 1.0e13;
+// 	for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+//       {
+//         CFreal rho  = m_cellStatesFlxPnt[iFlx][0];
+//         CFreal rhoU = m_cellStatesFlxPnt[iFlx][1];
+//         CFreal rhoV = m_cellStatesFlxPnt[iFlx][2];
+//         CFreal rhoE = m_cellStatesFlxPnt[iFlx][3];
+//         CFreal press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+// 	minPressFound = min(press, minPressFound);
+// 	
+//       }
+//       CFLog(INFO, "ratio: " << minPressFound/pressAv << "\n");
+      }
+    }
+    else if (RhoivtTv)
+    {
+      CFreal rhoAvMin = 1.0e13;
+      for (CFuint i = 0 ; i < m_nbSpecies ; ++i)
+      {
+        rhoAvMin = min(rhoAvMin,m_cellAvgState[i]);
+      }
+      
+      CFreal TAvMin = 1.0e13;
+      for(CFuint i = m_nbSpecies+nbDims ; i < m_nbrEqs; ++i)
+      {
+        TAvMin = min(TAvMin,m_cellAvgState[i]);
+      }
+      
+      CFreal epsilon = min(rhoAvMin,TAvMin);
+      epsilon = min(1.0e-13,epsilon);
+      CFreal epsilonT = 0.5*TAvMin;
+    
+      for (CFuint i = 0 ; i < m_nbSpecies ; ++i)
+      {
+        CFreal rhoMin = 1.0e13;
+    
+        for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+        {   
+          rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][i]);
+        }
+    
+        CFreal coeff = min((m_cellAvgState[i]-epsilon)/(m_cellAvgState[i]-rhoMin),1.0);
+    
+        if (coeff < 1.0)
+        {
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            (*((*m_cellStates)[iSol]))[i] = (1.0-coeff)*m_cellAvgState[i] + coeff*((*((*m_cellStates)[iSol]))[i]);
+          }
+        }
+      }
+    
+      // recompute the states in the flux points
+      computeFlxPntStates(m_cellStatesFlxPnt);
+    
+      for(CFuint i = m_nbSpecies+nbDims ; i < m_nbrEqs; ++i)
+      {
+	CFreal t = 1.0;
+	
+	CFreal TAv = m_cellAvgState[i];
+	
+        for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+        {
+	  CFreal T = m_cellStatesFlxPnt[iFlx][i];
+	  if (T < epsilonT)
+          {
+	    CFreal sol = (TAv - epsilonT)/(TAv - T);
+	    t = min(t,sol);
+	  }
+        }
+        if (t < 1.0)
+        {
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            (*((*m_cellStates)[iSol]))[i] = (1.0-t)*m_cellAvgState[i] + t*((*((*m_cellStates)[iSol]))[i]);
+          }
+        }
+      }
+    }
+  }
+  
   
   if (m_checkInternal)
   { 

@@ -126,8 +126,6 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 //   }
   
   
-  
-  
   // number of states
   const CFuint nbrStates = ghostStates.size();
   cf_assert(nbrStates == intStates.size());
