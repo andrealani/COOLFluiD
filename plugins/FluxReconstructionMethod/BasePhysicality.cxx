@@ -42,7 +42,9 @@ BasePhysicality::BasePhysicality(const std::string& name) :
   m_solPolyValsAtFlxPnts(CFNULL),
   m_cellStatesFlxPnt(),
   m_nbLimits(),
-  m_totalNbLimits()
+  m_totalNbLimits(),
+  m_nbAvLimits(),
+  m_totalNbAvLimits()
 {
   addConfigOptionsTo(this);
 }
@@ -101,6 +103,9 @@ void BasePhysicality::execute()
   
   // variable to store the number of limits done
   m_nbLimits = 0;
+  m_totalNbLimits = 0;
+  m_nbAvLimits = 0;
+  m_totalNbAvLimits = 0;
   
   // loop over all elements to check physicality and if necessary enforce it
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -141,14 +146,17 @@ void BasePhysicality::execute()
   
 #ifdef CF_HAVE_MPI
     MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    PE::GetPE().setBarrier(nsp);
     const CFuint count = 1;
     MPI_Allreduce(&m_nbLimits, &m_totalNbLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
+    MPI_Allreduce(&m_nbAvLimits, &m_totalNbAvLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
 #endif
     
   if (PE::GetPE().GetRank(nsp) == 0) 
   {
     // print number of limits
     CFLog(NOTICE, "Number of times physicality enforced: " << m_totalNbLimits << "\n");
+    CFLog(NOTICE, "Number of times average limited: " << m_totalNbAvLimits << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);

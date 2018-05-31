@@ -240,6 +240,7 @@ void LLAVFluxReconstruction::execute()
   
 #ifdef CF_HAVE_MPI
     MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    PE::GetPE().setBarrier(nsp);
     const CFuint count = 1;
     MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
     MPI_Allreduce(&m_nbPosPrev, &m_nbPosPrevGlobal, count, MPI_UNSIGNED, MPI_SUM, comm);
@@ -248,7 +249,8 @@ void LLAVFluxReconstruction::execute()
   if (PE::GetPE().GetRank(nsp) == 0) 
   {
     // print total artificial viscosity and number of positivity preservations
-    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+    //CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);

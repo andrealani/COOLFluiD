@@ -126,6 +126,12 @@ protected: // data
   
   /// total number of times a cell was limited for all processors
   CFuint m_totalNbLimits;
+  
+  /// number of times the cell average was limited
+  CFuint m_nbAvLimits;
+  
+  /// number of times the cell average was limited
+  CFuint m_totalNbAvLimits;
 
 }; // class BasePhysicality
 

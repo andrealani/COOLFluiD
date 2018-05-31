@@ -100,6 +100,9 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
     
     m_viscFactor = 2.0;
     setParameter( "ViscFactor", &m_viscFactor);
+    
+    m_addUpdCoeff = true;
+    setParameter( "AddUpdateCoeff", &m_addUpdCoeff);
   }
   
   
@@ -122,6 +125,8 @@ void LLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& option
   options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
   
   options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
+  
+  options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -291,12 +296,15 @@ void LLAVJacobFluxReconstruction::execute()
 
 	// compute FI
 	computeInterfaceFlxCorrection();
+	
+	if (m_addUpdCoeff)
+	{
+	  // compute the wave speed updates
+          computeWaveSpeedUpdates(m_waveSpeedUpd);
 
-	// compute the wave speed updates
-        computeWaveSpeedUpdates(m_waveSpeedUpd);
-
-        // update the wave speed
-        updateWaveSpeed();
+          // update the wave speed
+          updateWaveSpeed();
+	}
 
 	// compute the correction for the left neighbour
 	computeCorrection(LEFT, m_divContFlxL);
@@ -578,7 +586,8 @@ void LLAVJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& wave
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                    (*m_faceIntegrationCoefs)[iFlx]*
                                    m_cflConvDiffRatio;
-      const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
+      //const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
+      const CFreal rho = 1.0;
       const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlx]+m_epsilonLR[RIGHT][iFlx]);
       visc = epsilon/rho;
       
@@ -775,7 +784,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
 	  }
         }
         
-        if (!m_jacob)
+        if (!m_jacob && m_addUpdCoeff)
 	{
 	  // adding updateCoeff
 	  CFreal visc = 1.0;

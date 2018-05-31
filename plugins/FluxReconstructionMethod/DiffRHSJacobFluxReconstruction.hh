@@ -178,6 +178,11 @@ protected: //functions
    * compute the diffusive flux
    */
   virtual void computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux);
+  
+  /**
+   * compute the data needed for the computation of the perturbed gradients
+   */
+  void computePertGradData(const CFuint side);
 
 protected: //data
   
@@ -303,6 +308,12 @@ protected: //data
   
   /// list of the vectors to which to calculate the derivative
   std::vector< std::vector< CFuint > > m_dimList;
+  
+  /// transformed states in a cell for gradient computation
+  RealMatrix m_gradTerm;
+  
+  /// face local coords of the face flux points
+  Common::SafePtr< std::vector<RealVector> > m_flxLocalCoords;
 
   
 }; // class Solve
