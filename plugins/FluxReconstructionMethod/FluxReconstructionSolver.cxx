@@ -463,12 +463,6 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
     m_diffSolve->execute();
   }
   
-  if (m_artificialViscStr != "Null")
-  {
-    cf_assert(m_artificialVisc.isNotNull());
-    m_artificialVisc->execute();
-  }
-  
   // add source terms
   addSourceTermsImpl();
   
@@ -478,6 +472,12 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   if (m_data->isResidualTransformationNeeded())
   {
     m_finalizeRHS->execute();
+  }
+  
+  if (m_artificialViscStr != "Null")
+  {
+    cf_assert(m_artificialVisc.isNotNull());
+    m_artificialVisc->execute();
   }
   
   //cf_assert(m_limiter.isNotNull());

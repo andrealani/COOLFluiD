@@ -30,6 +30,7 @@ void BasePhysicality::defineConfigOptions(Config::OptionList& options)
 BasePhysicality::BasePhysicality(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_posPrev("posPrev"),
+  socket_outputPP("outputPP"),
   m_cellBuilder(CFNULL),
   m_cell(),
   m_cellStates(),
@@ -69,6 +70,16 @@ BasePhysicality::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
   result.push_back(&socket_posPrev);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+BasePhysicality::providesSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  result.push_back(&socket_outputPP);
   return result;
 }
 
@@ -229,6 +240,19 @@ void BasePhysicality::setup()
     RealVector temp(m_nbrEqs);
     m_cellStatesFlxPnt.push_back(temp);
   }
+  
+  // get the number of cells in the mesh
+  const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  // get datahandle
+  DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+  DataHandle< CFreal > output = socket_outputPP.getDataHandle();
+  
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;;
+
+  // resize socket
+  output.resize(nbStates);
+  posPrev.resize(nbrCells);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -80,7 +80,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_jacob(false),
   m_nbPosPrev(),
   m_nbPosPrevGlobal(),
-  m_subcellRes()
+  m_subcellRes(),
+  socket_artVisc("artVisc"),
+  socket_monPhysVar("monPhysVar")
   {
     addConfigOptionsTo(this);
     
@@ -148,6 +150,17 @@ void LLAVFluxReconstruction::configure ( Config::ConfigArgs& args )
 {
   FluxReconstructionSolverCom::configure(args);
 }  
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+  LLAVFluxReconstruction::providesSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  result.push_back(&socket_artVisc);
+  result.push_back(&socket_monPhysVar);
+  return result;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -789,6 +802,9 @@ void LLAVFluxReconstruction::setCellData()
   
   m_cellNodes = m_cell->getNodes();
   
+  // get datahandle
+  DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
+  
   // loop over flx pnts to extrapolate the states to the flux points
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {   
@@ -808,6 +824,8 @@ void LLAVFluxReconstruction::setCellData()
       m_solEpsilons[iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
       //CFLog(VERBOSE, "solEps: " << m_solEpsilons[iSol] << ", nodeEps: " << m_nodeEpsilons[nodeIdx] << ", nghb: " << m_nbNodeNeighbors[nodeIdx] << "\n");
     }
+    
+    artVisc[(((*m_cellStates)[iSol]))->getLocalID()] = m_solEpsilons[iSol];
     
 //       CFuint ID = m_cell->getID();
 //   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
@@ -1092,6 +1110,16 @@ void LLAVFluxReconstruction::setup()
   
   // get the number of cells in the mesh
   const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  // get datahandle
+  DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
+  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;;
+
+  // resize socket
+  artVisc.resize(nbStates);
+  monPhysVar.resize(nbStates);
   
   m_nodeEpsilons.resize(nbrNodes);
   m_nbNodeNeighbors.resize(nbrNodes);

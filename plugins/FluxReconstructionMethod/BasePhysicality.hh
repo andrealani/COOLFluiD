@@ -60,6 +60,11 @@ public:
   /// @return a vector of SafePtr with the DataSockets
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
     needsSockets();
+    
+  /// Returns the DataSocket's that this command provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
 
   /**
    * Execute Processing actions
@@ -87,6 +92,9 @@ protected: // data
   
   /// socket for positivity preservation values
   Framework::DataSocketSink< CFreal > socket_posPrev;
+  
+  /// socket for output of the pos preservation
+  Framework::DataSocketSource< CFreal > socket_outputPP;
 
   /// builder of cells
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
