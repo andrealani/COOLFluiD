@@ -37,6 +37,7 @@
 
 #include "Common/CFMap.hh"
 #include "Environment/FileHandlerOutput.hh"
+#include "Framework/DataHandleOutput.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -157,6 +158,18 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
       fout << " " << extraVarNames[i];
     }
   }
+  
+  SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+  datahandle_output->getDataHandles();
+  std::vector< std::string > dh_varnames = datahandle_output->getVarNames();
+  for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar)
+  {
+    std::string n = dh_varnames[iVar];
+    if ( *n.begin()   != '\"' )  n  = '\"' + n;
+    if ( *(n.end()--) != '\"' )  n += '\"';
+    fout << " " << n;
+  }
+
   fout << "\n";
 
   // get the ElementTypeData
@@ -338,7 +351,38 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
           fout << setw(20) << fixed << setprecision(12)
                << extraValues[iVal] << " ";
         }
-        fout << "\n";
+	
+	      // print datahandles with state based data
+  {
+
+    // loop over the state based variables
+
+    for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar)
+    {
+      DataHandleOutput::DataHandleInfo var_info = datahandle_output->getStateData(iVar);
+      CFuint var_var = var_info.first;
+      CFuint var_nbvars = var_info.second;
+      DataHandle<CFreal> var = var_info.third;
+      
+      vector<CFreal> outputPntStateSockets;
+      outputPntStateSockets.resize(nbrOutPnts);
+
+      // loop over output points
+      for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
+      {
+	outputPntStateSockets[iPnt]  = 0.0;
+        for (CFuint iState = 0; iState < nbrStates; ++iState)
+        {
+	  outputPntStateSockets[iPnt] += solShapeFuncs[iPnt][iState]*var(((*cellStates)[iState])->getLocalID(), var_var, var_nbvars);
+        }
+	
+        // write the current variable to the file
+        fout << setw(20) << fixed << setprecision(12)
+               << outputPntStateSockets[iPnt] << " ";
+      }
+    }
+  }
+  fout << "\n";
       }
       fout << "\n";
 
