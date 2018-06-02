@@ -367,19 +367,15 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
       vector<CFreal> outputPntStateSockets;
       outputPntStateSockets.resize(nbrOutPnts);
 
-      // loop over output points
-      for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
+      outputPntStateSockets[iPnt]  = 0.0;
+      for (CFuint iState = 0; iState < nbrStates; ++iState)
       {
-	outputPntStateSockets[iPnt]  = 0.0;
-        for (CFuint iState = 0; iState < nbrStates; ++iState)
-        {
-	  outputPntStateSockets[iPnt] += solShapeFuncs[iPnt][iState]*var(((*cellStates)[iState])->getLocalID(), var_var, var_nbvars);
-        }
-	
-        // write the current variable to the file
-        fout << setw(20) << fixed << setprecision(12)
-               << outputPntStateSockets[iPnt] << " ";
+	outputPntStateSockets[iPnt] += solShapeFuncs[iPnt][iState]*var(((*cellStates)[iState])->getLocalID(), var_var, var_nbvars);
       }
+	
+      // write the current variable to the file
+      fout << setw(20) << fixed << setprecision(12)
+             << outputPntStateSockets[iPnt] << " ";      
     }
   }
   fout << "\n";
