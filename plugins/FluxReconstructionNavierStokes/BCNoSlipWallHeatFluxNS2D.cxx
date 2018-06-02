@@ -151,7 +151,7 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       const CFreal R = m_eulerVarSet->getModel()->getR();
       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
-      const CFreal ghostT = m_wallT;//max(2.0*m_wallT - innerT,10.0);
+      const CFreal ghostT = max(2.0*m_wallT - innerT,10.0); //m_wallT;//
       CFreal ghostP;
       if (getMethodData().getUpdateVarStr() == "Cons")
       {

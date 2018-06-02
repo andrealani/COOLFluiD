@@ -219,6 +219,9 @@ void LLAVFluxReconstructionNS::computeSmoothness()
   
   CFreal sDenom = 0.0;
   
+  // get datahandle
+  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     CFreal stateP = 0.0;
@@ -227,12 +230,24 @@ void LLAVFluxReconstructionNS::computeSmoothness()
     if (m_monitoredPhysVar < m_pData.size())
     {
       RealVector statePMinOne = *((*m_cellStates)[iSol]->getData()) - m_statesPMinOne[iSol];
-      State tempState = static_cast< State > (statePMinOne);
-      m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
-      m_eulerVarSet2->computePhysicalData(statePMinOne,m_pData2);
       
-      diffStatesPPMinOne = m_pData2[m_monitoredPhysVar];
+      const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+      
+      if (RhoivtTv)
+      {
+        m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
+        m_eulerVarSet2->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      else 
+      {
+	m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
+        m_eulerVarSet->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      
       stateP = m_pData[m_monitoredPhysVar];
+      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
+    
+      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
     }
     else
     {
@@ -292,6 +307,8 @@ void LLAVFluxReconstructionNS::setup()
   {
     // get Euler varset
     m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
+    m_eulerVarSet->getModel()->resizePhysicalData(m_pData);
+    m_eulerVarSet->getModel()->resizePhysicalData(m_pData2);
   } 
   else
   {

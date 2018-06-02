@@ -104,6 +104,7 @@ bool PhysicalityEuler2D::checkPhysicality()
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
   const bool hasArtVisc = getMethodData().hasArtificialViscosity();
   DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+  DataHandle< CFreal > output = socket_outputPP.getDataHandle();
   const CFuint cellID = m_cell->getID();
   
   for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
@@ -160,6 +161,11 @@ bool PhysicalityEuler2D::checkPhysicality()
       }
       
     }
+  }
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    output[((*m_cellStates)[iSol])->getLocalID()] = 0.0;
   }
   
   if (physical && m_checkInternal)
@@ -225,6 +231,7 @@ void PhysicalityEuler2D::enforcePhysicality()
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
   bool needsLim = false;
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
+  DataHandle< CFreal > output = socket_outputPP.getDataHandle();
 
   // compute average state
   m_cellAvgState = 0.;
@@ -273,10 +280,11 @@ void PhysicalityEuler2D::enforcePhysicality()
   if (needsLim)
   {    
     m_nbAvLimits += 1;
-    
+     
     // subtract the average solution from the state
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
+      output[((*m_cellStates)[iSol])->getLocalID()] = -5.0;
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
 	(*((*m_cellStates)[iSol]))[iEq] -= m_cellAvgState[iEq];
@@ -298,7 +306,7 @@ void PhysicalityEuler2D::enforcePhysicality()
     {
       if (m_cellAvgState[0] < m_minDensity)
       {
-        m_cellAvgState[0] = m_minDensity;
+        m_cellAvgState[0] = 1.1*m_minDensity;
       }
       
       CFreal rho = m_cellAvgState[0];
@@ -309,7 +317,7 @@ void PhysicalityEuler2D::enforcePhysicality()
       
       if (press < m_minPressure)
       {
-	m_cellAvgState[3] = m_minPressure/m_gammaMinusOne + 0.5*(rhoU*rhoU+rhoV*rhoV)/rho;
+	m_cellAvgState[3] = 1.1*m_minPressure/m_gammaMinusOne + 0.5*(rhoU*rhoU+rhoV*rhoV)/rho;
       }
     }
     else if (RhoivtTv){
@@ -323,7 +331,6 @@ void PhysicalityEuler2D::enforcePhysicality()
 	if(m_cellAvgState[i] < m_minTemperature){
 	  m_cellAvgState[i] = m_minTemperature;
 	  //cout << " enforce T   " <<  m_cellAvgState[i] << endl;
-
 	}
       }
     }
@@ -413,6 +420,7 @@ void PhysicalityEuler2D::enforcePhysicality()
         phi /= 2.0;
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
 	  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 	  {
 	    if( needsLimFlags[iEq] || m_limCompleteState )
@@ -510,8 +518,9 @@ void PhysicalityEuler2D::enforcePhysicality()
       CFreal pressAv = m_gammaMinusOne*(rhoEAv - 0.5*(rhoUAv*rhoUAv+rhoVAv*rhoVAv)/rhoAv);
       
       CFreal epsilon = min(rhoAv,pressAv);
-      epsilon = min(1.0e-13,epsilon);
-      CFreal epsilonP = 0.5*pressAv;
+      epsilon = min(m_minDensity,epsilon);
+      //CFreal epsilonP = 0.8*pressAv;
+      CFreal epsilonP = min(m_minPressure,epsilon);
       
     
       CFreal rhoMin = 1.0e13;
@@ -527,6 +536,8 @@ void PhysicalityEuler2D::enforcePhysicality()
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
           (*((*m_cellStates)[iSol]))[0] = (1.0-coeff)*m_cellAvgState[0] + coeff*((*((*m_cellStates)[iSol]))[0]);
         }
       }
@@ -544,7 +555,9 @@ void PhysicalityEuler2D::enforcePhysicality()
         CFreal rhoE = m_cellStatesFlxPnt[iFlx][3];
         CFreal press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
       
-        if (press < epsilonP)
+	//CFLog(INFO, "p " << iFlx << " : "<< press << "\n");
+	
+        if (press < epsilon)
         {
 	  CFreal A = rho*rhoE+rhoAv*rhoEAv-rhoAv*rhoE-rho*rhoEAv-0.5*(rhoUAv*rhoUAv+rhoU*rhoU-2.0*rhoU*rhoUAv+rhoVAv*rhoVAv+rhoV*rhoV-2.0*rhoV*rhoVAv);
 	  CFreal B = rhoAv*rhoE+rho*rhoEAv-2.0*rhoAv*rhoEAv-epsilonP/m_gammaMinusOne*(rho-rhoAv)-0.5*(2.0*rhoU*rhoUAv-2.0*rhoUAv*rhoUAv+2.0*rhoV*rhoVAv-2.0*rhoVAv*rhoVAv);
@@ -566,10 +579,21 @@ void PhysicalityEuler2D::enforcePhysicality()
 	//CFLog(INFO, "t: " << t << "\n");
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  CFLog(VERBOSE, "state " << iSol << " : "<< (*((*m_cellStates)[iSol])) << ", coord: " << (*((*m_cellStates)[iSol])).getCoordinates() << "\n");
+	  CFreal p = m_gammaMinusOne*((*((*m_cellStates)[iSol]))[3] - 0.5*(pow((*((*m_cellStates)[iSol]))[1],2)+pow((*((*m_cellStates)[iSol]))[2],2))/(*((*m_cellStates)[iSol]))[0]);
+	  CFLog(VERBOSE, "p " << iSol << " : "<< p << "\n");
+          CFLog(VERBOSE, "T " << iSol << " : "<< p/((*((*m_cellStates)[iSol]))[0]*287.046) << "\n");
+	  CFLog(VERBOSE, "u " << iSol << " : "<< (*((*m_cellStates)[iSol]))[1]/(*((*m_cellStates)[iSol]))[0] << ", v " << iSol << " : "<< (*((*m_cellStates)[iSol]))[2]/(*((*m_cellStates)[iSol]))[0] << "\n");
+	  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
           {
             (*((*m_cellStates)[iSol]))[iEq] = (1.0-t)*m_cellAvgState[iEq] + t*((*((*m_cellStates)[iSol]))[iEq]);
           }
+          CFLog(VERBOSE, "state2 " << iSol << " : "<< (*((*m_cellStates)[iSol])) << "\n");
+	  p = m_gammaMinusOne*((*((*m_cellStates)[iSol]))[3] - 0.5*(pow((*((*m_cellStates)[iSol]))[1],2)+pow((*((*m_cellStates)[iSol]))[2],2))/(*((*m_cellStates)[iSol]))[0]);
+	  CFLog(VERBOSE, "p2 " << iSol << " : "<< p << "\n");
+          CFLog(VERBOSE, "T2 " << iSol << " : "<< p/((*((*m_cellStates)[iSol]))[0]*287.046) << "\n");
+	  CFLog(VERBOSE, "u2 " << iSol << " : "<< (*((*m_cellStates)[iSol]))[1]/(*((*m_cellStates)[iSol]))[0] << ", v2 " << iSol << " : "<< (*((*m_cellStates)[iSol]))[2]/(*((*m_cellStates)[iSol]))[0] << "\n");
         }
 
       }
@@ -590,7 +614,7 @@ void PhysicalityEuler2D::enforcePhysicality()
       
       CFreal epsilon = min(rhoAvMin,TAvMin);
       epsilon = min(1.0e-13,epsilon);
-      CFreal epsilonT = 0.5*TAvMin;
+      CFreal epsilonT = 0.8*TAvMin;
     
       for (CFuint i = 0 ; i < m_nbSpecies ; ++i)
       {
