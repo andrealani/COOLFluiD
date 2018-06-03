@@ -231,9 +231,9 @@ void LLAVFluxReconstruction::execute()
       // get the nodes in this cell
       m_cellNodes  = m_cell->getNodes();
       
-      // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
-      if ((*m_cellStates)[0]->isParUpdatable())
-      {
+//       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
+//       if ((*m_cellStates)[0]->isParUpdatable())
+//       {
 	// compute the states projected on order P-1
 	computeProjStates(m_statesPMinOne);
 	
@@ -242,7 +242,7 @@ void LLAVFluxReconstruction::execute()
 	
 	// store epsilon
 	storeEpsilon();
-      } 
+//       } 
       
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
