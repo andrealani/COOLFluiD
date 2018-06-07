@@ -182,11 +182,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	  
 	  // compute the states and ghost states in the flx pnts
 	  computeFlxPntStates();
-	}
-
-	// if cell is parallel updatable, compute the correction flux
-	if ((*m_cellStates)[0]->isParUpdatable())
-	{
+	
 	  // compute the interface flux
           computeInterfaceFlxCorrection();
 
@@ -195,6 +191,11 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
           // update the wave speeds
           updateWaveSpeed();
+	}
+	  
+	  // if cell is parallel updatable, compute the correction flux
+	if ((*m_cellStates)[0]->isParUpdatable())
+	{
 
 	  // compute the correction -(FI)divh of the bnd face for each sol pnt
           computeCorrection(m_corrections);

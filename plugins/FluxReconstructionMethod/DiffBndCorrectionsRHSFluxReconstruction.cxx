@@ -178,9 +178,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	
 	cf_assert(m_cellVolume > 0.0);
 
-        // if cell is parallel updatable, compute the correction flux
-        if ((*m_cellStates)[0]->isParUpdatable())
-        {
+        
 	  // set the bnd face data
 	  setBndFaceData(m_face->getID());//faceID
 
@@ -195,6 +193,10 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
       
           // update the wave speeds
           updateWaveSpeed();
+	  
+	  // if cell is parallel updatable, compute the correction flux
+        if ((*m_cellStates)[0]->isParUpdatable())
+        {
 
 	  // compute the correction -(FI)divh of the bnd face for each sol pnt
           computeCorrection(m_corrections);

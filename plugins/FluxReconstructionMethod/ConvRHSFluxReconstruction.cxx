@@ -187,11 +187,7 @@ void ConvRHSFluxReconstruction::execute()
 
 	// compute the states in the flx pnts
         computeFlxPntStates();
-      }
 
-      // if one of the neighbouring cells is parallel updatable, compute the correction flux
-      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
-      {
 	// compute the interface flux
 	computeInterfaceFlxCorrection();
           
@@ -200,6 +196,11 @@ void ConvRHSFluxReconstruction::execute()
 
         // update the wave speed
         updateWaveSpeed();
+      }
+	
+	// if one of the neighbouring cells is parallel updatable, compute the correction flux
+      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
+      {
 	
 	// compute the correction for the left neighbour
 	computeCorrection(LEFT, m_divContFlx);

@@ -194,9 +194,7 @@ void DiffRHSFluxReconstruction::execute()
       cf_assert(m_cellVolume[LEFT] > 0.0);
       cf_assert(m_cellVolume[RIGHT] > 0.0);
       
-      // if one of the neighbouring cells is parallel updatable, compute the correction flux
-      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
-      {
+      
 	// set the face data
 	setFaceData(m_face->getID());//faceID
 	
@@ -211,6 +209,10 @@ void DiffRHSFluxReconstruction::execute()
 
         // update the wave speed
         updateWaveSpeed();
+	
+	// if one of the neighbouring cells is parallel updatable, compute the correction flux
+      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
+      {
 
 	// compute the correction for the left neighbour
 	computeCorrection(LEFT, m_divContFlx);
