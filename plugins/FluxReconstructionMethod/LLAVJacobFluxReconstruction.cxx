@@ -72,7 +72,9 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
   m_totalEpsGlobal(),
   m_nbPosPrev(),
   m_nbPosPrevGlobal(),
-  m_subcellRes()
+  m_subcellRes(),
+  socket_artVisc("artVisc"),
+  socket_monPhysVar("monPhysVar")
   {
     addConfigOptionsTo(this);
     
@@ -103,6 +105,9 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
     
     m_addUpdCoeff = true;
     setParameter( "AddUpdateCoeff", &m_addUpdCoeff);
+    
+    m_monitoredPhysVar = MathTools::MathConsts::CFuintMax();
+    setParameter( "MonitoredPhysVar", &m_monitoredPhysVar);
   }
   
   
@@ -127,6 +132,8 @@ void LLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& option
   options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
   
   options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
+  
+  options.addConfigOption< CFuint >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -135,6 +142,17 @@ void LLAVJacobFluxReconstruction::configure ( Config::ConfigArgs& args )
 {
   FluxReconstructionSolverCom::configure(args);
 }  
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+  LLAVJacobFluxReconstruction::providesSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  result.push_back(&socket_artVisc);
+  result.push_back(&socket_monPhysVar);
+  return result;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -232,6 +250,7 @@ void LLAVJacobFluxReconstruction::execute()
   
 #ifdef CF_HAVE_MPI
     MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+    PE::GetPE().setBarrier(nsp);
     const CFuint count = 1;
     MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
     MPI_Allreduce(&m_nbPosPrev, &m_nbPosPrevGlobal, count, MPI_UNSIGNED, MPI_SUM, comm);
@@ -240,7 +259,8 @@ void LLAVJacobFluxReconstruction::execute()
   if (PE::GetPE().GetRank(nsp) == 0) 
   {
     // print total artificial viscosity and number of positivity preservations
-    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+    //CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);
@@ -760,7 +780,20 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
       }
       
       // compute ghost gradients
-      (*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,unitNormalFlxPnts,m_flxPntCoords);
+      if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+      {
+	for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+        {
+	  for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+	    *(m_flxPntGhostGrads[iFlxPnt][iVar]) = *(m_cellGradFlxPnt[0][iFlxPnt][iVar]);
+	  }
+	}
+      }
+      else
+      {
+	(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,unitNormalFlxPnts,m_flxPntCoords);
+      }
       
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
@@ -858,6 +891,8 @@ void LLAVJacobFluxReconstruction::setCellData()
   
   m_cellNodes = m_cell->getNodes();
   
+  DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
+  
   // loop over flx pnts to extrapolate the states to the flux points
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {   
@@ -876,6 +911,8 @@ void LLAVJacobFluxReconstruction::setCellData()
       
       m_solEpsilons[iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
     }
+    
+    artVisc[(((*m_cellStates)[iSol]))->getLocalID()] = m_solEpsilons[iSol];
   }
 }
 
@@ -1384,6 +1421,16 @@ void LLAVJacobFluxReconstruction::setup()
   
   // get the number of cells in the mesh
   const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  // get datahandle
+  DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
+  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;
+
+  // resize socket
+  artVisc.resize(nbStates);
+  monPhysVar.resize(nbStates);
   
   m_nodeEpsilons.resize(nbrNodes);
   m_nbNodeNeighbors.resize(nbrNodes);

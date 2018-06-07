@@ -228,6 +228,8 @@ void LLAVFluxReconstruction::execute()
       // get the states in this cell
       m_cellStates = m_cell->getStates();
       
+      //CFLog(INFO, "state: " << *((*m_cellStates)[0]) << "\n");
+      
       // get the nodes in this cell
       m_cellNodes  = m_cell->getNodes();
       
@@ -236,6 +238,8 @@ void LLAVFluxReconstruction::execute()
 //       {
 	// compute the states projected on order P-1
 	computeProjStates(m_statesPMinOne);
+	
+	//CFLog(INFO, "projstate: " << m_statesPMinOne[0] << "\n");
 	
 	// compute the artificial viscosity
 	computeEpsilon();
@@ -300,8 +304,8 @@ void LLAVFluxReconstruction::execute()
       m_cellVolume[RIGHT] = m_cells[RIGHT]->computeVolume();
       
       // if one of the neighbouring cells is parallel updatable, compute the correction flux
-      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
-      {
+  //    if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
+  //    {
 	// set the face data
 	setFaceData(m_face->getID());//faceID
 	
@@ -331,7 +335,7 @@ void LLAVFluxReconstruction::execute()
 	
 	// update RHS
 	updateRHS();
-      }
+   //   }
 
       // release the GeometricEntity
       m_faceBuilder->releaseGE();
@@ -358,8 +362,8 @@ void LLAVFluxReconstruction::execute()
       m_cellStates = m_cell->getStates();
       
       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
-      if ((*m_cellStates)[0]->isParUpdatable())
-      {
+  //    if ((*m_cellStates)[0]->isParUpdatable())
+   //   {
 	// get the neighbouring faces
         m_faces = m_cell->getNeighborGeos();
       
@@ -371,7 +375,7 @@ void LLAVFluxReconstruction::execute()
       
 	// update RHS
         updateRHS();
-      } 
+  //    } 
       
       // divide by the Jacobian to transform the residuals back to the physical domain
       //divideByJacobDet();
@@ -486,6 +490,7 @@ void LLAVFluxReconstruction::setFaceData(CFuint faceID)
 	  }
 	}
       }
+      //CFLog(INFO, "interEps: " << m_epsilonLR[iSide][iFlxPnt] << "\n");
     }
   }
 }
@@ -791,7 +796,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
 
 CFreal LLAVFluxReconstruction::computeViscCoef(RealVector* state)
 {
-  return 1./(*state)[0];
+  return 1.;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -824,6 +829,8 @@ void LLAVFluxReconstruction::setCellData()
       m_solEpsilons[iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
       //CFLog(VERBOSE, "solEps: " << m_solEpsilons[iSol] << ", nodeEps: " << m_nodeEpsilons[nodeIdx] << ", nghb: " << m_nbNodeNeighbors[nodeIdx] << "\n");
     }
+    
+    //CFLog(INFO, "eps: " << m_solEpsilons[iSol] << "\n");
     
     artVisc[(((*m_cellStates)[iSol]))->getLocalID()] = m_solEpsilons[iSol];
     
@@ -903,6 +910,8 @@ void LLAVFluxReconstruction::computeEpsilon()
     m_epsilon = m_epsilon0*0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
   }
   
+  //CFLog(INFO, "eps0: " << m_epsilon0 << ", S: " << m_s << ", eps: " << m_epsilon << "\n");
+  
 //   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 //       {
 //         (*((*m_cellStates)[iSol]))[2] = m_epsilon0;
@@ -927,11 +936,15 @@ void LLAVFluxReconstruction::computeEpsilon0()
   
   const CFreal wavespeed = updateCoeff[(*m_cellStates)[0]->getLocalID()];
   
+  if (wavespeed < 1e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
+  
   //const CFreal deltaKsi = 2.0/(m_order+2.0);
   
   const CFreal peclet = computePeclet();
   
   m_epsilon0 = max(wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
+  
+  //CFLog(INFO, "eps0: " << m_epsilon0 << "\n");
   
   //if (m_epsilon0 < -1.0e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
   
@@ -1049,6 +1062,8 @@ void LLAVFluxReconstruction::storeEpsilon()
       m_nbNodeNeighbors[nodeID] += 1.0;
     }
   }
+  
+  //CFLog(INFO, "solEps: " << m_cellEpsilons[m_cell->getID()] << "\n");
   
   if (m_epsilon > 0.5*m_epsilon0) CFLog(VERBOSE, "cellID eps: " << m_cell->getID() << "\n");
   CFLog(VERBOSE, "eps0 = " << m_epsilon0 << ", eps = " << m_epsilon << ", S = " << m_s << ", S0 = " << m_s0 << "\n");

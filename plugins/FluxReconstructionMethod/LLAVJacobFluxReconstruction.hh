@@ -59,6 +59,11 @@ public: // functions
    * Unsetup private data
    */
   virtual void unsetup();
+  
+  /// Returns the DataSocket's that this command provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
     
 protected: //functions
   
@@ -255,6 +260,15 @@ protected: //data
   
   /// subcell resolution
   CFreal m_subcellRes;
+  
+  /// index of the monitored physical variable for positivity preservation
+  CFuint m_monitoredPhysVar;
+  
+  /// storage for the artificial viscosity
+  Framework::DataSocketSource<CFreal> socket_artVisc;
+  
+  /// storage for the monitored phys var
+  Framework::DataSocketSource<CFreal> socket_monPhysVar;
   
   private:
 
