@@ -132,6 +132,12 @@ void StdSourceTerm::execute()
   SafePtr< GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
   StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.trs = trs;
+  
+  if (m_addJacob)
+  {
+    // create blockaccumulator
+    m_acc.reset(m_lss->createBlockAccumulator(m_nbrSolPnts,m_nbrSolPnts,m_nbrEqs));
+  }
 
   // loop over elements
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
@@ -240,7 +246,7 @@ void StdSourceTerm::addSrcTermJacob()
     {
       // perturb physical variable in state
       m_numJacob->perturb(iEqPert,pertState[iEqPert]);
-      
+
       m_pertResUpdates = 0.;
 
       // compute the perturbed residual updates (-divFD+divhFD)
