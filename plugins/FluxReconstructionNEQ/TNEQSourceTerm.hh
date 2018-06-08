@@ -69,7 +69,7 @@ protected:
   /**
    * add the source term
    */
-  void addSourceTerm();
+  void addSourceTerm(RealVector& resUpdates);
 
   /**
    * Configures the command.

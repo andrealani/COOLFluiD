@@ -75,16 +75,16 @@ void CNEQSourceTerm::getSourceTermData()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void CNEQSourceTerm::addSourceTerm()
+void CNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 {
-  // get the datahandle of the rhs
-  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-
-  // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
-
-  // loop over solution points in this cell to add the source term
-  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
+//   // get the datahandle of the rhs
+//   DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+// 
+//   // get residual factor
+//   const CFreal resFactor = getMethodData().getResFactor();
+// 
+//   // loop over solution points in this cell to add the source term
+//   CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
   const CFuint nbrSol = m_cellStates->size();
   
   const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
@@ -168,14 +168,15 @@ void CNEQSourceTerm::addSourceTerm()
     
       for (CFuint i = 0; i < nbSpecies; ++i) 
       {
-        m_srcTerm[speciesVarIDs[i]] = m_omega[i]*ovOmegaRef;
+//         m_srcTerm[speciesVarIDs[i]] = m_omega[i]*ovOmegaRef;
+	resUpdates[m_nbrEqs*iSol + speciesVarIDs[i]] = m_omega[i]*ovOmegaRef;
       }
-      CFLog(DEBUG_MAX,"ChemNEQST::computeSource() => source = " << m_srcTerm << "\n");
+      CFLog(DEBUG_MAX,"ChemNEQST::computeSource() => source = " << resUpdates << "\n");
       
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
-      {
-        rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
-      }
+//       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+//       {
+//         rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
+//       }
     }
   }
 }
