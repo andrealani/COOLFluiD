@@ -12,12 +12,16 @@
 
 #include "MathTools/MathFunctions.hh"
 
-#include "NavierStokes/EulerVarSet.hh"
 #include "NavierStokes/EulerTerm.hh"
+
+#include "NavierStokes/NavierStokesVarSet.hh"
+#include "NavierStokes/EulerVarSet.hh"
 
 #include "FluxReconstructionNavierStokes/LLAVJacobFluxReconstructionNS.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+
+#include "NavierStokes/Euler2DVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -44,7 +48,12 @@ LLAVJacobFluxReconstructionNSFluxReconstructionProvider("LLAVJacobNS");
   
 LLAVJacobFluxReconstructionNS::LLAVJacobFluxReconstructionNS(const std::string& name) :
   LLAVJacobFluxReconstruction(name),
-  m_eulerVarSet(CFNULL)
+  m_eulerVarSet(CFNULL),
+  m_msEulerTerm(CFNULL),
+  m_nbrSpecies(),
+  m_pData(),
+  m_pData2(),
+  m_eulerVarSet2(CFNULL)
   {
   }
 
@@ -166,6 +175,63 @@ CFreal LLAVJacobFluxReconstructionNS::computePeclet()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void LLAVJacobFluxReconstructionNS::computeSmoothness()
+{ 
+  CFreal sNum = 0.0;
+  
+  CFreal sDenom = 0.0;
+  
+  // get datahandle
+  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    CFreal stateP = 0.0;
+    CFreal diffStatesPPMinOne = 0.0;
+    
+    if (m_monitoredPhysVar < m_pData.size())
+    {
+      RealVector statePMinOne = *((*m_cellStates)[iSol]->getData()) - m_statesPMinOne[iSol];
+      
+      const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+      
+      if (RhoivtTv)
+      {
+        m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
+        m_eulerVarSet2->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      else 
+      {
+	m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
+        m_eulerVarSet->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      
+      stateP = m_pData[m_monitoredPhysVar];
+      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
+    
+      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
+    }
+    else
+    {
+      stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
+      diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
+    }
+    
+    sNum += diffStatesPPMinOne*diffStatesPPMinOne;
+    sDenom += stateP*stateP;
+  }
+  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
+  {
+    m_s = -100.0;
+  }
+  else
+  {
+    m_s = log10(sNum/sDenom);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void LLAVJacobFluxReconstructionNS::setup()
 {
   CFAUTOTRACE;
@@ -173,8 +239,29 @@ void LLAVJacobFluxReconstructionNS::setup()
   // setup parent class
   LLAVJacobFluxReconstruction::setup();
   
-  // get Euler varset
-  m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
+  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  
+  if(!RhoivtTv)
+  {
+    // get Euler varset
+    m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<EulerVarSet>();
+    m_eulerVarSet->getModel()->resizePhysicalData(m_pData);
+    m_eulerVarSet->getModel()->resizePhysicalData(m_pData2);
+  } 
+  else
+  {
+    m_eulerVarSet2 = getMethodData().getUpdateVar().d_castTo< MultiScalarVarSet< Euler2DVarSet > >();
+    m_msEulerTerm = PhysicalModelStack::getActive()-> getImplementor()->getConvectiveTerm().d_castTo< MultiScalarTerm< EulerTerm > >();
+    if (m_msEulerTerm.isNull())
+    {
+      throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MultiScalar EulerTerm in BCNoSlipWallrvt!");
+    }
+  
+    m_nbrSpecies = m_msEulerTerm->getNbScalarVars(0);
+    
+    m_eulerVarSet2->getModel()->resizePhysicalData(m_pData);
+    m_eulerVarSet2->getModel()->resizePhysicalData(m_pData2);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

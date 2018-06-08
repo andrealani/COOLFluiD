@@ -65,19 +65,19 @@ void NS2DAxiSourceTerm::getSourceTermData()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NS2DAxiSourceTerm::addSourceTerm()
+void NS2DAxiSourceTerm::addSourceTerm(RealVector& resUpdates)
 {
   m_diffVarSet = getMethodData().getDiffusiveVar();
   
   SafePtr< NavierStokes2DVarSet > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DVarSet >();
-  // get the datahandle of the rhs
-  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-
-  // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
-
-  // loop over solution points in this cell to add the source term
-  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
+//   // get the datahandle of the rhs
+//   DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+// 
+//   // get residual factor
+//   const CFreal resFactor = getMethodData().getResFactor();
+// 
+//   // loop over solution points in this cell to add the source term
+//   CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
   const CFuint nbrSol = m_cellStates->size();
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
   
@@ -128,12 +128,13 @@ void NS2DAxiSourceTerm::addSourceTerm()
     const CFreal tauThetaTheta = -coeffMu*(dUdX + dVdR - 2.0*avV*invR);
     
     // AL: check this in Hontzatko's report (dp!)
-    m_srcTerm[vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
+    //m_srcTerm[vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
+    resUpdates[m_nbrEqs*iSol + vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
 
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
-    {
-      rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
-    }
+//     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+//     {
+//       rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
+//     }
   }
 }
 

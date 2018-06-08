@@ -15,6 +15,10 @@
 
 #include "FluxReconstructionMethod/LLAVJacobFluxReconstruction.hh"
 
+#include "Framework/MultiScalarTerm.hh"
+
+#include "NavierStokes/MultiScalarVarSet.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -22,6 +26,8 @@ namespace COOLFluiD {
   namespace Physics {
     namespace NavierStokes {
       class EulerVarSet;
+      class EulerTerm;
+      class Euler2DVarSet;
     }
   }
   namespace FluxReconstructionMethod {
@@ -83,12 +89,34 @@ protected: //functions
    * Compute the Peclet number based on the user input
    */
   virtual CFreal computePeclet();
+  
+  /**
+   * Compute the smoothness indicator
+   */
+  virtual void computeSmoothness();
+
 
 
 protected: //data
   
-  /// physical model (in conservative variables)
+  /// physical model
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
+  
+  /// physical model MS
+  Common::SafePtr< Framework::MultiScalarTerm< Physics::NavierStokes::EulerTerm > > m_msEulerTerm;
+  
+  /// number of species
+  CFuint m_nbrSpecies;
+  
+  /// physical model (in conservative variables)
+  Common::SafePtr< Physics::NavierStokes::MultiScalarVarSet< Physics::NavierStokes::Euler2DVarSet > > m_eulerVarSet2;
+  
+  private:
+
+  /// Physical data temporary vector
+  RealVector m_pData;
+  /// Physical data temporary vector
+  RealVector m_pData2;
   
   
 }; // class Solve

@@ -60,13 +60,13 @@ void Euler2DAxiSourceTerm::getSourceTermData()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Euler2DAxiSourceTerm::addSourceTerm()
+void Euler2DAxiSourceTerm::addSourceTerm(RealVector& resUpdates)
 {
-  // get the datahandle of the rhs
-  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-
-  // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
+//   // get the datahandle of the rhs
+//   DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+// 
+//   // get residual factor
+//   const CFreal resFactor = getMethodData().getResFactor();
 
   // loop over solution points in this cell to add the source term
   CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
@@ -74,8 +74,10 @@ void Euler2DAxiSourceTerm::addSourceTerm()
   for (CFuint iSol = 0; iSol < nbrSol; ++iSol)
   { 
     m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]), m_solPhysData);
+    
+    resUpdates[m_nbrEqs*iSol+2] = m_solPhysData[EulerTerm::P];
 
-    rhs[resID+2] += resFactor*m_solPntJacobDets[iSol]*m_solPhysData[EulerTerm::P];
+//     rhs[resID+2] += resFactor*m_solPntJacobDets[iSol]*m_solPhysData[EulerTerm::P];
   }
 }
 
