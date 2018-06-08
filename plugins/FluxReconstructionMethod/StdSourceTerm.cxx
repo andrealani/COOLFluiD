@@ -1,6 +1,9 @@
 #include "Common/CFLog.hh"
 #include "Framework/MethodCommandProvider.hh"
 
+#include "Framework/BlockAccumulator.hh"
+#include "Framework/LSSMatrix.hh"
+
 #include "Framework/NamespaceSwitcher.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
@@ -34,14 +37,32 @@ StdSourceTerm::StdSourceTerm(const std::string& name) :
   m_nbrEqs(),
   m_iElemType(),
   m_solPntsLocalCoords(CFNULL),
-  m_solPntJacobDets()
+  m_solPntJacobDets(),
+  m_lss(CFNULL),
+  m_numJacob(CFNULL),
+  m_acc(CFNULL),
+  m_pertResUpdates(),
+  m_resUpdates(),
+  m_derivResUpdates(),
+  m_nbrSolPnts()
 {
+  addConfigOptionsTo(this);
+  
+  m_addJacob = 0.0;
+  setParameter("AddJacob",&m_addJacob);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 StdSourceTerm::~StdSourceTerm()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSourceTerm::defineConfigOptions(Config::OptionList& options)
+{
+    options.addConfigOption< bool >("AddJacob","Flag telling whether to add the jacobian");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -66,6 +87,23 @@ void StdSourceTerm::setup()
 
   // resize m_solPntJacobDets
   m_solPntJacobDets.resize(maxNbrSolPnts);
+  
+  m_nbrSolPnts = maxNbrSolPnts;
+  
+  if (m_addJacob)
+  {
+    // get the linear system solver
+    m_lss = getMethodData().getLinearSystemSolver()[0];
+
+    // get the numerical Jacobian computer
+    m_numJacob = getMethodData().getNumericalJacobian();
+  }
+  
+  const CFuint resSize = m_nbrSolPnts*m_nbrEqs;
+  
+  m_pertResUpdates.resize(resSize);
+  m_resUpdates.resize(resSize);
+  m_derivResUpdates.resize(resSize);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -118,13 +156,21 @@ void StdSourceTerm::execute()
       m_cellStates = m_cell->getStates();
 
       // get jacobian determinants at solution points
-      m_solPntJacobDets =
-          m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+      m_solPntJacobDets = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
       // add the source term if the current cell is parallel updatable
       if ((*m_cellStates)[0]->isParUpdatable())
       {
-        addSourceTerm();
+	m_resUpdates = 0.;
+	
+        addSourceTerm(m_resUpdates);
+	
+	updateRHS();
+	
+	if (m_addJacob)
+	{
+	  addSrcTermJacob();
+	}
       }
 
       //release the GeometricEntity
@@ -137,11 +183,100 @@ void StdSourceTerm::execute()
 
 void StdSourceTerm::getSourceTermData()
 {
-    // get the local FR data
+  // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
 
-    // get solution point local coordinates
+  // get solution point local coordinates
   m_solPntsLocalCoords = frLocalData[m_iElemType]->getSolPntsLocalCoords();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSourceTerm::updateRHS()
+{
+  // get the datahandle of the rhs
+  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  // loop over solution points in this cell to add the source term
+  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
+
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    // loop over physical variables
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+    {
+      rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_resUpdates[m_nbrEqs*iSol+iEq];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSourceTerm::addSrcTermJacob()
+{
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  // dereference accumulator
+  BlockAccumulator& acc = *m_acc;
+
+  // set block row and column indices
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    acc.setRowColIndex(iSol,(*m_cellStates)[iSol]->getLocalID());
+  }
+
+  // loop over the states/solpnts in this cell to perturb the states
+  for (CFuint iSolPert = 0; iSolPert < m_nbrSolPnts; ++iSolPert)
+  {
+    // dereference state
+    State& pertState = *(*m_cellStates)[iSolPert];
+
+    // loop over the variables in the state
+    for (CFuint iEqPert = 0; iEqPert < m_nbrEqs; ++iEqPert)
+    {
+      // perturb physical variable in state
+      m_numJacob->perturb(iEqPert,pertState[iEqPert]);
+      
+      m_pertResUpdates = 0.;
+
+      // compute the perturbed residual updates (-divFD+divhFD)
+      addSourceTerm(m_pertResUpdates);
+
+      // compute the finite difference derivative of the volume term
+      m_numJacob->computeDerivative(m_pertResUpdates,m_resUpdates,m_derivResUpdates);
+
+      // multiply residual update derivatives with residual factor
+      m_derivResUpdates *= resFactor;
+
+      // add the derivative of the residual updates to the accumulator
+      CFuint resUpdIdx = 0;
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, resUpdIdx += m_nbrEqs)
+      {
+        acc.addValues(iSol,iSolPert,iEqPert,&m_derivResUpdates[resUpdIdx]);
+      }
+
+      // restore physical variable in state
+      m_numJacob->restore(pertState[iEqPert]);
+    }
+  }
+//   if (m_cell->getID() == 49)
+//   {
+//   CFLog(VERBOSE,"accVol:\n");
+//    acc.printToScreen();
+//   }
+
+  if (getMethodData().doComputeJacobian())
+  {
+    // add the values to the jacobian matrix
+    m_lss->getMatrix()->addValues(acc);
+  }
+
+  // reset to zero the entries in the block accumulator
+  acc.reset();
 }
 
 //////////////////////////////////////////////////////////////////////////////

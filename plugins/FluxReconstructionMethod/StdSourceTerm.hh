@@ -9,6 +9,10 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
+  
+  namespace Framework {
+    class BlockAccumulator;
+  }
 
   namespace FluxReconstructionMethod {
 
@@ -33,6 +37,9 @@ public:
    * Destructor.
    */
   ~StdSourceTerm();
+  
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
 
   /**
    * Set up the member data
@@ -67,7 +74,17 @@ protected:
   /**
    * add the source term
    */
-  virtual void addSourceTerm() = 0;
+  virtual void addSourceTerm(RealVector& resUpdates) = 0;
+  
+  /**
+   * add the src term jacobian
+   */
+  virtual void addSrcTermJacob();
+  
+  /**
+   * add the src term to the RHS
+   */
+  void updateRHS();
 
 protected: // data
 
@@ -91,6 +108,30 @@ protected: // data
 
   /// solution point Jacobian determinants
   std::valarray<CFreal> m_solPntJacobDets;
+  
+  /// flag telling whether to add the jacobian
+  bool m_addJacob;
+  
+  /// pointer to the linear system solver
+  Common::SafePtr<Framework::LinearSystemSolver> m_lss;
+
+  /// pointer to the numerical Jacobian computer
+  Common::SafePtr<Framework::NumericalJacobian> m_numJacob;
+
+  /// accumulator for LSSMatrix
+  std::auto_ptr<Framework::BlockAccumulator> m_acc;
+  
+  /// perturbed updates to the residuals
+  RealVector m_pertResUpdates;
+  
+  /// unperturbed updates to the residuals
+  RealVector m_resUpdates;
+  
+  /// derivative of update to one element-residual
+  RealVector m_derivResUpdates;
+  
+  /// number of solution points
+  CFuint m_nbrSolPnts;
 
 }; // class StdSourceTerm
 

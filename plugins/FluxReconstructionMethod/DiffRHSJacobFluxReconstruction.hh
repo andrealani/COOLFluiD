@@ -175,11 +175,6 @@ protected: //functions
   virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
   
   /**
-   * compute the diffusive flux
-   */
-  virtual void computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux);
-  
-  /**
    * compute the data needed for the computation of the perturbed gradients
    */
   void computePertGradData(const CFuint side);

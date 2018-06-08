@@ -312,7 +312,8 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
     prepareFluxComputation();
      
     // compute the Riemann flux
-    m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
+//     m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
+     computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
      
     // compute FI in the mapped coord frame
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
@@ -446,7 +447,8 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
+//       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
+       computeFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
     }
     //if (m_cell->getID() == 1220) CFLog(VERBOSE, "state: " << m_avgSol << ", grad: " << *(grad[1]) << ", flx: " << m_contFlx[iSolPnt][1] << "\n");
 
@@ -661,6 +663,13 @@ void DiffRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
     }
     //if (waveSpeedUpd[iSide] > 10.0) CFLog(INFO, "wvspDiff: " << waveSpeedUpd[iSide] << "\n");
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffRHSFluxReconstruction::computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux)
+{
+  flux = m_diffusiveVarSet->getFlux(values,gradients,normal,radius);
 }
 
 //////////////////////////////////////////////////////////////////////////////

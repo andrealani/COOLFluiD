@@ -96,7 +96,7 @@ protected: // data
   /// unperturbed updates to the residuals
   std::vector< RealVector > m_resUpdates;
 
-  /// derivative of update to one CV-residual
+  /// derivative of update to one element-residual
   RealVector m_derivResUpdates;
   
   /// perturbed corrections

@@ -104,6 +104,8 @@ protected: // functions
   {
   }
   
+  virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
+  
   /**
    * compute the wave speed updates for this face
    * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),

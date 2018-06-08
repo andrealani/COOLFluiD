@@ -66,16 +66,16 @@ void AnalyticalSourceTerm::getSourceTermData()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void AnalyticalSourceTerm::addSourceTerm()
+void AnalyticalSourceTerm::addSourceTerm(RealVector& resUpdates)
 {
-  // get the datahandle of the rhs
-  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
-
-  // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
-
-  // loop over solution points in this cell to add the source term
-  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
+//   // get the datahandle of the rhs
+//   DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+// 
+//   // get residual factor
+//   const CFreal resFactor = getMethodData().getResFactor();
+// 
+//   // loop over solution points in this cell to add the source term
+//   CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
   const CFuint nbrSol = m_cellStates->size();
   for (CFuint iSol = 0; iSol < nbrSol; ++iSol)
   {
@@ -95,9 +95,10 @@ void AnalyticalSourceTerm::addSourceTerm()
     m_vFunction.evaluate(m_vFunctionInputVars,m_srcTerm);
 
     // loop over physical variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
+//       rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
+      resUpdates[m_nbrEqs*iSol + iEq] = m_srcTerm[iEq];
     }
   }
 }

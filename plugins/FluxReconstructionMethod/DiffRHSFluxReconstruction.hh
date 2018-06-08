@@ -109,6 +109,8 @@ protected: //functions
    */
   void computeFlxPntStatesAndGrads();
   
+  virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
+  
   /// prepare the computation of the diffusive flux
   virtual void prepareFluxComputation()
   {

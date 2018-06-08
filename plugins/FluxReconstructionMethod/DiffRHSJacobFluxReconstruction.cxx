@@ -1921,7 +1921,7 @@ void DiffRHSJacobFluxReconstruction::computeBndRes(CFuint side, CFuint faceIdx, 
     
     prepareFluxComputation();
 
-    computeFlux(m_avgSol,avgGrad,unitNormalFlxPnts[iFlxPnt],m_flxPntRiemannFlux[iFlxPnt]);
+    computeFlux(m_avgSol,avgGrad,unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
     
     m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt];
     
@@ -2053,7 +2053,7 @@ void DiffRHSJacobFluxReconstruction::computeFaceRes(CFuint side, CFuint faceIdx,
     
     prepareFluxComputation();
     
-    computeFlux(m_avgSol,avgGrad,unitNormalFlxPnts[iFlxPnt],m_flxPntRiemannFlux[iFlxPnt]);
+    computeFlux(m_avgSol,avgGrad,unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
      
     // compute FI-FD in the mapped coord frame
     m_cellFlx[cellSide][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt][cellSide];
@@ -2134,13 +2134,6 @@ void DiffRHSJacobFluxReconstruction::computeFaceGradTerms(RealMatrix& gradTermL,
       gradTermR(iEq,iFlx) = (*(m_cellStatesFlxPnt[RIGHT][iFlx]->getData()))[iEq];
     }
   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffRHSJacobFluxReconstruction::computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux)
-{
-  flux = m_diffusiveVarSet->getFlux(sol,grad,normals,0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
