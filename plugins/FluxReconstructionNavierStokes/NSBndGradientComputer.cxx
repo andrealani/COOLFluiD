@@ -117,7 +117,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
   }
   
   // if needed, compute the gradients for the artificial viscosity
-  if ((getMethodData().getUpdateVarStr() == "Cons" || getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasArtificialViscosity())
+  if ((getMethodData().getUpdateVarStr() == "Cons") && getMethodData().hasArtificialViscosity())
   {
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
@@ -155,7 +155,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       }
     }
   }
-  else if ((false) && getMethodData().hasArtificialViscosity())
+  else if ((getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasArtificialViscosity())
   {
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)

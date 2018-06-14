@@ -111,7 +111,7 @@ void LLAVFluxReconstructionNS::setFaceData(CFuint faceID)
 //       }
 //     }
 //   }
-  if (getMethodData().hasDiffTerm() || getMethodData().getUpdateVarStr() == "Puvt")
+  if (getMethodData().hasDiffTerm() && getMethodData().getUpdateVarStr() != "Puvt")
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -170,7 +170,7 @@ void LLAVFluxReconstructionNS::setCellData()
 //     }
 //   }
   
-  if (getMethodData().hasDiffTerm() || getMethodData().getUpdateVarStr() == "Puvt")
+  if (getMethodData().hasDiffTerm() && getMethodData().getUpdateVarStr() != "Puvt")
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();

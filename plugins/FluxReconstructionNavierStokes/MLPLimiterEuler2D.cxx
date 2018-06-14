@@ -325,12 +325,13 @@ CFreal MLPLimiterEuler2D::computeLimitingValue(RealVector state)
   }
   else
   {
-    CFreal rho  = state[0];
-    CFreal rhoU = state[1];
-    CFreal rhoV = state[2];
-    CFreal rhoE = state[3];
-
-    press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+//     CFreal rho  = state[0];
+//     CFreal rhoU = state[1];
+//     CFreal rhoV = state[2];
+//     CFreal rhoE = state[3];
+// 
+//     press = m_gammaMinusOne*(rhoE - 0.5*(rhoU*rhoU+rhoV*rhoV)/rho);
+    press = 1000.0;
   }
   
   
@@ -373,14 +374,17 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
   CFAUTOTRACE;
   
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
+  const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
   
-  const CFreal idGassConst = m_eulerVarSet->getModel()->getR();
-  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
+//   const CFreal idGassConst = m_eulerVarSet->getModel()->getR();
+//   const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
   
   CFreal M = 0.0;
   
   if (Puvt)
   {
+      const CFreal idGassConst = m_eulerVarSet->getModel()->getR();
+  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
     for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
     {
       const CFreal v2 = m_cellStatesNodesP1[iNode][1]*m_cellStatesNodesP1[iNode][1]+m_cellStatesNodesP1[iNode][2]*m_cellStatesNodesP1[iNode][2];
@@ -400,8 +404,10 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
       M = max(currM, M);
     }
   }
-  else
+  else if (Cons)
   {
+          const CFreal idGassConst = m_eulerVarSet->getModel()->getR();
+  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
     for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
     {
       const CFreal rho = m_cellStatesNodesP1[iNode][0];
@@ -426,7 +432,8 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
       M = max(currM, M);
     }
   }
-  const bool result = M > 0.5;
+//   const bool result = M > 0.5;
+const bool result = true;
 
   return result;
 }
@@ -436,9 +443,14 @@ bool MLPLimiterEuler2D::checkSpecialLimConditions()
 void MLPLimiterEuler2D::setup()
 {
   CFAUTOTRACE;
+  CFLog(INFO, "MLPEuler setup\n");
 
   MLPLimiter::setup();
   
+  const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
+  
+  if (Cons)
+  {
   // get Euler 2D varset
   m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
   if (m_eulerVarSet.isNull())
@@ -446,11 +458,13 @@ void MLPLimiterEuler2D::setup()
     throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in MLPLimiterEuler2DFluxReconstruction!");
   }
   cf_assert(m_nbrEqs == 4);
+  
 
   // get gamma-1
   m_gammaMinusOne = m_eulerVarSet->getModel()->getGamma()-1.0;
   
   m_eulerVarSet->getModel()->resizePhysicalData(m_solPhysData);
+  }
 
 }
 

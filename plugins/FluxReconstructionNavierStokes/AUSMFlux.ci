@@ -86,6 +86,18 @@ RealVector& AUSMFlux<UPDATEVAR>::computeFlux(State& lState,
     // store the left and right states in vector
     m_updateStates[LEFT ] = &lState;
     m_updateStates[RIGHT] = &rState;
+//     CFreal rho1 = 0.0;
+//     CFreal rho2 = 0.0;
+//     for (CFuint i = 0; i < 5; ++i)
+//     {
+//       rho1 += (*(m_updateStates[LEFT ]))[i];
+//       rho2 += (*(m_updateStates[RIGHT ]))[i];
+//     }
+//     for (CFuint i = 0; i < 5; ++i)
+//     {
+//       if ((*(m_updateStates[LEFT ]))[i]/rho1 > 1.1) CFLog(INFO, "wrong state: " << *(m_updateStates[LEFT ]) << "\n");
+//       if ((*(m_updateStates[RIGHT ]))[i]/rho2 > 1.1) CFLog(INFO, "wrong state: " << *(m_updateStates[RIGHT ]) << "\n");
+//     }
 
     // compute physical data for the left and the right internal flux points
     m_updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
