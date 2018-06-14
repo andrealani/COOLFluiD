@@ -128,7 +128,7 @@ void MLPLimiter::execute()
 
   // RESET THE MINIMUM AND MAXIMUM CELL AVERAGED SOLUTIONS (STORED IN THE NODES!!!)
   resetNodeNghbrCellAvgStates();
-  
+
   const CFreal residual = SubSystemStatusStack::getActive()->getResidual();
   
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
@@ -177,7 +177,7 @@ void MLPLimiter::execute()
       m_cellBuilder->releaseGE();
     }
   }
-  
+
   CFuint limitCounter = 0;
   CFuint orderLimit = 0;
 
@@ -215,7 +215,7 @@ void MLPLimiter::execute()
 
       // reconstruct cell averaged state
       reconstructCellAveragedState();
-      
+
       if(m_cell->getID() == 36)
       {
 	CFLog(VERBOSE, "states: \n");
@@ -236,7 +236,7 @@ void MLPLimiter::execute()
 	}
 	CFLog(VERBOSE, "min state: " << m_minAvgState[0] << ", max state: " << m_maxAvgState[0] << "\n");
       }
-      
+
       if (checkSpecialLimConditions())
       {
 
@@ -248,7 +248,7 @@ void MLPLimiter::execute()
         {
           m_states2[iSol] = (*((*m_cellStates)[iSol]));
         }
-      
+
         // compute the states in the nodes
         computeNodeStates(m_states2,m_cellStatesNodes);
 	
@@ -260,14 +260,14 @@ void MLPLimiter::execute()
 	    CFLog(VERBOSE, m_cellStatesNodes[iSol] << "\n");
 	  }
 	}
-	
+
 	bool limitFlag = false;
 	
         // check if P1u is within vertex limiting averages
         for (CFuint iNode = 0; iNode < m_nbrNodesElem; ++iNode)
         {
 	  m_applyLimiter[iNode] = false;
-	
+
 	  // check if we are in constant area of sol
 	  if (!( fabs(m_cellStatesNodes[iNode][0] - m_cellAvgState[0]) < max(1e-3 * fabs(m_cellAvgState[0]),m_cell->computeVolume())))
 	  {   
@@ -282,7 +282,7 @@ void MLPLimiter::execute()
 	      CFLog(VERBOSE, "prelim? " << m_applyLimiter[iNode] << "\n");
 	    }
 	  }
-	  
+
 	  if (m_applyLimiter[iNode])
 	  {
 	    limitFlag = true;
@@ -291,7 +291,7 @@ void MLPLimiter::execute()
         }
       
         const bool unphysical = !checkPhysicality();
-      
+
         if (limitFlag || unphysical)
         {
 	
@@ -303,7 +303,7 @@ void MLPLimiter::execute()
 	      CFLog(VERBOSE, m_cellStatesNodes[iNode][0] << "\n");
 	    }
 	  }
-	
+
 	  bool stillLimit = false;
 	
 	  // get the data handles for the minimum and maximum nodal states
@@ -319,7 +319,7 @@ void MLPLimiter::execute()
 	      {
 	        // get node ID
                 const CFuint nodeID = (*m_cellNodes)[iNode]->getLocalID();
-	        
+
 	        // get min and max states
                 RealVector minAvgState = nodeNghbCellMinAvgStates[nodeID];
                 RealVector maxAvgState = nodeNghbCellMaxAvgStates[nodeID];
@@ -361,7 +361,7 @@ void MLPLimiter::execute()
 	 {
 	   stillLimit = true;
 	 }
-        
+
          if (stillLimit || unphysical)
 	 {
 	   CFLog(VERBOSE, "limiting cell " << m_cell->getID() << "\n");
@@ -479,7 +479,9 @@ void MLPLimiter::execute()
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
 	CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	RealVector diff = (*((*m_cellStates)[iSol])-m_prevStates[stateID])*(*((*m_cellStates)[iSol])-m_prevStates[stateID]);
+
 	duL2Norm += diff;
 	m_prevStates[stateID] = *((*m_cellStates)[iSol]);
 	//CFLog(NOTICE, "diff: " << diff << "\n");

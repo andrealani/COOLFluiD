@@ -206,7 +206,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         } 
         
         // print out the residual updates for debugging
-        if(m_intCell->getID() == 1220)
+        if(m_intCell->getID() == 1220)//
         {
 	  CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
           CFLog(VERBOSE, "UpdateBnd = \n");

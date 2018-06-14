@@ -64,6 +64,7 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
        (*ghostStates[iState])[i]= (*intStates[iState])[i] - 2.0*vn*normals[iState][jxx]/area2;
        jxx++;
      }
+     if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
    }
    
    //CFLog(DEBUG_MAX, "MirrorVelocity::setGhostState() => ghostState = " << *ghostState << "\n"); 
@@ -165,7 +166,7 @@ void BCMirrorVelocity::setup()
     const CFuint dim = PhysicalModelStack::getActive()->getDim();
     m_velocityIDs.resize(dim);
     for (CFuint i = 0 ; i < dim; ++i) {
-      m_velocityIDs[i] = 1 + i;
+      m_velocityIDs[i] = 5 + i; //hard coded!!!!!!!!!!!!!!!!!!!!!!!!!!
     }
   }
 

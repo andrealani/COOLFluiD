@@ -82,7 +82,8 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_nbPosPrevGlobal(),
   m_subcellRes(),
   socket_artVisc("artVisc"),
-  socket_monPhysVar("monPhysVar")
+  socket_monPhysVar("monPhysVar"),
+  m_maxLambda()
   {
     addConfigOptionsTo(this);
     
@@ -205,6 +206,7 @@ void LLAVFluxReconstruction::execute()
   m_nodeEpsilons = 0.0;
   
   m_nbPosPrev = 0;
+  m_maxLambda = 0.;
   
   //// Loop over the elements to compute the artificial viscosities
   
@@ -252,6 +254,8 @@ void LLAVFluxReconstruction::execute()
       m_cellBuilder->releaseGE();
     }
   }
+  
+  CFLog(INFO, "max lambda: " << m_maxLambda << "\n");
   
   const std::string nsp = this->getMethodData().getNamespace();
   
@@ -687,7 +691,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       }
 	
       // compute ghost gradients
-      if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+      if ((getMethodData().getUpdateVarStr() == "Cons" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasDiffTerm())
       {
 	for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
         {
@@ -937,6 +941,9 @@ void LLAVFluxReconstruction::computeEpsilon0()
   const CFreal wavespeed = updateCoeff[(*m_cellStates)[0]->getLocalID()];
   
   if (wavespeed < 1e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
+  if (wavespeed > 1e4) CFLog(INFO, "state HW: " << *((*m_cellStates)[0]) << "\n");
+  
+  m_maxLambda = max(m_maxLambda,wavespeed);
   
   //const CFreal deltaKsi = 2.0/(m_order+2.0);
   
