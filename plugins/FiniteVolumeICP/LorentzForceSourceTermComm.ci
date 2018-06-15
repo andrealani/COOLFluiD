@@ -1,3 +1,4 @@
+
 #include "Common/PE.hh"
 #include "MathTools/MathConsts.hh"
 #include "Environment/SingleBehaviorFactory.hh"
@@ -140,21 +141,14 @@ void LorentzForceSourceTerm<ST>::setup()
   
   const CFuint nbCells = cells->nbRows();
   
-  DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
+  DataHandle<CFreal> LorentzForce = socket_LorentzForce.getDataHandle();
   
   const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
   const CFuint dim = (is2DHalf) ? 3 : PhysicalModelStack::getActive()->getDim();
   
-  LorentzForce.resize(dim);
-  for (CFuint i = 0; i < dim; ++i) {
-    LorentzForce[i].resize(nbCells);
-  }
-  for(CFuint iCell = 0; iCell < nbCells; ++iCell) {
-    for (CFuint i = 0; i < dim; ++i) {
-      LorentzForce[i][iCell] = 0.0;
-    }
-  }
-  
+  LorentzForce.resize(dim*nbCells);
+  LorentzForce = 0.;
+    
   // suppose that just one space method is available
   SafePtr<SpaceMethod> spaceMethod = getMethodData().template getCollaborator<SpaceMethod>();
   SafePtr<CellCenterFVM> fvmcc = spaceMethod.template d_castTo<CellCenterFVM>();
@@ -196,13 +190,15 @@ void LorentzForceSourceTerm<ST>::execute()
   // this is needed for coupling
   CFLogDebugMin( "::execute()" << "\n");
   
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  const CFuint dim = (is2DHalf) ? 3 : PhysicalModelStack::getActive()->getDim();
   const CFuint totNbEqs = PhysicalModelStack::getActive()->getNbEq();
   
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   DataHandle<RealVector> vacuumElFieldIntensity = socket_vacuumElFieldIntensity.getDataHandle();
   DataHandle<RealVector> vacuumElFieldIntensityInNodes = socket_vacuumElFieldIntensityInNodes.getDataHandle();
-  DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
+  DataHandle<CFreal> LorentzForce = socket_LorentzForce.getDataHandle();
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
   DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();
   DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
@@ -603,13 +599,13 @@ void LorentzForceSourceTerm<ST>::execute()
        }                                                                                            //
        /////////////////////////////////////////////////////////////////////////////////////////////// */
 
-       LorentzForce[0][iCell] = LorentzForce_x;
-       LorentzForce[1][iCell] = LorentzForce_r;
+       LorentzForce[iCell*dim] = LorentzForce_x;
+       LorentzForce[iCell*dim+1] = LorentzForce_r;
 
        // Lorentz Force in  source multiplied by radius - axisymmetric equations
-       LorentzForce[0][iCell] *= r;
-       LorentzForce[1][iCell] *= r;
-
+       LorentzForce[iCell*dim] *= r;
+       LorentzForce[iCell*dim+1] *= r;
+       
        m_cellBuilder->releaseGE();
     }  // [ MAIN CYCLE OVER CELLs END]
 
@@ -633,9 +629,9 @@ void LorentzForceSourceTerm<ST>::execute()
       RealVector LorentzForceInCellsRe(nbCells) ;
       RealVector LorentzForceInCellsIm(nbCells) ;
       for (CFuint iC = 0 ; iC < nbCells ; iC++ ) {
-         LorentzForceInCellsRe[iC] = LorentzForce[0][iC] / cellsRadius[iC] ;
-         LorentzForceInCellsIm[iC] = LorentzForce[1][iC] / cellsRadius[iC] ;
-         LorentzForceInCells[iC] = std::sqrt(LorentzForceInCellsRe[iC]*LorentzForceInCellsRe[iC] + LorentzForceInCellsIm[iC]*LorentzForceInCellsIm[iC]) ;
+	LorentzForceInCellsRe[iC] = LorentzForce[iC*dim] / cellsRadius[iC] ;
+	LorentzForceInCellsIm[iC] = LorentzForce[iC*dim+1] / cellsRadius[iC] ;
+	LorentzForceInCells[iC] = std::sqrt(LorentzForceInCellsRe[iC]*LorentzForceInCellsRe[iC] + LorentzForceInCellsIm[iC]*LorentzForceInCellsIm[iC]) ;
       }
       
       const CFreal scale = refData[refData.size()-1];

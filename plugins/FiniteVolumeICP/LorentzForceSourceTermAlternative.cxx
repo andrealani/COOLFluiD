@@ -73,22 +73,24 @@ void LorentzForceSourceTermAlternative::computeSource
     CFLogDebugMin( "LorentzForceSourceTermAlternative::computeSource()" << "\n");
     
     const CFuint elemID = element->getID();
-    DataHandle<RealVector> LorentzForce = socket_LorentzForce.getDataHandle();
+    DataHandle<CFreal> LorentzForce = socket_LorentzForce.getDataHandle();
     DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-    
+    const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+    const CFuint dim = (is2DHalf) ? 3 : PhysicalModelStack::getActive()->getDim();
+  
     // is not perturbed because it is computed in command, here is got just data handle
-    source[m_velIDs[0]] = LorentzForce[0][elemID] ;
-    source[m_velIDs[1]] = LorentzForce[1][elemID] ;
+    source[m_velIDs[0]] = LorentzForce[elemID*dim] ;
+    source[m_velIDs[1]] = LorentzForce[elemID*dim+1] ;
     
     CFLogDebugMax( "LorentzForceSourceTermAlternative::computeSource() => source[" << 
-		   m_velIDs[0] << "] = " <<LorentzForce[0][elemID]  << "\n");
+		   m_velIDs[0] << "] = " <<LorentzForce[elemID*dim]  << "\n");
     CFLogDebugMax( "LorentzForceSourceTermAlternative::computeSource() => source[" << 
-		   m_velIDs[1] << "] = " <<LorentzForce[1][elemID]  << "\n");
-
-    if (PhysicalModelStack::getActive()->getImplementor()->is2DHalf()) {
-      source[m_velIDs[2]] = LorentzForce[2][elemID] ;
+		   m_velIDs[1] << "] = " <<LorentzForce[elemID*dim+1]  << "\n");
+    
+    if (is2DHalf) {
+      source[m_velIDs[2]] = LorentzForce[elemID*dim+2] ;
       CFLogDebugMax( "LorentzForceSourceTermAlternative::computeSource() => source[" << 
-		   m_velIDs[2] << "] = " <<LorentzForce[2][elemID]  << "\n");
+		     m_velIDs[2] << "] = " <<LorentzForce[elemID*dim+2]  << "\n");
     }
     
     source *= volumes[elemID];

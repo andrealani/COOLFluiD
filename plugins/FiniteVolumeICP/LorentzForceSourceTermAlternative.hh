@@ -79,8 +79,8 @@ public:
 
 private: // data
   /// socket for the time-averaged Joule heat source storage
-  Framework::DataSocketSink<RealVector> socket_LorentzForce;
-
+  Framework::DataSocketSink<CFreal> socket_LorentzForce;
+  
 }; // end of class LorentzForceSourceTermAlternative
 
 //////////////////////////////////////////////////////////////////////////////

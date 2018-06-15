@@ -107,7 +107,7 @@ private: //data
   Framework::DataSocketSink<CFreal> socket_elCondField;
 
   /// socket for the Lorentz Force (x and r component)
-  Framework::DataSocketSource<RealVector> socket_LorentzForce;
+  Framework::DataSocketSource<CFreal> socket_LorentzForce;
 
   /// storage of volumes
   Framework::DataSocketSink<CFreal> socket_volumes;
