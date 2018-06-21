@@ -713,7 +713,7 @@ void PhysicalityEuler2D::enforcePhysicality()
             (*((*m_cellStates)[iSol]))[i] = (1.0-coeff)*m_cellAvgState[i] + coeff*((*((*m_cellStates)[iSol]))[i]);
 	    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
           }
-          if (i != 2 && i != 4) CFLog(INFO, "Lim rho " << i << "\n");
+          //if (i != 2 && i != 4) CFLog(INFO, "Lim rho " << i << "\n");
         }
       }
 
@@ -737,7 +737,7 @@ void PhysicalityEuler2D::enforcePhysicality()
             (*((*m_cellStates)[iSol]))[i] = (1.0-coeff)*m_cellAvgState[i] + coeff*((*((*m_cellStates)[iSol]))[i]);
 	    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
           }
-          CFLog(INFO, "Lim T " << i << "\n");
+          //CFLog(INFO, "Lim T " << i << "\n");
         }
       }
 
@@ -820,7 +820,7 @@ void PhysicalityEuler2D::enforcePhysicality()
       }
       if (t < 1.0)
       {
-	CFLog(INFO, "Lim p\n");
+	//CFLog(INFO, "Lim p\n");
         // We presearve positivity on the conservative variables and then we do inverse 
         // inverse transformation to recompute the RhoivtTv variables
         // Here hard code the equations 

@@ -66,7 +66,7 @@ void BCNoSlipWallHeatFluxNS2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("T","wall static temperature");
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly initially), default true.");
-  options.addConfigOption< CFuint >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
