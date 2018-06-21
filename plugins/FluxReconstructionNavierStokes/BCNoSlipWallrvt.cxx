@@ -69,7 +69,7 @@ BCNoSlipWallrvt::~BCNoSlipWallrvt()
 
 void BCNoSlipWallrvt::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFreal >("T","wall static temperature");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("T","wall static temperature");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
 }
 
