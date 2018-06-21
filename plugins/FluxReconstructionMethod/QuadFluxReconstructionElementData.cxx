@@ -236,6 +236,46 @@ void QuadFluxReconstructionElementData::createSolPntsLocalCoords()
 
 //////////////////////////////////////////////////////////////////////
 
+void QuadFluxReconstructionElementData::createFlxSolDependencies()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  const CFuint nbrFlxPnts = m_flxPntsLocalCoords.size();
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+
+  m_solFlxDep.resize(nbrSolPnts);
+  m_solSolDep.resize(nbrSolPnts);
+  m_flxSolDep.resize(nbrFlxPnts);
+
+  CFuint iSol = 0;
+
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
+    {
+      m_solFlxDep[iSol].push_back(iEta*4);
+      m_solFlxDep[iSol].push_back(iEta*4 + 1);
+      m_solFlxDep[iSol].push_back(iKsi*4 + 2);
+      m_solFlxDep[iSol].push_back(iKsi*4 + 3);
+
+      m_flxSolDep[iEta*4].push_back(iSol);
+      m_flxSolDep[iEta*4 + 1].push_back(iSol);
+      m_flxSolDep[iKsi*4 + 2].push_back(iSol);
+      m_flxSolDep[iKsi*4 + 3].push_back(iSol);
+
+      for (CFuint jSol = 0; jSol < nbrSolPnts1D; ++jSol)
+      {
+        m_solSolDep[iSol].push_back(iKsi*nbrSolPnts1D + jSol);
+        if (iSol != iEta + jSol*nbrSolPnts1D) m_solSolDep[iSol].push_back(iEta + jSol*nbrSolPnts1D);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void QuadFluxReconstructionElementData::createFaceFlxPntsFaceLocalCoords()
 {
   CFAUTOTRACE;

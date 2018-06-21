@@ -76,7 +76,10 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_solPolyValsAtFlxPnts(CFNULL),
   m_freezeGrads(),
   m_avgSol(),
-  m_avgGrad()
+  m_avgGrad(),
+  m_flxLocalCoords(CFNULL),
+  m_flxSolDep(CFNULL),
+  m_nbrSolDep()
 {
 }
 
@@ -177,24 +180,23 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         m_cellVolume = m_intCell->computeVolume();
 	
 	cf_assert(m_cellVolume > 0.0);
-
         
-	  // set the bnd face data
-	  setBndFaceData(m_face->getID());//faceID
+	// set the bnd face data
+	setBndFaceData(m_face->getID());//faceID
 
-	  // compute the states, gradients and ghost states, gradients in the flx pnts
-	  computeFlxPntStates();
+	// compute the states, gradients and ghost states, gradients in the flx pnts
+	computeFlxPntStates();
 
-	  // compute FI
-          computeInterfaceFlxCorrection();
+	// compute FI
+        computeInterfaceFlxCorrection();
 
-          // compute the wave speed updates
-          computeWaveSpeedUpdates(m_waveSpeedUpd);
+        // compute the wave speed updates
+        computeWaveSpeedUpdates(m_waveSpeedUpd);
       
-          // update the wave speeds
-          updateWaveSpeed();
+        // update the wave speeds
+        updateWaveSpeed();
 	  
-	  // if cell is parallel updatable, compute the correction flux
+	// if cell is parallel updatable, compute the correction flux
         if ((*m_cellStates)[0]->isParUpdatable())
         {
 
@@ -206,7 +208,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         } 
         
         // print out the residual updates for debugging
-        if(m_intCell->getID() == 1220)//
+        if(m_intCell->getID() == 35)//
         {
 	  CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
           CFLog(VERBOSE, "UpdateBnd = \n");
@@ -253,13 +255,15 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
     const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
     
     // Loop over sol points to add the contributions to each sol pnt
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
-      *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*m_cellStates)[iSol]));
+      const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
+
+      *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]));
       
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
-        *(m_cellGradFlxPnt[iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*((*(m_cellGrads[iSol]))[iVar]);
+        *(m_cellGradFlxPnt[iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*((*(m_cellGrads[solIdx]))[iVar]);
       }
     }
   }
@@ -307,25 +311,18 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeFlux(const RealVector& valu
 //////////////////////////////////////////////////////////////////////////////
 
 void DiffBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
-{
-  // get the local FR data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-    
-  // compute flux point coordinates
-  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-  
+{ 
   // compute flux point coordinates
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    m_flxPntCoords[iFlx] = m_face->computeCoordFromMappedCoord((*flxLocalCoords)[iFlx]);	
+    m_flxPntCoords[iFlx] = m_face->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);	
   }
           
   // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
+  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
   // get face Jacobian vector sizes in the flux points
-  DataHandle< vector< CFreal > >
-  faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
+  DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
   
   // Loop over flux points to compute the unit normals
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -363,26 +360,27 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
   {
     // reset the corrections
     corrections[iSolPnt] = 0.0;
-    
-    cf_assert(corrections[iSolPnt].size() == m_nbrEqs);
+  }
 
-    // compute the term due to each flx pnt
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  // compute the term due to each flx pnt
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+
+    // the current correction factor
+    RealVector currentCorrFactor = m_cellFlx[iFlxPnt];
+
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+
       // divergence of the correctionfct
-      const CFreal divh = m_corrFctDiv[iSolPnt][(*m_faceFlxPntConn)[m_orient][iFlxPnt]];
-      
-      if (fabs(divh) > MathTools::MathConsts::CFrealEps())
-      {
-        // the current correction factor
-        RealVector currentCorrFactor = m_cellFlx[iFlxPnt];
-        cf_assert(currentCorrFactor.size() == m_nbrEqs);
+      const CFreal divh = m_corrFctDiv[solIdx][flxIdx];
     
-        // Fill in the corrections
-        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-        {
-          corrections[iSolPnt][iVar] += currentCorrFactor[iVar] * divh;
-        }
+      // Fill in the corrections
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        corrections[solIdx][iVar] += currentCorrFactor[iVar] * divh;
       }
     }
   }
@@ -505,6 +503,13 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
+
+  // get the face local coords of the flux points on one face
+  m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
+
+  m_nbrSolDep = ((*m_flxSolDep)[0]).size();
   
   // get the flag telling whether to freeze the gradients
   m_freezeGrads = getMethodData().getFreezeGrads(); 

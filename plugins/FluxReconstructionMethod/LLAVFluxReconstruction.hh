@@ -282,6 +282,9 @@ protected: //data
   
   /// variable to monitor lambda, solely for debugging
   CFreal m_maxLambda;
+
+  /// extra vector to store the unit normal vectors in the flx pnts
+  std::vector< RealVector > m_unitNormalFlxPnts2;
   
   private:
 

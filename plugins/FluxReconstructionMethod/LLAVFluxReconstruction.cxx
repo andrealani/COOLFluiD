@@ -83,7 +83,8 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_subcellRes(),
   socket_artVisc("artVisc"),
   socket_monPhysVar("monPhysVar"),
-  m_maxLambda()
+  m_maxLambda(),
+  m_unitNormalFlxPnts2()
   {
     addConfigOptionsTo(this);
     
@@ -124,13 +125,13 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
 
 void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFreal >("Kappa","Kappa factor of artificial viscosity.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("Kappa","Kappa factor of artificial viscosity.");
   
-  options.addConfigOption< CFreal >("Peclet","Peclet number to be used for artificial viscosity.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
   
-  options.addConfigOption< CFreal >("FreezeLimiterRes","Residual after which to freeze the residual.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
-  options.addConfigOption< CFuint >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
   
   options.addConfigOption< bool >("AddPositivityPreservation","Bool telling whether extra viscosity needs to be added for positivity preservation.");
   
@@ -138,11 +139,11 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
   
-  options.addConfigOption< CFuint >("MonitoredVar","Index of the monitored var for positivity preservation.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredVar","Index of the monitored var for positivity preservation.");
   
   options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
   
-  options.addConfigOption< CFuint >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -238,16 +239,16 @@ void LLAVFluxReconstruction::execute()
 //       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
 //       if ((*m_cellStates)[0]->isParUpdatable())
 //       {
-	// compute the states projected on order P-1
-	computeProjStates(m_statesPMinOne);
+      // compute the states projected on order P-1
+      computeProjStates(m_statesPMinOne);
 	
-	//CFLog(INFO, "projstate: " << m_statesPMinOne[0] << "\n");
+      //CFLog(INFO, "projstate: " << m_statesPMinOne[0] << "\n");
 	
-	// compute the artificial viscosity
-	computeEpsilon();
+      // compute the artificial viscosity
+      computeEpsilon();
 	
-	// store epsilon
-	storeEpsilon();
+      // store epsilon
+      storeEpsilon();
 //       } 
       
       //release the GeometricEntity
@@ -255,7 +256,7 @@ void LLAVFluxReconstruction::execute()
     }
   }
   
-  CFLog(INFO, "max lambda: " << m_maxLambda << "\n");
+  //CFLog(INFO, "max lambda: " << m_maxLambda << "\n");
   
   const std::string nsp = this->getMethodData().getNamespace();
   
@@ -533,42 +534,36 @@ void LLAVFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSpeed
 void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residuals)
 {
   // reset the extrapolated fluxes
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrTotalFlxPnts; ++iFlxPnt)
   {
     m_extrapolatedFluxes[iFlxPnt] = 0.0;
   }
-  
+
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
     vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
-    vector< RealVector* > grad;
-    grad.resize(m_nbrEqs);
 
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    {
-      cf_assert(temp.size() == m_nbrEqs);
-      grad[iVar] = & (temp[iVar]);
-    }
-    
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-    { 
+    {
       m_contFlx[iSolPnt][iDim] = 0.0;
-    
+
       for (CFuint iDim2 = 0; iDim2 < m_dim; ++iDim2)
       {
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
-          m_contFlx[iSolPnt][iDim][iVar] += m_solEpsilons[iSolPnt]*((*(grad[iVar]))[iDim2])*m_cellFluxProjVects[iDim][iSolPnt][iDim2];
+          m_contFlx[iSolPnt][iDim][iVar] += m_solEpsilons[iSolPnt]*(temp[iVar][iDim2])*m_cellFluxProjVects[iDim][iSolPnt][iDim2];
         }
       }
     }
-    
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
-      m_extrapolatedFluxes[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+      const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
+      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+
+      m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
     }
   }
 
@@ -577,46 +572,47 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
   {
     // reset the divergence of FC
     residuals[iSolPnt] = 0.0;
+
     // Loop over solution pnt to count factor of all sol pnt polys
-    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
+    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
     {
+      const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
+
       // Loop over deriv directions and sum them to compute divergence
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
+        const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolIdx]; 
+
         // Loop over conservative fluxes 
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*(m_contFlx[jSolPnt][iDir][iEq]);
-
-	  if (fabs(residuals[iSolPnt][iEq]) < MathTools::MathConsts::CFrealEps())
-          {
-            residuals[iSolPnt][iEq] = 0.0;
-	  }
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
   }
-    
+
+  // add the contribution of the faces
   const CFuint nbrFaces = m_cell->nbNeighborGeos();
+
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
     if (!((*m_isFaceOnBoundaryCell)[iFace]))
     {
-      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
-        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-        {
-          const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
-          const CFreal divh = m_corrFctDiv[iSolPnt][currFlxIdx];
+        const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 
-          if (fabs(divh) > MathTools::MathConsts::CFrealEps())
-          {   
-            // Fill in the corrections
-            for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-            {
-              residuals[iSolPnt][iVar] += -m_extrapolatedFluxes[currFlxIdx][iVar] * divh; 
-            }
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+        {
+          const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
+          const CFreal divh = m_corrFctDiv[solIdx][currFlxIdx];
+   
+          // Fill in the corrections
+          for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+            residuals[solIdx][iVar] += -m_extrapolatedFluxes[currFlxIdx][iVar] * divh; 
           }
         }
       }
@@ -626,29 +622,21 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       m_faceNodes = (*m_faces)[iFace]->getNodes();
       m_face = (*m_faces)[iFace];
       m_cellNodes = m_cell->getNodes();
-	
-      vector< RealVector > unitNormalFlxPnts;
   
       vector< CFreal > faceJacobVecSizeFlxPnts;
       faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);
-	
-      // get the local FR data
-      vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
       
       // get the datahandle of the update coefficients
       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-    
-      // compute flux point coordinates
-      SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   
       // compute flux point coordinates
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
-        m_flxPntCoords[iFlx] = m_face->computeCoordFromMappedCoord((*flxLocalCoords)[iFlx]);	
+        m_flxPntCoords[iFlx] = m_face->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);	
       }
           
       // compute face Jacobian vectors
-      vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*flxLocalCoords);
+      vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
       // get face Jacobian vector sizes in the flux points
       DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
@@ -663,7 +651,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         faceJacobVecSizeFlxPnts[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
  
 	// set unit normal vector
-        unitNormalFlxPnts.push_back(faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+        m_unitNormalFlxPnts2[iFlxPnt] = (faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -679,13 +667,16 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         *(m_cellStatesFlxPnt[0][iFlxPnt]) = 0.0;
 
         // loop over the sol pnts to compute the states and grads in the flx pnts
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
         {
-	  *(m_cellStatesFlxPnt[0][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*(m_cellStates))[iSol]));
+          const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
+          const CFreal coeff = (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx];
+
+	  *(m_cellStatesFlxPnt[0][iFlxPnt]) += coeff*(*((*(m_cellStates))[solIdx]));
 	  
           for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
           {
-            *(m_cellGradFlxPnt[0][iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*((*(m_cellGrads[0][iSol]))[iVar]);
+            *(m_cellGradFlxPnt[0][iFlxPnt][iVar]) += coeff*((*(m_cellGrads[0][solIdx]))[iVar]);
           }
         }
       }
@@ -703,7 +694,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       }
       else
       {
-	(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,unitNormalFlxPnts,m_flxPntCoords);
+	(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,m_unitNormalFlxPnts2,m_flxPntCoords);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -768,7 +759,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         {
           for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
           {
-            m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGrad[iVar]))[iDim])*unitNormalFlxPnts[iFlxPnt][iDim];
+            m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGrad[iVar]))[iDim])*m_unitNormalFlxPnts2[iFlxPnt][iDim];
 	    if (m_cell->getID() == 1092) CFLog(VERBOSE, "avgrad: " << (*(m_avgGrad[iVar]))[iDim] << "\n");
           }
         }
@@ -777,23 +768,20 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt]; 
 	if (m_cell->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
 	
-	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {  
-          const CFreal divh = m_corrFctDiv[iSolPnt][currFlxIdx];
-
-          if (fabs(divh) > MathTools::MathConsts::CFrealEps())
-          {   
-            // Fill in the corrections
-            for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-            {
-              residuals[iSolPnt][iVar] += (m_cellFlx[0][iFlxPnt][iVar] - m_extrapolatedFluxes[currFlxIdx][iVar]) * divh; 
-	      if (m_cell->getID() == 1092) CFLog(VERBOSE, "riemann: " << m_cellFlx[0][iFlxPnt][iVar] << ", extr: " << m_extrapolatedFluxes[currFlxIdx][iVar] << "\n");
-            }
+          const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
+          const CFreal divh = m_corrFctDiv[solIdx][currFlxIdx];
+   
+          // Fill in the corrections
+          for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+            residuals[solIdx][iVar] += (m_cellFlx[0][iFlxPnt][iVar] - m_extrapolatedFluxes[currFlxIdx][iVar]) * divh; 
           }
         }
       }
     }
-  }
+}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1150,6 +1138,7 @@ void LLAVFluxReconstruction::setup()
   m_epsilonLR.resize(2);
   m_epsilonLR[LEFT].resize(m_nbrFaceFlxPnts);
   m_epsilonLR[RIGHT].resize(m_nbrFaceFlxPnts);
+  m_unitNormalFlxPnts2.resize(m_nbrFaceFlxPnts);
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -1183,6 +1172,8 @@ void LLAVFluxReconstruction::setup()
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
+    m_unitNormalFlxPnts2[iFlx].resize(m_dim);
+
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       m_flxPntGhostGrads[iFlx].push_back(new RealVector(m_dim));

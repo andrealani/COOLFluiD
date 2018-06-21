@@ -225,6 +225,12 @@ protected: // data
   
   /// local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+
+  /// dependencies of flx pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
+
+  /// nbr of sol pnts on which a flx pnt is dependent
+  CFuint m_nbrSolDep;
   
   private:
 

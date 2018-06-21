@@ -492,6 +492,30 @@ public:
   }
 
   /**
+   * @return m_solSolDep
+   */
+  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntSolDependency()
+  {
+    return &m_solSolDep;
+  }
+
+  /**
+   * @return m_flxSolDep
+   */
+  Common::SafePtr< std::vector< std::vector< CFuint > > > getFlxPntSolDependency()
+  {
+    return &m_flxSolDep;
+  }
+
+  /**
+   * @return m_solFlxDep
+   */
+  Common::SafePtr< std::vector< std::vector< CFuint > > > getSolPntFlxDependency()
+  {
+    return &m_solFlxDep;
+  }
+
+  /**
    * This function evaluates the solution polynomials at the given nodes
    * @param nodeLocalCoords is a vector with the local coordinates of the nodes
    * @return the solution polynomial values at the given nodes
@@ -573,6 +597,11 @@ protected: // functions
    * create the vandermonde matrix of the transformation to modal basis
    */
   virtual void createVandermondeMatrix() {}
+
+  /**
+   * create the sol/flx and sol/sol dependencies
+   */
+  virtual void createFlxSolDependencies();
 
   /**
    * Computes the polynomial coefficients of the solution polynomial basis functions.
@@ -915,6 +944,15 @@ protected: // protected data
   
   /// subcell resolution
   CFreal m_subcellRes;
+
+  /// dependency of solution points on solution pnts
+  std::vector< std::vector< CFuint > > m_solSolDep;
+
+  /// dependency of solution points on flx pnts
+  std::vector< std::vector< CFuint > > m_solFlxDep;
+
+  /// dependency of flx points on solution pnts
+  std::vector< std::vector< CFuint > > m_flxSolDep;
 
 }; // end of class FluxReconstructionElementData
 

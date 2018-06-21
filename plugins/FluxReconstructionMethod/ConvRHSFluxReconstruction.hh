@@ -253,6 +253,27 @@ protected: //data
   
   /// face local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+
+  /// dependencies of flx pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
+
+  /// dependencies of solution pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solSolDep;
+
+  /// dependencies of flx pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDep;
+
+  /// nbr of sol pnts on which a flx pnt is dependent
+  CFuint m_nbrSolDep;
+
+  /// nbr of flx pnts a sol pnt influences
+  CFuint m_nbrFlxDep;
+
+  /// nbr of sol pnts a sol pnt influences
+  CFuint m_nbrSolSolDep;
+
+  /// list of dimensions in which the flux will be evaluated in each sol pnt
+  std::vector< std::vector< CFuint > > m_dimList;
   
   private:
 

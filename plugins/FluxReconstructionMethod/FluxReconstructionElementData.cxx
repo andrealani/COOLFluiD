@@ -75,7 +75,10 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_vandermonde(),
   m_vandermondeInv(),
   m_coefSolPolyDerivInNodes(),
-  m_subcellRes()
+  m_subcellRes(),
+  m_solSolDep(),
+  m_solFlxDep(),
+  m_flxSolDep()
 {
   CFAUTOTRACE;
 }
@@ -152,6 +155,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createVandermondeMatrix();
   createCoefSolPolyInNodes();
   createCoefSolPolyDerivInNodes();
+  createFlxSolDependencies();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -194,6 +198,34 @@ void FluxReconstructionElementData::computeDerivCoefsSolPnts1D()
           m_derivCoefsSolPnts1D(iSol,iFlx) += term;
         }
       }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionElementData::createFlxSolDependencies()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  const CFuint nbrFlxPnts = m_flxPntsLocalCoords.size();
+
+  m_solFlxDep.resize(nbrSolPnts);
+  m_solSolDep.resize(nbrSolPnts);
+  m_flxSolDep.resize(nbrFlxPnts);
+
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+    {
+      m_solFlxDep[iSol].push_back(iFlx);
+      m_flxSolDep[iFlx].push_back(iSol);
+    }
+    
+    for (CFuint jSol = 0; jSol < nbrSolPnts; ++jSol)
+    {
+     m_solSolDep[iSol].push_back(jSol);
     }
   }
 }

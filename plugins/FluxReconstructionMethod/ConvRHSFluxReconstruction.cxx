@@ -85,7 +85,14 @@ ConvRHSFluxReconstruction::ConvRHSFluxReconstruction(const std::string& name) :
   m_solPolyDerivAtSolPnts(CFNULL),
   m_flxPntFlxDim(CFNULL),
   m_extrapolatedFluxes(),
-  m_flxLocalCoords(CFNULL)
+  m_flxLocalCoords(CFNULL),
+  m_flxSolDep(CFNULL),
+  m_solSolDep(CFNULL),
+  m_solFlxDep(CFNULL),
+  m_nbrSolDep(),
+  m_nbrFlxDep(),
+  m_nbrSolSolDep(),
+  m_dimList()
   {
     addConfigOptionsTo(this);
   }
@@ -272,7 +279,7 @@ void ConvRHSFluxReconstruction::execute()
       }
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 1220)
+      if(m_cell->getID() == 35)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "UpdateTotal = \n");
@@ -292,7 +299,7 @@ void ConvRHSFluxReconstruction::execute()
         }
       }
       
-      if(m_cell->getID() == 1220 && hasDiffTerm)
+      if(m_cell->getID() == 35 && hasDiffTerm)
       {
 	// get the gradients
         DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
@@ -376,12 +383,21 @@ void ConvRHSFluxReconstruction::computeFlxPntStates()
     *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) = 0.0;
 
     // extrapolate the left and right states to the flx pnts
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
+      const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
+      const CFuint solIdxR = (*m_flxSolDep)[flxPntIdxR][iSol];
+ 
       // add the contributions of the current sol pnt
-      *(m_cellStatesFlxPnt[LEFT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][iSol]*(*((*(m_states[LEFT]))[iSol]));
-      *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxR][iSol]*(*((*(m_states[RIGHT]))[iSol]));
+      *(m_cellStatesFlxPnt[LEFT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][solIdxL]*(*((*(m_states[LEFT]))[solIdxL]));
+      *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxR][solIdxR]*(*((*(m_states[RIGHT]))[solIdxR]));
     }
+//    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//    {
+//      // add the contributions of the current sol pnt
+//      *(m_cellStatesFlxPnt[LEFT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][iSol]*(*((*(m_states[LEFT]))[iSol]));
+//      *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[flxPntIdxR][iSol]*(*((*(m_states[RIGHT]))[iSol]));
+//    }
   }
 }
 
@@ -394,62 +410,75 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
   {
     m_extrapolatedFluxes[iFlxPnt] = 0.0;
   }
+
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     // dereference the state
-    State& stateSolPnt = *(*m_cellStates)[iSolPnt];
+    //State& stateSolPnt = *(*m_cellStates)[iSolPnt];
 
-    m_updateVarSet->computePhysicalData(stateSolPnt, m_pData);
+    m_updateVarSet->computePhysicalData(*(*m_cellStates)[iSolPnt], m_pData);
 
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
       m_contFlx[iSolPnt][iDim] = m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][iSolPnt]);
     }
-    
+
     // extrapolate the fluxes to the flux points
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
-      m_extrapolatedFluxes[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+      const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
+      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
     }
+
+//    // extrapolate the fluxes to the flux points
+//    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
+//    {
+//      CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
+//      m_extrapolatedFluxes[iFlxPnt] += (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+//    }
   }
 
   // Loop over solution pnts to calculate the divergence of the discontinuous flux
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
+
     // reset the residual updates
     residuals[iSolPnt] = 0.0;
     
     // Loop over solution pnts to count the factor of all sol pnt polys
-    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
+    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
     {
+      const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
+
       // Loop over deriv directions and sum them to compute divergence
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
+        const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolIdx]; 
+
         // Loop over conservative fluxes 
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] -= (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*(m_contFlx[jSolPnt][iDir][iEq]);
+          residuals[iSolPnt][iEq] -= polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
-    
-    // add divhFD to the residual updates
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
-    {
-      // get the divergence of the correction function
-      const CFreal divh = m_corrFctDiv[iSolPnt][iFlxPnt];
 
-      if (fabs(divh) > MathTools::MathConsts::CFrealEps())
-      {   
-        // Fill in the corrections
-        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-        {
-          residuals[iSolPnt][iVar] -= -m_extrapolatedFluxes[iFlxPnt][iVar] * divh; 
-        }
+    // add divhFD to the residual updates
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+    {
+      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+
+      // get the divergence of the correction function
+      const CFreal divh = m_corrFctDiv[iSolPnt][flxIdx];
+ 
+      // Fill in the corrections
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        residuals[iSolPnt][iVar] -= -m_extrapolatedFluxes[flxIdx][iVar] * divh; 
       }
     }
   }
@@ -459,16 +488,10 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
 
 void ConvRHSFluxReconstruction::setCellData()
 {
-  // create a list of the dimensions in which the deriv will be calculated
+  // create a the flux projection vectors scaled with the jacobian in the sol pnts
   for (CFuint iDim = 0; iDim < m_dim; ++iDim)
   {
-    vector<CFuint> dimList;
-    dimList.resize(m_nbrSolPnts);
-    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-    {
-      dimList[iSolPnt] = iDim;
-    }
-    m_cellFluxProjVects[iDim] = m_cell->computeMappedCoordPlaneNormalAtMappedCoords(dimList,*m_solPntsLocalCoords);
+    m_cellFluxProjVects[iDim] = m_cell->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
   }
 }
 
@@ -533,7 +556,6 @@ void ConvRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
       
       waveSpeedUpd[iSide] += jacobXIntCoef * m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
     }
-    //if (waveSpeedUpd[iSide] > 10.0) CFLog(INFO, "wvspConv: " << waveSpeedUpd[iSide] << "\n");
   }
 }
 
@@ -542,36 +564,37 @@ void ConvRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
 void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVector >& corrections)
 { 
   cf_assert(corrections.size() == m_nbrSolPnts);
-  
-  // loop over sol pnts to compute the corrections
+
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     // reset the corrections which will be stored in divContFlx in order to be able to reuse updateRHS() 
     corrections[iSolPnt] = 0.0;
-    
-    cf_assert(corrections[iSolPnt].size() == m_nbrEqs);
+  }
 
-    // compute the term due to each flx pnt
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  // compute the term due to each flx pnt
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];
+
+    // the current correction factor corresponding to the interface flux (stored in cellFlx)
+    const RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
+
+    // loop over sol pnts to compute the corrections
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+
       // divergence of the correction function
-      const CFreal divh = m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt]];
-      
-      if (fabs(divh) > MathTools::MathConsts::CFrealEps())
+      const CFreal divh = m_corrFctDiv[solIdx][flxIdx];
+
+      // Fill in the corrections
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
-        // the current correction factor corresponding to the interface flux (stored in cellFlx)
-        const RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
-        cf_assert(currentCorrFactor.size() == m_nbrEqs);
-    
-        // Fill in the corrections
-        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-        {
-          corrections[iSolPnt][iVar] -= currentCorrFactor[iVar] * divh; 
-        }
+        corrections[solIdx][iVar] -= currentCorrFactor[iVar] * divh; 
       }
     }
   }
-  
+
   // in order to use updateRHS, m_cellStates should have the correct states
   m_cellStates = m_states[side];
 }
@@ -579,31 +602,41 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
 //////////////////////////////////////////////////////////////////////////////
 
 void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
-{
-  // Loop over solution pnts to calculate the grad updates
+{ 
+  // Loop over solution pnts to reset the grad updates
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
-    // Loop over variables
+    // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
       //set the grad updates to 0 
       m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
       m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
+    }
+  }
       
-      // compute the face corrections to the gradients
-      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  // compute the face corrections to the gradients
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
+    const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+
+    // Loop over  variables
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
+      const RealVector projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+      const RealVector projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+
+      // Loop over solution pnts to calculate the grad updates
+      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
       {
-	// average state in the flux point
-        const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
-	
-	// gradient correction projected on the face normal, scaled with the geometric Jacobian, for both sides
-	const RealVector projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-	const RealVector projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
-	
+        const CFuint iSolIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
+        const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
+
 	/// @todo Check if this is also OK for triangles!!
-	// add gradient corrections
-	m_gradUpdates[LEFT][iSolPnt][iEq] += projectedCorrL*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx]];
-	m_gradUpdates[RIGHT][iSolPnt][iEq] += projectedCorrR*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx]];
+	m_gradUpdates[LEFT][iSolIdxL][iEq] += projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
+	m_gradUpdates[RIGHT][iSolIdxR][iEq] += projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
       }
     }
   }
@@ -611,7 +644,6 @@ void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
-  // add the updates to the gradient socket
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -631,26 +663,33 @@ void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
 //////////////////////////////////////////////////////////////////////////////
 
 void ConvRHSFluxReconstruction::computeGradients()
-{        
+{ 
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      //set the grad updates to 0 
+      m_gradUpdates[0][iSol][iEq] = 0.0;
+    }
+  }
+  
   // Loop over solution pnts to calculate the grad updates
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      // set the grad updates to 0 
-      m_gradUpdates[0][iSolPnt][iEq] = 0.0;
-
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
+	const RealVector projectedState = ((*(*m_cellStates)[iSolPnt])[iEq]) * m_cellFluxProjVects[iDir][iSolPnt];
+	
         // Loop over solution pnts to count factor of all sol pnt polys
-        for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
-        {
-	  const RealVector projectedState = ((*(*m_cellStates)[jSolPnt])[iEq]) * m_cellFluxProjVects[iDir][jSolPnt];
-	  
+        for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
+        { 
+          const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
           // compute the grad updates
-          m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
+          m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*projectedState;
 	}
       }
     }
@@ -662,7 +701,6 @@ void ConvRHSFluxReconstruction::computeGradients()
   // get jacobian determinants at solution points
   const std::valarray<CFreal> jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
-  // add the gradients to the socket and divide by the jacobian determinant
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     // get state ID
@@ -758,7 +796,17 @@ void ConvRHSFluxReconstruction::setup()
   
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
   
+  m_solSolDep = frLocalData[0]->getSolPntSolDependency();
+
+  m_solFlxDep = frLocalData[0]->getSolPntFlxDependency();
+
+  m_nbrSolDep = ((*m_flxSolDep)[0]).size();
+  m_nbrFlxDep = ((*m_solFlxDep)[0]).size();
+  m_nbrSolSolDep = ((*m_solSolDep)[0]).size();
+
   // resize the physical data temporary vector
   SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm(); 
   convTerm->resizePhysicalData(m_pData);
@@ -847,7 +895,17 @@ void ConvRHSFluxReconstruction::setup()
   
   // compute the divergence of the correction function
   m_corrFctComputer->computeDivCorrectionFunction(frLocalData[0],m_corrFctDiv);
-  
+
+  // create a list of the dimensions in which the deriv will be calculated
+  m_dimList.resize(m_dim);
+  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  {
+    m_dimList[iDim].resize(m_nbrSolPnts);
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+    {
+      m_dimList[iDim][iSolPnt] = iDim;
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

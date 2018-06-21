@@ -104,7 +104,7 @@ void BCMirrorVelocity::computeGhostGradients(const std::vector< std::vector< Rea
     vector< RealVector* > velocityGradI = intGrads[iState];
     RealVector velocityNGradI(nbDims); velocityNGradI = 0.;
     RealVector velocityTGradI(nbDims); velocityTGradI = 0.;
-    RealVector velocityNGradG(nbDims); velocityNGradG  = 0.;
+    //RealVector velocityNGradG(nbDims); velocityNGradG  = 0.;
     CFuint jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
       if (!m_isVelocityComp[i]) {
@@ -117,13 +117,13 @@ void BCMirrorVelocity::computeGhostGradients(const std::vector< std::vector< Rea
       }
       else {
 	// internal normal and tangential component
-	velocityNGradI +=  *velocityGradI[jxx]*normal[jxx];
-	velocityTGradI +=  *velocityGradI[jxx]*tangent[jxx];
+	velocityNGradI +=  *velocityGradI[i]*normal[jxx];
+	velocityTGradI +=  *velocityGradI[i]*tangent[jxx];
 	++jxx;
       }
     }
 
-    velocityNGradG = velocityNGradI;
+    const RealVector velocityNGradG = velocityNGradI;
 
     jxx = 0;
     CFreal nGradUT = 0.;
@@ -137,7 +137,7 @@ void BCMirrorVelocity::computeGhostGradients(const std::vector< std::vector< Rea
     const RealVector velocityTGradG = velocityTGradI - 2.0*nGradUT*normal;
 
     // project onto x- and y-axis
-    jxx=0;
+    jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
       if (m_isVelocityComp[i]) {
         *ghostGrads[iState][i] = velocityNGradG*normal[jxx] + velocityTGradG*tangent[jxx];
