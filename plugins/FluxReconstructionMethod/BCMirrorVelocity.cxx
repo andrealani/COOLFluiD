@@ -23,7 +23,12 @@ Framework::MethodStrategyProvider<
 
 BCMirrorVelocity::BCMirrorVelocity(const std::string& name) :
   BCStateComputer(name),
-  m_isVelocityComp()
+  m_isVelocityComp(),
+  m_tangent(),
+  m_velocityNGradI(),
+  m_velocityTGradI(),
+  m_velocityNGradG(),
+  m_velocityTGradG()
 {
   CFAUTOTRACE;
 }
@@ -64,7 +69,7 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
        (*ghostStates[iState])[i]= (*intStates[iState])[i] - 2.0*vn*normals[iState][jxx]/area2;
        jxx++;
      }
-     if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
+     // if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
    }
    
    //CFLog(DEBUG_MAX, "MirrorVelocity::setGhostState() => ghostState = " << *ghostState << "\n"); 
@@ -73,11 +78,11 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-void BCMirrorVelocity::computeGhostGradients(const std::vector< std::vector< RealVector* > >& intGrads,
-                                            std::vector< std::vector< RealVector* > >& ghostGrads,
-                                            const std::vector< RealVector >& normals,
-                                            const std::vector< RealVector >& coords)
+void BCMirrorVelocity::computeGhostGradients
+(const std::vector< std::vector< RealVector* > >& intGrads,
+ std::vector< std::vector< RealVector* > >& ghostGrads,
+ const std::vector< RealVector >& normals,
+ const std::vector< RealVector >& coords)
 {
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   
@@ -91,56 +96,51 @@ void BCMirrorVelocity::computeGhostGradients(const std::vector< std::vector< Rea
   
   // set the ghost gradients
   for (CFuint iState = 0; iState < nbrStateGrads; ++iState) {
-      
     // normal
-    RealVector normal(nbDims) ; normal = 0.;
-    normal = normals[iState];
-
-    // tangential unit vector
-    RealVector tangent(nbDims); tangent = 0.;
-    tangent[XX] = -normal[YY];
-    tangent[YY] =  normal[XX];
+    const RealVector& normal = normals[iState];
     
-    vector< RealVector* > velocityGradI = intGrads[iState];
-    RealVector velocityNGradI(nbDims); velocityNGradI = 0.;
-    RealVector velocityTGradI(nbDims); velocityTGradI = 0.;
-    //RealVector velocityNGradG(nbDims); velocityNGradG  = 0.;
+    // tangential unit vector
+    m_tangent[XX] = -normal[YY];
+    m_tangent[YY] =  normal[XX];
+    
+    const vector< RealVector* >& velocityGradI = intGrads[iState];
+    m_velocityNGradI = 0.;
+    m_velocityTGradI = 0.;
     CFuint jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
       if (!m_isVelocityComp[i]) {
-	RealVector& varGradI =  *intGrads[iState][i];
+	const RealVector& varGradI =  *intGrads[iState][i];
 	RealVector& varGradG =  *ghostGrads[iState][i];
-
 	const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
 	varGradG = varGradI - 2.0*nVarGrad*normal;
-
       }
       else {
 	// internal normal and tangential component
-	velocityNGradI +=  *velocityGradI[i]*normal[jxx];
-	velocityTGradI +=  *velocityGradI[i]*tangent[jxx];
+	m_velocityNGradI +=  *velocityGradI[i]*normal[jxx];
+	m_velocityTGradI +=  *velocityGradI[i]*m_tangent[jxx];
 	++jxx;
       }
     }
-
-    const RealVector velocityNGradG = velocityNGradI;
-
+    
+    m_velocityNGradG = m_velocityNGradI;
+    
     jxx = 0;
     CFreal nGradUT = 0.;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
       if (m_isVelocityComp[i]){
         // ghost normal and tangential component
-        nGradUT  +=  velocityTGradI[jxx]*normal[jxx];  
+        nGradUT += m_velocityTGradI[jxx]*normal[jxx];  
 	++jxx;
-     }
+      }
     }
-    const RealVector velocityTGradG = velocityTGradI - 2.0*nGradUT*normal;
-
+    
+    m_velocityTGradG = m_velocityTGradI - 2.0*nGradUT*normal;
+    
     // project onto x- and y-axis
     jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
       if (m_isVelocityComp[i]) {
-        *ghostGrads[iState][i] = velocityNGradG*normal[jxx] + velocityTGradG*tangent[jxx];
+        *ghostGrads[iState][i] = m_velocityNGradG*normal[jxx] + m_velocityTGradG*m_tangent[jxx];
 	++jxx;
       }
     }
@@ -161,15 +161,18 @@ void BCMirrorVelocity::setup()
   // no flux point coordinates required
   m_needsSpatCoord = false;
 
+  // set the IDs corresponding to the velocity components
+  getMethodData().getUpdateVar()->setStateVelocityIDs(m_velocityIDs);
+  
   if(m_velocityIDs.size() == 0) {
     CFLog(NOTICE, "MirrorVelocity::setup() => choosing default\n");
     const CFuint dim = PhysicalModelStack::getActive()->getDim();
     m_velocityIDs.resize(dim);
     for (CFuint i = 0 ; i < dim; ++i) {
-      m_velocityIDs[i] = 5 + i; //hard coded!!!!!!!!!!!!!!!!!!!!!!!!!!
+      m_velocityIDs[i] = 1 + i; 
     }
   }
-
+  
   m_isVelocityComp.resize(PhysicalModelStack::getActive()->getNbEq());
   m_isVelocityComp = false;
   for (CFuint i = 0 ; i < m_velocityIDs.size(); ++i) {
@@ -186,8 +189,16 @@ void BCMirrorVelocity::unsetup()
 
   // unsetup of the parent class
   BCStateComputer::unsetup();
-}
 
+  // allocate arrays to store temporary data
+  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
+  m_tangent.resize(nbDims);
+  m_velocityNGradI.resize(nbDims);
+  m_velocityTGradI.resize(nbDims);
+  m_velocityNGradG.resize(nbDims);
+  m_velocityTGradG.resize(nbDims);
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   }  // namespace FluxReconstructionMethod

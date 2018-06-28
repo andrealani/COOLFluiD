@@ -64,7 +64,21 @@ protected:
 
   /// velocity IDs
   std::vector< CFuint > m_velocityIDs;
+  
+  /// tangent vector
+  RealVector m_tangent;
 
+  /// temporary velocity gradient
+  RealVector m_velocityNGradI;
+
+  /// temporary velocity gradient
+  RealVector m_velocityTGradI;
+
+  /// temporary velocity gradient
+  RealVector m_velocityNGradG;
+  
+  /// temporary velocity gradient
+  RealVector m_velocityTGradG;
   
 }; // class BCMirrorVelocity
     
