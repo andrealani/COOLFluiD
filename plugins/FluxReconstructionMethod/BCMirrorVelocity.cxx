@@ -85,24 +85,24 @@ void BCMirrorVelocity::computeGhostGradients
  const std::vector< RealVector >& coords)
 {
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
-  
+
   // number of state gradients
   const CFuint nbrStateGrads = intGrads.size();
   cf_assert(nbrStateGrads == ghostGrads.size());
   cf_assert(nbrStateGrads == normals.size());
-  
+
   // number of gradient variables
   cf_assert(nbrStateGrads > 0);
-  
+
   // set the ghost gradients
   for (CFuint iState = 0; iState < nbrStateGrads; ++iState) {
     // normal
     const RealVector& normal = normals[iState];
-    
+
     // tangential unit vector
     m_tangent[XX] = -normal[YY];
     m_tangent[YY] =  normal[XX];
-    
+
     const vector< RealVector* >& velocityGradI = intGrads[iState];
     m_velocityNGradI = 0.;
     m_velocityTGradI = 0.;
@@ -121,9 +121,9 @@ void BCMirrorVelocity::computeGhostGradients
 	++jxx;
       }
     }
-    
+
     m_velocityNGradG = m_velocityNGradI;
-    
+
     jxx = 0;
     CFreal nGradUT = 0.;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
@@ -133,9 +133,9 @@ void BCMirrorVelocity::computeGhostGradients
 	++jxx;
       }
     }
-    
+
     m_velocityTGradG = m_velocityTGradI - 2.0*nGradUT*normal;
-    
+
     // project onto x- and y-axis
     jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
@@ -179,6 +179,13 @@ void BCMirrorVelocity::setup()
     m_isVelocityComp[m_velocityIDs[i]] = true;
   }
 
+  // allocate arrays to store temporary data
+  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
+  m_tangent.resize(nbDims);
+  m_velocityNGradI.resize(nbDims);
+  m_velocityTGradI.resize(nbDims);
+  m_velocityNGradG.resize(nbDims);
+  m_velocityTGradG.resize(nbDims);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -189,14 +196,6 @@ void BCMirrorVelocity::unsetup()
 
   // unsetup of the parent class
   BCStateComputer::unsetup();
-
-  // allocate arrays to store temporary data
-  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
-  m_tangent.resize(nbDims);
-  m_velocityNGradI.resize(nbDims);
-  m_velocityTGradI.resize(nbDims);
-  m_velocityNGradG.resize(nbDims);
-  m_velocityTGradG.resize(nbDims);
 }
     
 //////////////////////////////////////////////////////////////////////////////
