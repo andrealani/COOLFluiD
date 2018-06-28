@@ -2,8 +2,7 @@
 # 
 # This COOLFluiD CFcase file tests: 
 # 
-# FR, Euler2D, Forward Euler, mesh with quads, 
-# converter from Gmsh to CFmesh, second-order Roe scheme, subsonic inlet 
+# P3 FR, VCJH, Euler2D, Forward Euler, RoeFlux, mesh with curved quads, subsonic inlet 
 # and outlet, mirror BCs 
 #
 ################################################################################
@@ -11,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -1.00879
+### Residual = -1.71248
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -54,14 +53,14 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = sineBumpQuadCoarse.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = sineBumpQuadCurved_5_20.CFmesh
 Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P1
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
-Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
+#Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P1
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
+#Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -98,10 +97,10 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100000
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.05
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
@@ -117,7 +116,7 @@ Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
 
 #Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
 
@@ -125,7 +124,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.000000169665072663309 #0.03 #0.3333333
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  9.52e-4 
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
