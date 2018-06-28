@@ -4,7 +4,7 @@ cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl_Pg_M15_FVM_1st2nd.CFcase CAS
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl_Pg_M15_FVM_1st2nd_MeFiAlgo.CFcase CASEFILES cyl_Pg_M15.plt cyl_Pg_M15.surf.plt )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cyl3DFVMImplPuvt_Reynolds_40.CFcase CASEFILES cylinder_2D_quad.CFmesh )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cylinderEuler2DFR-impl.CFcase CASEFILES CylinderNSQuadCurved_16_5.CFmesh )
-cf_add_case( MPI 1       CASEDIR Cylinder PCASE cylinderNS2DFR-impl.CFcase CASEFILES CylinderNSQuadCurved_16_5.CFmesh )
+cf_add_case( MPI 8       CASEDIR Cylinder PCASE cylinderNS2DFR-impl.CFcase CASEFILES CylinderNSQuadCurved_16_5.CFmesh )
 cf_add_case( MPI 8       CASEDIR Cylinder PCASE cylinderNS2DFR.CFcase CASEFILES CylinderNSQuadCurved_16_5.CFmesh )
 cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE doubleEllipseRDS_NS_Pvt_adim.CFcase CASEFILES doubleEllipseNS_RDS.CFmesh )
 cf_add_case( MPI 8       CASEDIR DoubleEllipse PCASE restartRDS_NS_Pvt.CFcase CASEFILES restartRDS.plt restartRDS.surf.plt )
