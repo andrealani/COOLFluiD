@@ -257,10 +257,10 @@ SET ( Boost_USE_MULTITHREAD ON  )
 # find based on minimal version defined below
 SET ( Boost_FIND_VERSION        ON   )
 SET ( Boost_FIND_VERSION_MAJOR  "1"  )
-SET ( Boost_FIND_VERSION_MINOR  "42" )
+SET ( Boost_FIND_VERSION_MINOR  "66" )
 SET ( Boost_FIND_VERSION_PATCH  "0"  )
 # older cmakes dont have these versions
-SET ( Boost_ADDITIONAL_VERSIONS  "1.60" "1.60.0" "1.59" "1.59.0" "1.55" "1.55.0" "1.54" "1.54.0" "1.47" "1.47.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
+SET ( Boost_ADDITIONAL_VERSIONS  "1.66 1.60" "1.60.0" "1.59" "1.59.0" "1.55" "1.55.0" "1.54" "1.54.0" "1.47" "1.47.0" "1.42" "1.42.0" "1.41" "1.41.0"  "1.40" "1.40.0" "1.39" "1.39.0" )
 # components to search for
 
 #IF ( CF_ENABLE_IBMSHARED OR CF_ENABLE_IBMSTATIC ) 
@@ -286,6 +286,8 @@ ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_55" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_55 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_54" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_54 )
+ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_53" )
+ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_53 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_47")
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_47 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_42")

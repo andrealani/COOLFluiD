@@ -86,8 +86,8 @@ public:
     /// compute epsilon
     HOST_DEVICE void setEps(const CFuint iVar, const CFreal value)
     {
-      const CFreal absv = abs(value); 
-      const CFreal absr = abs(m_dco->refValues[iVar]);
+      const CFreal absv = (value>=0.) ? value : -value; 
+      const CFreal absr = (m_dco->refValues[iVar]>0.) ? m_dco->refValues[iVar] : -m_dco->refValues[iVar];
       const CFreal maxa = (absv > absr) ? absv : absr; 
       m_eps = m_dco->tol*sign(value)*maxa;
     }

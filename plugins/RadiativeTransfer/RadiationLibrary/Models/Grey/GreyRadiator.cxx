@@ -42,6 +42,14 @@ void GreyRadiator::defineConfigOptions(Config::OptionList& options)
 
 GreyRadiator::GreyRadiator(const std::string& name):
   Radiator(name),
+  m_Planck(6.6260693e-34),
+  m_Boltzmann(1.3806580e-23),
+  m_StefanBoltzmann(5.67037321e-08),
+  m_SpeedOfLight(2.99792458e8),
+  m_Angstrom(1.0000000e-10),
+  m_c1(1.5399311364756e-01),
+  m_c2(1.4387673140816e-02),
+  m_c3(1.1910428196088e-16),
   m_socketNormals(CFNULL),
   m_dim2(0),
   m_normal()

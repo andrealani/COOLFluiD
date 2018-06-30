@@ -16,7 +16,9 @@ FIND_PATH(MPI_INCLUDE_DIR
           NAMES mpi.h
           PATH_SUFFIXES mpi mpi/include
           PATHS
-          ${TRIAL_INCLUDE_PATHS}  NO_DEFAULT_PATH )
+          ${TRIAL_INCLUDE_PATHS} NO_DEFAULT_PATH )
+
+LOG ( "## MPI TRIAL_INCLUDE_PATHS: [${TRIAL_INCLUDE_PATHS}]" )
 
 # try in these paths first and then the system ones
 IF ( NOT MPI_INCLUDE_DIR )

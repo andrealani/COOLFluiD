@@ -599,6 +599,9 @@ IF(CF_HAVE_MPI)
 
 ENDIF()
 
+# Add link to boost libraries: this was needed only on Genius cluster, may prove faulty on some other systems
+LIST ( APPEND ${MYLIBNAME}_libs ${CF_Boost_LIBRARIES} )
+
 ###########################################
 # Metis
 #LIST ( APPEND OPTIONAL_dirfiles Metis.cxx Metis.hh)

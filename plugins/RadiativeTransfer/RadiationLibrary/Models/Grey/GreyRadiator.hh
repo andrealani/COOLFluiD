@@ -75,18 +75,18 @@ protected:
   bool m_allIsGrey;
   CFuint m_nbComPlankTerms;
   CFuint m_TRStypeID;
-  static const CFreal m_Planck          = 6.6260693e-34 ;
-  static const CFreal m_Boltzmann       = 1.3806580e-23 ;
-  static const CFreal m_StefanBoltzmann = 5.67037321e-08;
-  static const CFreal m_SpeedOfLight    = 2.99792458e8  ;
-  static const CFreal m_Angstrom        = 1.0000000e-10 ;
+  const CFreal m_Planck;
+  const CFreal m_Boltzmann;
+  const CFreal m_StefanBoltzmann;
+  const CFreal m_SpeedOfLight;
+  const CFreal m_Angstrom;
 
   //m_c1=std::pow(m_Boltzmann,4)/(std::pow(m_Planck,3)*std::pow(m_SpeedOfLight,2))/m_StefanBoltzmann/(2*m_Pi);
   //m_c2=m_Planck*m_SpeedOfLight/m_Boltzmann;
   //m_c3=2.*m_Planck*std::pow(m_SpeedOfLight,2);
-  static const CFreal m_c1 = 1.5399311364756e-01;
-  static const CFreal m_c2 = 1.4387673140816e-02;
-  static const CFreal m_c3 = 1.1910428196088e-16;
+  const CFreal m_c1;
+  const CFreal m_c2;
+  const CFreal m_c3;
   
 protected:
   
