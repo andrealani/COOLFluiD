@@ -53,10 +53,13 @@ void PetscOptions::setPCTypes()
   _pcType["PCCHOLESKY"]  = PCCHOLESKY;
   _pcType["PCNONE"]      = PCNONE;
   _pcType["PCSHELL"]     = PCSHELL;
+  _pcType["PCHYPRE"]     = PCHYPRE;
 #ifdef CF_HAVE_CUDA
+#if PETSC_VERSION_MINOR!=9
   _pcType["PCSACUSP"]    = PCSACUSP;
   _pcType["PCSACUSPPOLY"] = PCSACUSPPOLY;
   _pcType["PCBICGSTABCUSP"] = PCBICGSTABCUSP;
+#endif
 #endif
   _pcType["PCGASM"] = PCGASM;
   _pcType["PCKSP"] = PCKSP;

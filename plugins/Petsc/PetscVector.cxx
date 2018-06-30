@@ -48,9 +48,13 @@ void PetscVector::create(MPI_Comm comm,
 #ifdef CF_HAVE_VIENNACL
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECVIENNACL) );
 #else
+#if PETSC_VERSION_MINOR==9
+    CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUDA) ); 
+#else
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUSP) ); 
+#endif
 #endif 
- }
+  }
   else
 #endif
     {CF_CHKERRCONTINUE( VecSetType(m_vec, VECMPI) );}
@@ -58,9 +62,9 @@ void PetscVector::create(MPI_Comm comm,
   CF_CHKERRCONTINUE( VecSetSizes(m_vec, m, M) );
   
   CF_CHKERRCONTINUE( VecSetFromOptions(m_vec) );
-
+  
   CF_CHKERRCONTINUE( PetscObjectSetName((PetscObject) m_vec, name) );
-
+  
   m_toBeDestroyed = true;
 }
 #endif

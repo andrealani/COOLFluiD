@@ -66,7 +66,11 @@ void PetscMatrix::createSeqBAIJ(const CFuint blockSize,
 #ifdef CF_HAVE_VIENNACL
      CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJVIENNACL));
 #else
-      CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));
+#if PETSC_VERSION_MINOR==9 
+     CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSPARSE));
+#else
+     CF_CHKERRCONTINUE(MatSetType(m_mat, MATSEQAIJCUSP));
+#endif
 #endif
     }
     else 
@@ -162,7 +166,11 @@ void PetscMatrix::createParBAIJ(MPI_Comm comm,
   if (_isAIJ) {
 #ifdef CF_HAVE_CUDA
     if (m_useGPU) {
+#if PETSC_VERSION_MINOR==9
+      CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJCUSPARSE));
+#else
       CF_CHKERRCONTINUE(MatSetType(m_mat, MATMPIAIJCUSP));
+#endif
     }
     else
 #endif
