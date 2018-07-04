@@ -16,7 +16,7 @@ module load METIS/5.1.0-foss-2015a
 
 export TOP_DIR="/data/leuven/304/vsc30484/temp"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
-export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD"
+export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD/OPENMPI"
 export BUILD_MODE=optim
 export COOLFLUID_CONF_FILE="${TOP_DIR}/COOLFluid_VSC.conf"
 export COOLFLUID_INSTALL_DIR="${TOP_DIR}/COOLFluid_Install_Dir"
