@@ -18,6 +18,8 @@ export TOP_DIR="${VSC_DATA}/temp"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
 export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD/OPENMPI"
 export BUILD_MODE=optim
+
+cp ${COOLFLUID_TOP_DIR}/tools/conf/VSC/COOLFluid_VSC.conf ${TOP_DIR}
 export COOLFLUID_CONF_FILE="${TOP_DIR}/COOLFluid_VSC.conf"
 export COOLFLUID_INSTALL_DIR="${TOP_DIR}/COOLFluid_Install_Dir"
 export ALL_ACTIVE=1
