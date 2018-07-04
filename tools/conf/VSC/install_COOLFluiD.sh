@@ -2,8 +2,9 @@
 # The same CoolFluid_VSC.conf should be used
 
 source switch_to_2015a
-module load CMake/3.1.0-foss-2015a
 
+module load Subversion/1.8.14-foss-2015a
+module load CMake/3.1.0-foss-2015a
 module load OpenMPI/1.8.4-GCC-4.9.2
 #module load cURL/7.43.0-foss-2015a
 module load Boost/1.66.0-foss-2015a-Python-2.7.9
@@ -15,6 +16,11 @@ module load GSL/2.1-foss-2015a
 module load METIS/5.1.0-foss-2015a
 
 export TOP_DIR="${VSC_DATA}"
+cd ${TOP_DIR}
+
+#download COOLFluiD
+svn co https://github.com/andrealani/COOLFluiD/trunk YOUR_COOLFluiD
+
 export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
 export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD/OPENMPI"
 export BUILD_MODE=optim
