@@ -14,7 +14,7 @@ module load ParMETIS/4.0.3-foss-2015a
 module load GSL/2.1-foss-2015a
 module load METIS/5.1.0-foss-2015a
 
-export TOP_DIR="/data/leuven/304/vsc30484/temp"
+export TOP_DIR="${VSC_DATA}/temp"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
 export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD/OPENMPI"
 export BUILD_MODE=optim
