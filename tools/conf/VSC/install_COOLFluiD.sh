@@ -16,12 +16,11 @@ module load GSL/2.1-foss-2015a
 module load METIS/5.1.0-foss-2015a
 
 export TOP_DIR="${VSC_DATA}"
-#cd ${TOP_DIR}
-#download COOLFluiD
-#svn co https://github.com/andrealani/COOLFluiD/trunk YOUR_COOLFluiD
-
 export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
-export COOLFLUID_BASEBUILD_DIR="${TOP_DIR}/YOUR_COOLFluiD/OPENMPI"
+#download COOLFluiD
+svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
+
+export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
 export BUILD_MODE=optim
 
 cp ${COOLFLUID_TOP_DIR}/tools/conf/VSC/COOLFluid_VSC.conf ${TOP_DIR}
