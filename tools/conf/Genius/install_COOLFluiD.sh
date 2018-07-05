@@ -8,12 +8,12 @@ module load PETSc/3.9.0-foss-2018a
 module load ParMETIS/4.0.3-foss-2018a
 
 export TOP_DIR="${VSC_DATA}"
-export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
+export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius"
 #download COOLFluiD
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
-export BUILD_MODE=optim
+export BUILD_MODE=geniuscuda
 
 cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/COOLFluid_Genius.conf ${TOP_DIR}
 export COOLFLUID_CONF_FILE="${TOP_DIR}/COOLFluid_Genius.conf"

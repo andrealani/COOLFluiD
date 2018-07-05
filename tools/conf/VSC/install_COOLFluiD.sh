@@ -16,7 +16,7 @@ module load GSL/2.1-foss-2015a
 module load METIS/5.1.0-foss-2015a
 
 export TOP_DIR="${VSC_DATA}"
-export COOLFLUID_TOP_DIR="${TOP_DIR}/YOUR_COOLFluiD"
+export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_VSC"
 #download COOLFluiD
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
 
