@@ -83,7 +83,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
       const CFreal avgSol = (m_tempGradTerm(iEq,iFlx)+m_tempGradTermGhost(iEq,iFlx))/2.0;
-      const RealVector projectedCorr = (avgSol-m_tempGradTerm(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
+      m_projectedCorr = (avgSol-m_tempGradTerm(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
 
       // Loop over solution pnts to calculate the grad updates
       for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -91,7 +91,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
         const CFuint iSolIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
 
 	/// @todo Check if this is also OK for triangles!!
-	m_gradUpdates[iSolIdx][iEq] += projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
+	m_gradUpdates[iSolIdx][iEq] += m_projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
       }
     }
   }
@@ -135,7 +135,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
         const CFreal avgSol = ((*(m_cellStatesFlxPnt[iFlx]))[iEq]+(*(m_flxPntGhostSol[iFlx]))[iEq])/2.0;
-	const RealVector projectedCorr = (avgSol-(*(m_cellStatesFlxPnt[iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
+	m_projectedCorr = (avgSol-(*(m_cellStatesFlxPnt[iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
 
         // Loop over solution pnts to calculate the grad updates
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -143,7 +143,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
           const CFuint iSolIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
 
 	  /// @todo Check if this is also OK for triangles!!
-	  m_gradUpdates[iSolIdx][iEq] += projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
+	  m_gradUpdates[iSolIdx][iEq] += m_projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
         }
       }
     }
@@ -188,7 +188,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
 	const CFreal avgSol = (transformedState[iEq]+transformedGhostState[iEq])/2.0;
-	const RealVector projectedCorr = (avgSol-transformedState[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
+	m_projectedCorr = (avgSol-transformedState[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
 	  
         // Loop over solution pnts to calculate the grad updates
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -196,7 +196,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
           const CFuint iSolIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
 
 	  /// @todo Check if this is also OK for triangles!!
-	  m_gradUpdates[iSolIdx][iEq] += projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
+	  m_gradUpdates[iSolIdx][iEq] += m_projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
         }
       }
     }
@@ -239,7 +239,6 @@ void NSBndGradientComputer::setup()
   
   m_tempStates.resize(m_nbrFaceFlxPnts);
   m_tempStatesGhost.resize(m_nbrFaceFlxPnts);
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////

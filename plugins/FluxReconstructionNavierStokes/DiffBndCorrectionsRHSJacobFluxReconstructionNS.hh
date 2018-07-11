@@ -34,6 +34,18 @@ public:
    * Default destructor
    */
   virtual ~DiffBndCorrectionsRHSJacobFluxReconstructionNS();
+  
+  /**
+   * Set up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void setup();
+  
+  /**
+   * unset up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void unsetup();
 
 protected: // functions
 
@@ -50,6 +62,11 @@ protected: // functions
   virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
   
   /**
+   * compute the terms for the gradient computation for a bnd face
+   */
+  virtual void computeBndGradTerms2(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+  
+  /**
    * compute the term for the gradient computation for the cell
    */
   virtual void computeCellGradTerm(RealMatrix& gradTerm);
@@ -64,6 +81,12 @@ protected: // functions
   
 protected: // data
 
+    // vector for temporary storing the states of flx pnts
+    std::vector< std::vector< RealVector* > > m_tempStates;
+    
+    // vector for temporary storing the states of sol pnts
+    std::vector< RealVector* > m_tempStatesSol;
+    
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstructionNS
 
 //////////////////////////////////////////////////////////////////////////////

@@ -258,7 +258,10 @@ void LLAVFluxReconstructionNS::computeSmoothness()
     sNum += diffStatesPPMinOne*diffStatesPPMinOne;
     sDenom += stateP*stateP;
   }
-  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
+  const RealVector& coords = *((*m_cellNodes)[0]->getData());
+  const CFreal d = sqrt(coords[0]*coords[0]+coords[1]*coords[1]);
+
+  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps()) //  || d < 1.2
   {
     m_s = -100.0;
   }
@@ -272,18 +275,18 @@ void LLAVFluxReconstructionNS::computeSmoothness()
 
 CFreal LLAVFluxReconstructionNS::computePeclet()
 {
-  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
-  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
-  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
-  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
+//  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
+//  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
+//  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
+//  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
   
 //   cf_assert(machInf > 1.0);
 //   cf_assert(velInf > 0.0);
 //   cf_assert(pressInf > 0.0);
   
-  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
+//  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
   
-  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
+//  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
   
   //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
   

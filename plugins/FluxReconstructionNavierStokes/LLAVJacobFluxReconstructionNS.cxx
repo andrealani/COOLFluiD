@@ -70,7 +70,7 @@ void LLAVJacobFluxReconstructionNS::setFaceData(CFuint faceID)
 {
   LLAVJacobFluxReconstruction::setFaceData(faceID);
   
-  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+  if (getMethodData().getUpdateVarStr() != "Puvt" && getMethodData().hasDiffTerm())
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -92,7 +92,7 @@ void LLAVJacobFluxReconstructionNS::setCellData()
 {
   LLAVJacobFluxReconstruction::setCellData();
   
-  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+  if (getMethodData().getUpdateVarStr() != "Puvt" && getMethodData().hasDiffTerm())
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -110,7 +110,7 @@ void LLAVJacobFluxReconstructionNS::setCellData()
 
 void LLAVJacobFluxReconstructionNS::setFaceNeighbourGradients()
 {
-  if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasDiffTerm())
+  if (getMethodData().getUpdateVarStr() != "Puvt" && getMethodData().hasDiffTerm())
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();

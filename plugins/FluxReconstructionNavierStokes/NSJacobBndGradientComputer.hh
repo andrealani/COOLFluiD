@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSJacobFluxReconstruction.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -34,6 +35,12 @@ public: // functions
 
   /// Destructor
   virtual ~NSJacobBndGradientComputer() {}
+  
+  /**
+   * Set up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void setup();
 
 protected: //functions
   
@@ -45,7 +52,22 @@ protected: //functions
 protected: //data
   
   /// diffusive variable set
-  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
+  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
+  
+  /// Vector transformer from update to solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T)
+  RealMatrix m_tempGradTerm;
+  
+  /// matrix to store the ghost state terms needed for the gradients (p, u, v, T)
+  RealMatrix m_tempGradTermGhost;
+  
+  /// element states within an element in the correct format
+  std::vector< RealVector* > m_tempStates;
+  
+  /// element ghost states in the correct format
+  std::vector< RealVector* > m_tempStatesGhost;
     
 }; // class Solve
 

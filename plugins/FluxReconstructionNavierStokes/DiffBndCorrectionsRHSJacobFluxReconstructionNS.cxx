@@ -33,7 +33,9 @@ DiffBndCorrectionsRHSJacobNSFluxReconstructionProvider("DiffBndCorrectionsRHSJac
 //////////////////////////////////////////////////////////////////////////////
 
 DiffBndCorrectionsRHSJacobFluxReconstructionNS::DiffBndCorrectionsRHSJacobFluxReconstructionNS(const std::string& name) :
-  DiffBndCorrectionsRHSJacobFluxReconstruction(name)
+  DiffBndCorrectionsRHSJacobFluxReconstruction(name),
+  m_tempStates(),
+  m_tempStatesSol()
 {
 }
 
@@ -41,6 +43,26 @@ DiffBndCorrectionsRHSJacobFluxReconstructionNS::DiffBndCorrectionsRHSJacobFluxRe
 
 DiffBndCorrectionsRHSJacobFluxReconstructionNS::~DiffBndCorrectionsRHSJacobFluxReconstructionNS()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSJacobFluxReconstructionNS::setup()
+{
+  DiffBndCorrectionsRHSJacobFluxReconstruction::setup();
+    
+  m_tempStates.resize(2);
+
+  m_tempStates[LEFT].resize(m_nbrFaceFlxPnts);
+  m_tempStates[RIGHT].resize(m_nbrFaceFlxPnts);
+  m_tempStatesSol.resize(m_nbrSolPnts);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSJacobFluxReconstructionNS::unsetup()
+{
+  DiffBndCorrectionsRHSJacobFluxReconstruction::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -74,16 +96,30 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeBndGradTerms(RealMat
 { 
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
 
-  vector< RealVector* > tempStates;
-  vector< RealVector* > tempGhostStates;
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    tempStates.push_back(m_cellStatesFlxPnt[iFlx]->getData());
-    tempGhostStates.push_back(m_flxPntGhostSol[iFlx]->getData());
+    m_tempStates[LEFT][iFlx] = (m_cellStatesFlxPnt[iFlx]->getData());
+    m_tempStates[RIGHT][iFlx] = (m_flxPntGhostSol[iFlx]->getData());
   }
   
-  navierStokesVarSet->setGradientVars(tempStates,gradTerm,m_nbrFaceFlxPnts);
-  navierStokesVarSet->setGradientVars(tempGhostStates,ghostGradTerm,m_nbrFaceFlxPnts);
+  navierStokesVarSet->setGradientVars(m_tempStates[LEFT],gradTerm,m_nbrFaceFlxPnts);
+  navierStokesVarSet->setGradientVars(m_tempStates[RIGHT],ghostGradTerm,m_nbrFaceFlxPnts);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeBndGradTerms2(RealMatrix& gradTerm, RealMatrix& ghostGradTerm)
+{ 
+  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_tempStates[LEFT][iFlx] = (m_cellStatesFlxPnt2[iFlx]->getData());
+    m_tempStates[RIGHT][iFlx] = (m_flxPntGhostSol[iFlx]->getData());
+  }
+  
+  navierStokesVarSet->setGradientVars(m_tempStates[LEFT],gradTerm,m_nbrFaceFlxPnts);
+  navierStokesVarSet->setGradientVars(m_tempStates[RIGHT],ghostGradTerm,m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,13 +128,12 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeCellGradTerm(RealMat
 {
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
   
-  vector< RealVector* > tempStates;
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    tempStates.push_back((*m_cellStates)[iSol]->getData());
+    m_tempStatesSol[iSol] = ((*m_cellStates)[iSol]->getData());
   }
   
-  navierStokesVarSet->setGradientVars(tempStates,gradTerm,m_nbrSolPnts);
+  navierStokesVarSet->setGradientVars(m_tempStatesSol,gradTerm,m_nbrSolPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,16 +142,14 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeFaceGradTerms(RealMa
 {
   SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
 
-  vector< vector< RealVector* > > tempStates;
-  tempStates.resize(2);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    tempStates[LEFT].push_back(m_pertCellStatesFlxPnt[LEFT][iFlx]->getData());
-    tempStates[RIGHT].push_back(m_pertCellStatesFlxPnt[RIGHT][iFlx]->getData());
+    m_tempStates[LEFT][iFlx] = (m_pertCellStatesFlxPnt[LEFT][iFlx]->getData());
+    m_tempStates[RIGHT][iFlx] = (m_pertCellStatesFlxPnt[RIGHT][iFlx]->getData());
   }
   
-  navierStokesVarSet->setGradientVars(tempStates[LEFT],gradTermL,m_nbrFaceFlxPnts);
-  navierStokesVarSet->setGradientVars(tempStates[RIGHT],gradTermR,m_nbrFaceFlxPnts);
+  navierStokesVarSet->setGradientVars(m_tempStates[LEFT],gradTermL,m_nbrFaceFlxPnts);
+  navierStokesVarSet->setGradientVars(m_tempStates[RIGHT],gradTermR,m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
