@@ -178,7 +178,18 @@ protected: //functions
    * compute the data needed for the computation of the perturbed gradients
    */
   void computePertGradData(const CFuint side);
-
+  
+  /**
+   * store values that will be overwritten
+   */
+  void storeBackups();
+  
+  /**
+   * restore values that were overwritten
+   */
+  void restoreFromBackups();
+  
+  
 protected: //data
   
   /// builder of cells
@@ -304,11 +315,29 @@ protected: //data
   /// list of the vectors to which to calculate the derivative
   std::vector< std::vector< CFuint > > m_dimList;
   
+  /// transformed states in a left cell for gradient computation
+  RealMatrix m_gradTermL;
+  
+  /// transformed states in a right cell for gradient computation
+  RealMatrix m_gradTermR;
+  
   /// transformed states in a cell for gradient computation
   RealMatrix m_gradTerm;
   
-  /// face local coords of the face flux points
-  Common::SafePtr< std::vector<RealVector> > m_flxLocalCoords;
+  /// vector to temporarily store a correction projected on a normal
+  RealVector m_projectedCorrL;
+  
+  /// vector to temporarily store a correction projected on a normal
+  RealVector m_projectedCorrR;
+  
+  /// perturbed side
+  CFuint m_pertSide;
+  
+  /// perturbed sol pnt
+  CFuint m_pertSol;
+  
+  /// perturbed variable
+  CFuint m_pertVar;
 
   
 }; // class Solve

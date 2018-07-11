@@ -79,7 +79,8 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_avgGrad(),
   m_flxLocalCoords(CFNULL),
   m_flxSolDep(CFNULL),
-  m_nbrSolDep()
+  m_nbrSolDep(),
+  m_faceJacobVecs()
 {
 }
 
@@ -319,7 +320,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
   }
           
   // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+  m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
   // get face Jacobian vector sizes in the flux points
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
@@ -334,7 +335,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient];
     
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
   
   // get the gradients datahandle
@@ -368,7 +369,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
     const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
 
     // the current correction factor
-    RealVector currentCorrFactor = m_cellFlx[iFlxPnt];
+    const RealVector& currentCorrFactor = m_cellFlx[iFlxPnt];
 
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
@@ -549,6 +550,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   m_avgSol.resize(m_nbrEqs);
   m_avgGrad.reserve(m_nbrEqs);
   m_corrFctDiv.resize(m_nbrSolPnts);
+  m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -557,6 +559,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
     m_unitNormalFlxPnts[iFlx].resize(m_dim);
     m_cellFlx[iFlx].resize(m_nbrEqs);
     m_flxPntRiemannFlux[iFlx].resize(m_nbrEqs);
+    m_faceJacobVecs[iFlx].resize(m_dim);
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       m_flxPntGhostGrads[iFlx].push_back(new RealVector(m_dim));

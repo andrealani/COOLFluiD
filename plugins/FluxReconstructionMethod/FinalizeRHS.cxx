@@ -46,7 +46,8 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   m_state(),
   m_dState(),
   m_inverter(CFNULL),
-  m_numJacob(CFNULL)
+  m_numJacob(CFNULL),
+  m_tempRes()
 {
   CFAUTOTRACE;
 
@@ -85,8 +86,6 @@ void FinalizeRHS::execute()
 
   // get total nb of states and initialize vars
   const CFuint nbStates = states.size();
-  RealVector tempRes(nbEqs);
-  RealVector res(nbEqs);
 
   // get rhs socket
   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
@@ -101,16 +100,16 @@ void FinalizeRHS::execute()
     const CFuint startID = iState*nbEqs;
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
     {
-      tempRes[iEq] = rhs[startID + iEq];
+      m_tempRes[iEq] = rhs[startID + iEq];
     }
 
     // compute the transformed residual
-    res = matrix*tempRes;
+    m_tempRes = matrix*m_tempRes;
     
     // store transformed residual in rhs
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
     {
-      rhs[startID + iEq] = res[iEq];
+      rhs[startID + iEq] = m_tempRes[iEq];
     }
   }
 }
@@ -175,6 +174,8 @@ void FinalizeRHS::setup()
   m_invJacobDummy.resize(nbEqs, nbEqs, 0.);
   
   m_inverter.reset(MatrixInverter::create(nbEqs, false));
+  
+  m_tempRes.resize(nbEqs);
 }
 
 //////////////////////////////////////////////////////////////////////////////

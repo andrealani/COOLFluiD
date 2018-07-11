@@ -76,7 +76,27 @@ protected: // functions
    * compute the contribution of the convective boundary flux correction to the Jacobian
    */
   void computeJacobConvBndCorrection();
-
+  
+  /**
+   * compute the contribution of the convective boundary flux correction to the Jacobian
+   */
+  void extrapolatePerturbedState();
+  
+  /**
+   * store backups of values before perturbing the states
+   */
+  void storeBackups();
+  
+  /**
+   * restore values after perturbing a state
+   */
+  void restoreFromBackups();
+  
+  /// compute the perturbed interface flux
+  virtual void computePertInterfaceFlxCorrection();
+  
+  /// compute the total perturbed correction
+  void computePertCorrection(std::vector< RealVector >& corrections);
 
 protected: // data
   
@@ -100,6 +120,27 @@ protected: // data
   
   /// perturbed corrections due to the boundary faces for the Jacobian
   std::vector< RealVector> m_pertCorrections;
+  
+  /// index of the perturbed solution point
+  CFuint m_pertSol;
+  
+  /// index of the perturbed variable
+  CFuint m_pertVar;
+  
+  /// dependencies of sol pnts on flx pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDep;
+
+  /// nbr of flx pnts on which a sol pnt is dependent
+  CFuint m_nbrFlxDep;
+  
+  /// backup of extrapolated states in the flux points of the cell
+  std::vector< RealVector > m_cellStatesFlxPntBackup;
+  
+  /// booleans telling for each flx pnt whether it is influenced by the perturbation
+  std::vector< bool > m_influencedFlxPnts;
+  
+  /// backup of interface fluxes at the flux points of a face
+  std::vector< RealVector> m_flxPntRiemannFluxBackup;
 
 }; // end of class ConvBndCorrectionsRHSJacobFluxReconstruction
 

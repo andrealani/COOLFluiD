@@ -37,7 +37,9 @@ BCDirichlet::BCDirichlet(const std::string& name) :
   BCStateComputer(name),
   m_varSet(CFNULL),
   m_inputToUpdateVar(),
-  m_inputState()
+  m_inputState(),
+  m_spaceTime(),
+  m_dimState()
 {
   CFAUTOTRACE;
 
@@ -76,8 +78,6 @@ void BCDirichlet::computeGhostStates(const vector< State* >& intStates,
   cf_assert(nbrStates == ghostStates.size());
   cf_assert(nbrStates == normals.size());
 
-  RealVector space_time(coords[0].size()+1);
-
   // loop over the states
   for (CFuint iState = 0; iState < nbrStates; ++iState)
   {
@@ -88,16 +88,16 @@ void BCDirichlet::computeGhostStates(const vector< State* >& intStates,
     // compute input variables depending on space and time
     for (CFuint i=0; i<coords[iState].size(); ++i)
     {
-      space_time[i]=coords[iState][i];  
+      m_spaceTime[i]=coords[iState][i];  
     }
-    space_time[coords[iState].size()] = time; // time
-    m_vFunction.evaluate(space_time, *m_inputState);
+    m_spaceTime[coords[iState].size()] = time; // time
+    m_vFunction.evaluate(m_spaceTime, *m_inputState);
   
     // transform to update variables
-    State dimState = *m_inputToUpdateVar->transform(m_inputState);
+    m_dimState = m_inputToUpdateVar->transform(m_inputState);
 
     // adimensionalize the variables if needed and store
-    m_varSet->setAdimensionalValues(dimState,ghostSol);
+    m_varSet->setAdimensionalValues(*m_dimState,ghostSol);
 
     // modify to ensure that the required value is obtained in the flux point
     ghostSol *= 2.;
@@ -152,6 +152,11 @@ void BCDirichlet::setup()
 
   // get updateVarSet
   m_varSet = getMethodData().getUpdateVar();
+  
+  const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
+  
+  // resize space time
+  m_spaceTime.resize(nbDims+1);
 }
 
 //////////////////////////////////////////////////////////////////////////////

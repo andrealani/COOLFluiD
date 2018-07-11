@@ -56,6 +56,12 @@ void StdTimeRHSJacob::setup()
 
   // linear system solver
   m_lss = getMethodData().getLinearSystemSolver()[0];
+  
+  // get the local FR data
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+
+  // get solution point local coordinates
+  m_solPntsLocalCoords = frLocalData[0]->getSolPntsLocalCoords();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -90,12 +96,6 @@ void StdTimeRHSJacob::execute()
     // get start and end indexes for this type of element
     const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[iElemType].getEndIdx();
-
-    // get the local spectral FD data
-    vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-
-    // get solution point local coordinates
-    m_solPntsLocalCoords = frLocalData[iElemType]->getSolPntsLocalCoords();
 
     // add the diagonal entries in the jacobian (updateCoeff/CFL)
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)

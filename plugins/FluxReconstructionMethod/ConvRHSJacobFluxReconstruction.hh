@@ -75,6 +75,40 @@ protected: // functions
    * 
    */
   void computeOneJacob(const CFuint side);
+  
+  /**
+   * compute the contribution of the convective boundary flux correction to the Jacobian
+   */
+  void extrapolatePerturbedState();
+  
+  /**
+   * store backups of values before perturbing the states
+   */
+  void storeBackups();
+  
+  /**
+   * restore values after perturbing a state
+   */
+  void restoreFromBackups();
+  
+  /**
+   * store backups of values before perturbing the states for loop over cells
+   */
+  void storeBackupsCell();
+  
+  /**
+   * restore values after perturbing a state for loop over cells
+   */
+  void restoreFromBackupsCell();
+  
+  /// compute the perturbed interface flux
+  virtual void computePertInterfaceFlxCorrection();
+  
+  /// compute the total perturbed correction
+  void computePertCorrection(CFuint sided, std::vector< RealVector >& corrections);
+  
+  /// compute the divergence of the perturbed discontinuous flx (-divFD+divhFD)
+  void computePertDivDiscontFlx(std::vector< RealVector >& residuals);
 
 protected: // data
 
@@ -110,6 +144,30 @@ protected: // data
   
   /// Perturbed divergence of the continuous flux at the solution points of the neighbours
   std::vector< std::vector< RealVector> > m_pertDivContFlx;
+  
+  /// backup of extrapolated states in the flux points of the cell
+  std::vector< std::vector< RealVector > > m_cellStatesFlxPntBackup;
+  
+  /// booleans telling for each flx pnt whether it is influenced by the perturbation
+  std::vector< bool > m_influencedFlxPnts;
+  
+  /// backup of interface fluxes at the flux points of a face
+  std::vector< std::vector< RealVector> > m_flxPntRiemannFluxBackup;
+  
+  /// index of the perturbed solution point
+  CFuint m_pertSol;
+  
+  /// index of the perturbed variable
+  CFuint m_pertVar;
+  
+  /// index of the side which is being perturbed
+  CFuint m_pertSide;
+  
+  /// the discontinuous flux extrapolated to the flux points backup
+  std::vector< RealVector > m_extrapolatedFluxesBackup;
+  
+  /// Continuous flux at the solution points backup
+  std::vector< std::vector< RealVector> > m_contFlxBackup;
 
 }; // class ConvRHSJacobFluxReconstruction
 

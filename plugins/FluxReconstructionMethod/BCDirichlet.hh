@@ -93,6 +93,12 @@ protected: // data
 
   /// input state
   Framework::State* m_inputState;
+  
+  /// vector for space coords and time
+  RealVector m_spaceTime;
+  
+  /// dimensional state
+  Framework::State* m_dimState;
 
 }; // class BCDirichlet
 

@@ -84,7 +84,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   socket_artVisc("artVisc"),
   socket_monPhysVar("monPhysVar"),
   m_maxLambda(),
-  m_unitNormalFlxPnts2()
+  m_unitNormalFlxPnts2(),
+  m_faceJacobVecSizeFlxPnts2(),
+  m_tempSolPntVec()
   {
     addConfigOptionsTo(this);
     
@@ -542,7 +544,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
-    vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
+    vector< RealVector >& temp = *(m_cellGrads[0][iSolPnt]);
 
     // calculate the discontinuous flux projected on x, y, z-directions
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
@@ -560,8 +562,8 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
 
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
       const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
 
       m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
     }
@@ -622,9 +624,6 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       m_faceNodes = (*m_faces)[iFace]->getNodes();
       m_face = (*m_faces)[iFace];
       m_cellNodes = m_cell->getNodes();
-  
-      vector< CFreal > faceJacobVecSizeFlxPnts;
-      faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);
       
       // get the datahandle of the update coefficients
       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
@@ -636,7 +635,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       }
           
       // compute face Jacobian vectors
-      vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+      m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
       // get face Jacobian vector sizes in the flux points
       DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
@@ -648,10 +647,10 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         CFreal faceJacobVecAbsSizeFlxPnts = faceJacobVecSizeFaceFlxPnts[m_face->getID()][iFlxPnt];
 	
 	// set face Jacobian vector size with sign depending on mapped coordinate direction
-        faceJacobVecSizeFlxPnts[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
+        m_faceJacobVecSizeFlxPnts2[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
  
 	// set unit normal vector
-        m_unitNormalFlxPnts2[iFlxPnt] = (faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+        m_unitNormalFlxPnts2[iFlxPnt] = (m_faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -726,8 +725,8 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
   
           m_waveSpeedUpd[0] = 0.0;
 
-          const CFreal jacobXJacobXIntCoef = faceJacobVecSizeFlxPnts[iFlxPnt]*
-                                             faceJacobVecSizeFlxPnts[iFlxPnt]*
+          const CFreal jacobXJacobXIntCoef = m_faceJacobVecSizeFlxPnts2[iFlxPnt]*
+                                             m_faceJacobVecSizeFlxPnts2[iFlxPnt]*
                                              (*m_faceIntegrationCoefs)[iFlxPnt]*
                                              m_cflConvDiffRatio;
           //const CFreal rho = (*(m_cellStatesFlxPnt[0][iFlxPnt]))[0];
@@ -763,10 +762,10 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
 	    if (m_cell->getID() == 1092) CFLog(VERBOSE, "avgrad: " << (*(m_avgGrad[iVar]))[iDim] << "\n");
           }
         }
-     
+
         // compute FI in the mapped coord frame
-        m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt]; 
-	if (m_cell->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
+        m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts2[iFlxPnt]; 
+	if (m_cell->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << m_faceJacobVecSizeFlxPnts2[iFlxPnt] << "\n");
 	
 	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {  
@@ -839,24 +838,22 @@ void LLAVFluxReconstruction::setCellData()
 
 void LLAVFluxReconstruction::computeProjStates(std::vector< RealVector >& projStates)
 {
+  cf_assert(m_nbrSolPnts == projStates.size());
+  
   if (m_order != 1)
   {
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      RealVector temp(projStates.size());
-    
-      for (CFuint iSol = 0; iSol < projStates.size(); ++iSol)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
-        temp[iSol] = (*((*m_cellStates)[iSol]))[iEq];
+        m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[iEq];
       }
 
-      RealVector tempProj(projStates.size());
+      m_tempSolPntVec = m_transformationMatrix*m_tempSolPntVec;
 
-      tempProj = m_transformationMatrix*temp;
-
-      for (CFuint iSol = 0; iSol < projStates.size(); ++iSol)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
-        projStates[iSol][iEq] = tempProj[iSol];
+        projStates[iSol][iEq] = m_tempSolPntVec[iSol];
       }
     }
   }
@@ -866,14 +863,14 @@ void LLAVFluxReconstruction::computeProjStates(std::vector< RealVector >& projSt
     {
       CFreal stateSum = 0.0;
       
-      for (CFuint iSol = 0; iSol < projStates.size(); ++iSol)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
         stateSum += (*((*m_cellStates)[iSol]))[iEq];
       }
 
-      stateSum /= projStates.size();
+      stateSum /= m_nbrSolPnts;
 
-      for (CFuint iSol = 0; iSol < projStates.size(); ++iSol)
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
         projStates[iSol][iEq] = stateSum;
       }
@@ -1139,6 +1136,8 @@ void LLAVFluxReconstruction::setup()
   m_epsilonLR[LEFT].resize(m_nbrFaceFlxPnts);
   m_epsilonLR[RIGHT].resize(m_nbrFaceFlxPnts);
   m_unitNormalFlxPnts2.resize(m_nbrFaceFlxPnts);
+  m_faceJacobVecSizeFlxPnts2.resize(m_nbrFaceFlxPnts);
+  m_tempSolPntVec.resize(m_nbrSolPnts);
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {

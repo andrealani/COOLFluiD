@@ -52,6 +52,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
   options.addConfigOption< std::vector<std::string> >("BcTypes","Types of the boundary condition commands.");
   options.addConfigOption< std::vector<std::string> >("BcNames","Names of the boundary condition commands.");
+  options.addConfigOption< bool >("ComputeVolumeForEachState" ,"Boolean telling whether to create a socket with the volume for each state, needed for some unsteady algorithms.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -103,6 +104,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_addAV = false;
   setParameter( "AddArtificialViscosity", &m_addAV );
+
+  m_createVolumesSocketBool = false;
+  setParameter("ComputeVolumeForEachState", &m_createVolumesSocketBool);
   
   // options for bc commands
   m_bcTypeStr = vector<std::string>();

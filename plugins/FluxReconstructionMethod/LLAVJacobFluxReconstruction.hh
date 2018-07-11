@@ -118,7 +118,7 @@ protected: //functions
   /**
    * compute the artificial diffusive flux
    */
-  void computeFlux(const RealVector& sol, const std::vector< RealVector* >& grad, const RealVector& normals, RealVector& flux);
+  virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
   
   /**
    * compute the unperturbed cell diffusive residuals
@@ -263,6 +263,9 @@ protected: //data
   
   /// index of the monitored physical variable for positivity preservation
   CFuint m_monitoredPhysVar;
+  
+  /// extra vector to store the unit normal vectors in the flx pnts
+  std::vector< RealVector > m_unitNormalFlxPnts2;
   
   /// storage for the artificial viscosity
   Framework::DataSocketSource<CFreal> socket_artVisc;

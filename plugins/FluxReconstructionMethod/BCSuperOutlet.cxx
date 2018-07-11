@@ -73,9 +73,17 @@ void BCSuperOutlet::computeGhostGradients(const std::vector< std::vector< RealVe
   // set the ghost gradients
   for (CFuint iState = 0; iState < nbrStateGrads; ++iState)
   {
+    // normal
+    const RealVector& normal = normals[iState];
+
     for (CFuint iGradVar = 0; iGradVar < nbrGradVars; ++iGradVar)
     {
-      *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar];
+      const RealVector& varGradI =  *intGrads[iState][iGradVar];
+      RealVector& varGradG =  *ghostGrads[iState][iGradVar];
+      const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
+      varGradG = varGradI - 2.0*nVarGrad*normal;
+
+//      *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar]; //0;//
     }
   }
 }

@@ -52,6 +52,11 @@ public: // functions
     needsSockets();
    
 private: // private functions    
+
+  /**
+   * Creates socket with the cell volume for each state
+   */
+  void computeStatesVolumes();
     
    /**
    * Gets the start and stop indexes of the range of faces with a certain orientation from the connectivity
@@ -95,6 +100,9 @@ protected: // data
   
   /// storage of nodes
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
+
+  /// socket for cell volumes
+  Framework::DataSocketSource< CFreal > socket_volumes;
   
   /// socket for gradients
   Framework::DataSocketSource< std::vector< RealVector > > socket_gradients;

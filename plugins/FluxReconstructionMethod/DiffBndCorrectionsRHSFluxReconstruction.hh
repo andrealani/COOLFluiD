@@ -260,7 +260,8 @@ protected: // data
   /// nbr of sol pnts on which a flx pnt is dependent
   CFuint m_nbrSolDep;
   
-  private:
+  /// vector with face Jacobian vectors
+  std::vector< RealVector > m_faceJacobVecs;
 
   /// Physical data temporary vector
   RealVector m_pData;

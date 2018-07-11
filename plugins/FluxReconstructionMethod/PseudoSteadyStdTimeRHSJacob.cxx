@@ -4,6 +4,7 @@
 #include "Framework/LSSMatrix.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/SubSystemStatus.hh"
+#include "Framework/BlockAccumulator.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
@@ -26,7 +27,7 @@ namespace COOLFluiD {
 MethodCommandProvider< PseudoSteadyStdTimeRHSJacob,
                        FluxReconstructionSolverData,
                        FluxReconstructionModule>
-BE_RHSJacob("PseudoSteadyTimeRHS");
+PseudoSteadyRHSJacob("PseudoSteadyTimeRHS");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -43,14 +44,33 @@ PseudoSteadyStdTimeRHSJacob::PseudoSteadyStdTimeRHSJacob(const std::string& name
   m_cellStates(CFNULL),
   m_solPntsLocalCoords(CFNULL),
   m_diagValues(),
-  m_isUnsteady()
+  m_isUnsteady(),
+  m_tempState(),
+  m_updateToSolutionVecTrans(CFNULL),
+  m_acc(CFNULL),
+  m_numericalJacob(CFNULL),
+  m_fluxDiff(),
+  m_nbrSolPnts()
 {
+//  m_useGlobalDT = false;
+//  setParameter("useGlobalDT",&m_useGlobalDT);
+//
+//  m_useAnalyticalMatrix = false;
+//  setParameter("useAnalyticalMatrix",&m_useAnalyticalMatrix);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 PseudoSteadyStdTimeRHSJacob::~PseudoSteadyStdTimeRHSJacob()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void PseudoSteadyStdTimeRHSJacob::defineConfigOptions(Config::OptionList& options)
+{
+//  options.addConfigOption< bool >("useGlobalDT", "Flag telling if to use global DT.");
+//  options.addConfigOption< bool >("useAnalyticalMatrix", "Flag telling if to use analytical matrix.");  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,9 +98,21 @@ void PseudoSteadyStdTimeRHSJacob::setup()
     const CFuint nbrSolPnts = frLocalData[iElemType]->getNbrOfSolPnts();
     maxNbrSolPnts = maxNbrSolPnts > nbrSolPnts ? maxNbrSolPnts : nbrSolPnts;
   }
+  m_nbrSolPnts = maxNbrSolPnts;
 
   // resize m_diagValues
   m_diagValues.resize(maxNbrSolPnts);
+  
+  m_tempState.resize(m_nbrEqs);
+  
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  
+  m_acc.reset(m_lss->createBlockAccumulator(maxNbrSolPnts,maxNbrSolPnts,m_nbrEqs));
+  
+  // numerical jacobian
+  m_numericalJacob = getMethodData().getNumericalJacobian();
+  
+  m_fluxDiff.resize(m_nbrEqs);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -106,6 +138,8 @@ void PseudoSteadyStdTimeRHSJacob::execute()
 
   // check if computation is unsteady (time accurate)
   m_isUnsteady = dt > 0.;
+  
+  m_acc.reset(m_lss->createBlockAccumulator(m_nbrSolPnts,m_nbrSolPnts,m_nbrEqs));
 
   // get datahandle of volumes if necessary
   DataHandle<CFreal> volumes(CFNULL);
@@ -183,6 +217,7 @@ void PseudoSteadyStdTimeRHSJacob::execute()
 
         // add the contribution of the time residual to the rhs and the jacobian
         addTimeResidual();
+    
       }
 
       //release the GeometricEntity
@@ -214,25 +249,61 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
   {
     // get state
-    const State& currState = *(*m_cellStates)[iSol];
+    State *const currState = (*m_cellStates)[iSol];
 
     // get state ID
-    const CFuint stateID = currState.getLocalID();
+    const CFuint stateID = currState->getLocalID();
 
     // get past state
     const State& pastState = *pastStates[stateID];
+    
+    // this first transformed state HAS TO BE stored,
+    // since the returned pointer will change pointee after
+    // the second call to transform()
+    m_tempState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(currState));
+
+    const State *const tPastState = m_updateToSolutionVecTrans->transform(pastStates[stateID]);
+
+    // now the contribution to the jacobian matrix is calculated
+    m_acc->setRowColIndex(iSol, currState->getLocalID());
 
     // add contribution to rhs and jacobian
     CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++globalID)
     {
-      rhs(stateID, iEq, m_nbrEqs) -= (currState[iEq] - pastState[iEq])*m_diagValues[iSol];
+      rhs(stateID, iEq, m_nbrEqs) -= (m_tempState[iEq] - (*tPastState)[iEq])*m_diagValues[iSol];
 //       CF_DEBUG_OBJ(rhs(stateID, iEq, m_nbrEqs));
 
-      if(getMethodData().doComputeJacobian())
+      if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian() && false)
       {
-	      m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);
-      }
+        // perturb the given component of the state vector
+        m_numericalJacob->perturb(iEq, (*currState)[iEq]);
+
+        const RealVector& tempPertState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(currState));
+
+        // compute the finite difference derivative of the flux
+        m_numericalJacob->computeDerivative(m_tempState,tempPertState,m_fluxDiff);
+
+//      // _fluxDiff corresponds to a column vector of the dU/dP matrix
+//      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+//	_fluxDiff[iEq] *= (!_zeroDiagValue[iEq]) ? _diagValue*resFactor : 0.0;
+//      }
+
+        m_acc->addValues(iSol, iSol, iEq, &m_fluxDiff[0]);
+
+        // restore the unperturbed value
+        m_numericalJacob->restore((*currState)[iEq]);
+
+      }  
+if (false){
+      // add the values in the jacobian matrix
+      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
+      m_lss->getMatrix()->addValues(*m_acc);}
+
+      // reset to zero the entries in the block accumulator
+      m_acc->reset();
+
+      m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);
     }
   }
 //   CF_DEBUG_POINT;
@@ -240,8 +311,7 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<SafePtr<BaseDataSocketSink> >
-PseudoSteadyStdTimeRHSJacob::needsSockets()
+vector<SafePtr<BaseDataSocketSink> > PseudoSteadyStdTimeRHSJacob::needsSockets()
 {
   vector<SafePtr<BaseDataSocketSink> > result;
 

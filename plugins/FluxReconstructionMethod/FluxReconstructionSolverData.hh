@@ -302,6 +302,12 @@ public: // functions
   {
     return (_updateVarStr != _solutionVarStr);
   }
+
+  /// @return m_createVolumesSocketBool
+  bool createVolumesSocket()
+  {
+    return m_createVolumesSocketBool;
+  }
   
   /// Sets up the FluxReconstructionData
   void setup();
@@ -416,6 +422,9 @@ private:  // data
   
   /// Flag telling whether to add artificial viscosity
   bool m_addAV;
+
+  /// boolean telling wheter the socket containing the volume for each state (!= cell) has to be created
+  bool m_createVolumesSocketBool;
 
 };  // end of class FluxReconstructionSolverData
 

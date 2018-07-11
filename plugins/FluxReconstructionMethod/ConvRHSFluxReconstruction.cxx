@@ -92,7 +92,11 @@ ConvRHSFluxReconstruction::ConvRHSFluxReconstruction(const std::string& name) :
   m_nbrSolDep(),
   m_nbrFlxDep(),
   m_nbrSolSolDep(),
-  m_dimList()
+  m_dimList(),
+  m_faceJacobVecs(),
+  m_projectedCorrL(),
+  m_projectedCorrR(),
+  m_jacobDet()
   {
     addConfigOptionsTo(this);
   }
@@ -346,7 +350,7 @@ void ConvRHSFluxReconstruction::computeInterfaceFlxCorrection()
 void ConvRHSFluxReconstruction::setFaceData(CFuint faceID)
 {   
   // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+  m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -363,7 +367,7 @@ void ConvRHSFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 }
 
@@ -428,8 +432,8 @@ void ConvRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     // extrapolate the fluxes to the flux points
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
       const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
       m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
     }
 
@@ -577,7 +581,7 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
     const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];
 
     // the current correction factor corresponding to the interface flux (stored in cellFlx)
-    const RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
+    const RealVector& currentCorrFactor = m_cellFlx[side][iFlxPnt];
 
     // loop over sol pnts to compute the corrections
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -625,8 +629,8 @@ void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
       const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
-      const RealVector projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-      const RealVector projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+      m_projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+      m_projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
 
       // Loop over solution pnts to calculate the grad updates
       for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -635,8 +639,8 @@ void ConvRHSFluxReconstruction::computeGradientFaceCorrections()
         const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
 
 	/// @todo Check if this is also OK for triangles!!
-	m_gradUpdates[LEFT][iSolIdxL][iEq] += projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
-	m_gradUpdates[RIGHT][iSolIdxR][iEq] += projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
+	m_gradUpdates[LEFT][iSolIdxL][iEq] += m_projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
+	m_gradUpdates[RIGHT][iSolIdxR][iEq] += m_projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
       }
     }
   }
@@ -682,14 +686,15 @@ void ConvRHSFluxReconstruction::computeGradients()
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-	const RealVector projectedState = ((*(*m_cellStates)[iSolPnt])[iEq]) * m_cellFluxProjVects[iDir][iSolPnt];
+	// project the state on a normal and reuse a RealVector variable of the class to store
+	m_projectedCorrL = ((*(*m_cellStates)[iSolPnt])[iEq]) * m_cellFluxProjVects[iDir][iSolPnt];
 	
         // Loop over solution pnts to count factor of all sol pnt polys
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
         { 
           const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
           // compute the grad updates
-          m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*projectedState;
+          m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*m_projectedCorrL;
 	}
       }
     }
@@ -699,7 +704,7 @@ void ConvRHSFluxReconstruction::computeGradients()
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
   // get jacobian determinants at solution points
-  const std::valarray<CFreal> jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+  m_jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -707,7 +712,7 @@ void ConvRHSFluxReconstruction::computeGradients()
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
     // inverse Jacobian determinant
-    const CFreal invJacobDet = 1.0/jacobDet[iSol];
+    const CFreal invJacobDet = 1.0/m_jacobDet[iSol];
 
     // update gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -847,6 +852,10 @@ void ConvRHSFluxReconstruction::setup()
   m_corrFctDiv.resize(m_nbrSolPnts);
   m_cellFluxProjVects.resize(m_dim);
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
+  m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
+  m_projectedCorrL.resize(m_dim);
+  m_projectedCorrR.resize(m_dim);
+  m_jacobDet.resize(m_nbrSolPnts);
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -856,6 +865,7 @@ void ConvRHSFluxReconstruction::setup()
     m_cellFlx[LEFT][iFlx].resize(m_nbrEqs);
     m_cellFlx[RIGHT][iFlx].resize(m_nbrEqs);
     m_flxPntRiemannFlux[iFlx].resize(m_nbrEqs);
+    m_faceJacobVecs[iFlx].resize(m_dim);
   }
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)

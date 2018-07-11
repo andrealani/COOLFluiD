@@ -316,6 +316,12 @@ protected: //data
   /// number of flx pnts in a cell
   CFreal m_nbrTotalFlxPnts;
   
+  /// vector with the face Jacobian vectors
+  std::vector< RealVector > m_faceJacobVecs;
+  
+  /// vector of arrays with jacobian determinants for the sol pnts
+  std::vector< std::valarray<CFreal> > m_jacobDets;
+  
   private:
 
   /// Physical data temporary vector

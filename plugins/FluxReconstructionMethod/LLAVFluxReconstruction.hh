@@ -286,6 +286,12 @@ protected: //data
   /// extra vector to store the unit normal vectors in the flx pnts
   std::vector< RealVector > m_unitNormalFlxPnts2;
   
+  /// extra vector for face jacobian determinants 
+  std::vector< CFreal > m_faceJacobVecSizeFlxPnts2;
+  
+  /// vector to store sol pnt values temporarily
+  RealVector m_tempSolPntVec;
+  
   private:
 
   /// Physical data temporary vector

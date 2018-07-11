@@ -274,8 +274,18 @@ protected: //data
 
   /// list of dimensions in which the flux will be evaluated in each sol pnt
   std::vector< std::vector< CFuint > > m_dimList;
+
+  /// vector to store the face jacobians in
+  std::vector< RealVector > m_faceJacobVecs;
   
-  private:
+  /// left correction term projected on a normal
+  RealVector m_projectedCorrL;
+  
+  /// right correction term projected on a normal
+  RealVector m_projectedCorrR;
+  
+  /// array for jacobian determinants in sol pnts
+  std::valarray<CFreal> m_jacobDet;
 
   /// Physical data temporary vector
   RealVector m_pData;

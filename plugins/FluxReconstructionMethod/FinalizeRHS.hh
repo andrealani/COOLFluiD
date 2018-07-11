@@ -97,6 +97,9 @@ protected: // data
   
   /// pointer to the numerical Jacobian computer
   Common::SafePtr<Framework::NumericalJacobian> m_numJacob;
+  
+  /// vector to temporarily store residuals
+  RealVector m_tempRes;
 
 }; // class FinalizeRHS
 

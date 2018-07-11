@@ -9,6 +9,10 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
+    
+    namespace Framework {
+    class BlockAccumulator;
+  }
 
   namespace FluxReconstructionMethod {
 
@@ -31,6 +35,12 @@ public:
    * Destructor.
    */
   virtual ~PseudoSteadyStdTimeRHSJacob();
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
 
   /**
    * Set up private data and data of the aggregated classes
@@ -99,6 +109,31 @@ protected:
 
   /// boolean telling whether computation is unsteady
   bool m_isUnsteady;
+  
+  /// flag telling if to use global DT (global time stepping)
+  bool m_useGlobalDT;
+
+  /// flag telling if to use analytical transformation matrix
+  bool m_useAnalyticalMatrix;
+  
+  /// temporary state
+  RealVector m_tempState;
+  
+  /// vector transformation from the update variables to the
+  /// solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
+  // accumulator
+  std::auto_ptr<Framework::BlockAccumulator> m_acc;
+  
+  /// pointer to the linear system solver
+  Common::SafePtr<Framework::NumericalJacobian> m_numericalJacob;
+  
+  /// vector for the temporary flux finite difference
+  RealVector m_fluxDiff;
+  
+  /// number of sol pnts
+  CFuint m_nbrSolPnts;
 
 }; // class PseudoSteadyStdTimeRHSJacob
 

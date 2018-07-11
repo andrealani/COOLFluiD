@@ -97,6 +97,11 @@ protected: // functions
   virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
   
   /**
+   * compute the terms for the gradient computation for a bnd face
+   */
+  virtual void computeBndGradTerms2(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+  
+  /**
    * compute the term for the gradient computation for the cell
    */
   virtual void computeCellGradTerm(RealMatrix& gradTerm);
@@ -105,6 +110,21 @@ protected: // functions
    * compute the terms for the gradient computation for a face
    */
   virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
+  
+  /**
+   * compute the contribution of the convective boundary flux correction to the Jacobian
+   */
+  void extrapolatePerturbedState();
+  
+  /**
+   * store backups of values before perturbing the states
+   */
+  void storeBackups();
+  
+  /**
+   * restore values after perturbing a state
+   */
+  void restoreFromBackups();
 
 protected: // data
   
@@ -182,6 +202,69 @@ protected: // data
   
   /// local cell face - mapped coordinate direction per orientation
   Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDirPO;
+  
+  /// index of the perturbed solution point
+  CFuint m_pertSol;
+  
+  /// index of the perturbed variable
+  CFuint m_pertVar;
+  
+  /// dependencies of sol pnts on flx pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDep;
+
+  /// nbr of flx pnts on which a sol pnt is dependent
+  CFuint m_nbrFlxDep;
+  
+  /// backup of extrapolated states in the flux points of the cell
+  std::vector< RealVector > m_cellStatesFlxPntBackup;
+  
+  /// booleans telling for each flx pnt whether it is influenced by the perturbation
+  std::vector< bool > m_influencedFlxPnts;
+  
+  /// backup of interface fluxes at the flux points of a face
+  std::vector< RealVector> m_flxPntRiemannFluxBackup;
+  
+  /// the corrected gradients in the flux points backup
+  std::vector< std::vector< RealVector* > > m_cellGradFlxPntBackup;
+  
+  /// list of dimensions in which the flux will be evaluated in each sol pnt
+  std::vector< std::vector< CFuint > > m_dimList;
+  
+  /// flux projection vectors in solution points for disc flux
+  std::vector< std::vector< RealVector > > m_cellFluxProjVects;
+  
+  /// term for the gradient computation
+  RealMatrix m_gradTerm;
+  
+  /// dependencies of solution pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solSolDep;
+
+  /// nbr of sol pnts a sol pnt influences
+  CFuint m_nbrSolSolDep;
+  
+  /// correction projected on a normal
+  RealVector m_projectedCorr;
+  
+  /// face local coordinates of the flux points on one face
+  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+  
+  /// vector to store the face jacobians in
+  std::vector< RealVector > m_faceJacobVecs;
+  
+  /// term for the gradient computation on a face
+  RealMatrix m_gradTermFace;
+  
+  /// term for the ghost gradient computation on a face
+  RealMatrix m_ghostGradTerm;
+  
+  /// array for jacobian determinants in sol pnts
+  std::valarray<CFreal> m_jacobDet;
+  
+  /// number of flx pnts in one element
+  CFuint m_nbrTotalFlxPnts;
+  
+  /// extrapolated states in the flux points of the cell
+  std::vector< Framework::State* > m_cellStatesFlxPnt2;
 
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstruction
 

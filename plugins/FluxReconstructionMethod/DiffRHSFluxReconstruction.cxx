@@ -105,7 +105,9 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_nbrSolSolDep(),
   m_dimList(),
   m_tempGrad(),
-  m_nbrTotalFlxPnts()
+  m_nbrTotalFlxPnts(),
+  m_faceJacobVecs(),
+  m_jacobDets()
   {
     addConfigOptionsTo(this);
   }
@@ -335,9 +337,7 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
 void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
 {   
   // compute face Jacobian vectors
-  vector< RealVector > faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
-  
-  vector< std::valarray<CFreal> > jacobDets(2,std::valarray<CFreal>(m_nbrFaceFlxPnts));
+  m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -353,17 +353,17 @@ void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
   
   // compute Jacobian determinants
-  jacobDets[LEFT] = m_cells[LEFT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][LEFT]);
-  jacobDets[RIGHT] = m_cells[RIGHT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][RIGHT]);
+  m_jacobDets[LEFT] = m_cells[LEFT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][LEFT]);
+  m_jacobDets[RIGHT] = m_cells[RIGHT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][RIGHT]);
 
   // compute inverse characteristic lengths
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    m_faceInvCharLengths[iFlx] = m_faceJacobVecAbsSizeFlxPnts[iFlx]/(jacobDets[LEFT][iFlx] + jacobDets[RIGHT][iFlx]);
+    m_faceInvCharLengths[iFlx] = m_faceJacobVecAbsSizeFlxPnts[iFlx]/(m_jacobDets[LEFT][iFlx] + m_jacobDets[RIGHT][iFlx]);
   }
   
   // get the gradients datahandle
@@ -453,8 +453,8 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
 
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
       const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
 
       m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
     }
@@ -582,7 +582,7 @@ void DiffRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
     const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];
 
     // the current correction factor (stored in cellFlx)
-    const RealVector currentCorrFactor = m_cellFlx[side][iFlxPnt];
+    const RealVector& currentCorrFactor = m_cellFlx[side][iFlxPnt];
 
     // compute the term due to each flx pnt
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -672,7 +672,7 @@ void DiffRHSFluxReconstruction::computeFlux(const RealVector& values, const std:
 void DiffRHSFluxReconstruction::setup()
 {
   CFAUTOTRACE;
-  
+  CFLog(VERBOSE, "Diff setup\n");
   // setup parent class
   FluxReconstructionSolverCom::setup();
   
@@ -800,6 +800,7 @@ void DiffRHSFluxReconstruction::setup()
   m_cellGrads.resize(2);
   m_cellGradFlxPnt.resize(2);
   m_cellVolume.resize(2);
+  m_jacobDets.resize(2);
   m_faceJacobVecAbsSizeFlxPnts.resize(m_nbrFaceFlxPnts);
   m_cellGrads[LEFT].resize(m_nbrSolPnts);
   m_cellGrads[RIGHT].resize(m_nbrSolPnts);
@@ -807,6 +808,8 @@ void DiffRHSFluxReconstruction::setup()
   m_cellGradFlxPnt[RIGHT].resize(m_nbrFaceFlxPnts);
   m_cellFlx[LEFT].resize(m_nbrFaceFlxPnts);
   m_cellFlx[RIGHT].resize(m_nbrFaceFlxPnts);
+  m_jacobDets[LEFT].resize(m_nbrFaceFlxPnts);
+  m_jacobDets[RIGHT].resize(m_nbrFaceFlxPnts);
   m_faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);
   m_unitNormalFlxPnts.resize(m_nbrFaceFlxPnts);
   m_flxPntRiemannFlux.resize(m_nbrFaceFlxPnts);
@@ -819,6 +822,7 @@ void DiffRHSFluxReconstruction::setup()
   m_avgSol.resize(m_nbrEqs);
   m_avgGrad.reserve(m_nbrEqs);
   m_tempGrad.resize(m_nbrEqs);
+  m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -828,6 +832,7 @@ void DiffRHSFluxReconstruction::setup()
     m_cellFlx[LEFT][iFlx].resize(m_nbrEqs);
     m_cellFlx[RIGHT][iFlx].resize(m_nbrEqs);
     m_flxPntRiemannFlux[iFlx].resize(m_nbrEqs);
+    m_faceJacobVecs[iFlx].resize(m_dim);
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       m_cellGradFlxPnt[LEFT][iFlx].push_back(new RealVector(m_dim));
