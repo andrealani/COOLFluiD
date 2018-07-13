@@ -122,20 +122,20 @@ public: // classes
   {
     //printf("EulerMFMHD2DRhoiViTiT::computePhysicalData \n"); 
     const CFuint nbSpecies = m_dco->nbSpecies;
-    const CFuint nbMomentum = m_dco->nbMomentum;
-    const CFuint nbEnergyEqs = m_dco->nbEnergyEqs;
+    //const CFuint nbMomentum = m_dco->nbMomentum;
+    //const CFuint nbEnergyEqs = m_dco->nbEnergyEqs;
 
     const CFuint endEM = 8;
     const CFuint firstSpecies = m_dco->firstSpecies;  
     const CFuint firstVelocity = m_dco->firstVelocity;   
-    const CFuint firstTemperature = m_dco->firstTemperature;
+    //const CFuint firstTemperature = m_dco->firstTemperature;
 
     const CFreal m_e = m_dco->molecularMass1;
     const CFreal m_n = m_dco->molecularMass2;
     const CFreal m_p = m_dco->molecularMass3; 
 
-    const CFreal gamma = m_dco->gamma;
-    const CFreal K_gas = m_dco->K;
+    //const CFreal gamma = m_dco->gamma;
+    //const CFreal K_gas = m_dco->K;
 
   //set the molar masses of the species (should be changed in the future)
   _m_i[0] = m_e;
@@ -262,7 +262,7 @@ public: // classes
     
       const CFreal c_p = (gamma/(gamma-1))*(K_gas/mi);
       const CFreal R_gas = K_gas/mi;
-      const CFreal c_v = c_p - R_gas;
+      //const CFreal c_v = c_p - R_gas;
       
       data[firstTemperature + 4*ie] = Ti;//Temperature
       data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
@@ -315,10 +315,10 @@ public: // classes
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {   
     state[endEM + nbSpecies + 2*nbSpecies + ie] = data[firstTemperature + 4*ie];
   }  
-  CFLog(DEBUG_MAX,"EulerMFMHD2DRhoiViTi::computeStateFromPhysicalData" << "\n");
-  for (CFuint ie = 0; ie < endEM + 4*nbSpecies; ++ie) {
-     CFLog(DEBUG_MAX,"state["<< ie <<"] = "<< state[ie] << "\n");
-  }
+  //CFLog(DEBUG_MAX,"EulerMFMHD2DRhoiViTi::computeStateFromPhysicalData" << "\n");
+  //for (CFuint ie = 0; ie < endEM + 4*nbSpecies; ++ie) {
+  //   CFLog(DEBUG_MAX,"state["<< ie <<"] = "<< state[ie] << "\n");
+  //}
   }
 
 

@@ -120,12 +120,12 @@ public:
     //printf("EulerMFMHD2DConsT::computePhysicalData \n");
 
     const CFuint nbSpecies = m_dco->nbSpecies;
-    const CFuint nbMomentum = m_dco->nbMomentum;
-    const CFuint nbEnergyEqs  = m_dco->nbEnergyEqs;
+    //const CFuint nbMomentum = m_dco->nbMomentum;
+    //const CFuint nbEnergyEqs  = m_dco->nbEnergyEqs;
     const CFuint endEM = 8;
     const CFuint firstSpecies = m_dco->firstSpecies;
     const CFuint firstVelocity = m_dco->firstVelocity;
-    const CFuint firstTemperature = m_dco->firstTemperature;
+    //const CFuint firstTemperature = m_dco->firstTemperature;
   
     data[PTERM::BX] = state[0];
     data[PTERM::BY] = state[1]; 

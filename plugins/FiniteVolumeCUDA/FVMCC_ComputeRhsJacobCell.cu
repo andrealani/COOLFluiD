@@ -16,6 +16,7 @@
 #include "FiniteVolume/LeastSquareP1PolyRec2D.hh"
 #include "FiniteVolume/LeastSquareP1PolyRec3D.hh"
 #include "FiniteVolume/BarthJesp.hh"
+#include "FiniteVolume/Venktn2D.hh"
 
 #include "MHD/MHD2DProjectionConsT.hh"
 #include "MHD/MHD3DProjectionConsT.hh"
@@ -114,7 +115,6 @@ fvmcc_RhsJacobMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##
 FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP(2D, Half,Cons, RhoiViTi, 48, "CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTi")
 
 #undef FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP
-
 
 
 
@@ -399,6 +399,7 @@ __global__ void computeFluxJacobianKernel(typename SCHEME::BASE::template Device
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(&currFd, faceCenters, uX, uY, uZ, limiter);
 
+        fluxScheme.prepareComputation(&currFd, &pmodel);
 	fluxScheme(&currFd, &pmodel);
 
         for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {
@@ -579,94 +580,7 @@ void computeFluxJacobianCPU(typename SCHEME::BASE::template DeviceConfigOptions<
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(currFd, faceCenters, uX, uY, uZ, limiter);
 		
-	/*if (cellID == 0) {    
-	  FluxData<PHYS>* data = currFd; 
-	  PHYS* model = &pmodel;
-	  CudaEnv::CFVec<CFreal,PHYS::NBEQS> m_tmp;
-	  CudaEnv::CFVec<CFreal,PHYS::NBEQS> m_tmp2;
-	  CudaEnv::CFVec<CFreal,PHYS::NBEQS> m_sumFlux;
-	  CudaEnv::CFVec<CFreal,PHYS::DATASIZE> m_pdata;
-	  CudaEnv::CFVec<CFreal,PHYS::DIM> m_tempUnitNormal;
-	  CudaEnv::CFVecSlice<CFreal,PHYS::DIM> unitNormal(data->getUnitNormal());
-	  const CFreal coeff = (data->isOutward()) ? 1. : -1.;
-	  m_tempUnitNormal = coeff*unitNormal;
-	  CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> flux(data->getResidual());
-	  typename PHYS::UPDATE_VS* updateVS = model->getUpdateVS();
-	  
-	  updateVS->computePhysicalData(data->getRstate(1), data->getNode(1), &m_pdata[0]);
-	  updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
-	  flux = 0.5*m_tmp;
-	  
-	  updateVS->computeEigenValues(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
-	  
-	  std::cout << std::endl << "stateIDs [" << cellID << "," << stateID << "]" << std::endl;
-	  // std::cout.precision(12); std::cout << "centerNodes[0]    = "; printArray<CFreal,PHYS::DIM>(&centerNodes[cellID*PHYS::DIM]);
-	  
-	  std::cout.precision(12);std::cout << "dataR   = "; printArray<CFreal,PHYS::DATASIZE>(&m_pdata[0]);
-	  // std::cout.precision(12);std::cout << "eigenR  = "; printArray<CFreal,PHYS::NBEQS>(&m_tmp[0]);
-	  std::cout.precision(12);std::cout << "normalR = "; printArray<CFreal,PHYS::DIM>(&m_tempUnitNormal[0]);
-	  
-	  CFreal aR = 0.0;
-	  for (CFuint i = 0; i < PHYS::NBEQS; ++i) {
-	    aR = max(aR, abs(m_tmp[i]));
-	  }
-	  
-	  // left physical data, flux and eigenvalues
-	  updateVS->computePhysicalData(data->getRstate(0), data->getNode(0), &m_pdata[0]);
-	  updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
-	  flux += 0.5*m_tmp;
-	  
-	  updateVS->computeEigenValues(&m_pdata[0], &m_tempUnitNormal[0], &m_tmp[0]);
-	  std::cout.precision(12);std::cout << "dataL   = "; printArray<CFreal,PHYS::DATASIZE>(&m_pdata[0]);
-	  // std::cout.precision(12);std::cout << "eigenL  = "; printArray<CFreal,PHYS::NBEQS>(&m_tmp[0]);
-	  std::cout.precision(12);std::cout << "normalL = "; printArray<CFreal,PHYS::DIM>(&m_tempUnitNormal[0]);
-	  
-	  // compute update coefficient
-	  if (!data->isPerturb()) {    
-	    const CFreal k = max(m_tmp.max(), 0.)*data->getFaceArea();
-	    std::cout << "lambda = " << max(m_tmp.max(), 0.) << ", area =" << data->getFaceArea() << std::endl;
-	    std::cout << "updateCoeff [" <<cellID << "] = " << k << std::endl;
-	    // data->setUpdateCoeff(k);
-	    //abort();
-	  }
-	  
-	  CFreal aL = 0.0;
-	  for (CFuint i = 0; i < PHYS::NBEQS; ++i) {
-	    aL = max(aL, abs(m_tmp[i]));
-	  }
-	  
-	  const CFreal a = (aR > aL) ? aR : aL; // max(aR,aL);
-	  const CFreal aDiff = a*dcof->currentDiffRedCoeff;
-	  
-	  Framework::VarSetTransformerT<typename PHYS::UPDATE_VS, typename PHYS::SOLUTION_VS, NOTYPE>* up2Sol = 
-	    model->getUpdateToSolution();
-	  
-	  // transform to solution variables
-	  up2Sol->transform(data->getRstate(LEFT), &m_tmp[0]);
-	  up2Sol->transform(data->getRstate(RIGHT), &m_tmp2[0]);
-	  
-	  CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> stateL(&m_tmp[0]);
-	  CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> stateR(&m_tmp2[0]);
-	  
-	  m_sumFlux = 2.*flux;
-	  
-	  std::cout.precision(12);;std::cout << "UR       = ";printArray<CFreal,PHYS::NBEQS>(&stateR[0]);
-	  std::cout.precision(12);;std::cout << "UL       = ";printArray<CFreal,PHYS::NBEQS>(&stateL[0]);
-	  std::cout.precision(12);;std::cout << "_sumFlux = ";printArray<CFreal,PHYS::NBEQS>(&m_sumFlux[0]);
-	  std::cout.precision(12);;std::cout << "aDiff    = " << aDiff << std::endl;
-	  
-	  flux -= (0.5*aDiff)*(stateR - stateL);
-	  
-	  
-	  // // NOTE THE AREA HERE !!!!!!!!!!!!!!!!
-	  // flux *= data->getFaceArea();
-	  }*/
-
-	
-	////////
-	
-
-       
+        fluxScheme.prepareComputation(currFd, &pmodel); 
 	fluxScheme(currFd, &pmodel); // compute the convective flux across the face
         
 

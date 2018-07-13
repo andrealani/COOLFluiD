@@ -15,6 +15,8 @@
 #include "FiniteVolume/LeastSquareP1PolyRec2D.hh"
 #include "FiniteVolume/LeastSquareP1PolyRec3D.hh"
 #include "FiniteVolume/BarthJesp.hh"
+#include "FiniteVolume/Venktn2D.hh"
+
 #include "MHD/MHD2DProjectionConsT.hh"
 #include "MHD/MHD3DProjectionConsT.hh"
 #include "MHD/MHD2DProjectionPrimT.hh"
@@ -68,19 +70,19 @@ namespace COOLFluiD {
 
 
 //Provider for AUSMPlusUpFlux with Source
-#define FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__nbBThreads__,__providerName__) \
+#define FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__limiter__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<FVMCC_ComputeSourceRhsJacobCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
 				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
-				      LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
+				      LeastSquareP1PolyRec##__dim__ , __limiter__ , __nbBThreads__>, \
 		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
-fvmcc_RhsJacobMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
+fvmcc_RhsJacobMultiFluidMHD##__limiter__##AUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
 
 // 48 block threads (default)
-FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,48,"CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
+//FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE_BARTH(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,BarthJesp,48,"CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
+FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,BarthJesp,48,"CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
+FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,Venktn2D,48,"CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
 
-FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(2D,,Cons,RhoiViTi,HartmannSourceTerm,48,"CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiHartmann")
-//SOURCE HARD CODED
 #undef FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE
 
 
@@ -140,7 +142,7 @@ HOST_DEVICE void setFluxData(const CFuint f, const CFint stype,
 template <typename T, CFuint SIZE>
 void print(const std::string& name, T* array) 
 {
-  std::cout << name << " = \t";
+  std::cout << name << " = \n";
   for (CFuint i = 0; i < SIZE; ++i) {
     std::cout.precision(10); std::cout << array[i] << " ";
   }
@@ -319,7 +321,6 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
   // each thread takes care of computing the gradient for one single cell
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x + startCellID;
   if (cellID < nbCells) {
-    
     // compute and store cell gradients at once 
     POLYREC polyRec(dcor);
     SCHEME  fluxScheme(dcof);
@@ -334,7 +335,9 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
     CFreal midFaceCoord[PHYS::DIM*MAX_NB_FACES];
     CudaEnv::CFVec<CFreal,PHYS::NBEQS> fluxDiff;
     CudaEnv::CFVec<CFreal,PHYS::NBEQS> resBkp;
-    FluxData<PHYS> currFd; currFd.initialize();
+    //FluxData<PHYS> currFd; currFd.initialize();
+    FluxData<PHYS> fd; fd.initialize();
+    FluxData<PHYS>* currFd = &fd;
     typename SCHEME::MODEL pmodel(dcop);
     
     // reset the rhs and update coefficients to 0
@@ -363,7 +366,7 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
     const CFuint nbFacesInCell = cell.getNbActiveFacesInCell();
     const CFuint nbRows = nbFacesInCell + 1;
     const CFuint bStartCellID = blockStart[cellID];
-    
+
     // this block accumulator represents a column block (nbFaces+1 x 1)
     BlockAccumulatorBaseCUDA acc(nbRows, 1, PHYS::NBEQS, &blockJacob[bStartCellID]);
     acc.reset();
@@ -371,46 +374,47 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
     // compute the face flux and flux numerical jacobian within the same loop
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      
-      if (stype != 0) { // skip all partition faces
+      if (stype > 0) { // skip all partition and boundary faces
 	const CFuint stateID = cell.getNeighborID(f);
-	setFluxData(f, stype, stateID, cellID, &kd, &currFd, cellFaces);
-	
+	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
 	// compute face quadrature points (face centroids)
 	CFreal* faceCenters = &midFaceCoord[f*PHYS::DIM];
 	computeFaceCentroid<PHYS>(&cell, f, nodes, faceCenters);
 	
 	// extrapolate solution on quadrature points on both sides of the face
-	polyRec.extrapolateOnFace(&currFd, faceCenters, uX, uY, uZ, limiter);
-	fluxScheme(&currFd, &pmodel); // compute the convective flux across the face
+	polyRec.extrapolateOnFace(currFd, faceCenters, uX, uY, uZ, limiter);
+        fluxScheme.prepareComputation(currFd, &pmodel);
+	fluxScheme(currFd, &pmodel); // compute the convective flux across the face
 	
 	for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {
-	  const CFreal value = currFd.getResidual()[iEq];
+	  const CFreal value = currFd->getResidual()[iEq];
 	  res[iEq]   -= value;  // update the residual 
-          //printf("resFlux [%d] \t %f \n", iEq, res[iEq]);
 	  resBkp[iEq] = value;  // backup the current face-based residual
 	}
 	
 	// update the update coefficient
-	updateCoeff[cellID] += currFd.getUpdateCoeff();
+	updateCoeff[cellID] += currFd->getUpdateCoeff();
 		
 	// only contribution from internal faces is computed here  
 	if (stype > 0) { 	  
-	  currFd.setIsPerturb(true);
+	  currFd->setIsPerturb(true);
 	  // flux jacobian computation
 	  for (CFuint iVar = 0; iVar < PHYS::NBEQS; ++iVar) {
+	    const CFreal rstateBkpL = currFd->getRstate(LEFT)[iVar];
+            //const CFreal stateBkp = currFd.getState(LEFT)[iVar];
 	    // here we perturb the current variable for the left cell state
-	    numJacob.perturb(iVar, &currFd.getState(LEFT)[iVar]);
+	    numJacob.perturb(iVar, &currFd->getState(LEFT)[iVar]);
 	    
 	    // extrapolate solution on quadrature points on both sides of the face
-	    const CFreal rstateBkpL = currFd.getRstate(LEFT)[iVar];
-	    polyRec.extrapolateOnFace(iVar, &currFd, faceCenters, uX, uY, uZ, limiter);
-	    fluxScheme(&currFd, &pmodel); // compute the convective flux across the face
-	    
+	    polyRec.extrapolateOnFace(iVar, currFd, faceCenters, uX, uY, uZ, limiter);
+
+	    fluxScheme(currFd, &pmodel); // compute the convective flux across the face
+            fluxDiff = 0.;    
 	    // compute the numerical jacobian of the flux
-	    CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> resPert(currFd.getResidual());
+	    CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> resPert(currFd->getResidual());
 	    numJacob.computeDerivative(&resBkp, &resPert, &fluxDiff);
-	    
+
+
 	    // contribution to the row corresponding of the current cell
 	    // this subblock gets all contributions from all face cells
 	    acc.addValues(0, 0, iVar, &fluxDiff[0]);
@@ -420,14 +424,14 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
 	    // due to the currently perturbed cell state and is opposite in sign
 	    // because the outward normal for neighbors is inward for the current cell
 	    fluxDiff *= -1.0;
-	    acc.addValues(f+1, 0, iVar, &fluxDiff[0]); 
+	    acc.addValues(f+1, 0, iVar, &fluxDiff[0]);
 	    
 	    // restore perturbed states
-	    currFd.getRstate(LEFT)[iVar] = rstateBkpL;
-	    numJacob.restore(&currFd.getState(LEFT)[iVar]);
+	    currFd->getRstate(LEFT)[iVar] = rstateBkpL;
+  	    numJacob.restore(&currFd->getState(LEFT)[iVar]);
 	  }
 	  
-	  currFd.setIsPerturb(false);
+	  currFd->setIsPerturb(false);
 	}
       }
     }
@@ -457,15 +461,13 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
       source *= factor;
       SourceDiff = 0.0; 
       numJacob.computeDerivative(&sourceBkp, &source, &SourceDiff);
-       
-//      printf("SourceDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
-//SourceDiff[0],SourceDiff[1],SourceDiff[2],SourceDiff[3],SourceDiff[4],SourceDiff[5],SourceDiff[6],SourceDiff[7],SourceDiff[8],SourceDiff[9],
-//SourceDiff[10],SourceDiff[11],SourceDiff[12],SourceDiff[13],SourceDiff[14],SourceDiff[15]);
+      SourceDiff *= -1.; 
 
       acc.addValues(0, 0, iVar, &SourceDiff[0]);   //Add values to the block accumulator
 
       // restore perturbed states
       state[iVar] = stateBkp;
+//	    numJacob.restore(&state[iVar]); // IA: Why does this not work? Anyway, the previous line is an alternative that works..
     }
 
 
@@ -566,12 +568,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
     CellData cells(nbCells, cellInfo, cellStencil, cellFaces, cellNodes, neighborTypes, cellConn);
     CellData::Itr cell = cells.getItr(cellID);
     const CFuint nbFacesInCell = cell.getNbActiveFacesInCell();
-    const CFuint nbRows = nbFacesInCell + 1;
-    const CFuint bStartCellID = blockStart[cellID];
     
-//    // this block accumulator represents a column block (nbFaces+1 x 1)
-//    BlockAccumulatorBaseCUDA acc(nbRows, 1, PHYS::NBEQS, &blockJacob[bStartCellID]);
-//    acc.reset();
   
     //Compute the index for the diagonal blocks
     const CFint nb = PHYS::NBEQS;
@@ -589,7 +586,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
       
-      if (stype != 0) { // skip all partition faces
+      if (stype > 0) { // skip all partition and boundary faces
 	const CFuint stateID = cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, &currFd, cellFaces);
 	
@@ -599,12 +596,12 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
 	
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(&currFd, faceCenters, uX, uY, uZ, limiter);
+        fluxScheme.prepareComputation(&currFd, &pmodel);
 	fluxScheme(&currFd, &pmodel); // compute the convective flux across the face
 	
 	for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {
 	  const CFreal value = currFd.getResidual()[iEq];
 	  res[iEq]   -= value;  // update the residual 
-          //printf("resFlux [%d] \t %f \n", iEq, res[iEq]);
 	  resBkp[iEq] = value;  // backup the current face-based residual
 	}
 	
@@ -632,7 +629,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
 	    // this subblock gets all contributions from all face cells
 	    //acc.addValues(0, 0, iVar, &fluxDiff[0]);
 
-//THIS IS EQUIVALENT TO acc.addValues(0, 0, iVar, &fluxDiff[0]);
+            // IA: this is equivalent to: acc.addValues(0, 0, iVar, &fluxDiff[0]);
 
             for (CFint nbi=0; nbi<PHYS::NBEQS; nbi++){
                col[IndexCSRDiag+nbi*nb*mmDiag+iVar] = cellID*nb + iVar; 
@@ -650,7 +647,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
 	    currFd.getRstate(LEFT)[iVar] = rstateBkpL;
 	    numJacob.restore(&currFd.getState(LEFT)[iVar]);
 
-//THIS IS EQUIVLENT TO acc.addValues(f+1, 0, iVar, &fluxDiff[0]);
+            // IA: this is equivalent to: acc.addValues(f+1, 0, iVar, &fluxDiff[0]);
             CFuint RowPosition = rowoff[stateID*nb]; //stateID is the ID of the neighbour
             CFuint RowPositionPlusOne = rowoff[stateID*nb + 1];
             CFuint mm = (RowPositionPlusOne-RowPosition)/nb;
@@ -700,34 +697,13 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
       source *= factor;
       SourceDiff = 0.0; 
       numJacob.computeDerivative(&sourceBkp, &source, &SourceDiff);
-       
-//      printf("SourceDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
-//SourceDiff[0],SourceDiff[1],SourceDiff[2],SourceDiff[3],SourceDiff[4],SourceDiff[5],SourceDiff[6],SourceDiff[7],SourceDiff[8],SourceDiff[9],
-//SourceDiff[10],SourceDiff[11],SourceDiff[12],SourceDiff[13],SourceDiff[14],SourceDiff[15]);
+      SourceDiff *= -1.; 
 
 //      acc.addValues(0, 0, iVar, &SourceDiff[0]);   //Add values to the block accumulator
-/*
-            const CFint nb = PHYS::NBEQS;
-            CFuint RowPosition = rowoff[cellID*nb]; //In this case we are looking for the diagonal block
-            CFuint RowPositionPlusOne = rowoff[cellID*nb + 1];
-            CFuint mm = (RowPositionPlusOne-RowPosition)/nb;
-            CFint IndexCSR = -1;
-
-            for (CFuint mii=0; mii<mm; mii++){
-               if(col[RowPosition+mii*nb] == cellID*nb || col[RowPosition+mii*nb] == -1){
-                  IndexCSR = RowPosition+mii*nb;
-               }
-            }
-
-            for (CFint nbi=0; nbi<PHYS::NBEQS; nbi++){
-               col[IndexCSR+nbi*nb*mm+iVar] = cellID*nb + iVar;
-               val[IndexCSR+nbi*nb*mm+iVar] += SourceDiff[nbi];
-            }
-*/
-            for (CFint nbi=0; nbi<PHYS::NBEQS; nbi++){
-               col[IndexCSRDiag+nbi*nb*mmDiag+iVar] = cellID*nb + iVar; 
-               val[IndexCSRDiag+nbi*nb*mmDiag+iVar] += SourceDiff[nbi];
-            }
+      for (CFint nbi=0; nbi<PHYS::NBEQS; nbi++){
+         col[IndexCSRDiag+nbi*nb*mmDiag+iVar] = cellID*nb + iVar; 
+         val[IndexCSRDiag+nbi*nb*mmDiag+iVar] += SourceDiff[nbi];
+      }
 
 
 
@@ -889,22 +865,19 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      if (stype != 0) { // skip all partition faces
+      if (stype > 0) { // skip all partition and boundary faces
 	const CFuint stateID =  cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
-	
+
 	// compute face quadrature points (centroid)
 	CFreal* faceCenters = &midFaceCoord[f*PHYS::DIM];
 	computeFaceCentroid<PHYS>(&cell, f, nodes, faceCenters);
 	
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(currFd, faceCenters, uX, uY, uZ, limiter);
-		
-
 	
-	
+        fluxScheme.prepareComputation(currFd, &pmodel);
 	fluxScheme(currFd, &pmodel); // compute the convective flux across the face
-		
 
 	for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {
 	  const CFreal value = currFd->getResidual()[iEq];
@@ -937,11 +910,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 	    // compute the numerical jacobian of the flux
 	    CudaEnv::CFVecSlice<CFreal,PHYS::NBEQS> resPert(currFd->getResidual());
 	    numJacob.computeDerivative(&resBkp, &resPert, &fluxDiff);
-	    
-	    
-//	    printf("fluxDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
-// fluxDiff[0],fluxDiff[1],fluxDiff[2],fluxDiff[3],fluxDiff[4],fluxDiff[5],fluxDiff[6],fluxDiff[7],fluxDiff[8],fluxDiff[9],
-// fluxDiff[10],fluxDiff[11],fluxDiff[12],fluxDiff[13],fluxDiff[14],fluxDiff[15]);
+
 
 	    // flux is computed with the outward normal, so the sign is correct here
 	    // contribution to the row corresponding of the current cell
@@ -960,7 +929,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 	    currFd->getRstate(LEFT)[iVar] = rstateBkpL;
 	    numJacob.restore(&currFd->getState(LEFT)[iVar]);
 	  }
-	  	  
+	    
 	  currFd->setIsPerturb(false);
 	}
       }
@@ -982,8 +951,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
     source *= factor;
     for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) { 
-      res[iEq] += source[iEq];   
-      //printf("source [%d] \t %e \n", iEq, source[iEq]);
+       res[iEq] += source[iEq];   
        sourceBkp[iEq] = source[iEq];
        stateBkp[iEq] = state[iEq];
     }
@@ -1006,15 +974,12 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
       // contribution to the row corresponding of the current cell
       // this subblock gets all contributions from all face cells
        
-//      printf("SourceDiff %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \t %e \n",
-// SourceDiff[0],SourceDiff[1],SourceDiff[2],SourceDiff[3],SourceDiff[4],SourceDiff[5],SourceDiff[6],SourceDiff[7],SourceDiff[8],SourceDiff[9],
-// SourceDiff[10],SourceDiff[11],SourceDiff[12],SourceDiff[13],SourceDiff[14],SourceDiff[15]);
-
+      SourceDiff *= -1.;
 
       acc.addValues(0, 0, iVar, &SourceDiff[0]);   
 
       // restore perturbed states
-      state = stateBkp;
+      state[iVar] = stateBkp[iVar];
       numJacob.restore(&state[iVar]);
     }
 
@@ -1210,7 +1175,7 @@ if(!this->m_useParalutionPtr){
          ResFactor, 
          IsAxisymmetric);
 
-         FluxTime += timer.elapsed();
+      FluxTime += timer.elapsed();
   
       timer.start();
       m_blockJacobians.get();
@@ -1225,7 +1190,7 @@ if(!this->m_useParalutionPtr){
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
 
 }else{  /// New code for building the matrix on the GPU
-/*  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
+/* //  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
 #ifdef CF_HAVE_PARALUTION
 
  SafePtr<LSSMatrix> matrix = m_lss->getMatrix();
@@ -1291,6 +1256,7 @@ startCellID += m_nbCellsInKernel[s];
     timer.start();  
 
 #endif
+
 */
 
 }
@@ -1350,7 +1316,8 @@ startCellID += m_nbCellsInKernel[s];
     updateSystemMatrix(0);
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
   }
-  
+
+
   timer.start();
   // compute flux jacobians on boundaries
   executeBC();
@@ -1359,19 +1326,19 @@ startCellID += m_nbCellsInKernel[s];
   finalizeComputationRHS();
   
   CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() END\n");
-  
- /* for (int i = 0; i < updateCoeff.size(); ++i) {
-    // for (int i = 0; i < 10000; ++i) {
+
+ /* // DEBUG
+  for (int i = 0; i < rhs.size(); ++i) {
     std::cout << "updateCoeff[" << i << "] = " << updateCoeff[i]  << std::endl;
     std::cout << "rhs[" << i << "] = ";
-    for (int j = 0; j < 9; ++j) {
-      std::cout << rhs[i*9+j] << " ";
+    for (int j = 0; j < 18; ++j) {
+     cout.precision(14); cout.setf(ios::scientific,ios::floatfield);  std::cout << rhs[i*18+j] << " ";
     }
     std::cout << std::endl;
-  }*/
+  }
   
-  // abort();
-  
+   abort();
+ */ 
   CFTRACEEND;
 }
 

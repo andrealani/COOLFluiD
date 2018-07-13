@@ -274,7 +274,7 @@ public: // classes
     
         const CFreal c_p = (gamma/(gamma-1))*(K_gas/mi);
         const CFreal R_gas = K_gas/mi;
-        const CFreal c_v = c_p - R_gas;
+        //const CFreal c_v = c_p - R_gas;
         //printf("FirstTemperature %d \n", firstTemperature);
         data[firstTemperature + 4*ie] = Ti;//Temperature
         data[firstTemperature + 4*ie + 1] = Ti*R_gas*rhoi;//pressure
@@ -285,7 +285,6 @@ public: // classes
         //cout << "Ti = "<< Ti <<"\n";
       }
     }
-
   }  
 
 

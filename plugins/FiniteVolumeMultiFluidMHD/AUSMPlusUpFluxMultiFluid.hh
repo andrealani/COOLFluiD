@@ -71,6 +71,8 @@ public:
     CFreal coeffSigma;
     CFreal machInf[2];   //VS is not accesible from here, so this size is fixed (to run more than two species, change to the number desired)
     CFreal beta;
+    CFreal Bdiss;
+    CFreal Ediss;
   };
   
   /// nested class defining a functor
@@ -98,6 +100,11 @@ public:
     {
       return oldMach;
     }
+    // Calculate private variables that do not depend upon
+    // the physical data. For AUSM+Up, these are the Aplus and Aminus matrices
+    // This will be only called one time per thread, thus avoiding recalculating
+    // this values at each variable perturbation action when computing the jacobian.
+    HOST_DEVICE void prepareComputation(FluxData<VS>* data, VS* model); 
 
   private:
     DeviceConfigOptions<NOTYPE>* m_dco;
@@ -148,6 +155,9 @@ public:
     CFreal beta = getBeta();
     CFreal fa = getFa();
 
+    CFreal Bdiss = this->getMagneticDissCoeff();
+    CFreal Ediss = this->getElectricDissCoeff();
+
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions coeff = " << coeff  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions useMacCormackScaling = " << useMacCormackScaling  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions coeffKu = " << coeffKu  << "\n");
@@ -157,6 +167,8 @@ public:
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions machInf[1] = " << machInf[1]  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions beta = " << beta  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions fa = " << fa  << "\n");
+    CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions Bdiss = " << Bdiss  << "\n");
+    CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions Ediss = " << Ediss  << "\n");
 
     CudaEnv::copyHost2Dev(&dco->coeff, &coeff, 1);
     CudaEnv::copyHost2Dev(&dco->useMacCormackScaling, &useMacCormackScaling, 1);
@@ -166,6 +178,8 @@ public:
     CudaEnv::copyHost2Dev(&dco->machInf[0], &machInf[0], 2);  //number of species
     CudaEnv::copyHost2Dev(&dco->beta, &beta, 1);
     CudaEnv::copyHost2Dev(&dco->fa, &fa, 1);
+    CudaEnv::copyHost2Dev(&dco->Bdiss, &Bdiss, 1);
+    CudaEnv::copyHost2Dev(&dco->Ediss, &Ediss, 1);
     
 
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::copyConfigOptionsToDevice END \n \n");
@@ -186,6 +200,9 @@ public:
     dco->machInf[1] = machInf[1];      //number of species
     dco->beta = getBeta();
     dco->fa = getFa();
+    dco->Bdiss = this->getMagneticDissCoeff();
+    dco->Ediss = this->getElectricDissCoeff();
+
 
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions MacCormackCoeff = " << dco->coeff  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions useMacCormackScaling = " << dco->useMacCormackScaling  << "\n");
@@ -196,6 +213,8 @@ public:
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions machInf[1] = " << dco->machInf[1]  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions beta = " << dco->beta  << "\n");
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions fa = " << dco->fa  << "\n");
+    CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions Bdiss = " << dco->Bdiss  << "\n");
+    CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::DeviceConfigOptions Ediss = " << dco->Ediss  << "\n");
 
     CFLog(VERBOSE, "AUSMPlusUpFluxMultiFluid::copyConfigOptions END \n");
   }   
@@ -316,15 +335,15 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
   const CFreal gamma = updateVS->getGamma(); 
 
  //Variables needed for the EM part
+  const CFuint endEM = 8;
+
+
+// DEBUG
+/*
   const CFreal gammaB = updateVS->getDivBCleaningConst();   //Not get confused by the gamma of the fluid!!!
   const CFreal chi = updateVS->getDivECleaningConst();
   const CFreal c_e = updateVS->getLightSpeed();   
-  CFreal factor1, factor2, factor3, factor4;
-  const CFuint endEM = 8;
-
-// DEBUG
-//
-/*
+  printf("stateID = %d \n", data->getStateID(LEFT));
   printf("normal = %f \t %f \t %f \n", d_normal[0], d_normal[1], d_normal[2]);
   printf("dim = %d \n", dim);
   printf("firstTemperature = %d \n", firstTemperature); //20
@@ -332,11 +351,9 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
   printf("firstSpecies = %d \n", firstSpecies);  //12
   printf("nbSpecies = %d \n", nbSpecies);
   printf("gammaB = %f \n", gammaB);
-  printf("gamma = %f \n", gamma);
+  printf("gamma = %f \n", updateVS->getGamma());
   printf("chi = %f \n", chi);
   printf("c_e = %f \n", c_e);
-  
-  
   printf("useMacCormackScaling = %d \n", m_dco->useMacCormackScaling);
   printf("coeff = %f \n", m_dco->coeff);
   printf("coeffKu = %f \n", m_dco->coeffKu);
@@ -345,6 +362,8 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
   printf("machInf = %f \t %f \n", m_dco->machInf[0], m_dco->machInf[1]);
   printf("beta = %f \n", m_dco->beta);
   printf("fa = %f \n", m_dco->fa);
+  printf("Bdiss = %f \n", m_dco->Bdiss);
+  printf("Ediss = %f \n", m_dco->Ediss);
   printf("========================== \n");
 */
 
@@ -621,6 +640,55 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
 
  // New version, added 09/11 from AUSMFluxMultiFluid.ci
 
+
+  d_fluxEM = 0.5*d_Aplus*d_EMField_l + 0.5*d_Aminus*d_EMField_r;   
+
+
+    
+  for(CFuint iem = 0; iem < endEM; ++iem){
+    flux[iem] = d_fluxEM[iem];   
+  }    
+  
+  const CFreal FaceArea = data->getFaceArea();
+  const CFreal MaxeValue = updateVS->getMaxEigenValue(&d_pdata[0], &d_normal[0]);  
+  const CFreal k = MaxeValue*FaceArea;     
+  if (!data->isPerturb()) {
+    data->setUpdateCoeff(k);
+  }
+
+/// DEBUG
+/*
+    printf("ID %d ID %d %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e \n",
+    data->getStateID(0), data->getStateID(1), flux[0],flux[1], flux[2], flux[3],flux[4],flux[5],flux[6],flux[7],flux[8],flux[9],flux[10],flux[11],flux[12],flux[13],flux[14],flux[15], flux[16], flux[17]);
+    printf("ID %d ID %d d_lData %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e \n",
+    data->getStateID(0), data->getStateID(1), d_lData[0],d_lData[1], d_lData[2], d_lData[3],d_lData[4],d_lData[5],d_lData[6],d_lData[7],d_lData[8],d_lData[9],d_lData[10],d_lData[11],d_lData[12],d_lData[13],d_lData[14],d_lData[15], d_lData[16], d_lData[17],
+d_lData[18],d_lData[19], d_lData[20], d_lData[21],d_lData[22],d_lData[23],d_lData[24],d_lData[25],d_lData[26],d_lData[27]);
+    printf("ID %d ID %d d_rData %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e \n",
+    data->getStateID(0), data->getStateID(1), d_rData[0],d_rData[1], d_rData[2], d_rData[3],d_rData[4],d_rData[5],d_rData[6],d_rData[7],d_rData[8],d_rData[9],d_rData[10],d_rData[11],d_rData[12],d_rData[13],d_rData[14],d_rData[15], d_rData[16], d_rData[17],
+d_rData[18],d_rData[19], d_rData[20], d_rData[21],d_rData[22],d_rData[23],d_rData[24],d_rData[25],d_rData[26],d_rData[27]);
+*/
+ 
+  flux *= FaceArea;   
+
+}
+
+
+template <class UPDATEVAR>
+template <DeviceType DT, typename VS>
+HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::prepareComputation(FluxData<VS>* data, VS* model)
+{
+  typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
+  typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getUnitNormal());
+  const CFreal coeff = (data->isOutward()) ? 1. : -1.;
+  d_normal = coeff*unitNormal;
+  CFreal factor1, factor2, factor3, factor4;
+  const CFreal gammaB = updateVS->getDivBCleaningConst();   //Not get confused by the gamma of the fluid!!!
+  const CFreal chi = updateVS->getDivECleaningConst();
+  const CFreal c_e = updateVS->getLightSpeed();   
+  //printf("%d %d ", data->getStateID(0), data->getStateID(1));
+  //printf("A+ gamma = %e ; chi = %e ; c_e = %e ; m_coeff = %e ; m_Bdiss = %e ; m_Ediss = %e \n", 
+  //           gammaB,      chi,       c_e,  m_dco->coeff,  m_dco->Bdiss,  m_dco->Ediss);
+
   if(m_dco->useMacCormackScaling){
     factor1 = 1.;
     factor2 = c_e*c_e;
@@ -628,13 +696,15 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
     factor4 = m_dco->coeff;
   }
   else{
-    factor1 = c_e;
-    factor2 = c_e;
-    factor3 = c_e;
-    factor4 = c_e;
+    factor1 = c_e*m_dco->Bdiss;
+    factor2 = c_e*m_dco->Ediss;
+    factor3 = c_e*m_dco->coeff;
+    factor4 = c_e*m_dco->coeff;
   }
   
-  if(dim == 2){
+  //if(dim == 2){
+  switch(VS::DIM)  {
+  case 2:
     d_Aplus(0,0) = (d_normal[1]*d_normal[1] + gammaB*d_normal[0]*d_normal[0])*factor1; //flag2
     d_Aplus(0,1) = (gammaB - 1)*d_normal[0]*d_normal[1]*factor1; //flag2
     d_Aplus(0,2) = 0;
@@ -706,82 +776,9 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
     d_Aplus(7,5) = 0; 
     d_Aplus(7,6) = 0; 
     d_Aplus(7,7) = chi*factor4; //flag2  
-  }
-  if(dim == 3){
-    d_Aplus(0,0) = (1 + d_normal[0]*d_normal[0]*(gammaB - 1))*factor1;
-    d_Aplus(0,1) = (gammaB - 1)*d_normal[0]*d_normal[1]*factor1;
-    d_Aplus(0,2) = (gammaB - 1)*d_normal[0]*d_normal[2]*factor1;
-    d_Aplus(0,3) = 0;
-    d_Aplus(0,4) = -d_normal[2];
-    d_Aplus(0,5) = d_normal[1];
-    d_Aplus(0,6) = gammaB*gammaB*d_normal[0]; 
-    d_Aplus(0,7) = 0; 
 
-    d_Aplus(1,0) = (gammaB - 1)*d_normal[0]*d_normal[1]*factor1;
-    d_Aplus(1,1) = (1 + d_normal[1]*d_normal[1]*(gammaB - 1))*factor1;
-    d_Aplus(1,2) = (gammaB - 1)*d_normal[1]*d_normal[2]*factor1;
-    d_Aplus(1,3) = d_normal[2];
-    d_Aplus(1,4) = 0;
-    d_Aplus(1,5) = -d_normal[0];
-    d_Aplus(1,6) = gammaB*gammaB*d_normal[1]; 
-    d_Aplus(1,7) = 0; 
-
-    d_Aplus(2,0) = (gammaB - 1)*d_normal[0]*d_normal[2]*factor1;
-    d_Aplus(2,1) = (gammaB - 1)*d_normal[1]*d_normal[2]*factor1;
-    d_Aplus(2,2) = (1 + d_normal[2]*d_normal[2]*(gammaB - 1))*factor1;
-    d_Aplus(2,3) = -d_normal[1];
-    d_Aplus(2,4) = d_normal[0];
-    d_Aplus(2,5) = 0;
-    d_Aplus(2,6) = gammaB*gammaB*d_normal[2]; 
-    d_Aplus(2,7) = 0; 
-
-    d_Aplus(3,0) = 0; 
-    d_Aplus(3,1) = d_normal[2]*c_e*c_e; 
-    d_Aplus(3,2) = -d_normal[1]*c_e*c_e;
-    d_Aplus(3,3) = (1 + d_normal[0]*d_normal[0]*(chi - 1))*factor2;
-    d_Aplus(3,4) = (chi - 1)*d_normal[0]*d_normal[1]*factor2;
-    d_Aplus(3,5) = (chi - 1)*d_normal[0]*d_normal[2]*factor2; 
-    d_Aplus(3,6) = 0; 
-    d_Aplus(3,7) = chi*chi*d_normal[0]*c_e*c_e;
-
-    d_Aplus(4,0) = -d_normal[2]*c_e*c_e;
-    d_Aplus(4,1) = 0;
-    d_Aplus(4,2) = d_normal[0]*c_e*c_e;
-    d_Aplus(4,3) = (chi - 1)*d_normal[0]*d_normal[1]*factor2;
-    d_Aplus(4,4) = (1 + d_normal[1]*d_normal[1]*(chi - 1))*factor2;
-    d_Aplus(4,5) = (chi - 1)*d_normal[1]*d_normal[2]*factor2;
-    d_Aplus(4,6) = 0; 
-    d_Aplus(4,7) = chi*chi*d_normal[1]*c_e*c_e; 
-
-    d_Aplus(5,0) = d_normal[1]*c_e*c_e;
-    d_Aplus(5,1) = -d_normal[0]*c_e*c_e;
-    d_Aplus(5,2) = 0;
-    d_Aplus(5,3) = (chi - 1)*d_normal[0]*d_normal[2]*factor2;
-    d_Aplus(5,4) = (chi - 1)*d_normal[1]*d_normal[2]*factor2;
-    d_Aplus(5,5) = (1 + d_normal[2]*d_normal[2]*(chi - 1))*factor2;
-    d_Aplus(5,6) = 0; 
-    d_Aplus(5,7) = chi*chi*d_normal[2]*c_e*c_e; 
+    // Aminus
     
-    d_Aplus(6,0) = d_normal[0]*c_e*c_e;
-    d_Aplus(6,1) = d_normal[1]*c_e*c_e;
-    d_Aplus(6,2) = d_normal[2]*c_e*c_e;
-    d_Aplus(6,3) = 0;
-    d_Aplus(6,4) = 0;
-    d_Aplus(6,5) = 0; 
-    d_Aplus(6,6) = gammaB*factor3; 
-    d_Aplus(6,7) = 0;
-    
-    d_Aplus(7,0) = 0;
-    d_Aplus(7,1) = 0;
-    d_Aplus(7,2) = 0;
-    d_Aplus(7,3) = d_normal[0];
-    d_Aplus(7,4) = d_normal[1];
-    d_Aplus(7,5) = d_normal[2]; 
-    d_Aplus(7,6) = 0; 
-    d_Aplus(7,7) = chi*factor4;
-  }
-
-  if(dim == 2){
     d_Aminus(0,0) = -(d_normal[1]*d_normal[1] + gammaB*d_normal[0]*d_normal[0])*factor1; //flag2
     d_Aminus(0,1) = (1 - gammaB)*d_normal[0]*d_normal[1]*factor1; //flag2
     d_Aminus(0,2) = 0;
@@ -853,8 +850,84 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
     d_Aminus(7,5) = 0; 
     d_Aminus(7,6) = 0; 
     d_Aminus(7,7) = -chi*factor4; //flag2  
-  }
-  if(dim == 3){
+    break;
+  //}
+  //if(dim == 3){
+  case 3:
+    d_Aplus(0,0) = (1 + d_normal[0]*d_normal[0]*(gammaB - 1))*factor1;
+    d_Aplus(0,1) = (gammaB - 1)*d_normal[0]*d_normal[1]*factor1;
+    d_Aplus(0,2) = (gammaB - 1)*d_normal[0]*d_normal[2]*factor1;
+    d_Aplus(0,3) = 0;
+    d_Aplus(0,4) = -d_normal[2];
+    d_Aplus(0,5) = d_normal[1];
+    d_Aplus(0,6) = gammaB*gammaB*d_normal[0]; 
+    d_Aplus(0,7) = 0; 
+
+    d_Aplus(1,0) = (gammaB - 1)*d_normal[0]*d_normal[1]*factor1;
+    d_Aplus(1,1) = (1 + d_normal[1]*d_normal[1]*(gammaB - 1))*factor1;
+    d_Aplus(1,2) = (gammaB - 1)*d_normal[1]*d_normal[2]*factor1;
+    d_Aplus(1,3) = d_normal[2];
+    d_Aplus(1,4) = 0;
+    d_Aplus(1,5) = -d_normal[0];
+    d_Aplus(1,6) = gammaB*gammaB*d_normal[1]; 
+    d_Aplus(1,7) = 0; 
+
+    d_Aplus(2,0) = (gammaB - 1)*d_normal[0]*d_normal[2]*factor1;
+    d_Aplus(2,1) = (gammaB - 1)*d_normal[1]*d_normal[2]*factor1;
+    d_Aplus(2,2) = (1 + d_normal[2]*d_normal[2]*(gammaB - 1))*factor1;
+    d_Aplus(2,3) = -d_normal[1];
+    d_Aplus(2,4) = d_normal[0];
+    d_Aplus(2,5) = 0;
+    d_Aplus(2,6) = gammaB*gammaB*d_normal[2]; 
+    d_Aplus(2,7) = 0; 
+
+    d_Aplus(3,0) = 0; 
+    d_Aplus(3,1) = d_normal[2]*c_e*c_e; 
+    d_Aplus(3,2) = -d_normal[1]*c_e*c_e;
+    d_Aplus(3,3) = (1 + d_normal[0]*d_normal[0]*(chi - 1))*factor2;
+    d_Aplus(3,4) = (chi - 1)*d_normal[0]*d_normal[1]*factor2;
+    d_Aplus(3,5) = (chi - 1)*d_normal[0]*d_normal[2]*factor2; 
+    d_Aplus(3,6) = 0; 
+    d_Aplus(3,7) = chi*chi*d_normal[0]*c_e*c_e;
+
+    d_Aplus(4,0) = -d_normal[2]*c_e*c_e;
+    d_Aplus(4,1) = 0;
+    d_Aplus(4,2) = d_normal[0]*c_e*c_e;
+    d_Aplus(4,3) = (chi - 1)*d_normal[0]*d_normal[1]*factor2;
+    d_Aplus(4,4) = (1 + d_normal[1]*d_normal[1]*(chi - 1))*factor2;
+    d_Aplus(4,5) = (chi - 1)*d_normal[1]*d_normal[2]*factor2;
+    d_Aplus(4,6) = 0; 
+    d_Aplus(4,7) = chi*chi*d_normal[1]*c_e*c_e; 
+
+    d_Aplus(5,0) = d_normal[1]*c_e*c_e;
+    d_Aplus(5,1) = -d_normal[0]*c_e*c_e;
+    d_Aplus(5,2) = 0;
+    d_Aplus(5,3) = (chi - 1)*d_normal[0]*d_normal[2]*factor2;
+    d_Aplus(5,4) = (chi - 1)*d_normal[1]*d_normal[2]*factor2;
+    d_Aplus(5,5) = (1 + d_normal[2]*d_normal[2]*(chi - 1))*factor2;
+    d_Aplus(5,6) = 0; 
+    d_Aplus(5,7) = chi*chi*d_normal[2]*c_e*c_e; 
+    
+    d_Aplus(6,0) = d_normal[0]*c_e*c_e;
+    d_Aplus(6,1) = d_normal[1]*c_e*c_e;
+    d_Aplus(6,2) = d_normal[2]*c_e*c_e;
+    d_Aplus(6,3) = 0;
+    d_Aplus(6,4) = 0;
+    d_Aplus(6,5) = 0; 
+    d_Aplus(6,6) = gammaB*factor3; 
+    d_Aplus(6,7) = 0;
+    
+    d_Aplus(7,0) = 0;
+    d_Aplus(7,1) = 0;
+    d_Aplus(7,2) = 0;
+    d_Aplus(7,3) = d_normal[0];
+    d_Aplus(7,4) = d_normal[1];
+    d_Aplus(7,5) = d_normal[2]; 
+    d_Aplus(7,6) = 0; 
+    d_Aplus(7,7) = chi*factor4;
+ 
+    // Aminus
+    
     d_Aminus(0,0) = -(1 + d_normal[0]*d_normal[0]*(gammaB - 1))*factor1;
     d_Aminus(0,1) = -(gammaB - 1)*d_normal[0]*d_normal[1]*factor1;
     d_Aminus(0,2) = -(gammaB - 1)*d_normal[0]*d_normal[2]*factor1;
@@ -926,42 +999,13 @@ HOST_DEVICE void AUSMPlusUpFluxMultiFluid<UPDATEVAR>::DeviceFunc<DT, VS>::operat
     d_Aminus(7,5) = d_normal[2]; 
     d_Aminus(7,6) = 0; 
     d_Aminus(7,7) = -chi*factor4;  
-  }  
+    break;
 
-  d_fluxEM = 0.5*d_Aplus*d_EMField_l + 0.5*d_Aminus*d_EMField_r;   
-
-
-    
-  for(CFuint iem = 0; iem < endEM; ++iem){
-    flux[iem] = d_fluxEM[iem];   
-  }    
-  
-
-  const CFreal FaceArea = data->getFaceArea();
-  const CFreal MaxeValue = updateVS->getMaxEigenValue(&d_pdata[0], &d_normal[0]);  
-  const CFreal k = MaxeValue*FaceArea;     
-  if (!data->isPerturb()) {
-    //printf("UpdateCoeff k = %f \n", k);
-    data->setUpdateCoeff(k);
   }
-  
-/// DEBUG
-/*
-  if(is2DHalf){
-    printf("%.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n %.12e \n",
-     flux[0],flux[1], flux[2], flux[3],flux[4],flux[5],flux[6],flux[7],flux[8],flux[9],flux[10],flux[11],flux[12],flux[13],flux[14],flux[15], flux[16], flux[17]);
-  }
-
-  else{
-    printf("%.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %.12e \t %e \n",
-     flux[0],flux[1], flux[2], flux[3],flux[4],flux[5],flux[6],flux[7],flux[8],flux[9],flux[10],flux[11],flux[12],flux[13],flux[14],flux[15], k);
-  }
-*/
-/// 
- 
-  flux *= FaceArea;   
 
 }
+
+
 
 
 #endif //CF_HAVE_CUDA

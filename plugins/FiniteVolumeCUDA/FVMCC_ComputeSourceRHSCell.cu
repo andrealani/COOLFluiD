@@ -17,6 +17,7 @@
 #include "FiniteVolume/LeastSquareP1PolyRec2D.hh"
 #include "FiniteVolume/LeastSquareP1PolyRec3D.hh"
 #include "FiniteVolume/BarthJesp.hh"
+#include "FiniteVolume/Venktn2D.hh"
 #include "MHD/MHD2DProjectionConsT.hh"
 #include "MHD/MHD3DProjectionConsT.hh"
 #include "MHD/MHD2DProjectionPrimT.hh"
@@ -65,17 +66,17 @@ namespace COOLFluiD {
 
 
 //Provider for AUSMPlusUpFlux with Source
-#define FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__nbBThreads__,__providerName__) \
+#define FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__limiter__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<FVMCC_ComputeSourceRHSCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
 				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
-				      LeastSquareP1PolyRec##__dim__ , BarthJesp, __nbBThreads__>, \
+				      LeastSquareP1PolyRec##__dim__ , __limiter__, __nbBThreads__>, \
 		      CellCenterFVMData, FiniteVolumeCUDAModule>	\
-fvmcc_RhsMultiFluidMHDAUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
+fvmcc_RhsMultiFluidMHD##__limiter__##AUSMPlusUp##__dim__##__half__##__svars__##__uvars__##__sourceterm__##__nbBThreads__##Provider(__providerName__);
 
 // 48 block threads (default)
-FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,48,"CellAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
-FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,,Cons,RhoiViTi,HartmannSourceTerm,48,"CellAUSMPlusUpEulerMFMHD2DHalfRhoiViTiHartmann")
+FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,BarthJesp,48,"CellBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid")
+FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(2D,Half,Cons,RhoiViTi,DriftWaves2DHalfTwoFluid,Venktn2D,48,"CellVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiHartmann")
 #undef FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE
 
 //////////////////////////////////////////////////////////////////////////////
@@ -355,6 +356,7 @@ __global__ void computeFluxKernel(typename SCHEME::BASE::template DeviceConfigOp
 	polyRec.extrapolateOnFace(&currFd, faceCenters, uX, uY, uZ, limiter);
 	
 	// compute the convective flux across the face
+        fluxScheme.prepareComputation(&currFd, &pmodel);
 	fluxScheme(&currFd, &pmodel);
 	
 	// update the residual
@@ -530,6 +532,7 @@ void computeFluxSourceCPU(typename SCHEME::BASE::template DeviceConfigOptions<NO
 	
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(currFd, faceCenters, uX, uY, uZ, limiter);
+        fluxScheme.prepareComputation(currFd, &pmodel);
 	fluxScheme(currFd, &pmodel); // compute the convective flux across the face
 	
 	for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {

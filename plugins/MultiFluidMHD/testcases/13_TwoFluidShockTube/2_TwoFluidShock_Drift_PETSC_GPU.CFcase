@@ -22,7 +22,7 @@
 
 
 #This case tests the GPU-enabled RHS computation with a source term
-### Residual = -1.01338
+### Residual = -1.02245
 
 ###############################################################################
 # SubSystem Modules
@@ -33,7 +33,7 @@ CudaDeviceManager.NbThreadsPerBlock = 32
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube
-Simulator.Paths.ResultsDir       = ./RESULTS_TwoFluid_CUDASOURCE
+Simulator.Paths.ResultsDir       = ./RESULTS_TwoFluid_PETSC_GPU
 
 ###############################################################################
 # Physical Model
@@ -73,7 +73,7 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot.SaveRate    = 10 #1250
+Simulator.SubSystem.Tecplot.SaveRate    = 100 #1250
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true
@@ -99,7 +99,7 @@ Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000333333333
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10 #100
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.1
 
@@ -159,7 +159,7 @@ Simulator.SubSystem.BDF2.ShowRate = 1
 #Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
 #Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
 
-Simulator.SubSystem.BDF2.Data.MaxSteps = 100 #100 
+Simulator.SubSystem.BDF2.Data.MaxSteps = 50 #100 
 Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 16 #12 
 Simulator.SubSystem.BDF2.Data.Norm = -1. #-4
 #Simulator.SubSystem.BDF2.Data.FilterState = Max
@@ -188,10 +188,10 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 ###############################################################################
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
 #Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
+Simulator.SubSystem.CellCenterFVM.CellNumBarthJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = false
+Simulator.SubSystem.CellCenterFVM.CellNumBarthJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
 
 #OLD CUDA WITHOUT SOURCE
 #Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTi #NumJacob

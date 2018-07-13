@@ -178,6 +178,12 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 
     cf_assert(startCellID  == nbCells-1);
     cf_assert(startEntryID == fullMatrixSize);
+
+    if (maxSizeJacobEntries > fullMatrixSize) {
+      CFLog(ERROR, "ERROR!! FVMCC_ComputeRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => "
+          << maxSizeJacobEntries << " >= " << fullMatrixSize << "\n"); 
+      cf_assert(maxSizeJacobEntries <= fullMatrixSize);
+    }
     
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::setup() => uses maxSizeJacobEntries < fullMatrixSize => " 
 	  << maxSizeJacobEntries << " < " << fullMatrixSize << "\n");
@@ -265,8 +271,9 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     const CFuint nbFacesInCell = this->m_cellInfo[cellID*5+4];
     cf_assert(cellID < m_blockStart.size());
     const CFuint bStartCellID = m_blockStart[cellID]; 
+    // cout << "[" << cellID << "] has bStartCellID = " << bStartCellID << endl;
     const CFuint nbRows = nbFacesInCell + 1;
-
+    // cout << "nbRows = " << nbRows << ", bStartCellID = " << bStartCellID << ", m_blockJacobians.size() = " << m_blockJacobians.size() <<  endl;
     cf_assert(bStartCellID < m_blockJacobians.size());
     CFreal* startb = &m_blockJacobians[bStartCellID];  
     acc->resetB(nbRows, 1, nbEqs, startb);
@@ -277,6 +284,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     acc->setRowIndex(0, rowID);
     acc->setColIndex(0, cellID);
     
+    // cout << "Neighbors are ["<< " ";
     cf_assert(cellID*5 < this->m_cellInfo.size());
     const CFuint startStencil = this->m_cellInfo[cellID*5];
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
@@ -295,8 +303,10 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       // here we are assuming that this block contribution is = 0
       // so adding 0 to block (cellID,cellID) will not harm 
       acc->setRowIndex(f+1, neighID);
+      // cout << neighID << " ";
     }
-
+    //  cout << "]" <<endl;
+    
     m_lss->getMatrix()->addValues(*acc);
     
      //acc->printToScreen(); //abort();
@@ -401,7 +411,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	    // avoid to recompute the gradient
 	    cellFlag[this->_currFace->getState(0)->getLocalID()] = true;
 	    
-	    // cout << "states = " << this->_currFace->getState(0)->getLocalID()  << ", " <<  this->_currFace->getState(1)->getLocalID() << endl;
+	     //cout << "states = " << this->_currFace->getState(0)->getLocalID()  << ", " <<  this->_currFace->getState(1)->getLocalID() << endl;
 	    
 	    // extrapolate (and LIMIT, if the reconstruction is linear or more)
 	    // the solution in the quadrature points
@@ -419,13 +429,16 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	    //   this was very buggy !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
 	    // this->getMethodData().setIsPerturb(false);
 	    // we have to avoid to update updateCoeff
-	    this->getMethodData().setIsPerturb(true);
-	    
+	    //this->getMethodData().setIsPerturb(true);
+            // IA: We need to update updateCoeff at the boundaries because the kernel do not loop along the 
+            // the boundary faces	    
+	    this->getMethodData().setIsPerturb(false);
+
 	    // cout << "L = " << *this->_currFace->getState(0) << endl;
 	    // cout << "R = " << *this->_currFace->getState(1) << endl;
 	    this->_currBC->computeFlux(this->_flux);
-	    
 	    // cout.precision(12);cout << currTrs->getName() << " C flux = " << _flux << endl;
+
 	    this->computeInterConvDiff();
 	    
 	    //this->_isDiffusionActive = (*this->_eqFilters)[0]->filterOnGeo(this->_currFace);
@@ -447,13 +460,13 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	    CFLogDebugMed("flux = " <<  this->_flux  << "\n");
 	    
 	    // compute the source term
-	    // if (hasSourceTerm) {			
-	    //   computeSourceTerm();
-	    // }
+	     if (hasSourceTerm) {			
+	       this->computeSourceTerm();
+	     }
 	    
 	    // source term jacobians are only computed while processing internal faces 
 	    //_diffVar->setFreezeCoeff(_freezeDiffCoeff);
-	    
+	    this->updateRHS(); 
 	    computeBoundaryJacobianTerm();
 	  }
 	  
@@ -473,6 +486,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
+
   this->getMethodData().setIsPerturb(true);
   
   // set the index of the block corresponding to the current
@@ -531,10 +545,9 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
       // restore the original ghost state
       ghostState = _origState;
     }
-
     // compute analytical jacobian for source term 
-    // if (computeSourceTermJacob(LEFT,_stAnJacobIDs)) {
-    //   addAnalyticSourceTermJacob(LEFT, _bAcc.get());
+    // if (this->computeSourceTermJacob(LEFT,_stAnJacobIDs)) {
+    //   this->addAnalyticSourceTermJacob(LEFT, _bAcc.get());
     // }
     
     // add the values in the jacobian matrix

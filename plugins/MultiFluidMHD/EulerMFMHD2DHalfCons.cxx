@@ -209,10 +209,10 @@ void EulerMFMHD2DHalfCons::computePhysicalData(const State& state, RealVector& d
     data[firstTemperature + 4*ie + 3] = 0.5*V2 + c_p*Ti;//total enthaply of species i   
      
   }    
-  cout << "EulerMFMHD2DHalfCons::computePhysicalData" << endl;
-  for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
-    cout << "data["<< ie <<"] = "<< data[ie] << endl;
-  }
+  //cout << "EulerMFMHD2DHalfCons::computePhysicalData" << endl;
+  //for (CFuint ie = 0; ie < firstTemperature + 4*nbSpecies; ++ie) {
+  //  cout << "data["<< ie <<"] = "<< data[ie] << endl;
+  //}
 }
 
 //////////////////////////////////////////////////////////////////////////////

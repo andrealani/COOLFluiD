@@ -1,8 +1,5 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
-
-### Residual = -1.06373 
-
 # It stops at 188 *save the 187
 ###############################################################################
 # Assertion For Debugging
@@ -24,15 +21,20 @@
 #CFEnv.ErrorOnUnusedConfig = true
 
 
+#This case tests the GPU-enabled RHS computation with a source term
+### Residual = -1.01338
+
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libFiniteVolumeCUDA libParalutionI #libPetscI
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libParalutionI libFiniteVolumeCUDA
+# libParalutionI should appear before libFiniteVolumeCUDA. If not, an error is given in the configuration phase.
 
 CudaDeviceManager.NbThreadsPerBlock = 32
 
+
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube
-Simulator.Paths.ResultsDir       = ./RESULTS_TwoFluid_CUDASOURCE
+Simulator.Paths.ResultsDir       = ./RESULTS_TwoFluid_PARALUTION_GPU
 
 ###############################################################################
 # Physical Model
@@ -72,7 +74,7 @@ Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot.SaveRate    = 50 #1250
+Simulator.SubSystem.Tecplot.SaveRate    = 100 #1250
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true
@@ -94,49 +96,75 @@ Simulator.SubSystem.Tecplot.AppendTime = true
 #Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
 #Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<101,5.0e-3,if(i<111,1e-2,2e-2))
-Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000033333333
-
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000333333333
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 30 #100
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 500
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.1
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -20.0
 
-# Linear System
-#Simulator.SubSystem.LinearSystemSolver = PETSC
-#Simulator.SubSystem.LSSNames = NewtonIteratorLSS
-#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
-#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
-#Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
-#Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
-#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
-
-# Liner System with CUDA
+# Linear System with CUDA
 Simulator.SubSystem.LinearSystemSolver = PARALUTION #PETSC
 Simulator.SubSystem.LSSNames = PARALUTION #BwdEulerLSS 
 Simulator.SubSystem.PARALUTION.Data.useGPU = 1
+Simulator.SubSystem.PARALUTION.Data.buildOnGPU = true  # Remember to recompile!! FiniteVolumeCUDA~: grep 'IA' *
 Simulator.SubSystem.PARALUTION.Data.reBuildRatio = 30
-#Simulator.SubSystem.PARALUTION.Data.RelativeTolerance = 1e-5
+
+#Simulator.SubSystem.LinearSystemSolver = PETSC
+#Simulator.SubSystem.LSSNames = BwdEulerLSS 
+#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCBJACOBI #PCASM # PCJACOBI #PCASM
+#Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+#Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true
 
-Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+
 #Simulator.SubSystem.BwdEulerLSS.Data.SaveSystemToFile = true
 #Simulator.SubSystem.BwdEulerLSS.Data.SaveRate = 1
 
+
 ####### GPU ########
-Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = false
 Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
+
+
+
+# Explicit
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+#Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
+
+# Implicit first Order
+#Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
+
+# CFL definition
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def =\
+#if(i<160,1e4,if(i<250,1e5,if(i<670,1e6,if(i<2690,1e7,1e8))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e4
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+
+#Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 20
+#Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 9
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 0 0 0 1 
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 5.
 
 # Implicit Second Order
 Simulator.SubSystem.ConvergenceMethod = BDF2
 Simulator.SubSystem.BDF2.ShowRate = 1
-Simulator.SubSystem.BDF2.Data.MaxSteps = 100 #100 
+# CFL definition
+#Simulator.SubSystem.BDF2.Data.CFL.Value = 1.0
+#Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
+
+Simulator.SubSystem.BDF2.Data.MaxSteps = 50 #100 
 Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 16 #12 
 Simulator.SubSystem.BDF2.Data.Norm = -1. #-4
 #Simulator.SubSystem.BDF2.Data.FilterState = Max
@@ -152,7 +180,7 @@ Simulator.SubSystem.BDF2.Data.Norm = -1. #-4
 Simulator.SubSystem.Default.listTRS = PeriodicY x0 x1
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = ../../../../plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube/shockTube_1x6e-3_600x4.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = shockTube_1x6e-3_600x4.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 0.01
 
 # comment this out to Restart
@@ -165,14 +193,24 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 ###############################################################################
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.UseParalutionPtr = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
 
 #OLD CUDA WITHOUT SOURCE
 #Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTi #NumJacob
 #Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTi.OnGPU = true
 #Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTi.NbCellsPerBlock = 16
+
+
+
+
+# First Order Time stepping
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = true 
 
 # second order Time stepping
 #Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
@@ -188,12 +226,17 @@ Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
 ## second order: uncomment this
 Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
 Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D #Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
+
+
+
 
 Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1 
@@ -203,6 +246,12 @@ Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScali
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = RhoiViTi
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMF
+#Simulator.SubSystem.CellCenterFVM.Data.isAxisymm = true
+
 Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves2DHalfTwoFluid
 Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid.ElectricCharge = 1.49208242546e-25 #7.95774715482e14 #5e6 #1256.6370614359
 #Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid = true #false

@@ -47,8 +47,8 @@ public:
   HOST_DEVICE void transform(const CFreal *const state, CFreal *const result)
   {
     const CFuint nbSpecies = m_dco->nbSpecies;
-    const CFuint nbMomentum = m_dco->nbMomentum;
-    const CFuint nbEnergyEqs = m_dco->nbEnergyEqs;
+    //const CFuint nbMomentum = m_dco->nbMomentum;
+    //const CFuint nbEnergyEqs = m_dco->nbEnergyEqs;
     const CFuint endEM = 8;
   
     //Electro Magnetic Field Needs no tranformation   
@@ -87,7 +87,7 @@ public:
     
       const CFreal R_i = K_B/m_p;				// ions gas constant
       const CFreal R_p = 2*R_i;				// Plasma gas constant (ions + electrons)
-      const CFreal Cp_p = (gamma/(gamma-1))*R_p;	
+      //const CFreal Cp_p = (gamma/(gamma-1))*R_p;	
       const CFreal Cv_p = (1/(gamma-1))*R_p;
       const CFreal u_i = result[endEM + nbSpecies];
       const CFreal v_i = result[endEM + nbSpecies + 1];
@@ -100,7 +100,7 @@ public:
       const CFreal m_n = m_dco->molecularMass2;
     
       const CFreal R_n = K_B/m_n;				// neutrals gas constant
-      const CFreal Cp_n = (gamma/(gamma-1))*R_n;	
+      //const CFreal Cp_n = (gamma/(gamma-1))*R_n;	
       const CFreal Cv_n = (1/(gamma-1))*R_n;
       const CFreal u_n = result[endEM + nbSpecies + 2];
       const CFreal v_n = result[endEM + nbSpecies + 3];
@@ -146,8 +146,8 @@ public:
   HOST_DEVICE void transformFromRef(const CFreal *const data, CFreal *const result)
   {
     const CFuint nbSpecies = m_dco->nbSpecies;
-    const CFuint nbMomentum   = m_dco->nbMomentum;
-    const CFuint nbEnergyEqs  = m_dco->nbEnergyEqs;
+    //const CFuint nbMomentum   = m_dco->nbMomentum;
+    //const CFuint nbEnergyEqs  = m_dco->nbEnergyEqs;
     const CFuint endEM = 8;
  
     //Electro Magnetic Field Needs no tranformation   

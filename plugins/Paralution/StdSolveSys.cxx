@@ -57,13 +57,13 @@ StdSolveSys::~StdSolveSys()
 
 void StdSolveSys::execute()
 {
-  using namespace paralution;
-  CFAUTOTRACE;
+   using namespace paralution;
+   CFAUTOTRACE;
 
-  CFLog(VERBOSE, "StdSolveSys::execute() \n");
+   CFLog(VERBOSE, "StdSolveSys::execute() \n");
 
-Stopwatch<WallTime> stopTimer;
-stopTimer.start();
+   Stopwatch<WallTime> stopTimer;
+   stopTimer.start();
 
    ParalutionLSSData& MethodData = getMethodData();
 
@@ -90,13 +90,8 @@ stopTimer.start();
 
 #ifdef CF_HAVE_CUDA
    if (getMethodData().getBuildOnGPU()) {
-  Stopwatch<WallTime> diagTimer;
-  diagTimer.start();
-  
-  mat.updateDiagBlocks(nbStates, nbEqs);
-  
-  CFLog(NOTICE, "ParalutionMatrix::updateDiagBlocks took " << diagTimer << "s \n");
-  }
+     mat.updateDiagBlocks(nbStates, nbEqs);
+   }
 #endif
    
    // assemble the matrix in the HOST
@@ -105,7 +100,6 @@ stopTimer.start();
 //mat.printToFile("ParalutionMatrix.txt");
 //abort();
 
-   CFLog(VERBOSE, "StdSolveSys::execute() ==> Matrix assembled! \n");
 
 //   // the rhs is copied into the ParalutionVector for the rhs
 //   // _upStatesGlobalIDs[i] is different from _upLocalIDs[i]
@@ -135,30 +129,31 @@ stopTimer.start();
 
 
 
-IterCounter++;
-  //FOR RE-USE THE LS
-if (firstIter){
-  mat.AssignToSolver(ls);
-  ls.SetPreconditioner(p);
-  ls.Build();
-  getMethodData().setFirstIter(false);
-}
-if (IterCounter%reBuildRatio == 0){
-  p.ReBuildNumeric();
-  IterCounter=0;
-}
+    IterCounter++;
+   //FOR RE-USE THE LS
+   if (firstIter){
+      mat.AssignToSolver(ls);
+      ls.SetPreconditioner(p);
+      ls.Build();
+      getMethodData().setFirstIter(false);
+   }
+   if (IterCounter%reBuildRatio == 0){
+      p.ReBuildNumeric();
+      IterCounter=0;
+   }
 
 
 
-rhsVec.Solve(ls, solVec.getVecPtr());
+   rhsVec.Solve(ls, solVec.getVecPtr());
 //ls.Clear(); //Only if not reusing the ls
 
-if(useGPU){
-  if (!getMethodData().getBuildOnGPU()){mat.moveToCPU();}
-solVec.moveToCPU();
-rhsVec.moveToCPU();
-}
-mat.LeavePointers();
+
+   if(useGPU){
+      if (!getMethodData().getBuildOnGPU()){mat.moveToCPU();}
+      solVec.moveToCPU();
+      rhsVec.moveToCPU();
+   }
+   mat.LeavePointers();
 
 //mat.resetToZeroEntriesGPU();
 //mat.finalAssembly(rhs.size());
@@ -172,12 +167,12 @@ mat.LeavePointers();
 
 //solVec.printToFile("Sol.txt");
 //abort();
-  solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
+   solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
 
 
+   CFLog(NOTICE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");
 
 
-CFLog(NOTICE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");
 
 
 /*
@@ -208,80 +203,6 @@ for(int counter=0;counter<6;counter++)printf(" x[%i]=%f \n",counter,x[counter]);
 
 */
 
-
-
-
-
-
-
-
-//   const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
-//   if (getMethodData().getSaveRate() > 0) {
-//     if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 
-//       const string mFile = "mat-iter" + StringOps::to_str(nbIter) + ".dat";
-//       mat.printToFile(mFile.c_str());
-//       // mat.printToScreen();
-      
-//       const string vFile = "rhs-iter" + StringOps::to_str(nbIter) + ".dat";
-//       rhsVec.printToFile(vFile.c_str());
-//       // rhsVec.printToScreen();
-//     }
-//   }
- 
-//   // reuse te preconditioner
-// #if PETSC_VERSION_MINOR==7
-//   ParalutionBool reusePC = ((nbIter-1)%getMethodData().getPreconditionerRate() == 0) ?
-//      PETSC_FALSE : PETSC_TRUE;
-//   CFLog(VERBOSE, "StdSolveSys::execute() => reusePC [" << reusePC <<"]\n");
-//   CHKERRCONTINUE(KSPSetReusePreconditioner(ksp,reusePC));
-//   PC& pc = getMethodData().getPreconditioner();
-//   CHKERRCONTINUE(PCSetReusePreconditioner(pc,reusePC));
-// #endif
- 
-// #if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7
-//   CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
-// #else
-//   CFuint ierr = KSPSetOperators
-//     (ksp, mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);
-// #endif
-  
-//   //This is to allow viewing the matrix structure in X windows
-//   //Works only if Paralution is compiled with X
-//   if(getMethodData().isShowMatrixStructure())
-//   {
-//     ierr = MatView(mat.getMat(), PETSC_VIEWER_DRAW_WORLD);
-//     CHKERRCONTINUE(ierr);
-//   }
-
-//   ierr = KSPSetUp(ksp);
-//   CHKERRCONTINUE(ierr);
-
-// #if PETSC_VERSION_MINOR==7
-//   if (getMethodData().getPCType()==PCBJACOBI && getMethodData().useGPU()) {
-//     ParalutionInt its,nlocal,first;
-//     KSP* subksp;
-//     PC   subpc;  
-//     PC& pc = getMethodData().getPreconditioner();
-//     PCBJacobiGetSubKSP(pc,&nlocal,&first,&subksp);
-//     for (CFuint i=0; i<nlocal; i++) {
-//       KSPGetPC(subksp[i],&subpc);
-//       PCSetType(subpc,PCILU);
-//     }
-//   }
-// #endif
-
-//   ierr = KSPSolve(ksp, rhsVec.getVec(), solVec.getVec());
-//   CHKERRCONTINUE(ierr);
-
-//   CFint iter = 0;
-//   ierr = KSPGetIterationNumber(ksp, &iter);
-//   CHKERRCONTINUE(ierr);
-  
-//   if (nbIter%getMethodData().getKSPConvergenceShowRate() == 0) {
-//     CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");
-//   }
-  
-//   solVec.copy(&rhs[0], &_upLocalIDs[0], vecSize);
 }
 
 //////////////////////////////////////////////////////////////////////////////

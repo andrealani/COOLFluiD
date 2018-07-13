@@ -389,6 +389,7 @@ __global__ void computeFluxKernel(typename SCHEME::BASE::template DeviceConfigOp
 	polyRec.extrapolateOnFace(&currFd, faceCenters, uX, uY, uZ, limiter);
 	
 	// compute the convective flux across the face
+        fluxScheme.prepareComputation(&currFd, &pmodel);
 	fluxScheme(&currFd, &pmodel);
 	
 	// update the residual
@@ -539,6 +540,7 @@ void computeFluxCPU(CFuint nbThreadsOMP,
 	
 	// extrapolate solution on quadrature points on both sides of the face
 	polyRec.extrapolateOnFace(currFd, faceCenters, uX, uY, uZ, limiter);
+        fluxScheme.prepareComputation(currFd, &pmodel);
 	fluxScheme(currFd, &pmodel); // compute the convective flux across the face
 	
 	for (CFuint iEq = 0; iEq < PHYS::NBEQS; ++iEq) {

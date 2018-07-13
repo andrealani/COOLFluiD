@@ -303,6 +303,8 @@ protected:
   virtual CFreal getMacCormackCoeff(){return m_coeff;}
 
   virtual CFreal getMagneticDissCoeff(){return m_Bdiss;}
+
+  virtual CFreal getElectricDissCoeff(){return m_Ediss;}
   
   virtual bool getUseMacCormackScaling(){return m_useMacCormackScaling;}
 

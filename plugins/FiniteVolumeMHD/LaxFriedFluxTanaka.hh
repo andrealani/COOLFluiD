@@ -39,6 +39,11 @@ public:
     
     /// constructor taking the options as argument
     HOST_DEVICE DeviceFunc(LaxFriedFlux::DeviceConfigOptions<NOTYPE>* dco) : m_dco(dco) {}
+
+   
+    /// Compute needed private variables that do not depend on the physical state
+    HOST_DEVICE void prepareComputation(FluxData<VS>* data, VS* model) {}
+
     
     /// Compute the flux : implementation
     HOST_DEVICE void operator()(FluxData<VS>* data, VS* model)
