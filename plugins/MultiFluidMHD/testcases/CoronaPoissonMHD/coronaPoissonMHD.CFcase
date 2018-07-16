@@ -1,7 +1,8 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
 #
-### Residual = -1.14417
+### Residual = -1.13829
+##-1.14417
 #
 
 ###############################################################################
@@ -100,10 +101,10 @@ Simulator.SubSystem.Tecplot1.AppendTime = false
 Simulator.SubSystem.Tecplot1.AppendIter = false
 Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
 # Extra Values from Data Processing
-Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCSocketNames = divB Current 
-Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCVariableNames = divB Current 
-Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1  
-Simulator.SubSystem.Tecplot1.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCSocketNames = divB Current 
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCVariableNames = divB Current 
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1  
+#Simulator.SubSystem.Tecplot1.WriteSol = ParWriteSolutionBlock
 Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
 
 Simulator.SubSystem.ParaView1.FileName    = corona.vtu
@@ -274,6 +275,14 @@ Simulator.SubSystem.Flow.Setup1.stencil = FaceVertexPlusGhost
 Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup
 Simulator.SubSystem.Flow.UnSetupNames = UnSetup1
 
+# AL: this pre-processing command computes the coupling between EM and Flow solvers
+# pre-processing to transfer solution of EM system to Flow by computing B field out of potential 
+# and filling corresponding "PreProcess1.VariableIDs" entries in the Flow equations 
+Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
+Simulator.SubSystem.Flow.PreProcessNames = PreProcess1
+Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 0 1 2
+Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace 
+
 ## second order: uncomment this
 Simulator.SubSystem.Flow.Data.PolyRec = LinearLS2D
 Simulator.SubSystem.Flow.Data.LinearLS2D.limitRes = -4.0
@@ -296,8 +305,9 @@ Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 #Simulator.SubSystem.Flow.Data.DiffusiveFlux = NavierStokesMF
 #Simulator.SubSystem.Flow.Data.isAxisymm = true
 
-Simulator.SubSystem.Flow.Data.SourceTerm = HartmannSourceTerm2D
-Simulator.SubSystem.Flow.Data.HartmannSourceTerm2D.electricalConductivity = 7.95774715482e7 #7.95774715482e14 #5e6 #1256.6370614359
+# in reality we will use another source term
+#Simulator.SubSystem.Flow.Data.SourceTerm = HartmannSourceTerm2D
+#Simulator.SubSystem.Flow.Data.HartmannSourceTerm2D.electricalConductivity = 7.95774715482e7 #7.95774715482e14 #5e6 #1256.6370614359
 
 ###############################################################################
 # Initial Conditions
@@ -334,7 +344,7 @@ Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
 Simulator.SubSystem.Flow.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1
 
 ###############################################################################
-# DataProcessing
+
 #Simulator.SubSystem.DataPostProcessing = DataProcessing
 #Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
 #Simulator.SubSystem.DataProcessing.Comds = DivMonitoring
@@ -398,13 +408,11 @@ Simulator.SubSystem.EM.Outlet.OnlyRadialGradient = true
 #Simulator.SubSystem.EM.Outlet.Def = 0.
 #Simulator.SubSystem.EM.Outlet.ZeroGradientFlags = 1
 
-# Compute the Wall distance
-Simulator.SubSystem.DataPostProcessing = DataProcessing
-Simulator.SubSystem.DataPostProcessingNames = DataProcessing1
-
-Simulator.SubSystem.DataProcessing1.Namespace = EMNamespace
-Simulator.SubSystem.DataProcessing1.Data.CollaboratorNames = EM
-Simulator.SubSystem.DataProcessing1.Comds = SphericalDerivatives
-Simulator.SubSystem.DataProcessing1.Names = BrThetaPhi
-Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
-Simulator.SubSystem.DataProcessing1.ProcessRate = 1
+Simulator.SubSystem.DataPostProcessing = DataProcessing 
+Simulator.SubSystem.DataPostProcessingNames = EMPostProcessing 
+Simulator.SubSystem.EMPostProcessing.Comds = SphericalDerivatives
+Simulator.SubSystem.EMPostProcessing.Names = BrThetaPhi
+Simulator.SubSystem.EMPostProcessing.SkipFirstIteration = true
+Simulator.SubSystem.EMPostProcessing.ProcessRate = 1
+Simulator.SubSystem.EMPostProcessing.Namespace = EMNamespace
+Simulator.SubSystem.EMPostProcessing.Data.CollaboratorNames = EM
