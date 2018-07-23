@@ -3,8 +3,10 @@
 
 if [ -z "$1" ] ; then
     echo '"Please choose and run one of the two following options:"'
-    echo '"./install_COOLFluiD.sh DEBUG  (with debugging, development version)"'
-    echo '"./install_COOLFluiD.sh OPTIM  (w/o debugging, production version)"'
+    echo '"./install_COOLFluiD.sh DEBUG_CUDA   (with debugging, development version with CUDA)"'
+    echo '"./install_COOLFluiD.sh OPTIM_CUDA   (w/o debugging, production version with CUDA)"'
+    echo '"./install_COOLFluiD.sh DEBUG_NOCUDA (with debugging, development version w/o CUDA)"'
+    echo '"./install_COOLFluiD.sh OPTIM_NOCUDA (w/o debugging, production version w/o CUDA)"'
     exit 1 
 fi
 
@@ -19,18 +21,28 @@ export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius"
 #download COOLFluiD
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
 
-if [ "$1" == "DEBUG" ] ; then
+if [ "$1" == "DEBUG_CUDA" ] ; then
 # with debugging
 export BUILD_MODE=geniuscuda
-elif [ "$1" == "OPTIM" ] ; then
+export CONF_FILE="COOLFluid_Genius.conf"
+elif [ "$1" == "OPTIM_CUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=geniuscudafast
+export CONF_FILE="COOLFluid_Genius.conf"
+elif [ "$1" == "DEBUG_NOCUDA" ] ; then
+# w/o debugging (production mode)
+export BUILD_MODE=optim
+export CONF_FILE="COOLFluid_Genius_nocuda.conf"
+elif [ "$1" == "OPTIM_NOCUDA" ] ; then
+# w/o debugging (production mode)
+export BUILD_MODE=release
+export CONF_FILE="COOLFluid_Genius_nocuda.conf"
 fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI/${BUILD_MODE}"
 
-cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/COOLFluid_Genius.conf ${TOP_DIR}
-export COOLFLUID_CONF_FILE="${TOP_DIR}/COOLFluid_Genius.conf"
+cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${TOP_DIR}
+export COOLFLUID_CONF_FILE="${TOP_DIR}/${CONF_FILE}"
 export COOLFLUID_INSTALL_DIR="${COOLFLUID_BASEBUILD_DIR}/INSTALL"
 export ALL_ACTIVE=1
 
