@@ -136,6 +136,8 @@ GridConvergence::needsSockets()
 void GridConvergence::setup()
 {
   CFAUTOTRACE;
+
+  DataProcessingCom::setup();
   
   // Get number of cells
   Common::SafePtr<Common::ConnectivityTable<CFuint> > cells =
@@ -172,12 +174,11 @@ void GridConvergence::setup()
   TTheory = 0.0;
 
   m_geoBuilder.setup();
-
-// AAL: To add in the future a chemical library to compute this
-//  m_library = PhysicalModelStack::getActive()->getImplementor()->
-//    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
-//  cf_assert(m_library.isNotNull());
   
+  // AAL: To add in the future a chemical library to compute this
+  //  m_library = PhysicalModelStack::getActive()->getImplementor()->
+  //    getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
+  //  cf_assert(m_library.isNotNull());
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -611,6 +612,8 @@ void GridConvergence::writeOutputFile()
 void GridConvergence::unsetup()
 {
   CFAUTOTRACE;
+
+  DataProcessingCom::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////

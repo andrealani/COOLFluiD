@@ -169,10 +169,7 @@ void StdSolveSys::execute()
 //abort();
    solVec.copy2(&rhs[0], &_upLocalIDs[0], vecSize);
 
-
-   CFLog(NOTICE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");
-
-
+   CFLog(VERBOSE, "StdSolveSys::execute() took " << stopTimer << "s, with " << ls.GetIterationCount() << " iterations \n");
 
 
 /*

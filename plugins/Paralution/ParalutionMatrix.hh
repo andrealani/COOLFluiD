@@ -284,7 +284,7 @@ public: // functions
   }
 
   void moveToGPU(){
-    CFLog(NOTICE, "ParalutionMatrix::moveToGPU \n");
+    CFLog(VERBOSE, "ParalutionMatrix::moveToGPU \n");
     m_mat.MoveToAccelerator();
   }
 

@@ -157,6 +157,9 @@ void MutationLibrarypp::setup()
   cf_assert(_Rgas > 0.);
   
   CFLog(VERBOSE, "MutationLibrarypp::setup() => m_shiftHO [" << m_shiftHO << "]\n");
+
+  // AL: don't allow to shift the enthalpy in LTE (shift is buggy for air5)
+  //if (_stateModelName == "Equil") {m_shiftHO = false;}
   
   if (m_shiftHO) { 
     /// computation of the H formation at (close to) 0K
