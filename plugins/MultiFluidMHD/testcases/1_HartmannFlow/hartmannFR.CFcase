@@ -25,14 +25,14 @@ CFEnv.OnlyCPU0Writes = false
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI libTecplotWriter libParaViewWriter libFluxReconstructionMethod libFluxReconstructionNavierStokes  libNewtonMethod libFluxReconstructionMultiFluidMHD
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI libTecplotWriter libParaViewWriter libFluxReconstructionMethod libFluxReconstructionNavierStokes  libNewtonMethod libFluxReconstructionMultiFluidMHD libGmsh2CFmesh
 
 #Simulation Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/1_HartmannFlow
 Simulator.Paths.ResultsDir       = plugins/MultiFluidMHD/testcases/1_HartmannFlow
 
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/1_HartmannFlow/hartmannFR.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 100
+Simulator.SubSystem.InteractiveParamReader.readRate = 2
 
 ###############################################################################
 # Physical Model
@@ -56,30 +56,67 @@ Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 0.0257
 
 #Simulator.SubSystem.SubSystemStatus.TimeStep = 1e-7
 
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = MultiFluidMHD2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = MultiFluidMHD2D
+Simulator.SubSysMesh.MultiFluidMHD2D.nbSpecies = 1
+Simulator.SubSysMesh.MeshMeshData.listTRS = Inlet Outlet1 Outlet2 Cylinder
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = hartmannUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = hartmannFRFullMesh.CFmesh #hartmannMeshFR.CFmesh #
+#Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.Data.ScalingFactor = 1000.
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+#Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
 ###############################################################################
 # Output
 
 Simulator.SubSystem.OutputFormat        = CFmesh Tecplot  ParaView
 
-Simulator.SubSystem.CFmesh.FileName     = hartmannFR.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = hartmannFRMeshP1.CFmesh
 #Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
-Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.SaveRate = 5
 Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = true
 
 Simulator.SubSystem.Tecplot.FileName = hartmannFR.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 1000
+Simulator.SubSystem.Tecplot.SaveRate = 1
 Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.AppendIter = true
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 
 Simulator.SubSystem.ParaView.FileName    = hartmannFR.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = RhoiViTi
-Simulator.SubSystem.ParaView.SaveRate = 1000
+Simulator.SubSystem.ParaView.SaveRate = 10
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
@@ -95,37 +132,39 @@ Simulator.SubSystem.ParaView.AppendIter = false
 # Time Marching
 # Consider steady case
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000000000
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100000000000
 
 # Explicit
-Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
 #Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
-Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
-Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceHartmannFR.plt
-Simulator.SubSystem.FwdEuler.ShowRate        = 1
-Simulator.SubSystem.FwdEuler.ConvRate        = 1
+#Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceHartmannFR.plt
+#Simulator.SubSystem.FwdEuler.ShowRate        = 1
+#Simulator.SubSystem.FwdEuler.ConvRate        = 1
 
 #Implicit
-#Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-##Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
-##Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
 
 # Linear System for implicit
-#Simulator.SubSystem.LinearSystemSolver = PETSC
-#Simulator.SubSystem.LSSNames = NewtonIteratorLSS
-#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
-#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
-#Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
-#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
 # CFL definition for implicit
-#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 ##Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
 ##Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def =\
 ##if(i<1000,1e4,if(i<2000,1e5,if(i<5000,1e6,if(i<10000,1e7,1e8))))
 ##Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e4
 ##Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceHartmannFR.plt
 
 
 ###############################################################################
@@ -133,15 +172,24 @@ Simulator.SubSystem.FwdEuler.ConvRate        = 1
 Simulator.SubSystem.Default.listTRS = x0 x1 y0 y1 #InnerCells
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = halfTube40X250P1.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hartmannUpgraded.CFmesh #halfTube40X250P1.CFmesh #hartmannFRMeshP1.CFmesh #hartmannMeshFR.CFmesh #
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+#Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
+#Simulator.SubSystem.FluxReconstruction.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 ###############################################################################
 # Space Method
-Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSNS
-Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSNS
-Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSNS
-#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobMFMHD #RHSMFMHD
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacobMFMHD #ConvRHSMFMHD
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSJacobMFMHD #DiffRHSMFMHD
+
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = RhoiViTi
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
@@ -155,17 +203,24 @@ Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
 Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.33 
 
 ####### AUSM #######
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux # add here the option for AUSM
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusUpFluxMultiFluidMHD2D #AUSMPlusUpFluxMultiFluidMHD #LaxFriedrichsFlux 
+#CentredFlux # add here the option for AUSM
+
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.useMacCormackScaling = true
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.choiceA12 = 1
+# put right value here (a(T=288)=131.51m/s)
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.machInf = 0.125
 
 ####### Diff Flux #######
 # Some option will need to be added to use the correct flux computation for diffusive fluxes
 
 ####### Src Terms #######
-Simulator.SubSystem.FluxReconstruction.SrcTermNames = # add the src term name
-Simulator.SubSystem.FluxReconstruction.SrcTermComds = # add the src term name
+Simulator.SubSystem.FluxReconstruction.SrcTermNames = HartmannSourceTerm2D # add the src term name
+Simulator.SubSystem.FluxReconstruction.SrcTermComds = HartmannSourceTerm2D # add the src term name
+Simulator.SubSystem.FluxReconstruction.HartmannSourceTerm2D.electricalConductivity = 1.82e5
+Simulator.SubSystem.FluxReconstruction.HartmannSourceTerm2D.IsResistive = true
 
-
-Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.FluxReconstruction.HartmannSourceTerm2D.AddJacob = true
 
 ###############################################################################
 # Initial Conditions
@@ -178,21 +233,22 @@ Simulator.SubSystem.FluxReconstruction.InField.Def =  0. 0. 0. 0. 0. 0. 0. 0. 1.
 
 ###############################################################################
 # Boundary Conditions
-
-#Simulator.SubSystem.FluxReconstruction.BcNames = Jet1 Jet2 Jet3 Jet4
+Simulator.SubSystem.FluxReconstruction.BcNames = Jet1 Jet2 Jet3 Jet4
 Simulator.SubSystem.FluxReconstruction.Jet1.applyTRS = x0
 Simulator.SubSystem.FluxReconstruction.Jet2.applyTRS = x1
 Simulator.SubSystem.FluxReconstruction.Jet3.applyTRS = y0
 Simulator.SubSystem.FluxReconstruction.Jet4.applyTRS = y1
 
-#Simulator.SubSystem.FluxReconstruction.BcNamesDiff = Jet1Diff Jet2Diff Jet3Diff Jet4Diff
+Simulator.SubSystem.FluxReconstruction.BcNamesDiff = Jet1Diff Jet2Diff Jet3Diff Jet4Diff
 Simulator.SubSystem.FluxReconstruction.Jet1Diff.applyTRS = x0
 Simulator.SubSystem.FluxReconstruction.Jet2Diff.applyTRS = x1
 Simulator.SubSystem.FluxReconstruction.Jet3Diff.applyTRS = y0
 Simulator.SubSystem.FluxReconstruction.Jet4Diff.applyTRS = y1
 
 ####### BC ####### 
-Simulator.SubSystem.FluxReconstruction.Data.BcTypes = SubInletUVTEIWRhoiViTiFVMCC SubOutletPEIWRhoiViTiFVMCC MirrorWallFVMCC NoSlipWallIsothermalEIWRhoiViTiFVMCC # add here the FR BC names instead of the FVM ones
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = BCSubInletUVTPCWRhoiViTi BCSubOutletPPCWRhoiViTi BCNoSlipWallHeatFluxMF2D BCNoSlipWallHeatFluxMF2D #BCMirrorWall2D  #BCSubInletTtPtAlphaEIWRhoiViTi3D #BCSubOutletPPCWRhoiViTi3D   #BCNoSlipWallHeatFluxMF3D
+# add here the FR BC names instead of the FVM ones
+
 Simulator.SubSystem.FluxReconstruction.Data.BcNames = Jet1                        Jet2                       Jet3            Jet4
 
 Simulator.SubSystem.FluxReconstruction.Data.Jet1.HeatFlux = true
@@ -204,13 +260,18 @@ Simulator.SubSystem.FluxReconstruction.Data.Jet1.ZeroGradientFlags = 1 1 1 1 1 1
 
 #################### Oulet Conditions ##########################################
 
-Simulator.SubSystem.FluxReconstruction.Data.Jet2.Pi = 101324.9862 #101325
+Simulator.SubSystem.FluxReconstruction.Data.Jet2.P = 101324.9862 #101325
 Simulator.SubSystem.FluxReconstruction.Data.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 0 1 1 1
 
 #################### Symmetry plane Conditions ##########################################
-Simulator.SubSystem.FluxReconstruction.Data.Jet3.ZeroGradientFlags = 0 1 0 1 0 1 1 0 1 1 0 1
+#Simulator.SubSystem.FluxReconstruction.Data.Jet3.ZeroGradientFlags = 0 1 0 1 0 1 1 0 1 1 0 1
+Simulator.SubSystem.FluxReconstruction.Data.Jet3.HeatFlux = false
+Simulator.SubSystem.FluxReconstruction.Data.Jet3.T = 288.2076994
+Simulator.SubSystem.FluxReconstruction.Data.Jet3.Ez0 = -0.1 
+Simulator.SubSystem.FluxReconstruction.Data.Jet3.ZeroGradientFlags = 0 0 1 0 0 0 0 0 1 0 0 0
 
 #################### Wall Conditions ##########################################
+Simulator.SubSystem.FluxReconstruction.Data.Jet4.HeatFlux = false
 Simulator.SubSystem.FluxReconstruction.Data.Jet4.T = 288.2076994
 Simulator.SubSystem.FluxReconstruction.Data.Jet4.Ez0 = -0.1 
 Simulator.SubSystem.FluxReconstruction.Data.Jet4.ZeroGradientFlags = 0 0 1 0 0 0 0 0 1 0 0 0

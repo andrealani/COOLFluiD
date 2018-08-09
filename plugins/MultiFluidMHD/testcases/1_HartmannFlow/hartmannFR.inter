@@ -1,1 +1,1 @@
-Simulator.SubSystem.FwdEuler.Data.CFL.Interactive.CFL = 0.1
+Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0e4
