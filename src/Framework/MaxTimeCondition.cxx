@@ -40,8 +40,8 @@ MaxTimeCondition::MaxTimeCondition(const std::string& name)
  : StopCondition(name)
 {
   addConfigOptionsTo(this);
-
-  m_maxTime = 1.;
+  
+  m_maxTime = -1.; // AL: WARNING: changed default, used to be =1
   setParameter("maxTime",&m_maxTime);
 }
 
@@ -65,7 +65,15 @@ bool MaxTimeCondition::isAchieved (const ConvergenceStatus& status)
   if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
 
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-  subSysStatus->setMaxTimeDim(m_maxTime);
+
+  // if the user has set a max time use it
+  if (m_maxTime >= 0.) {
+    subSysStatus->setMaxTimeDim(m_maxTime);
+  }
+  else { // otherwise use the one set by some other object (e.g. unsteady BC)
+    m_maxTime = subSysStatus->getMaxTimeDim();
+  }
+  cf_assert(m_maxTime >= 0.);
   
   static bool isFirstIter = true;
   if (isFirstIter)

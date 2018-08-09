@@ -44,7 +44,7 @@ public:
   /// should stop
   virtual bool isAchieved (const ConvergenceStatus& status) ;
 
-  /// returns MaxTime used for stoping simulation
+  /// returns MaxTime used for stopping simulation
   const CFreal& getMaxTime() const { return m_maxTime;}
 
 private:

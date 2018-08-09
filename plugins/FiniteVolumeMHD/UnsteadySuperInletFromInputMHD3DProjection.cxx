@@ -34,9 +34,10 @@ void UnsteadySuperInletFromInputMHD3DProjection::defineConfigOptions(Config::Opt
 {
    options.addConfigOption< std::string >("ACEDataFileName","Name of Input File from where to read the inlet solar wind data from ACE satellite.");
    options.addConfigOption< CFreal >("beginTimeAtRestart","Begin time of the overall unsteady simulation that uses ACE data input file in case of restart.");
-   options.addConfigOption< CFreal >("maxTime","Maximum time of the unsteady simulation.");
+   options.addConfigOption< CFreal, Config::DynamicOption<> >
+     ("maxTime","Maximum time of the unsteady simulation.");
    options.addConfigOption< CFint, Config::DynamicOption<> >
-     ("readInputFileFlag","Interacive flag telling whether to read the file.");
+     ("readInputFileFlag","Interactive flag telling whether to read the file.");
    options.addConfigOption< bool > ("useTimeInterpolation","Flag telling whether to use time interpolation.");
 }
 
@@ -289,7 +290,11 @@ void UnsteadySuperInletFromInputMHD3DProjection::unsetup()
 void UnsteadySuperInletFromInputMHD3DProjection::configure ( Config::ConfigArgs& args )
 {
   SuperInlet::configure(args);
-
+  
+  cf_assert(_maxTime > 0.);
+  SubSystemStatusStack::getActive()->setMaxTime(_maxTime);
+  cf_assert(SubSystemStatusStack::getActive()->getMaxTime() > 0.);
+  cf_assert(SubSystemStatusStack::getActive()->getMaxTimeDim() > 0.);
 }
 
 //////////////////////////////////////////////////////////////////////////////
