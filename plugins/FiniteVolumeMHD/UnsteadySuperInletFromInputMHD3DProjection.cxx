@@ -59,7 +59,7 @@ UnsteadySuperInletFromInputMHD3DProjection::UnsteadySuperInletFromInputMHD3DProj
 {
   addConfigOptionsTo(this);
 
-  _nameInputFile = "ACE";
+  _nameInputFile = "input.dat";
    setParameter("ACEDataFileName",&_nameInputFile);
 
   _beginTime = 0.0;
