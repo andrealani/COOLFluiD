@@ -271,6 +271,11 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
 void UnsteadySuperInletFromInputMHD3DProjection::setup()
 {
   SuperInlet::setup();
+
+  cf_assert(_maxTime > 0.);
+  SubSystemStatusStack::getActive()->setMaxTime(_maxTime);
+  cf_assert(SubSystemStatusStack::getActive()->getMaxTime() > 0.);
+  cf_assert(SubSystemStatusStack::getActive()->getMaxTimeDim() > 0.);
  
   _varSet = getMethodData().getUpdateVar().d_castTo<MHD3DProjectionVarSet>(); 
   _varSet->getModel()->resizePhysicalData(_dataInnerState);
@@ -290,11 +295,6 @@ void UnsteadySuperInletFromInputMHD3DProjection::unsetup()
 void UnsteadySuperInletFromInputMHD3DProjection::configure ( Config::ConfigArgs& args )
 {
   SuperInlet::configure(args);
-  
-  cf_assert(_maxTime > 0.);
-  SubSystemStatusStack::getActive()->setMaxTime(_maxTime);
-  cf_assert(SubSystemStatusStack::getActive()->getMaxTime() > 0.);
-  cf_assert(SubSystemStatusStack::getActive()->getMaxTimeDim() > 0.);
 }
 
 //////////////////////////////////////////////////////////////////////////////
