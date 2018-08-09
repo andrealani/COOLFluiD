@@ -1,0 +1,1017 @@
+#include <iterator>
+
+#include "Framework/CFSide.hh"
+
+#include "FluxReconstructionMethod/RiemannFlux.hh"
+#include "Framework/EquationSetData.hh"
+#include "Framework/BaseTerm.hh"
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "MultiFluidMHD/EulerMFMHDTerm.hh"
+#include "Framework/MultiScalarTerm.hh"
+#include "MultiFluidMHD/DiffMFMHD2DVarSet.hh"
+#include "MultiFluidMHD/MultiFluidMHDVarSet.hh"
+#include "MultiFluidMHD/EulerMFMHDTerm.hh"
+#include "Maxwell/Maxwell2DProjectionVarSet.hh"
+
+#include "FluxReconstructionMultiFluidMHD/FluxReconstructionMultiFluidMHD.hh"
+#include "FluxReconstructionMultiFluidMHD/AUSMFluxMultiFluidMHD.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD { 
+
+  namespace FluxReconstructionMethod {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFluxMultiFluid<UPDATEVAR>::AUSMFluxMultiFluid(const std::string& name) :
+  RiemannFlux(name),
+  m_unL(),
+  m_unR(),
+  m_a12(),
+  m_mL(),
+  m_mR(),
+  m_mflux12(),
+  m_p12(),
+  _EMField_l(),
+  _EMField_r(), 
+  _Aplus(),
+  _Aminus(), 
+  _resultEM(),
+  _psi_l(),
+  _psi_r(),
+  _m_i()
+{
+  CFAUTOTRACE;
+  
+  addConfigOptionsTo(this);
+
+  m_choiceA12 = 1;
+  this->setParameter("choiceA12",&m_choiceA12);
+
+  m_useMacCormackScaling = true;
+  this->setParameter("useMacCormackScaling",&m_useMacCormackScaling);
+
+  m_Bdiss = 1.;
+  this->setParameter("Bdiss",&m_Bdiss);
+
+  m_coeff = 1.;
+  this->setParameter("Coeff",&m_coeff);
+
+  m_Ediss = 1.;
+  this->setParameter("Ediss",&m_Ediss);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+AUSMFluxMultiFluid<UPDATEVAR>::~AUSMFluxMultiFluid()
+{
+  CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint >
+    ("choiceA12","Way of computing the interface sound speed a12.");
+
+  options.template addConfigOption< bool >
+   ("useMacCormackScaling", "Flag to use the scaling of the numerical dissipation in the Steger-Warming of Maxwell equations.");
+
+  options.template addConfigOption< CFreal >
+    ("Coeff","Coeff for numerical viscosity in the div cleaning");
+
+  options.template addConfigOption< CFreal >
+    ("Bdiss","Coeff for numerical viscosity in the magnetic Field");
+
+  options.template addConfigOption< CFreal >
+    ("Ediss","Coeff for numerical viscosity in the electric Field");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RealVector& AUSMFluxMultiFluid<UPDATEVAR>::computeFlux(State& lState,
+					     State& rState,
+					     const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  CFLog(DEBUG_MIN, "AUSMFlux::compute() START\n");
+  
+  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
+  const CFuint nbEqs = eqSS.getNbEqsSS();  				
+  const CFuint iEqSS = eqSS.getEqSS();
+  
+  const vector<bool>& m_pdata = m_updateVarSet->getMaskVariableArray();
+
+  //vector<RealVector>& m_pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
+
+//  m_lData = &m_pdata[LEFT];
+//  m_rData = &m_pdata[RIGHT];
+
+  CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+
+  CFLog(DEBUG_MED, "AUSMFluxMultiFluidMHD::computeFlux() => Fluid iEqSS = " << iEqSS << ", isPerturb " 
+  << getMethodData().isPerturb() << ", iVar = " << getMethodData().iPerturbVar() <<"\n");
+
+  // AL: this may fail in general cases other than ICP!
+  //     Here we are assuming that there is fluid + something else
+  //     In a weakly coupled simulation you must enter here only when the fluid is active
+  //     (i.e. during the RHS and RHS fluid jacobian computations)
+  // AL: this will fail if you try to solve turbulence decoupled
+
+  if (iEqSS == 0 || nbEqs == totalNbEqs) 
+  {  
+    // store the left and right states in vector
+    m_updateStates[LEFT ] = &lState;
+    m_updateStates[RIGHT] = &rState;
+
+  //  CFLog(VERBOSE, "\n\n\n\n\n m_updateStates[LEFT ] = "<< *m_updateStates[LEFT ] << "\n\n\n\n\n"); // these are some finite values
+
+    // compute physical data for the left and the right internal flux points
+    m_updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
+    m_updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
+
+    // The flow at the freestream is assumed to be one-dimensional
+    // calculation of the normal component of velocity for the left and right states
+
+    const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+    const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1);
+
+
+    for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+      m_unL[ie] = 0.0;
+      m_unR[ie] = 0.0;
+      if(!is2DHalf){
+        for (CFuint idim = 0; idim < dim; ++idim) {
+          const CFuint currXX = firstVelocity + dim*ie + idim;
+          m_unL[ie] += (m_pData[LEFT])[currXX]*normal[idim];
+          m_unR[ie] += (m_pData[RIGHT])[currXX]*normal[idim];
+        }
+      }
+      const CFuint dim2DHalf = 3;
+      if(is2DHalf){
+        for (CFuint idim = 0; idim < dim2DHalf; ++idim) {
+          if( idim != 2) { // x,y-direction
+            const CFuint currXX = firstVelocity + dim2DHalf*ie + idim;
+            m_unL[ie] += (m_pData[LEFT])[currXX]*normal[idim];
+            m_unR[ie] += (m_pData[RIGHT])[currXX]*normal[idim];
+          }
+        }
+      }
+    }
+
+    computeMassFlux();              // computes m_mflux12
+
+    //This part is for the MultiFluid euler equations
+    computePressureFlux();	//m_p12
+    computeMassFluxImpl(m_rFlux, normal);    
+  }
+
+  
+  if (nbEqs == totalNbEqs || iEqSS == 0) 
+  {
+    CFLog(DEBUG_MED, "AUSMFluxMultiFluid::compute() => Maxwell iEqSS = " << iEqSS << ", isPerturb " 
+	  << getMethodData().isPerturb() << ", iVar = " << getMethodData().iPerturbVar() <<"\n");
+
+    // here there could be the current number of equations if we want
+    // different eigenvalues for each set of equations
+    const EquationSetData& eqSetEMField = UPDATEVAR::MAXWELLSET::getEqSetData()[0]; //Electromagnetic Field
+    const vector<CFuint>& varIDsEMField = eqSetEMField.getEqSetVarIDs();
+
+    // const CFuint firstEMField = varIDsEMField[0];  
+    const CFuint endEM = varIDsEMField.size();
+
+    /// flux splitting scheme for Maxwell's Equations
+    //loop to set the electromagnetic variables 
+    for (CFuint i = 0; i < endEM; ++i){
+      _EMField_l[i] = (m_pData[LEFT])[i];
+      _EMField_r[i] = (m_pData[RIGHT])[i];     
+    }
+    computeMatrixAplus(normal);
+    computeMatrixAminus(normal);
+
+    _resultEM = 0.5*_Aplus*_EMField_l + 0.5*_Aminus*_EMField_r;   
+  
+
+    for(CFuint iem = 0; iem < endEM; ++iem){
+      m_rFlux[iem] = _resultEM[iem];   
+    }    
+  }
+  
+//  if (!this->getMethodData().isPerturb()) {
+//    computeUpdateCoeff();
+//  }
+  
+  if(is2DHalf){
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BX = " << m_rFlux[0] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BY = " << m_rFlux[1] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << m_rFlux[2] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EX = " << m_rFlux[3] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EY = " << m_rFlux[4] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << m_rFlux[5] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << m_rFlux[6] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << m_rFlux[7] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << m_rFlux[8] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << m_rFlux[9] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << m_rFlux[10] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << m_rFlux[11] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << m_rFlux[12] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << m_rFlux[13] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << m_rFlux[14] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux z-mom = " << m_rFlux[15] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << m_rFlux[16] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << m_rFlux[17] << "\n");
+  }
+  else{
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BX = " << m_rFlux[0] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BY = " << m_rFlux[1] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux BZ = " << m_rFlux[2] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EX = " << m_rFlux[3] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EY = " << m_rFlux[4] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux EZ = " << m_rFlux[5] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PSI = " << m_rFlux[6] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux PHI = " << m_rFlux[7] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux mass = " << m_rFlux[8] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux X-mom = " << m_rFlux[9] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Y-mom = " << m_rFlux[10] << "\n");
+   CFLog(DEBUG_MED,"AUSMFluxMultiFluid::compute --> convFlux Energy = " << m_rFlux[11] << "\n");
+  }
+
+
+//  CFLog(VERBOSE, "\n\n\n\n\n m_rFlux = "<< m_rFlux << "\n\n\n\n\n");
+  return m_rFlux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+RealVector& AUSMFluxMultiFluid<UPDATEVAR>::computeFlux(State& lState,RealVector& lExtraVars,
+                                 State& rState, RealVector& rExtraVars,
+                                 const RealVector& normal)
+{
+  // There is no implementation for extravars yet.
+  return computeFlux(lState,rState,normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeMassFluxImpl(RealVector& m_rFlux, const RealVector normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1); 
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
+  const CFuint endEM = 8; 
+  
+  // calculation of the dimensional numerical fluxes at the interface
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    
+    if (m_mflux12[ie] > 0.0) { // LEFT CASE
+
+      _psi_l[ie] = 1;      
+      m_rFlux[endEM + ie] = m_mflux12[ie];
+      
+      //loop to set the velocities inside Psi
+      if(!is2DHalf) {
+        for (CFuint i = 0; i < dim; ++i) {
+          _psi_l[nbSpecies + ie*dim + i] =  (m_pData[LEFT])[firstVelocity + ie*dim + i];
+          m_rFlux[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        }
+      }
+      else { // is 2DHalf
+        const CFuint dim2DHalf = 3;
+        for (CFuint i = 0; i < dim2DHalf; ++i) {
+          if( i != 2) { // x,y-direction
+            _psi_l[nbSpecies + ie*dim2DHalf + i] =  (m_pData[LEFT])[firstVelocity + ie*dim2DHalf + i];
+            m_rFlux[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*normal[i];
+          }
+          else { // z-direction
+            CFreal nz = 0;
+            _psi_l[nbSpecies + ie*dim2DHalf + i] =  (m_pData[LEFT])[firstVelocity + ie*dim2DHalf + i];
+            m_rFlux[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_l[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*nz;
+          }
+        }
+      }
+      //enthalpy
+      if(!is2DHalf) { //Default case
+        _psi_l[nbSpecies + nbSpecies*dim + ie] = (m_pData[LEFT])[firstTemperature + 4*ie + 3];
+        m_rFlux[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*dim + ie];
+      }
+      else { // when it is 2D half
+        _psi_l[nbSpecies + nbSpecies*3 + ie] = (m_pData[LEFT])[firstTemperature + 4*ie + 3];
+        m_rFlux[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_l[nbSpecies + nbSpecies*3 + ie];
+      }
+    }
+  
+    else { // RIGHT CASE
+      
+      _psi_r[ie] = 1;      
+      m_rFlux[endEM + ie] = m_mflux12[ie];
+      
+      //loop to set the velocities inside Psi
+      if(!is2DHalf) {
+        for (CFuint i = 0; i < dim; ++i) {
+          _psi_r[nbSpecies + ie*dim + i] =  (m_pData[RIGHT])[firstVelocity + ie*dim + i];
+          m_rFlux[endEM + nbSpecies + ie*dim + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim + i] + m_p12[ie]*normal[i];
+        }
+      }
+      else { // is 2DHalf
+        const CFuint dim2DHalf = 3;
+        for (CFuint i = 0; i < dim2DHalf; ++i) {
+          if( i != 2) { // x,y-direction
+            _psi_r[nbSpecies + ie*dim2DHalf + i] =  (m_pData[RIGHT])[firstVelocity + ie*dim2DHalf + i];
+            m_rFlux[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*normal[i];
+          }
+          else { // z-direction
+            CFreal nz = 0;
+            _psi_r[nbSpecies + ie*dim2DHalf + i] =  (m_pData[RIGHT])[firstVelocity + ie*dim2DHalf + i];
+            m_rFlux[endEM + nbSpecies + ie*dim2DHalf + i] = m_mflux12[ie]*_psi_r[nbSpecies + ie*dim2DHalf + i] + m_p12[ie]*nz;
+          }
+        }
+      }
+      //total enthalpy
+      if(!is2DHalf) { //Default case
+        _psi_r[nbSpecies + nbSpecies*dim + ie] = (m_pData[RIGHT])[firstTemperature + 4*ie + 3];
+        m_rFlux[endEM + nbSpecies + nbSpecies*dim + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*dim + ie] ;
+      }
+      else { // when it is 2D half
+        _psi_r[nbSpecies + nbSpecies*3 + ie] = (m_pData[RIGHT])[firstTemperature + 4*ie + 3];
+        m_rFlux[endEM + nbSpecies + nbSpecies*3 + ie] = m_mflux12[ie]*_psi_r[nbSpecies + nbSpecies*3 + ie] ;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeInterfaceSoundSpeed()
+{
+  // the user must choose one of the following 5 ways of calculation of the
+  // interface speed of sound, a12
+  this->m_a12 = 0.0;
+  switch(m_choiceA12) {
+  case 1:
+    computeSoundSpeed1();
+    break;
+  case 2:
+    computeSoundSpeed2();
+    break;
+  case 3:
+    computeSoundSpeed3();
+    break;
+  case 4:
+    computeSoundSpeed4();
+    break;
+  case 5:
+    computeSoundSpeed5();
+    break;
+  default:
+    computeSoundSpeed1();
+    break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed1()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
+  const CFreal gamma = m_updateVarSet->getModel()->getGamma();
+  const CFreal gammaMinus1 = gamma - 1.0;
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie){
+
+  const CFreal hL = (m_pData[LEFT])[firstTemperature + 4*ie + 3];
+  const CFreal hR = (m_pData[RIGHT])[firstTemperature + 4*ie + 3];
+
+  // 1st Way of calculation of the interface speed of sound, a12,
+  // suggested by Liou in his AIAA 2003-4116 paper
+
+  const CFreal aCritL = sqrt( (2.0*gammaMinus1/(gamma+1.0))*hL);
+  const CFreal aCritR = sqrt( (2.0*gammaMinus1/(gamma+1.0))*hR);
+
+  const CFreal acL = (aCritL*aCritL)/max(aCritL, this->m_unL[ie]);
+  const CFreal acR = (aCritR*aCritR)/max(aCritR, -this->m_unR[ie]);
+  this->m_a12[ie] = min(acL, acR);		      //Array with the speed of sound of the different species
+  //cout << "AUSMFluxMultiFluid::computeSoundSpeed1() \n";
+  //cout << "ie = "<< ie <<"\n";
+  //cout << "a12 = " << this->m_a12[ie] <<"\n";
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed2()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
+
+  // 2nd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the arithmetic average of the speeds of sounds
+  // at the left and right states
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie){  
+  const CFreal aL = (m_pData[LEFT])[firstTemperature + 4*ie + 2];
+  const CFreal aR = (m_pData[RIGHT])[firstTemperature + 4*ie + 2];
+  this->m_a12 = 0.5 * (aL+aR);
+    //cout << "AUSMFluxMultiFluid::computeSoundSpeed2() \n";
+    //cout << "ie = "<< ie <<"\n";
+    //cout << "a12 = " << this->m_a12[ie] <<"\n";
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed3()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // 3rd Way of calculation of the interface speed of sound, a12,
+  // by simply taking the geometric mean of the speeds of sounds
+  // at the left and right states
+
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);  
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie){  
+    const CFreal aL = (m_pData[LEFT])[firstTemperature + 4*ie + 2];
+    const CFreal aR = (m_pData[RIGHT])[firstTemperature + 4*ie + 2];
+    this->m_a12 = sqrt(aL*aR);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed4()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // Way of calculation of the interface speed of sound, a12,
+  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
+
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+//   const CFuint firstSpecies = m_updateVarSet->getModel()->getFirstScalarVar(0);
+  const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1);  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
+  const CFreal gamma = m_updateVarSet->getModel()->getGamma();
+  
+  for (CFuint ie = 0; ie < nbSpecies; ++ie){ 
+    
+    CFreal V2L = 0;		//square of velocity
+    CFreal V2R = 0;
+    
+    for (CFuint i = 0; i < dim; ++i){      
+      V2L = V2L + (m_pData[LEFT])[firstVelocity + dim*ie + i]*(m_pData[LEFT])[firstVelocity + dim*ie + i];
+      V2R = V2R + (m_pData[RIGHT])[firstVelocity + dim*ie + i]*(m_pData[RIGHT])[firstVelocity + dim*ie + i];
+    }
+    if (is2DHalf) { // summing the z component in case of 2D Half
+      V2L = V2L + (m_pData[LEFT])[firstVelocity + 3*ie + 2]*(m_pData[LEFT])[firstVelocity + 3*ie + 2];
+      V2R = V2R + (m_pData[RIGHT])[firstVelocity + 3*ie + 2]*(m_pData[RIGHT])[firstVelocity + 3*ie + 2];
+    }
+    
+    const CFreal kL = 0.5*V2L;
+    const CFreal kR = 0.5*V2R;
+    const CFreal hsL = (m_pData[LEFT])[firstTemperature + 4*ie + 3] - kL + 0.5*m_unL[ie]*m_unL[ie];
+    const CFreal hsR = (m_pData[RIGHT])[firstTemperature + 4*ie + 3]- kR + 0.5*m_unR[ie]*m_unR[ie];
+    const CFreal Hnormal = 0.5*(hsL + hsR);
+    const CFreal c1 = (gamma-1.)/(gamma*m_unR[ie])- (gamma-1.)/(gamma*m_unL[ie]);
+    const CFreal c2 = (gamma+1.)/(gamma*m_unL[ie])- (gamma+1.)/(gamma*m_unR[ie]);
+    const CFreal as = sqrt(2.*Hnormal*std::abs(c1)/std::abs(c2));
+    this->m_a12[ie] = ((m_unL[ie] + m_unR[ie]) < 0.0) ? as*as/max(std::abs(m_unR[ie]),as) :
+      as*as/max(std::abs(m_unL[ie]),as);
+    // this->m_a12 = min(as*as/max(std::abs(m_unR),as), as*as/max(std::abs(m_unL),as));
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed5()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+  // Way of calculation of the interface speed of sound, a12,
+  // in case of TCNEQ suggested by Jin Wook Lee in his PhD thesis
+  // unused //  const CFreal aL = (m_pData[LEFT])[UPDATEVAR::PTERM::A];
+  // unused //   const CFreal aR = (*this->m_rData)[UPDATEVAR::PTERM::A];
+
+  // Way of calculation of the interface speed of sound, a12,
+  // suggested by Liou in his AIAA 2003-4116 paper but applied to
+  // NEQ flows (Selmin's lecture)
+  RealVector& lData = (m_pData[LEFT]);
+  RealVector& rData = (m_pData[RIGHT]);
+
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+  const CFuint firstSpecies = m_updateVarSet->getModel()->getFirstScalarVar(0);
+//   const CFuint firstVelocity = m_updateVarSet->getModel()->getFirstScalarVar(1);  
+//   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const CFuint firstTemperature = m_updateVarSet->getModel()->getFirstScalarVar(2);
+  const CFreal gamma = m_updateVarSet->getModel()->getGamma();
+  const CFreal K_gas = m_updateVarSet->getModel()->getK();
+  const CFreal m_e = m_updateVarSet->getModel()->getMolecularMass1();
+  const CFreal m_n = m_updateVarSet->getModel()->getMolecularMass2();
+  const CFreal m_p = m_updateVarSet->getModel()->getMolecularMass3(); 
+  
+  //set the molar masses of the species (should be changed in the future)
+  _m_i[0] = m_e;
+  _m_i[1] = m_n;
+  _m_i[2] = m_p;
+  
+   
+  for (CFuint ie = 0; ie < nbSpecies; ++ie){
+    
+    const CFreal R_gas = K_gas/_m_i[ie];
+    const CFreal c_v = (1/(gamma-1))*(R_gas);//specific heat for constant volumen
+
+    const CFreal eL = c_v*lData[firstTemperature + 4*ie];//internal energy (LEFT)
+    const CFreal eR = c_v*rData[firstTemperature + 4*ie];//internal energy (RIGHT)
+
+    const CFreal gBarL = 1. + lData[firstTemperature + 4*ie + 1]/
+      (eL*lData[UPDATEVAR::PTERM::RHO]*lData[firstSpecies + ie]);
+    const CFreal gBarMinus1L = gamma*(gBarL - 1.0);
+
+    const CFreal gBarR = 1. + rData[firstTemperature + 4*ie + 1]/
+      (eR*rData[UPDATEVAR::PTERM::RHO]*rData[firstSpecies + ie]);
+    const CFreal gBarMinus1R = gamma*(gBarR - 1.0);
+
+    const CFreal hLL = lData[firstTemperature + 4*ie + 3];
+    const CFreal hRR = rData[firstTemperature + 4*ie + 3];
+    const CFreal aCritLL2 = 2.0*gBarMinus1L/(2.*gBarL + gBarMinus1L)*hLL;
+    const CFreal aCritRR2 = 2.0*gBarMinus1R/(2.*gBarR + gBarMinus1R)*hRR;
+    const CFreal acLL = aCritLL2/max(sqrt(aCritLL2), this->m_unL[ie]);
+    const CFreal acRR = aCritRR2/max(sqrt(aCritRR2), -this->m_unR[ie]);
+    this->m_a12[ie] = min(acLL, acRR);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus(const RealVector normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//  const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
+  CFreal factor1, factor2, factor3, factor4;
+  
+  
+  if(m_useMacCormackScaling){
+    factor1 = 1.;
+    factor2 = c_e*c_e;
+    factor3 = m_coeff*c_e*c_e;
+    factor4 = m_coeff;
+  }
+  else{
+    factor1 = c_e*m_Bdiss;
+    factor2 = c_e*m_Ediss;
+    factor3 = c_e*m_coeff;
+    factor4 = c_e*m_coeff;
+  }
+  
+  if(dim == 2){
+    _Aplus(0,0) = (normal[1]*normal[1] + gamma*normal[0]*normal[0])*factor1; //flag2
+    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*factor1; //flag2
+    _Aplus(0,2) = 0;
+    _Aplus(0,3) = 0;
+    _Aplus(0,4) = 0;
+    _Aplus(0,5) = normal[1];
+    _Aplus(0,6) = gamma*gamma*normal[0]; 
+    _Aplus(0,7) = 0; 
+
+    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*factor1; //flag2;
+    _Aplus(1,1) = (normal[0]*normal[0] + gamma*normal[1]*normal[1])*factor1; //flag2
+    _Aplus(1,2) = 0;
+    _Aplus(1,3) = 0;
+    _Aplus(1,4) = 0;
+    _Aplus(1,5) = -normal[0];
+    _Aplus(1,6) = gamma*gamma*normal[1]; 
+    _Aplus(1,7) = 0; 
+
+    _Aplus(2,0) = 0;
+    _Aplus(2,1) = 0;
+    _Aplus(2,2) = factor1; //flag2
+    _Aplus(2,3) = -normal[1];
+    _Aplus(2,4) = normal[0];
+    _Aplus(2,5) = 0;
+    _Aplus(2,6) = 0; 
+    _Aplus(2,7) = 0; 
+
+    _Aplus(3,0) = 0;
+    _Aplus(3,1) = 0;
+    _Aplus(3,2) = -normal[1]*c_e*c_e;
+    _Aplus(3,3) = (normal[1]*normal[1] + chi*normal[0]*normal[0])*factor2; //flag
+    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*factor2; //flag
+    _Aplus(3,5) = 0;
+    _Aplus(3,6) = 0;  
+    _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;  
+    
+    _Aplus(4,0) = 0;
+    _Aplus(4,1) = 0;
+    _Aplus(4,2) = normal[0]*c_e*c_e;
+    _Aplus(4,3) = (chi -1)*normal[0]*normal[1]*factor2; //flag
+    _Aplus(4,4) = (normal[0]*normal[0] + chi*normal[1]*normal[1])*factor2; //flag
+    _Aplus(4,5) = 0;
+    _Aplus(4,6) = 0; 
+    _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e;  
+
+    _Aplus(5,0) = normal[1]*c_e*c_e;
+    _Aplus(5,1) = -normal[0]*c_e*c_e;
+    _Aplus(5,2) = 0;
+    _Aplus(5,3) = 0;
+    _Aplus(5,4) = 0;
+    _Aplus(5,5) = factor2; //flag 
+    _Aplus(5,6) = 0; 
+    _Aplus(5,7) = 0; 
+    
+    _Aplus(6,0) = normal[0]*c_e*c_e;
+    _Aplus(6,1) = normal[1]*c_e*c_e;
+    _Aplus(6,2) = 0;
+    _Aplus(6,3) = 0;
+    _Aplus(6,4) = 0;
+    _Aplus(6,5) = 0;  
+    _Aplus(6,6) = gamma*factor3;
+    _Aplus(6,7) = 0;
+    
+    _Aplus(7,0) = 0;
+    _Aplus(7,1) = 0;
+    _Aplus(7,2) = 0;
+    _Aplus(7,3) = normal[0];
+    _Aplus(7,4) = normal[1];
+    _Aplus(7,5) = 0; 
+    _Aplus(7,6) = 0; 
+    _Aplus(7,7) = chi*factor4; //flag2  
+  }
+  if(dim == 3){
+    _Aplus(0,0) = (1 + normal[0]*normal[0]*(gamma - 1))*factor1;
+    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aplus(0,2) = (gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aplus(0,3) = 0;
+    _Aplus(0,4) = -normal[2];
+    _Aplus(0,5) = normal[1];
+    _Aplus(0,6) = gamma*gamma*normal[0]; 
+    _Aplus(0,7) = 0; 
+
+    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aplus(1,1) = (1 + normal[1]*normal[1]*(gamma - 1))*factor1;
+    _Aplus(1,2) = (gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aplus(1,3) = normal[2];
+    _Aplus(1,4) = 0;
+    _Aplus(1,5) = -normal[0];
+    _Aplus(1,6) = gamma*gamma*normal[1]; 
+    _Aplus(1,7) = 0; 
+
+    _Aplus(2,0) = (gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aplus(2,1) = (gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aplus(2,2) = (1 + normal[2]*normal[2]*(gamma - 1))*factor1;
+    _Aplus(2,3) = -normal[1];
+    _Aplus(2,4) = normal[0];
+    _Aplus(2,5) = 0;
+    _Aplus(2,6) = gamma*gamma*normal[2]; 
+    _Aplus(2,7) = 0; 
+
+    _Aplus(3,0) = 0; 
+    _Aplus(3,1) = normal[2]*c_e*c_e; 
+    _Aplus(3,2) = -normal[1]*c_e*c_e;
+    _Aplus(3,3) = (1 + normal[0]*normal[0]*(chi - 1))*factor2;
+    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*factor2;
+    _Aplus(3,5) = (chi - 1)*normal[0]*normal[2]*factor2; 
+    _Aplus(3,6) = 0; 
+    _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;
+
+    _Aplus(4,0) = -normal[2]*c_e*c_e;
+    _Aplus(4,1) = 0;
+    _Aplus(4,2) = normal[0]*c_e*c_e;
+    _Aplus(4,3) = (chi - 1)*normal[0]*normal[1]*factor2;
+    _Aplus(4,4) = (1 + normal[1]*normal[1]*(chi - 1))*factor2;
+    _Aplus(4,5) = (chi - 1)*normal[1]*normal[2]*factor2;
+    _Aplus(4,6) = 0; 
+    _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e; 
+
+    _Aplus(5,0) = normal[1]*c_e*c_e;
+    _Aplus(5,1) = -normal[0]*c_e*c_e;
+    _Aplus(5,2) = 0;
+    _Aplus(5,3) = (chi - 1)*normal[0]*normal[2]*factor2;
+    _Aplus(5,4) = (chi - 1)*normal[1]*normal[2]*factor2;
+    _Aplus(5,5) = (1 + normal[2]*normal[2]*(chi - 1))*factor2;
+    _Aplus(5,6) = 0; 
+    _Aplus(5,7) = chi*chi*normal[2]*c_e*c_e; 
+    
+    _Aplus(6,0) = normal[0]*c_e*c_e;
+    _Aplus(6,1) = normal[1]*c_e*c_e;
+    _Aplus(6,2) = normal[2]*c_e*c_e;
+    _Aplus(6,3) = 0;
+    _Aplus(6,4) = 0;
+    _Aplus(6,5) = 0; 
+    _Aplus(6,6) = gamma*factor3; 
+    _Aplus(6,7) = 0;
+    
+    _Aplus(7,0) = 0;
+    _Aplus(7,1) = 0;
+    _Aplus(7,2) = 0;
+    _Aplus(7,3) = normal[0];
+    _Aplus(7,4) = normal[1];
+    _Aplus(7,5) = normal[2]; 
+    _Aplus(7,6) = 0; 
+    _Aplus(7,7) = chi*factor4;
+  }
+}
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus(const RealVector normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+//const RealVector& normal = getMethodData().getUnitNormal();
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
+  const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
+  const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
+  CFreal factor1, factor2, factor3, factor4;
+  
+  
+  if(m_useMacCormackScaling){
+    factor1 = 1.;
+    factor2 = c_e*c_e;
+    factor3 = m_coeff*c_e*c_e;
+    factor4 = m_coeff;
+  }
+  else{
+    factor1 = c_e*m_Bdiss;
+    factor2 = c_e*m_Ediss;
+    factor3 = c_e*m_coeff;
+    factor4 = c_e*m_coeff;
+  }
+
+  if(dim == 2){
+    _Aminus(0,0) = -(normal[1]*normal[1] + gamma*normal[0]*normal[0])*factor1; //flag2
+    _Aminus(0,1) = (1 - gamma)*normal[0]*normal[1]*factor1; //flag2
+    _Aminus(0,2) = 0;
+    _Aminus(0,3) = 0;
+    _Aminus(0,4) = 0;
+    _Aminus(0,5) = normal[1];
+    _Aminus(0,6) = gamma*gamma*normal[0]; 
+    _Aminus(0,7) = 0; 
+
+    _Aminus(1,0) = (1 - gamma)*normal[0]*normal[1]*factor1; //flag2
+    _Aminus(1,1) = -(normal[0]*normal[0] + gamma*normal[1]*normal[1])*factor1; //flag2
+    _Aminus(1,2) = 0;
+    _Aminus(1,3) = 0;
+    _Aminus(1,4) = 0;
+    _Aminus(1,5) = -normal[0];
+    _Aminus(1,6) = gamma*gamma*normal[1]; 
+    _Aminus(1,7) = 0; 
+
+    _Aminus(2,0) = 0;
+    _Aminus(2,1) = 0;
+    _Aminus(2,2) = -1*factor1; //flag2
+    _Aminus(2,3) = -normal[1];
+    _Aminus(2,4) = normal[0];
+    _Aminus(2,5) = 0;
+    _Aminus(2,6) = 0;
+    _Aminus(2,7) = 0; 
+
+    _Aminus(3,0) = 0;
+    _Aminus(3,1) = 0;
+    _Aminus(3,2) = -normal[1]*c_e*c_e;
+    _Aminus(3,3) = -(normal[1]*normal[1] + chi*normal[0]*normal[0])*factor2; //flag
+    _Aminus(3,4) = (1 - chi)*normal[0]*normal[1]*factor2; //flag
+    _Aminus(3,5) = 0;
+    _Aminus(3,6) = 0;  
+    _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;  
+    
+    _Aminus(4,0) = 0;
+    _Aminus(4,1) = 0;
+    _Aminus(4,2) = normal[0]*c_e*c_e;
+    _Aminus(4,3) = (1 - chi)*normal[0]*normal[1]*factor2; //flag
+    _Aminus(4,4) = -(normal[0]*normal[0] + chi*normal[1]*normal[1])*factor2; //flag
+    _Aminus(4,5) = 0;
+    _Aminus(4,6) = 0; 
+    _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e;  
+
+    _Aminus(5,0) = normal[1]*c_e*c_e;
+    _Aminus(5,1) = -normal[0]*c_e*c_e;
+    _Aminus(5,2) = 0;
+    _Aminus(5,3) = 0;
+    _Aminus(5,4) = 0;
+    _Aminus(5,5) = -1*factor2; //flag 
+    _Aminus(5,6) = 0; 
+    _Aminus(5,7) = 0; 
+    
+    _Aminus(6,0) = normal[0]*c_e*c_e;
+    _Aminus(6,1) = normal[1]*c_e*c_e;
+    _Aminus(6,2) = 0;
+    _Aminus(6,3) = 0;
+    _Aminus(6,4) = 0;
+    _Aminus(6,5) = 0;
+    _Aminus(6,6) = -gamma*factor3;
+    _Aminus(6,7) = 0;
+    
+    _Aminus(7,0) = 0;
+    _Aminus(7,1) = 0;
+    _Aminus(7,2) = 0;
+    _Aminus(7,3) = normal[0];
+    _Aminus(7,4) = normal[1];
+    _Aminus(7,5) = 0; 
+    _Aminus(7,6) = 0; 
+    _Aminus(7,7) = -chi*factor4; //flag2  
+  }
+  if(dim == 3){
+    _Aminus(0,0) = -(1 + normal[0]*normal[0]*(gamma - 1))*factor1;
+    _Aminus(0,1) = -(gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aminus(0,2) = -(gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aminus(0,3) = 0;
+    _Aminus(0,4) = -normal[2];
+    _Aminus(0,5) = normal[1];
+    _Aminus(0,6) = gamma*gamma*normal[0]; 
+    _Aminus(0,7) = 0; 
+
+    _Aminus(1,0) = -(gamma - 1)*normal[0]*normal[1]*factor1;
+    _Aminus(1,1) = -(1 + normal[1]*normal[1]*(gamma - 1))*factor1;
+    _Aminus(1,2) = -(gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aminus(1,3) = normal[2];
+    _Aminus(1,4) = 0;
+    _Aminus(1,5) = -normal[0];
+    _Aminus(1,6) = gamma*gamma*normal[1]; 
+    _Aminus(1,7) = 0; 
+
+    _Aminus(2,0) = -(gamma - 1)*normal[0]*normal[2]*factor1;
+    _Aminus(2,1) = -(gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aminus(2,2) = -(1 + normal[2]*normal[2]*(gamma - 1))*factor1;
+    _Aminus(2,3) = -normal[1];
+    _Aminus(2,4) = normal[0];
+    _Aminus(2,5) = 0;
+    _Aminus(2,6) = gamma*gamma*normal[2]; 
+    _Aminus(2,7) = 0; 
+
+    _Aminus(3,0) = 0; 
+    _Aminus(3,1) = normal[2]*c_e*c_e; 
+    _Aminus(3,2) = -normal[1]*c_e*c_e;
+    _Aminus(3,3) = -(1 + normal[0]*normal[0]*(chi - 1))*factor2;
+    _Aminus(3,4) = -(chi - 1)*normal[0]*normal[1]*factor2;
+    _Aminus(3,5) = -(chi - 1)*normal[0]*normal[2]*factor2; 
+    _Aminus(3,6) = 0; 
+    _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;
+
+    _Aminus(4,0) = -normal[2]*c_e*c_e;
+    _Aminus(4,1) = 0;
+    _Aminus(4,2) = normal[0]*c_e*c_e;
+    _Aminus(4,3) = -(chi - 1)*normal[0]*normal[1]*factor2;
+    _Aminus(4,4) = -(1 + normal[1]*normal[1]*(chi - 1))*factor2;
+    _Aminus(4,5) = -(chi - 1)*normal[1]*normal[2]*factor2;
+    _Aminus(4,6) = 0; 
+    _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e; 
+
+    _Aminus(5,0) = normal[1]*c_e*c_e;
+    _Aminus(5,1) = -normal[0]*c_e*c_e;
+    _Aminus(5,2) = 0;
+    _Aminus(5,3) = -(chi - 1)*normal[0]*normal[2]*factor2;
+    _Aminus(5,4) = -(chi - 1)*normal[1]*normal[2]*factor2;
+    _Aminus(5,5) = -(1 + normal[2]*normal[2]*(chi - 1))*factor2;
+    _Aminus(5,6) = 0; 
+    _Aminus(5,7) = chi*chi*normal[2]*c_e*c_e; 
+    
+    _Aminus(6,0) = normal[0]*c_e*c_e;
+    _Aminus(6,1) = normal[1]*c_e*c_e;
+    _Aminus(6,2) = normal[2]*c_e*c_e;
+    _Aminus(6,3) = 0;
+    _Aminus(6,4) = 0;
+    _Aminus(6,5) = 0; 
+    _Aminus(6,6) = -gamma*factor3; 
+    _Aminus(6,7) = 0;
+    
+    _Aminus(7,0) = 0;
+    _Aminus(7,1) = 0;
+    _Aminus(7,2) = 0;
+    _Aminus(7,3) = normal[0];
+    _Aminus(7,4) = normal[1];
+    _Aminus(7,5) = normal[2]; 
+    _Aminus(7,6) = 0; 
+    _Aminus(7,7) = -chi*factor4;  
+  }  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::setup()
+{
+  CFAUTOTRACE;
+
+  RiemannFlux::setup();
+  
+  m_updateVarSet = getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+
+  // get the name of the physical model
+  std::string physicsName = PhysicalModelStack::getActive()->getImplementor()->getConvectiveName();
+
+ /* PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm()->resizePhysicalData(m_pdata);
+*/
+
+  // get the varset names
+  std::string updateVarName = getMethodData().getUpdateVarStr();
+  std::string solutionVarName = getMethodData().getSolutionVarStr();
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  const bool is2DHalf = PhysicalModelStack::getActive()->getImplementor()->is2DHalf();
+  const CFuint nbSpecies = m_updateVarSet->getModel()->getNbScalarVars(0);
+
+  // AUSM scheme related data
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  m_a12.resize(nbSpecies);
+  m_p12.resize(nbSpecies);
+  m_mflux12.resize(nbSpecies);
+  m_unL.resize(nbSpecies);
+  m_unR.resize(nbSpecies);
+  m_mL.resize(nbSpecies);
+  m_mR.resize(nbSpecies);
+/*  _rightEv.resize(nbEqs, nbEqs);
+  _leftEv.resize(nbEqs, nbEqs);
+  _eValues.resize(nbEqs);
+  _absEvalues.resize(nbEqs);
+  _absJacob.resize(nbEqs,nbEqs);
+  _jRight.resize(nbEqs,nbEqs);
+  _jLeft.resize(nbEqs, nbEqs);
+  _jacob.resize(nbEqs, nbEqs);
+  _jacobLeftTransf.resize(nbEqs, nbEqs);
+  _jacobRightTransf.resize(nbEqs, nbEqs);
+  _jacobDummy.resize(nbEqs, nbEqs);
+*/  
+  _EMField_l.resize(8);
+  _EMField_r.resize(8); 
+  _Aplus.resize(8,8);
+  _Aminus.resize(8,8);  
+  _resultEM.resize(8);
+  if(is2DHalf){
+    _psi_l.resize(nbSpecies + 3*nbSpecies + nbSpecies);
+    _psi_r.resize(nbSpecies + 3*nbSpecies + nbSpecies);
+  }
+  else {
+    _psi_l.resize(nbSpecies + dim*nbSpecies + nbSpecies);
+    _psi_r.resize(nbSpecies + dim*nbSpecies + nbSpecies);
+  }
+  _m_i.resize(3);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void AUSMFluxMultiFluid<UPDATEVAR>::unsetup()
+{
+  CFAUTOTRACE;
+
+  RiemannFlux::unsetup();
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  }  // namespace FluxReconstructionMethod
+
+}  // namespace COOLFluiD

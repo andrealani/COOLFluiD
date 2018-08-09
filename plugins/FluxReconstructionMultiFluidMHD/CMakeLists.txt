@@ -1,9 +1,54 @@
 LIST( APPEND FluxReconstructionMultiFluidMHD_files
-AUSMFluxMultiFluid.cxx
 FluxReconstructionMultiFluidMHD.hh
+AUSMFluxMultiFluidMHD.cxx
+AUSMFluxMultiFluidMHD.hh
+AUSMFluxMultiFluidMHD.ci
+AUSMPlusUpFluxMultiFluidMHD.hh
+AUSMPlusUpFluxMultiFluidMHD.ci
+BCMirrorWallHartmann.hh
+BCMirrorWallHartmann.cxx
+BCMirrorWall2D.cxx
+BCMirrorWall2D.hh
+BCMirrorWall3D.cxx
+BCMirrorWall3D.hh
+BCNoSlipWallHeatFluxMF3D.cxx	
+BCNoSlipWallHeatFluxMF3D.hh
+BCNoSlipWallHeatFluxMF2D.cxx
+BCNoSlipWallHeatFluxMF2D.hh
+BCSubInletUVTPCWRhoiViTi.cxx
+BCSubInletUVTPCWRhoiViTi.hh
+BCSubInletUVTEIWRhoiViTi.cxx
+BCSubInletUVTEIWRhoiViTi.hh
+BCSubInletTtPtAlphaEIWRhoiViTi2D.cxx
+BCSubInletTtPtAlphaEIWRhoiViTi2D.hh
+BCSubInletTtPtAlphaEIWRhoiViTi3D.cxx
+BCSubInletTtPtAlphaEIWRhoiViTi3D.hh
+BCSubOutletPPCWRhoiViTi3D.cxx
+BCSubOutletPPCWRhoiViTi3D.hh
+BCSubOutletPPCWRhoiViTi.cxx
+BCSubOutletPPCWRhoiViTi.hh
+DiffBndCorrectionsRHSFluxReconstructionMFMHD.cxx
+DiffBndCorrectionsRHSFluxReconstructionMFMHD.hh
+DiffRHSFluxReconstructionMFMHD.cxx
+DiffRHSFluxReconstructionMFMHD.hh
+DiffRHSJacobFluxReconstructionMFMHD.cxx
+DiffRHSJacobFluxReconstructionMFMHD.hh
+DiffBndCorrectionsRHSJacobFluxReconstructionMFMHD.cxx
+DiffBndCorrectionsRHSJacobFluxReconstructionMFMHD.hh
+HartmannSourceTerm.hh
+HartmannSourceTerm.ci
+HartmannSourceTerm.cxx
+MFMHDBndGradientComputer.cxx
+MFMHDBndGradientComputer.hh
+MFMHDGradientComputer.cxx
+MFMHDGradientComputer.hh
+MFMHDJacobGradientComputer.cxx
+MFMHDJacobGradientComputer.hh
+MFMHDJacobBndGradientComputer.cxx
+MFMHDJacobBndGradientComputer.hh
 )
 
-LIST ( APPEND FluxReconstructionMultiFluidMHD_cflibs FluxReconstructionMethod MultiFluidMHD Framework)
+LIST ( APPEND FluxReconstructionMultiFluidMHD_cflibs FluxReconstructionMethod Maxwell MultiFluidMHD Framework)
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionMultiFluidMHD )
 
 CF_WARN_ORPHAN_FILES()
