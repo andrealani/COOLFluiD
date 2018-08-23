@@ -82,6 +82,8 @@ void BCSubInletUVTEIWRhoiViTi::setup()
   
   m_bCoord.resize(PhysicalModelStack::getActive()->getDim());
   
+  m_needsSpatCoord = true;
+  
 //   _vars.resize(PhysicalModelStack::getActive()->getDim());
   
   m_varSet = getMethodData().getUpdateVar().d_castTo<MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> >();

@@ -79,6 +79,8 @@ void BCSubInletUVTPCWRhoiViTi::setup()
   
 //   cout << "SubInletUVTPCWRhoiViTi::setup" << endl; 
   
+  m_needsSpatCoord = true;
+  
   
   m_bCoord.resize(PhysicalModelStack::getActive()->getDim());
   
@@ -223,6 +225,7 @@ void BCSubInletUVTPCWRhoiViTi::computeGhostStates(const vector< State* >& intSta
 
    // (*ghostState) = 2*bcState - (*innerState)
    m_vFunction.evaluate(coords[iState], m_uvT);
+   //CFLog(INFO, "coords: " << coords[iState] << ", m_uvT: " << m_uvT << "\n");
 
 //    _uvT[0] /= _uvTRef[0];
 //    _uvT[1] /= _uvTRef[1];
@@ -247,6 +250,7 @@ void BCSubInletUVTPCWRhoiViTi::computeGhostStates(const vector< State* >& intSta
 //    std::cout << "SubInletUVTPCWRhoiViTi::setGhostState Vi = "<< Vi <<"\n"; 
 
    (ghostState)[endEM + nbSpecies + 2*i] = 2*Ui -(intState)[endEM + nbSpecies + 2*i];
+   //CFLog(INFO, "Ui: " << Ui << ", ghostU: " << (ghostState)[endEM + nbSpecies + 2*i] << "\n");
    (ghostState)[endEM + nbSpecies + 2*i + 1] = 2*Vi  -(intState)[endEM + nbSpecies + 2*i + 1];   
  } 
 //   std::cout << "SubInletUVTPCWRhoiViTi::setGhostState after Velocities" <<"\n"; 
@@ -260,7 +264,7 @@ void BCSubInletUVTPCWRhoiViTi::computeGhostStates(const vector< State* >& intSta
 
     //m_varSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
 
-   // CFLog(VERBOSE, "\n\n\n\n\n Ghost State Value = " << ghostState << "\n\n\n\n\n");
+   //CFLog(INFO, "ghost inside inlet: " << ghostState << "\n");
     //CFLog(VERBOSE, "\n\n\n\n\n Physical Data Value = " << m_ghostSolPhysData << "\n\n\n\n\n");
  }
   
