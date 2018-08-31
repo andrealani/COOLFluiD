@@ -281,7 +281,7 @@ void DiffRHSFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 35)
+      if(true) //m_cell->getID() == 35)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "TotalUpdate = \n");

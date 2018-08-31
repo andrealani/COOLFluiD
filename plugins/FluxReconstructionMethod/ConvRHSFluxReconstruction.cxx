@@ -283,9 +283,10 @@ void ConvRHSFluxReconstruction::execute()
       }
       
       // print out the residual updates for debugging
-      if(m_cell->getID() == 35)
+      if(m_cell->getID() == 35) //true) //
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+        CFLog(VERBOSE, "coords  = " << (*m_cellStates)[0]->getCoordinates() << "\n");
         CFLog(VERBOSE, "UpdateTotal = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();

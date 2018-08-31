@@ -82,6 +82,17 @@ public: // functions
     cf_assert(m_updateToSolutionVecTrans.isNotNull());
     return m_updateToSolutionVecTrans.getPtr();
   }
+  
+  /**
+   * Get the matrix transformer from solution to update variables
+   * starting from update variables
+   */
+  Common::SafePtr<Framework::VarSetMatrixTransformer>
+  getSolToUpdateInUpdateMatTrans() const
+  {
+    cf_assert(m_solToUpdateInUpdateMatTrans.isNotNull());
+    return m_solToUpdateInUpdateMatTrans.getPtr();
+  }
 
   /// Sets the LinearSystemSolver for this SpaceMethod to use
   /// @pre LinearSystemSolver pointer is not constant to allow dynamic_casting
@@ -416,6 +427,10 @@ private:  // data
   
   /// Vector transformer from update to solution variables
   Common::SelfRegistPtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
+  /// Matrix transformer from solution to update variables
+  /// starting from update variables
+  Common::SelfRegistPtr<Framework::VarSetMatrixTransformer> m_solToUpdateInUpdateMatTrans;
   
   /// Flag telling whether to freeze the gradients in the Jacobian computation
   bool m_freezeGrads;

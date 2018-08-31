@@ -91,9 +91,28 @@ protected: //functions
   void setCellData();
   
   /**
+   * recompute the cell gradients from the current cell solutions,
+   * after perturbation
+   */
+  virtual void computePerturbedGradients(const CFuint side);
+  
+  /**
+   * recompute the cell gradients from the current cell and the neighbouring cells solutions,
+   * after perturbation
+   * @pre setCellsData()
+   * @pre backupAndReconstructOtherFacesAndCellPhysVars()
+   */
+  virtual void computePerturbedGradients();
+  
+  /**
    * Compute the projected states on order P-1
    */
   void computeProjStates(std::vector< RealVector >& projStates);
+  
+  /**
+   * Compute the projected states on order P-1 on a side of the current face
+   */
+  void computeProjStates(std::vector< RealVector >& projStates, const CFuint side);
   
   /**
    * Compute the artificial viscosity
@@ -106,9 +125,19 @@ protected: //functions
   virtual void computeEpsilon0();
   
   /**
+   * Compute the reference artificial viscosity
+   */
+  virtual void computeEpsilon0(const CFuint side);
+  
+  /**
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness();
+  
+  /**
+   * Compute the smoothness indicator
+   */
+  virtual void computeSmoothness(const CFuint side);
   
   /**
    * Store the computed artificial viscosity
@@ -272,6 +301,9 @@ protected: //data
   
   /// storage for the monitored phys var
   Framework::DataSocketSource<CFreal> socket_monPhysVar;
+  
+  /// backup for epsilon
+  CFreal m_epsBackUp;
   
   private:
 

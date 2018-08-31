@@ -54,7 +54,7 @@ public:  // methods
   
   /// Unset up private data and data
   void unsetup();
-
+  
   /**
    * Finalize computation RHS
    */
@@ -64,6 +64,13 @@ private: // helper functions
   
   /// Compute the transformation matrix dP/dU numerically
   RealMatrix& computeNumericalTransMatrix(Framework::State& state);
+  
+  /// Compute the transformation matrix dP/dU analytically
+  const RealMatrix& computeAnalyticalTransMatrix(const Framework::State& state) 
+  {
+    m_solutionToUpdateMatTrans->setMatrix(state);
+    return *m_solutionToUpdateMatTrans->getMatrix();
+  }
 
 
 protected: // data
@@ -86,6 +93,10 @@ protected: // data
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
   
+  /// Matrix transformer from solution to update variables
+  /// starting from update variables
+  Common::SafePtr<Framework::VarSetMatrixTransformer> m_solutionToUpdateMatTrans;
+  
   /// vector to store the a state
   RealVector m_state;
   
@@ -100,6 +111,9 @@ protected: // data
   
   /// vector to temporarily store residuals
   RealVector m_tempRes;
+  
+  /// flag telling if to use analytical transformation matrix
+  bool m_useAnalyticalMatrix;
 
 }; // class FinalizeRHS
 

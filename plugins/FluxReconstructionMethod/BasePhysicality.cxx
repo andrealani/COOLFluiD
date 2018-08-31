@@ -248,7 +248,7 @@ void BasePhysicality::setup()
   DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
   DataHandle< CFreal > output = socket_outputPP.getDataHandle();
   
-  const CFuint nbStates = nbrCells*m_nbrSolPnts;;
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;
 
   // resize socket
   output.resize(nbStates);

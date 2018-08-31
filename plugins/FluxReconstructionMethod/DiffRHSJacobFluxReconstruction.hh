@@ -102,7 +102,7 @@ protected: //functions
    * recompute the cell gradients from the current cell solutions,
    * after perturbation
    */
-  void computePerturbedGradients(const CFuint side);
+  virtual void computePerturbedGradients(const CFuint side);
   
   /**
    * recompute the cell gradients from the current cell and the neighbouring cells solutions,
@@ -110,7 +110,7 @@ protected: //functions
    * @pre setCellsData()
    * @pre backupAndReconstructOtherFacesAndCellPhysVars()
    */
-  void computePerturbedGradients();
+  virtual void computePerturbedGradients();
 
   /**
    * recompute the cell gradients from the current cell and the neighbouring cells,
@@ -338,6 +338,9 @@ protected: //data
   
   /// perturbed variable
   CFuint m_pertVar;
+  
+  /// the corrected gradients in the flux points backup
+  std::vector< std::vector< RealVector* > > m_cellGradFlxPntBackup;
 
   
 }; // class Solve

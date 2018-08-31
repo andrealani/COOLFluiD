@@ -76,7 +76,7 @@ protected: //functions
   virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
 
   /// compute the interface flux
-  void computeInterfaceFlxCorrection();
+  virtual void computeInterfaceFlxCorrection();
   
   /// compute the divergence of the discontinuous flux (-divFD+divhFD)
   void computeDivDiscontFlx(std::vector< RealVector >& residuals);

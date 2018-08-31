@@ -208,7 +208,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
           updateRHS();
 	  
 	  // print out the residual updates for debugging
-          if(m_intCell->getID() == 35)
+          if((*m_cellStates)[0]->getLocalID() == 704) //m_intCell->getID() == 35)
           {
 	    CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
             CFLog(VERBOSE, "UpdateBnd = \n");
@@ -253,8 +253,12 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
 								      *(m_flxPntGhostSol[iFlxPnt]),
 								      m_unitNormalFlxPnts[iFlxPnt]);
     
+    //CFLog(INFO, "iFlx: " << iFlxPnt << ", ghost: " << *(m_flxPntGhostSol[iFlxPnt]) << ", inner: " << *(m_cellStatesFlxPnt[iFlxPnt]) << ", normal: " << m_unitNormalFlxPnts[iFlxPnt] << "\n");
+    
     // store the local Riemann flux, scaled with geometrical Jacobian
     m_flxPntRiemannFlux[iFlxPnt] *= m_faceJacobVecSizeFlxPnts[iFlxPnt];
+    
+    if (m_intCell->getID() == 0) CFLog(VERBOSE, "flx: " << m_flxPntRiemannFlux[iFlxPnt] << ", normal: " << m_unitNormalFlxPnts[iFlxPnt] << ", jacob: " << m_faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
   }
 }
 
@@ -277,11 +281,21 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
       const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
 
       *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]));
+      if (m_intCell->getID() == 783) CFLog(VERBOSE, "sol: " << *((*m_cellStates)[solIdx])  << "\n");
     }
+    
+    if (m_intCell->getID() == 783) CFLog(VERBOSE, "inner: " << *(m_cellStatesFlxPnt[iFlxPnt])  << "\n");
   }
   
   // compute ghost states
   m_bcStateComputer->computeGhostStates(m_cellStatesFlxPnt,m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
+  if (m_intCell->getID() == 0)
+  {
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+     CFLog(VERBOSE, "flx pnt state: " << *(m_cellStatesFlxPnt[iFlxPnt]) << ", ghost: " << *(m_flxPntGhostSol[iFlxPnt]) << "\n") ;
+  }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -409,7 +423,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
     // transform update states to physical data to calculate eigenvalues
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlx]), m_pData);
     waveSpeedUpd += jacobXIntCoef*m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
-    //if (waveSpeedUpd > 10.0) CFLog(INFO, "wvspConvBnd: " << waveSpeedUpd << "\n");
+    if (waveSpeedUpd != waveSpeedUpd) CFLog(INFO, "nan pData: " << m_pData << "\n");
   }
   
 }

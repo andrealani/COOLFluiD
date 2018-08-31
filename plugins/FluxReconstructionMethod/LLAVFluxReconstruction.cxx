@@ -905,8 +905,12 @@ void LLAVFluxReconstruction::computeEpsilon()
 //       {
 //         (*((*m_cellStates)[iSol]))[2] = m_epsilon0;
 //       }
-  
-  cf_assert(m_epsilon > -1.0e-8);
+  if (m_epsilon < 0.0 || m_epsilon != m_epsilon) 
+  {
+      CFLog(INFO, "eps: " << m_epsilon << ", eps0: " << m_epsilon0 << ", s: " << m_s << "\n");
+      m_epsilon = 0.0;
+  }
+  //cf_assert(m_epsilon > -1.0e-8);
   //if (m_epsilon >= m_epsilon0*0.0001) CFLog(INFO, "eps0 = " << m_epsilon0 << ", DS: " << m_s-m_s0 << "\n");
 //   CFuint ID = m_cell->getID();
 //   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
@@ -939,6 +943,7 @@ void LLAVFluxReconstruction::computeEpsilon0()
   //CFLog(INFO, "eps0: " << m_epsilon0 << "\n");
   
   //if (m_epsilon0 < -1.0e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
+  if (m_epsilon0 != m_epsilon0) CFLog(INFO, "wvsp: " << wavespeed << ", state: " << *((*m_cellStates)[0]) << ", coord: " << (*m_cellStates)[0]->getCoordinates() << "\n");
   
   if (m_addPosPrev) addPositivityPreservation();
 

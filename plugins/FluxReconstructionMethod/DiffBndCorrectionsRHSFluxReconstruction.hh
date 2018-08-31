@@ -85,7 +85,7 @@ protected: // functions
   void computeFlxPntStates();
   
   /// compute the interface flux
-  void computeInterfaceFlxCorrection();
+  virtual void computeInterfaceFlxCorrection();
   
   /// compute the total correction
   void computeCorrection(std::vector< RealVector >& corrections);

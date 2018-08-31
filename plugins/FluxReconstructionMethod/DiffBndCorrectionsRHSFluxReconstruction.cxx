@@ -209,7 +209,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
         } 
         
         // print out the residual updates for debugging
-        if(m_intCell->getID() == 35)//
+        if(m_intCell->getID() == 35)//true) //
         {
 	  CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
           CFLog(VERBOSE, "UpdateBnd = \n");
@@ -349,6 +349,15 @@ void DiffBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
     const CFuint stateID = (*m_cellStates)[iState]->getLocalID();
     m_cellGrads[iState] = &gradients[stateID];
   }
+  
+//  // compute Jacobian determinants
+//  m_jacobDets = m_intCell->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][LEFT]);
+//
+//  // compute inverse characteristic lengths
+//  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+//  {
+//    m_faceInvCharLengths[iFlx] = m_faceJacobVecAbsSizeFlxPnts[iFlx]/m_jacobDets[iFlx];
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -29,12 +29,6 @@ Framework::MethodCommandProvider<
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FinalizeRHS::defineConfigOptions(Config::OptionList& options)
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 FinalizeRHS::FinalizeRHS(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_states("states"),
@@ -43,6 +37,7 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   m_jacobDummy(),
   m_invJacobDummy(),
   m_updateToSolutionVecTrans(CFNULL),
+  m_solutionToUpdateMatTrans(CFNULL),
   m_state(),
   m_dState(),
   m_inverter(CFNULL),
@@ -52,6 +47,9 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   CFAUTOTRACE;
 
   addConfigOptionsTo(this);
+  
+  m_useAnalyticalMatrix = false;
+  setParameter("useAnalyticalMatrix",&m_useAnalyticalMatrix);
 
 }
 
@@ -76,6 +74,14 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
 
 //////////////////////////////////////////////////////////////////////////////
 
+void FinalizeRHS::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >
+    ("useAnalyticalMatrix", "Flag telling if to use analytical matrix."); 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void FinalizeRHS::execute()
 {
   // get the number of equations
@@ -94,13 +100,14 @@ void FinalizeRHS::execute()
   for(CFuint iState = 0; iState < nbStates; ++iState) 
   {
     // set and get the transformation matrix in the update variables
-    const RealMatrix& matrix = computeNumericalTransMatrix(*states[iState]);
+    const RealMatrix& matrix = (m_useAnalyticalMatrix) ? computeAnalyticalTransMatrix(*states[iState]) : computeNumericalTransMatrix(*states[iState]);
 
     // copy the rhs in a given temporary array
     const CFuint startID = iState*nbEqs;
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
     {
       m_tempRes[iEq] = rhs[startID + iEq];
+      if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", temp rhs: " << rhs[startID + iEq] << "\n");
     }
 
     // compute the transformed residual
@@ -110,6 +117,7 @@ void FinalizeRHS::execute()
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
     {
       rhs[startID + iEq] = m_tempRes[iEq];
+      if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", rhs: " << rhs[startID + iEq] << "\n");//states[iState]->getLocalID()==704
     }
   }
 }
@@ -122,6 +130,7 @@ RealMatrix& FinalizeRHS::computeNumericalTransMatrix(State& state)
   // since the returned pointer will change pointee after
   // the second call to transform()
   m_state = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(&state));
+  if (state.getLocalID()==704) CFLog(VERBOSE, "origstate: " << state << ", transstate: " << m_state << ", coords: " << (state.getCoordinates()) << "\n");
 
   // get nb of equations
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
@@ -149,7 +158,6 @@ RealMatrix& FinalizeRHS::computeNumericalTransMatrix(State& state)
   return m_invJacobDummy;
 }
 
-
 //////////////////////////////////////////////////////////////////////////////
 
 void FinalizeRHS::setup()
@@ -160,8 +168,10 @@ void FinalizeRHS::setup()
   FluxReconstructionSolverCom::setup();
   
   m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  m_solutionToUpdateMatTrans = getMethodData().getSolToUpdateInUpdateMatTrans();
   
   m_updateToSolutionVecTrans->setup(2);
+  m_solutionToUpdateMatTrans->setup(2);
   
   // get the numerical Jacobian computer
   m_numJacob = getMethodData().getNumericalJacobian();

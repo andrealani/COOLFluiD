@@ -80,7 +80,8 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_bndFacesStartIdxs(),
   m_innerFacesStartIdxs(),
   m_partitionFacesStartIdxs(),
-  m_updateToSolutionVecTrans()
+  m_updateToSolutionVecTrans(),
+  m_solToUpdateInUpdateMatTrans()
 {
   addConfigOptionsTo(this);
   
@@ -196,6 +197,31 @@ void FluxReconstructionSolverData::setup()
   m_updateToSolutionVecTrans.reset(vecTransProv->create(physModel->getImplementor()));
   cf_assert(m_updateToSolutionVecTrans.isNotNull());
   m_updateToSolutionVecTrans->setup(2);
+  
+  std::string solToUpdateInUpdateMatTransStr =
+    VarSetMatrixTransformer::getProviderName
+    (physModel->getConvectiveName(), _solutionVarStr,
+     _updateVarStr, _updateVarStr);
+
+  CFLog(VERBOSE, "Configuring VarSet Transformer: " <<
+	solToUpdateInUpdateMatTransStr << "\n");
+  
+  Common::SafePtr<VarSetMatrixTransformer::PROVIDER> matTransProv = CFNULL;
+
+  try {
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, solToUpdateInUpdateMatTransStr);
+  }
+  catch (Common::NoSuchValueException& e) {
+    solToUpdateInUpdateMatTransStr = "Identity";
+
+    CFLog(VERBOSE, e.what() << "\n");
+    CFLog(VERBOSE, "Choosing IdentityVarSetMatrixTransformer instead ..." << "\n");
+    matTransProv = FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetMatrixTransformer, solToUpdateInUpdateMatTransStr);
+  }
+
+  cf_assert(matTransProv.isNotNull());
+  m_solToUpdateInUpdateMatTrans.reset(matTransProv->create(physModel->getImplementor()));
+  cf_assert(m_solToUpdateInUpdateMatTrans.getPtr() != CFNULL);
   
 }
 
