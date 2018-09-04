@@ -67,6 +67,12 @@ public:  // methods
   {
     return m_needsExtraVars;
   }
+  
+  /// set the current face
+  void setFace(Framework::GeometricEntity *const face)
+  {
+      m_face = face;
+  }
 
   /// adds a trs name
   void addTRSName(const std::string trsName)
@@ -132,6 +138,9 @@ protected: // data
 
   /// boolean telling whether to use the domain model to add curvature to the boundary faces
   bool m_useDomainModel;
+  
+  /// variable for current face
+  Framework::GeometricEntity* m_face;
 
 }; // class BCStateComputer
 

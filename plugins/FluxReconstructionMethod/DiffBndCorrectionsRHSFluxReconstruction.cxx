@@ -322,6 +322,9 @@ void DiffBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
   // compute face Jacobian vectors
   m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
+  // communicate the face to the BC class
+  m_bcStateComputer->setFace(m_face);
+  
   // get face Jacobian vector sizes in the flux points
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
   
