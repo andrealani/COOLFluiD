@@ -37,9 +37,12 @@ ComputeFieldFromPotentialProvider("ComputeFieldFromPotential");
 void ComputeFieldFromPotential::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< vector<CFuint> >
-    ("VariableIDs", "IDs of the variable to be assigned to the newly conputed field.");
+    ("VariableIDs", "IDs of the variable to be assigned to the newly computed field.");
   options.addConfigOption< string >
     ("OtherNamespace", "Name of the other namespace (providing the potential).");
+  options.addConfigOption< CFreal >
+    ("InterRadius",
+     "Radius corresponding to the internal boundary between donor and current grids (<= 0 assumes one mesh).");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -49,15 +52,19 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
   socket_states("states"),
   socket_otherUX("uX"),
   socket_otherUY("uY"),
-  socket_otherUZ("uZ")
+  socket_otherUZ("uZ"),
+  socket_otherStates("states")
 {
   addConfigOptionsTo(this);
   
   m_variableIDs = vector<CFuint>();
   setParameter("VariableIDs",&m_variableIDs);
-
+  
   m_otherNamespace = "";
   setParameter("OtherNamespace", &m_otherNamespace);
+
+  m_interRadius = -1.;
+  setParameter("InterRadius", &m_interRadius);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,6 +83,7 @@ ComputeFieldFromPotential::needsSockets()
   result.push_back(&socket_otherUX);
   result.push_back(&socket_otherUY);
   result.push_back(&socket_otherUZ);
+  result.push_back(&socket_otherStates);
   return result;
 }
 
@@ -108,6 +116,7 @@ void ComputeFieldFromPotential::configure ( Config::ConfigArgs& args )
   socket_otherUX.setDataSocketNamespace(m_otherNamespace);
   socket_otherUY.setDataSocketNamespace(m_otherNamespace);
   socket_otherUZ.setDataSocketNamespace(m_otherNamespace);
+  socket_otherStates.setDataSocketNamespace(m_otherNamespace);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -146,13 +155,30 @@ void ComputeFieldFromPotential::execute()
     cf_assert(yVar < nbEqs);
     const CFuint zVar = (dim == DIM_3D) ? m_variableIDs[2] : 0;
     cf_assert(zVar < nbEqs);
-    
-    for (CFuint iState = 0; iState < nbStates; ++iState) {
-      (*states[iState])[xVar] = ux[iState];
-      (*states[iState])[yVar] = uy[iState];
-      if (dim == DIM_3D) {
-	(*states[iState])[zVar] = uz[iState];
+
+    if (m_interRadius <= 0.) {
+      for (CFuint iState = 0; iState < nbStates; ++iState) {
+	(*states[iState])[xVar] = ux[iState];
+	(*states[iState])[yVar] = uy[iState];
+	if (dim == DIM_3D) {
+	  (*states[iState])[zVar] = uz[iState];
+	}
       }
+    }
+    else {
+      // those are the states correspondng to the smaller mesh
+      DataHandle<State*, GLOBAL> otherStates = socket_otherStates.getDataHandle();
+      
+      // here follows algorithm to copy the B values for states
+      // with R < m_interRadius and R > m_interRadius the algorithm will behave differently
+
+      // State* s1 = states[cellID1];
+      // Node& coord1 = s1->getCoordinates();
+      // const CFreal radius1 = coord1.norm2();
+      
+      // State* s2 = otherStates[cellID2];
+      // Node& coord2 = s2->getCoordinates();
+      // const CFreal radius2 = coord2.norm2();
     }
   } 
   CFLog(INFO, "ComputeFieldFromPotential::execute() => END\n");
