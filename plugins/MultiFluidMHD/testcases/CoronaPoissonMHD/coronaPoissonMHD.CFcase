@@ -185,6 +185,8 @@ Simulator.SubSystem.ConvergenceMethodNames = EMIterator FlowIterator # This orde
 Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
 Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
 Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
+# this guarantees that we only deal with initialization and no system is solved
+Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 0
 #Simulator.SubSystem.FlowIterator.StdUpdateSol.Relaxation= 1.
 # CFL definition
 Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
