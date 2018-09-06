@@ -94,6 +94,11 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness();
+  
+  /**
+   * Compute the smoothness indicator
+   */
+  virtual void computeSmoothness(const CFuint side);
 
 
 

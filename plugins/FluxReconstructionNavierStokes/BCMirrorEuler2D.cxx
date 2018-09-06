@@ -73,9 +73,10 @@ void BCMirrorEuler2D::computeGhostStates(const vector< State* >& intStates,
 
     cf_assert(intState.size() == 4);
     cf_assert(ghostState.size() == 4);
-
+    CFLog(VERBOSE, "state: " << intState << "\n");
     // set the physical data starting from the inner state
     m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
+    CFLog(VERBOSE, "physData: " << m_intSolPhysData << "\n");
 
     // compute normal velocity component
     const CFreal uNX2 = 2.0*(m_intSolPhysData[EulerTerm::VX]*normal[XX] +
