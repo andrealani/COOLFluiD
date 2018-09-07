@@ -48,14 +48,18 @@ LLAVFluxReconstructionNSFluxReconstructionProvider("LLAVNS");
   
 LLAVFluxReconstructionNS::LLAVFluxReconstructionNS(const std::string& name) :
   LLAVFluxReconstruction(name),
-  m_diffVarSet(CFNULL),
   m_gradsBackUp(),
   m_eulerVarSet(CFNULL),
   m_msEulerTerm(CFNULL),
   m_nbrSpecies(),
   m_pData(),
   m_pData2(),
-  m_eulerVarSet2(CFNULL)
+  m_eulerVarSet2(CFNULL),
+  m_tempGradTermL(),
+  m_tempGradTermR(),
+  m_diffusiveVarSet(CFNULL),
+  m_tempStatesL(),
+  m_tempStatesR()
   {
   }
 
@@ -186,6 +190,48 @@ void LLAVFluxReconstructionNS::setCellData()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void LLAVFluxReconstructionNS::computeInterfaceFlxCorrection()
+{   
+  // Loop over the flux points to calculate FI
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  { 
+    const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
+      
+    // compute the average sol and grad to use the BR2 scheme
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
+    }
+
+    // damping factor
+    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+
+    // compute averaged (damped) gradients
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      // compute damping term
+      const RealVector dGradVarXNormal = ((*m_cellStatesFlxPnt[LEFT][iFlxPnt])[iGrad] - (*m_cellStatesFlxPnt[RIGHT][iFlxPnt])[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
+    }
+    
+    m_flxPntRiemannFlux[iFlxPnt] = 0.0;
+    
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGrad[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
+      }
+    }
+     
+    // compute FI in the mapped coord frame
+    m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
+    m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 CFreal LLAVFluxReconstructionNS::computeViscCoef(RealVector* state)
 {
   CFreal result = 1.0;
@@ -261,7 +307,7 @@ void LLAVFluxReconstructionNS::computeSmoothness()
   const RealVector& coords = *((*m_cellNodes)[0]->getData());
   const CFreal d = sqrt(coords[0]*coords[0]+coords[1]*coords[1]);
 
-  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps()) //  || d < 1.2
+  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps() ) //  || d < 1.2 || coords[0] < 0.1
   {
     m_s = -100.0;
   }
@@ -328,9 +374,6 @@ void LLAVFluxReconstructionNS::setup()
     m_eulerVarSet2->getModel()->resizePhysicalData(m_pData2);
   }
   
-  
-
-  
   // if needed, get the MS 
   
   m_gradsBackUp.resize(2);
@@ -345,6 +388,15 @@ void LLAVFluxReconstructionNS::setup()
       m_gradsBackUp[RIGHT][iSol].push_back(new RealVector(m_dim));
     }
   }
+  
+  // get the diffusive varset
+  m_diffusiveVarSet = (getMethodData().getDiffusiveVar()).d_castTo< NavierStokesVarSet >();
+  
+  m_tempGradTermL.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  m_tempGradTermR.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  
+  m_tempStatesL.resize(m_nbrFaceFlxPnts);
+  m_tempStatesR.resize(m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

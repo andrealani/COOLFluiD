@@ -44,6 +44,12 @@ BCNoSlipWallHeatFluxNS2D::BCNoSlipWallHeatFluxNS2D(const std::string& name) :
 
   m_wallQ = 0.0;
    setParameter("q",&m_wallQ);
+   
+   m_wallU = 0.0;
+   setParameter("U",&m_wallU);
+   
+   m_wallV = 0.0;
+   setParameter("V",&m_wallV);
 
   m_heatFlux= true;
    setParameter("HeatFlux",&m_heatFlux);
@@ -67,6 +73,8 @@ void BCNoSlipWallHeatFluxNS2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly initially), default true.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("U","wall x-velocity");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("V","wall y-velocity");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -109,8 +117,8 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
     {
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
-      m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-      m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_wallU-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_wallV-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
       m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
       m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P];
       m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
@@ -164,8 +172,8 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
-      m_ghostSolPhysData[EulerTerm::VX]  = -m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-      m_ghostSolPhysData[EulerTerm::VY]  = -m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_wallU-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_wallV-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
       m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
       m_ghostSolPhysData[EulerTerm::P]   = ghostP;
       m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
@@ -184,6 +192,7 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
     // set the ghost state from its physical data
     m_eulerVarSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
+    CFLog(VERBOSE, "innerState: " << intState << ", ghostState: " << ghostState << "\n");
   }
 }
 

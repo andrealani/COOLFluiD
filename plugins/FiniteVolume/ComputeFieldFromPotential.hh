@@ -89,11 +89,17 @@ private:
   /// socket for uY values
   Framework::DataSocketSink<CFreal> socket_otherUZ;
 
+  /// socket for nodes
+  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_otherStates;
+  
   /// IDs of the state variables to assign to the newly computed field
   std::vector<CFuint> m_variableIDs;
 
   /// name of the other namespace (providing the potential)
   std::string m_otherNamespace;
+
+  /// radius corresponding to the internal boundary between donor and current grids
+  CFreal m_interRadius;
   
 }; // end of class ComputeFieldFromPotential
       
