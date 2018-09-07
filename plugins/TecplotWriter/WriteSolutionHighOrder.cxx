@@ -303,7 +303,7 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
       {
         // write coordinates
         for (CFuint iDim = 0; iDim < dim; ++iDim) {
-          fout << setw(20) << fixed << setprecision(12)
+          fout << setw(20) << scientific << setprecision(12)
                << outputPntCoords[iPnt][iDim]*refL << " ";
         }
 
@@ -340,7 +340,7 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
         // write state
         for (CFuint iEq = 0; iEq < nbEqs; ++iEq)
         {
-          fout << setw(20) << fixed << setprecision(12)
+          fout << setw(20) << scientific << setprecision(12)
                << dimState[iEq] << " ";
         }
 
@@ -348,7 +348,7 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
         const CFuint nbrExtraVals = extraValues.size();
         for (CFuint iVal = 0; iVal < nbrExtraVals; ++iVal)
         {
-          fout << setw(20) << fixed << setprecision(12)
+          fout << setw(20) << scientific << setprecision(12)
                << extraValues[iVal] << " ";
         }
 	
@@ -374,7 +374,7 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
       }
 	
       // write the current variable to the file
-      fout << setw(20) << fixed << setprecision(12)
+      fout << setw(20) << scientific << setprecision(12)
              << outputPntStateSockets[iPnt] << " ";      
     }
   }
