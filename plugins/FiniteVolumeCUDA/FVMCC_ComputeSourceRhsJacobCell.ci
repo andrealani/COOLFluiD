@@ -429,10 +429,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	    //   this was very buggy !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
 	    // this->getMethodData().setIsPerturb(false);
 	    // we have to avoid to update updateCoeff
-	    //this->getMethodData().setIsPerturb(true);
-            // IA: We need to update updateCoeff at the boundaries because the kernel do not loop along the 
-            // the boundary faces	    
-	    this->getMethodData().setIsPerturb(false);
+	    this->getMethodData().setIsPerturb(true);
 
 	    // cout << "L = " << *this->_currFace->getState(0) << endl;
 	    // cout << "R = " << *this->_currFace->getState(1) << endl;
@@ -460,13 +457,13 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
 	    CFLogDebugMed("flux = " <<  this->_flux  << "\n");
 	    
 	    // compute the source term
-	     if (hasSourceTerm) {			
-	       this->computeSourceTerm();
-	     }
+	    //if (hasSourceTerm) {			
+	    //   this->computeSourceTerm();
+	    //}
 	    
 	    // source term jacobians are only computed while processing internal faces 
 	    //_diffVar->setFreezeCoeff(_freezeDiffCoeff);
-	    this->updateRHS(); 
+	    //this->updateRHS(); 
 	    computeBoundaryJacobianTerm();
 	  }
 	  

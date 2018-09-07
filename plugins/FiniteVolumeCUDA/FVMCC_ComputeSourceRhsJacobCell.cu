@@ -374,7 +374,7 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
     // compute the face flux and flux numerical jacobian within the same loop
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition faces
 	const CFuint stateID = cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
 	// compute face quadrature points (face centroids)
@@ -586,7 +586,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
       
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition faces
 	const CFuint stateID = cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, &currFd, cellFaces);
 	
@@ -865,7 +865,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition faces
 	const CFuint stateID =  cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
 
