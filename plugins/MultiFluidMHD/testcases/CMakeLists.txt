@@ -11,3 +11,4 @@ cf_add_case( MPI        1       CASEDIR 10_SodTube		PCASE 1_SodTube.CFcase				  
 #cf_add_case( MPI        1       CASEDIR 11_BrioWuTube		PCASE 1_BrioWu.CFcase				   CASEFILES shockTube_1x6e-3_600x4.neu BrioWu.inter )
 cf_add_case( MPI	8	CASEDIR 14_Chromo_Waves_dynVisc_therm_Cond  PCASE Unsteady_Kh_dynVisc_reg_test.CFcase  CASEFILES  MFinteractive_unsteady.inter Mesh_2x2_300x300_extended.neu ) 
 cf_add_case( MPI	1	CASEDIR 13_TwoFluidShockTube	PCASE 2_TwoFluidShock_Drift_PETSC_GPU.CFcase CASEFILES TwoFluid_MR_1836.inter shockTube_1x6e-3_600x4.neu ) 
+cf_add_case( MPI	1	CASEDIR 15_PolarizedWaves  PCASE circularPolarized_64x32.CFcase  CASEFILES  TwoFluid_wave_64x32.inter Mesh_2x1_64x32_centered_periodic.neu ) 
