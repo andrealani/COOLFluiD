@@ -229,8 +229,8 @@ void MutationLibrarypp::setup()
     const CFreal RT0 = _Rgas*T0;
     for (CFuint i = 0; i < _NS; ++i) {
       cf_assert(m_molarmassp[i] > 0.);
-      const CFreal k = RT0/m_molarmassp[i];
-      m_vecH0[i] *= k;
+      const CFreal k0 = RT0/m_molarmassp[i];
+      m_vecH0[i] *= k0;
     }
     CFLog(VERBOSE, "MutationLibrarypp::setup() => m_vecH0 = [ " << m_vecH0 << "]\n");
     RealVector yH0(m_vecH0*y0);
@@ -277,10 +277,10 @@ void MutationLibrarypp::unsetup()
 CFdouble MutationLibrarypp::lambdaNEQ(CFdouble& temperature,
 				      CFdouble& pressure)
 {
-  CFreal k = m_gasMixture->frozenThermalConductivity();
-  // RESET_TO_ZERO(k);
-  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << k << "\n");
-  return k;
+  CFreal kNEQ = m_gasMixture->frozenThermalConductivity();
+  // RESET_TO_ZERO(kNEQ);
+  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << kNEQ << "\n");
+  return kNEQ;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -756,11 +756,11 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
-    const CFreal k = RT/m_molarmassp[i];
-    hsTot[i] *= k;
-    if (hsVib != CFNULL) {(*hsVib)[i] *= k;} 
+    const CFreal k0 = RT/m_molarmassp[i];
+    hsTot[i] *= k0;
+    if (hsVib != CFNULL) {(*hsVib)[i] *= k0;} 
   //  if (presenceElectron()) {
-     if (hsEl != CFNULL) {(*hsEl)[i]  *= k;}
+     if (hsEl != CFNULL) {(*hsEl)[i]  *= k0;}
   // }
   }
   
@@ -934,11 +934,11 @@ void MutationLibrarypp::setTables(vector<ComputeQuantity>& varComputeVec)
 	 * STEP 6: set the other values between the ones set previously (step 5)
 	 */ 
 	for(CFdouble pix=0 ; pix<NbPixPerBloc ; ++pix){	 	
-		for(CFuint k=0 ; k<nbBlocs ; ++k){
-			if(vPbis[pix+k*NbPixPerBloc] ==0){
-					vPbis[pix+k*NbPixPerBloc] = pow(10,double(pix/NbPixPerBloc))	*StartBloc[k];	
-			}
-		}		
+	  for(CFuint k=0 ; k<nbBlocs ; ++k){
+	    if(vPbis[pix+k*NbPixPerBloc] ==0){
+	      vPbis[pix+k*NbPixPerBloc] = pow(10,double(pix/NbPixPerBloc))	*StartBloc[k];	
+	    }
+	  }		
 	}
 	/* 
 	 * STEP 7: Resize the vector vPbis by removing the values in excess () in the boundaries
@@ -948,8 +948,8 @@ void MutationLibrarypp::setTables(vector<ComputeQuantity>& varComputeVec)
 	nbP_log = PixelPmax-PixelPmin+1;
 	vector<CFdouble> vP_log(nbP_log+1);
 	 for(CFuint pix=PixelPmin ; pix<=PixelPmax ; ++pix){
-					vP_log[k]=vPbis[pix];
-					k=k+1;
+	   vP_log[k]=vPbis[pix];
+	   k=k+1;
 	 }
 	///... END STEPS
 

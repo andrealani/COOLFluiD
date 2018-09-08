@@ -8,7 +8,6 @@
 #include "Common/NotImplementedException.hh"
 #include "MathTools/RealVector.hh"
 #include "MathTools/RealMatrix.hh"
-
 #include <mutation++.h>
 #include "Common/LookupTable2D.hh" //@modif_LkT
 
@@ -669,13 +668,13 @@ protected: //variables
 
   /// state temperatures
   RealVector m_Tstate;
-  
+
   /// mixture name
   std::string _mixtureName;
     
   /// state model name
   std::string _stateModelName;
-  
+
   /// minimum partial density
   CFreal _minRhoi;
   
