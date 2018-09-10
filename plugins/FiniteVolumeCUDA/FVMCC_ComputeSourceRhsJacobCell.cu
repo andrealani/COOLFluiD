@@ -374,7 +374,7 @@ __global__ void computeFluxSourceJacobianKernel(typename SCHEME::BASE::template 
     // compute the face flux and flux numerical jacobian within the same loop
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition and boundary faces
 	const CFuint stateID = cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
 	// compute face quadrature points (face centroids)
@@ -586,7 +586,7 @@ __global__ void computeFluxSourceJacobianKernelParalution(typename SCHEME::BASE:
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
       
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition and boundary faces
 	const CFuint stateID = cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, &currFd, cellFaces);
 	
@@ -865,7 +865,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
     for (CFuint f = 0; f < nbFacesInCell; ++f) { 
       const CFint stype = cell.getNeighborType(f);
-      if (stype > 0) { // skip all partition and boundary faces
+      if (stype != 0) { // skip all partition and boundary faces
 	const CFuint stateID =  cell.getNeighborID(f);
 	setFluxData(f, stype, stateID, cellID, &kd, currFd, cellFaces);
 
@@ -1190,7 +1190,7 @@ if(!this->m_useParalutionPtr){
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
 
 }else{  /// New code for building the matrix on the GPU
-/* //  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
+/*  //  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
 #ifdef CF_HAVE_PARALUTION
 
  SafePtr<LSSMatrix> matrix = m_lss->getMatrix();
@@ -1256,8 +1256,8 @@ startCellID += m_nbCellsInKernel[s];
     timer.start();  
 
 #endif
-
 */
+
 
 }
 

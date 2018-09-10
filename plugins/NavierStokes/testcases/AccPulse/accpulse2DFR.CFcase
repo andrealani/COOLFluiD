@@ -1,0 +1,218 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, NS2D, Forward Euler, mesh with curved quads, 
+# Lax-Friedrichs scheme, wall BCs and Dirichlet BC 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -5.42802
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libRungeKuttaLS libPetscI libGmsh2CFmesh libTHOR2CFmesh libNewtonMethod
+ 
+###################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/AccPulse
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/AccPulse
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = NavierStokes2D
+Simulator.SubSysMesh.MeshMeshData.listTRS = SuperInlet SuperOutlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = accPulseUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = accPulse2Dsfdm.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.convertFromFile = jets2DQDPert.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSysMesh.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+###################################
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.pRef = 1.
+Simulator.SubSystem.Euler2D.rhoRef = 1.
+Simulator.SubSystem.Euler2D.ConvTerm.pRef = 101300
+Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 352.90
+Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.1
+
+###################################
+Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = accPulseFRP2.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendTime = true
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = accPulseFRP2.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.SaveRate = 20
+Simulator.SubSystem.ParaView.AppendTime = true
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName    = accPulseFRP2.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 1000
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+###################################
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
+
+#Simulator.SubSystem.ConvergenceMethod  = RKLS
+#Simulator.SubSystem.RKLS.ConvergenceFile = convergenceAccPulseFRP2.plt
+#Simulator.SubSystem.RKLS.ShowRate        = 10
+#Simulator.SubSystem.RKLS.ConvRate        = 50
+#Simulator.SubSystem.RKLS.Data.CFL.Value  = 0.2
+#Simulator.SubSystem.RKLS.Data.Order      = 3
+#Simulator.SubSystem.RKLS.Data.TimeAccurate = true
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00025
+
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+
+#Simulator.SubSystem.ConvergenceMethod  = CrankNicholson
+#Simulator.SubSystem.CrankNicholson.ShowRate        = 1
+#Simulator.SubSystem.CrankNicholson.ConvergenceFile = convergenceAccPulseFRP2.plt
+#Simulator.SubSystem.CrankNicholson.ConvRate        = 50
+#Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 100
+#Simulator.SubSystem.CrankNicholson.Data.Norm = -10.
+#Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
+#Simulator.SubSystem.CrankNicholson.Data.CFL.Value  = 1.0
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+
+Simulator.SubSystem.ConvergenceMethod  = BDF2
+Simulator.SubSystem.BDF2.ShowRate        = 1
+Simulator.SubSystem.BDF2.ConvergenceFile = convergenceAccPulseFRP2.plt
+Simulator.SubSystem.BDF2.ConvRate        = 1
+Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+Simulator.SubSystem.BDF2.Data.Norm = -10.
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+Simulator.SubSystem.BDF2.Data.CFL.Value  = 1.0
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000005
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BDFLSS
+Simulator.SubSystem.BDFLSS.Data.PCType = PCASM
+Simulator.SubSystem.BDFLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BDFLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BDFLSS.Data.MaxIter = 1000
+Simulator.SubSystem.BDFLSS.Data.RelativeTolerance = 1e-8
+
+###################################
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+
+Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = accPulseUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+
+###################################
+# choose which builder we use
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+#Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
+#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = BDF2_RHSJacob
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+
+
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
+Simulator.SubSystem.FluxReconstruction.Data.ComputeVolumeForEachState = true
+
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.03
+
+###################################
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   (101300.0+0.001*376.59*376.59*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+#1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+#                                                     0.0 \
+#                                                     0.0 \
+#                                                     (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+Simulator.SubSystem.FluxReconstruction.BcNames = FarField
+Simulator.SubSystem.FluxReconstruction.FarField.applyTRS = SuperInlet SuperOutlet
+
+Simulator.SubSystem.FluxReconstruction.BcNamesDiff = FarFieldDiff
+Simulator.SubSystem.FluxReconstruction.FarFieldDiff.applyTRS = SuperInlet SuperOutlet
+
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Dirichlet
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = FarField 
+
+Simulator.SubSystem.FluxReconstruction.Data.FarField.Vars = x y
+Simulator.SubSystem.FluxReconstruction.Data.FarField.Def  = 1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+                                                   0.0 \
+                                                   0.0 \
+                                                   (101300.0+0.001*376.59*376.59*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+#1.0+0.001*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)) \
+#                                                            0.0 \
+#                                                            0.0 \
+#                                                            (1.0+0.001*1.4*exp(-((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5))/(0.1*0.1)))/0.4
+
+
+###################################

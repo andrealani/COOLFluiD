@@ -18,6 +18,7 @@
 #include "Framework/MultiScalarTerm.hh"
 
 #include "NavierStokes/MultiScalarVarSet.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -93,11 +94,11 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness();
+  
+  /// compute the interface flux
+  virtual void computeInterfaceFlxCorrection();
 
 protected: //data
-  
-  /// corresponding diffusive variable set
-  Common::SafePtr<Framework::DiffusiveVarSet> m_diffVarSet;
   
   /// backup of the gradients in the neighbouring cell
   std::vector< std::vector< std::vector< RealVector* > > > m_gradsBackUp;
@@ -113,6 +114,21 @@ protected: //data
   
   /// physical model (in conservative variables)
   Common::SafePtr< Physics::NavierStokes::MultiScalarVarSet< Physics::NavierStokes::Euler2DVarSet > > m_eulerVarSet2;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
+  RealMatrix m_tempGradTermL;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
+  RealMatrix m_tempGradTermR;
+  
+  /// diffusive variable set
+  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
+  
+  /// element states of the left neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesL;
+  
+  /// element states of the right neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesR;
   
   private:
 

@@ -232,6 +232,63 @@ void LLAVJacobFluxReconstructionNS::computeSmoothness()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void LLAVJacobFluxReconstructionNS::computeSmoothness(const CFuint side)
+{ 
+  CFreal sNum = 0.0;
+  
+  CFreal sDenom = 0.0;
+  
+  // get datahandle
+  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    CFreal stateP = 0.0;
+    CFreal diffStatesPPMinOne = 0.0;
+    
+    if (m_monitoredPhysVar < m_pData.size())
+    {
+      RealVector statePMinOne = *((*m_states[side])[iSol]->getData()) - m_statesPMinOne[iSol];
+      
+      const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+      
+      if (RhoivtTv)
+      {
+        m_eulerVarSet2->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
+        m_eulerVarSet2->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      else 
+      {
+	m_eulerVarSet->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
+        m_eulerVarSet->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
+      }
+      
+      stateP = m_pData[m_monitoredPhysVar];
+      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
+    
+      monPhysVar[(((*m_states[side])[iSol]))->getLocalID()] = stateP;
+    }
+    else
+    {
+      stateP = (*((*m_states[side])[iSol]))[m_monitoredVar];
+      diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
+    }
+    
+    sNum += diffStatesPPMinOne*diffStatesPPMinOne;
+    sDenom += stateP*stateP;
+  }
+  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
+  {
+    m_s = -100.0;
+  }
+  else
+  {
+    m_s = log10(sNum/sDenom);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void LLAVJacobFluxReconstructionNS::setup()
 {
   CFAUTOTRACE;

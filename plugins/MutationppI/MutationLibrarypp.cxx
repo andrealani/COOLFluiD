@@ -1,6 +1,7 @@
 #include "MutationppI/MutationLibrarypp.hh"
 #include "MutationppI/Mutationpp.hh"
 #include "Common/CFLog.hh"
+#include "Common/Stopwatch.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Common/StringOps.hh"
 #include <fstream>
@@ -40,6 +41,15 @@ void MutationLibrarypp::defineConfigOptions(Config::OptionList& options)
     ("StateModelName","Name of the state model (e.g. \"Equil\", \"ChemNonEq1T\", \"ChemNonEq1TTv\").");
   options.addConfigOption< CFreal >("MinRhoi","Minimum partial density."); 
   options.addConfigOption< CFreal >("MinT","Minimum temperature."); 
+  options.addConfigOption< CFdouble >("deltaT","Delta temperature.");
+  options.addConfigOption< bool >("useLookUpTable","Flag telling if to use the look up tables.");
+	options.addConfigOption< bool >("pLogScale","Flag to activate the logarithmic scale for the pressure in the lookup Table.");
+  options.addConfigOption< std::vector<std::string> >("lookUpVars","Name of the vars to store in the table.");
+  options.addConfigOption< CFdouble >("Tmax","Maximum temperature in the table.");
+  options.addConfigOption< CFdouble >("Tmin","Minimum temperature in the table.");
+  options.addConfigOption< CFdouble >("Pmax","Maximum pressure in the table.");
+  options.addConfigOption< CFdouble >("Pmin","Minimum pressure in the table.");
+  options.addConfigOption< CFdouble >("deltaP","Delta pressure.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -61,7 +71,9 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name) :
   m_ht(),
   m_hr(),
   m_hf(),  
-  m_Tstate()
+  m_Tstate(),
+  _nameToIdxVar(), //@modif_LkT
+  _lookUpTables()
 {
   addConfigOptionsTo(this);
   
@@ -80,6 +92,34 @@ MutationLibrarypp::MutationLibrarypp(const std::string& name) :
   // change default
   m_shiftHO = true;
   _electrEnergyID = 0;
+
+  _useLookUpTable = false;
+  setParameter("useLookUpTable",&_useLookUpTable);
+
+  _lkpVarNames = vector<std::string>();
+  setParameter("lookUpVars",&_lkpVarNames);
+
+  _Tmin = 100.0;
+  setParameter("Tmin",&_Tmin);
+
+  _Tmax = 2000.0;
+  setParameter("Tmax",&_Tmax);
+
+  _deltaT = 10.0;
+  setParameter("deltaT",&_deltaT);
+  
+  _pLogScale = false;
+  setParameter("pLogScale",&_pLogScale); 
+
+  _pmin = 10000.0;
+  setParameter("Pmin",&_pmin);
+
+  _pmax = 1000000.0;
+  setParameter("Pmax",&_pmax);
+
+  _deltaP = 1000.0;
+  setParameter("deltaP",&_deltaP);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,7 +132,17 @@ MutationLibrarypp::~MutationLibrarypp()
 
 void MutationLibrarypp::configure ( Config::ConfigArgs& args )
 {
+  CFLog(NOTICE, "========================================\n"); 
+  CFLog(NOTICE, "MutationLibrarypp::config() => start\n"); 
   Framework::PhysicalChemicalLibrary::configure(args);
+  CFLog(NOTICE, "Tmax   = " << _Tmax << "\n");
+  CFLog(NOTICE, "Tmin   = " << _Tmin << "\n");
+  CFLog(NOTICE, "deltaT = " << _deltaT << "\n");
+  CFLog(NOTICE, "Pmax   = " << _pmax << "\n");
+  CFLog(NOTICE, "Pmin   = " << _pmin << "\n");
+  CFLog(NOTICE, "deltaP = " << _deltaP << "\n");
+  CFLog(NOTICE, "MutationLibrarypp::config() => end\n");
+  CFLog(NOTICE, "========================================\n"); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -179,14 +229,29 @@ void MutationLibrarypp::setup()
     const CFreal RT0 = _Rgas*T0;
     for (CFuint i = 0; i < _NS; ++i) {
       cf_assert(m_molarmassp[i] > 0.);
-      const CFreal k = RT0/m_molarmassp[i];
-      m_vecH0[i] *= k;
+      const CFreal k0 = RT0/m_molarmassp[i];
+      m_vecH0[i] *= k0;
     }
     CFLog(VERBOSE, "MutationLibrarypp::setup() => m_vecH0 = [ " << m_vecH0 << "]\n");
     RealVector yH0(m_vecH0*y0);
     CFLog(VERBOSE, "MutationLibrarypp::setup() => " << yH0.sum() << " == " << m_H0 << "\n");
   }
-  
+
+  //@modif_LkT
+	CFLog(NOTICE, ">> In setup: _lkpVarNames.size() = " <<_lkpVarNames.size() << "\n");
+
+	//////////////////////////////
+	// Activate the Look up Table
+  if (_lkpVarNames.size() > 0) {
+	  CFLog(NOTICE, ">> In setup::Inside the loop IF(_lkpVarNames.size() > 0): " << "\n");
+		CFLog(NOTICE, ">> -----> BEFORE the call of setLookUpTables()... " << "\n");
+  	setLookUpTables(); //during the call of this function "_useLookUpTable" is still at false
+		CFLog(NOTICE, ">> -----> AFTER the call of setLookUpTables() " << "\n");
+    _useLookUpTable = true;
+		CFLog(NOTICE, ">> -----> Boolean _useLookUpTable = " <<_useLookUpTable<< "\n");
+		CFLog(NOTICE, ">> In setup::END loop IF" << "\n");
+  }
+
   CFLog(VERBOSE, "MutationLibrarypp::setup() => end\n"); 
 }
       
@@ -212,10 +277,10 @@ void MutationLibrarypp::unsetup()
 CFdouble MutationLibrarypp::lambdaNEQ(CFdouble& temperature,
 				      CFdouble& pressure)
 {
-  CFreal k = m_gasMixture->frozenThermalConductivity();
-  // RESET_TO_ZERO(k);
-  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << k << "\n");
-  return k;
+  CFreal kNEQ = m_gasMixture->frozenThermalConductivity();
+  // RESET_TO_ZERO(kNEQ);
+  CFLog(DEBUG_MAX, "Mutation::lambdaNEQ() => k = " << kNEQ << "\n");
+  return kNEQ;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -287,11 +352,16 @@ void MutationLibrarypp::frozenGammaAndSoundSpeed(CFdouble& temp,
 }
       
 //////////////////////////////////////////////////////////////////////////////
-      
-CFdouble MutationLibrarypp::soundSpeed(CFdouble& temp, CFdouble& pressure)
+// @modif_LkT     
+CFdouble MutationLibrarypp::soundSpeed(CFdouble& temp, CFdouble& pressure) 
 {
-  m_gasMixture->setState(&pressure, &temp, 1);
-  return m_gasMixture->equilibriumSoundSpeed();
+	if(!_useLookUpTable) {
+  	m_gasMixture->setState(&pressure, &temp, 1);
+  	return m_gasMixture->equilibriumSoundSpeed();
+	}
+	else {
+		return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("a"));
+		}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -300,20 +370,26 @@ void MutationLibrarypp::setComposition(CFdouble& temp,
 				       CFdouble& pressure,
 				       RealVector* x)
 {
-  if (temp < 100.) {temp = 100.;}
+	if(!_useLookUpTable){
+		
+		if (temp < 100.) {temp = 100.;}
+		// ___________________________________________________________ 
+		// Test for knowing the number of time this function is called
+		//std::cout<<MutationLibrarypp::k<<std::endl;
+		//MutationLibrarypp::k = MutationLibrarypp::k+1;
 
-  m_gasMixtureEquil->setState(&pressure, &temp, 1);
-  const double* xm = m_gasMixtureEquil->X();
-  
-  if (x != CFNULL) {
-    for(CFint i = 0; i < _NS; ++i) {
-      (*x)[i] = xm[i];
-    }
-  }
-  
-  m_gasMixtureEquil->convert<X_TO_Y>(xm, &m_y[0]);
-  
-  CFLog(DEBUG_MAX, "Mutation::setComposition() => m_y = " << m_y << "\n");
+		 m_gasMixtureEquil->setState(&pressure, &temp, 1);
+
+		const double* xm = m_gasMixtureEquil->X();
+		
+		if (x != CFNULL) {
+		  for(CFint i = 0; i < _NS; ++i) {
+		    (*x)[i] = xm[i];
+		  }
+		}
+		
+		m_gasMixtureEquil->convert<X_TO_Y>(xm, &m_y[0]);
+	}
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -322,14 +398,22 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 						 CFdouble& pressure,
 						 RealVector& dhe)
 {
-  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
-	<< pressure << ", T = " << temp << "\n");
+	//setComposition must be called before
+  if(!_useLookUpTable){
+  	CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => P = " 
+		<< pressure << ", T = " << temp << "\n");
   
-  dhe[0] = m_gasMixture->density();
-  dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
-  dhe[2] = dhe[1]-pressure/dhe[0];
+  	dhe[0] = m_gasMixture->density();
+  	dhe[1] = m_gasMixture->mixtureHMass() - m_H0;
+  	dhe[2] = dhe[1]-pressure/dhe[0];
   
-  CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
+  	CFLog(DEBUG_MAX, "Mutation::setDensityEnthalpyEnergy() => " << dhe << ", " <<  m_y << "\n");
+	}
+	else{
+    dhe[0] = _lookUpTables.get(temp, pressure, _nameToIdxVar.find("d"));
+    dhe[1] = _lookUpTables.get(temp, pressure, _nameToIdxVar.find("h"));
+    dhe[2] = _lookUpTables.get(temp, pressure, _nameToIdxVar.find("e"));
+  }
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -351,13 +435,16 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
-CFdouble MutationLibrarypp::density(CFdouble& temp,
-				    CFdouble& pressure,
-				    CFreal* tVec)
+// @modif_LkT
+CFdouble MutationLibrarypp::density(CFdouble& temp,CFdouble& pressure,CFreal* tVec)
 {
-  if (m_smType == LTE) {m_gasMixture->setState(&pressure, &temp, 1);}
-  return m_gasMixture->density();
+  if( (m_smType == LTE) && (!_useLookUpTable) ){
+		m_gasMixture->setState(&pressure, &temp, 1);
+    return m_gasMixture->density();
+	}
+  else {
+		return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("d"));
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -391,22 +478,30 @@ CFdouble MutationLibrarypp::electronPressure(CFreal rhoE,
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
-CFdouble MutationLibrarypp::energy(CFdouble& temp,
-				   CFdouble& pressure)
-  
+// @modif_LkT
+CFdouble MutationLibrarypp::energy(CFdouble& temp,CFdouble& pressure)
 {
-  m_gasMixture->setState(&pressure, &temp, 1);
-  return m_gasMixture->mixtureEnergyMass()- m_H0;
+	if(!_useLookUpTable){
+  	m_gasMixture->setState(&pressure, &temp, 1);
+  	return m_gasMixture->mixtureEnergyMass()- m_H0;
+	}
+  else {
+		return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("e"));
+	}
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
-CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,
-				     CFdouble& pressure)
+//@modif_LkT
+CFdouble MutationLibrarypp::enthalpy(CFdouble& temp,CFdouble& pressure)		     
 {
-  m_gasMixture->setState(&pressure, &temp, 1);
-  return m_gasMixture->mixtureHMass() - m_H0;
+	if (!_useLookUpTable) {
+  	m_gasMixture->setState(&pressure, &temp, 1);
+  	return m_gasMixture->mixtureHMass() - m_H0;
+	}
+  else{
+		 return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("h"));
+	}
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -661,11 +756,11 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
   
   const CFreal RT = _Rgas*temp;
   for (CFuint i = 0; i < _NS; ++i) {
-    const CFreal k = RT/m_molarmassp[i];
-    hsTot[i] *= k;
-    if (hsVib != CFNULL) {(*hsVib)[i] *= k;} 
+    const CFreal k0 = RT/m_molarmassp[i];
+    hsTot[i] *= k0;
+    if (hsVib != CFNULL) {(*hsVib)[i] *= k0;} 
   //  if (presenceElectron()) {
-     if (hsEl != CFNULL) {(*hsEl)[i]  *= k;}
+     if (hsEl != CFNULL) {(*hsEl)[i]  *= k0;}
   // }
   }
   
@@ -677,6 +772,263 @@ void MutationLibrarypp::getSpeciesTotEnthalpies(CFdouble& temp,
 }
       
 //////////////////////////////////////////////////////////////////////////////
+
+//@modif_LkT
+void MutationLibrarypp::setLookUpTables()
+{
+  vector<ComputeQuantity> varComputeVec;
+  varComputeVec.reserve(_lkpVarNames.size());
+
+  // store the pointers to member functions for
+  // computing physical quantities
+  for (CFuint i = 0; i < _lkpVarNames.size(); ++i) {
+
+    if (_lkpVarNames[i] == "e") {
+			CFLog(NOTICE, ">> In SetLookUpTables():_lkpVarNames["<<i<<"] == 'e' \n");
+      varComputeVec.push_back(&MutationLibrarypp::energy);
+    }
+    else if (_lkpVarNames[i] == "h") {
+			CFLog(NOTICE, ">> In SetLookUpTables():_lkpVarNames["<<i<<"] == 'h' \n");
+      varComputeVec.push_back(&MutationLibrarypp::enthalpy);
+    }
+    else if (_lkpVarNames[i] == "a") {
+			CFLog(NOTICE, ">> In SetLookUpTables():_lkpVarNames["<<i<<"] == 'a'  \n");
+      varComputeVec.push_back(&MutationLibrarypp::soundSpeed);
+    }
+    else if (_lkpVarNames[i] == "d") {
+			CFLog(NOTICE, ">> In SetLookUpTables():_lkpVarNames["<<i<<"] == 'd'  \n");
+      varComputeVec.push_back(&MutationLibrarypp::density);
+    }
+    else {
+      throw Common::NoSuchValueException (FromHere(), "Variable name not found");
+    }
+  }
+
+  // set the look up tables
+  CFLog(NOTICE, ">> In SetLookUpTables(): -------> BEFORE the call of setTables() \n");
+  setTables(varComputeVec);
+	CFLog(NOTICE, ">> In SetLookUpTables(): -------> AFTER the call of setTables() \n");
+}
+////////////////////////////////////////////////////////////////////////////////
+
+void MutationLibrarypp::setTables(vector<ComputeQuantity>& varComputeVec)
+{
+  Common::Stopwatch<Common::WallTime> stp;
+  stp.start(); 
+  const CFuint nbLookUpVars = _lkpVarNames.size();
+	
+
+
+  //_____________________________________________________________________________
+  // create mapping variable names with corresponding idxs
+	//https://github.com/andrealani/COOLFluiD/blob/master/src/Common/CFMap.hh
+	CFLog(NOTICE, ">> In setTables(): Creating and printing the mapping CFmap... \n");
+  _nameToIdxVar.reserve(nbLookUpVars);
+  for (CFuint iVar = 0; iVar < nbLookUpVars; ++iVar) {
+    _nameToIdxVar.insert(_lkpVarNames[iVar], iVar);
+	  
+  }	
+	_nameToIdxVar.print();
+  _nameToIdxVar.sortKeys();
+	//a => 0
+	//e => 1
+	//h => 2
+	//d => 3
+	CFLog(NOTICE, ">> In setTables(): After sorting the mapping CFmap... \n");
+	_nameToIdxVar.print();
+	//a => 0
+	//d => 3
+	//e => 1
+	//h => 2
+
+
+  //_____________________________________________________________________________
+  // compute the arrays containing all the keys for T and P
+	// Based on the value set in CFcase file
+
+	//_________________________________
+	// Linear scale for the temperature
+	//---------------------------------
+	const CFuint nbT = static_cast<CFuint> ((_Tmax - _Tmin)/_deltaT) +1 ;
+		vector<CFdouble> vT(nbT+2);
+
+	CFLog(NOTICE, ">> 	           __________________________________\n");
+	CFLog(NOTICE, ">> In setTables(): Linear scale for the temperature\n");
+	CFLog(NOTICE, ">> In setTables(): Tmin           = "<<_Tmin<<"\n");
+	CFLog(NOTICE, ">> In setTables(): Tmax           = "<<_Tmax<<"\n");
+	CFLog(NOTICE, ">> In setTables(): deltaT         = "<<_deltaT<<"\n");
+	CFLog(NOTICE, ">> In setTables(): nbT = "<<nbT<<"\n");
+  for(CFuint i = 0; i <= nbT ; ++i) {
+    vT[i] = _Tmin + i*_deltaT;
+  }
+		CFLog(NOTICE, ">> In setTables(): vT[0] = "<<vT[0]<<",  vT[1] = "<<vT[1]<<"... "<<"vT["<<nbT-1<<"] = "<<vT[nbT-1]<<"\n");
+
+	//_________________________________
+	// Linear scale for the pressure
+	//---------------------------------
+
+	const CFuint nbP_lin = static_cast<CFuint> ((_pmax - _pmin)/_deltaP)+1; 
+	vector<CFdouble> vP_lin(nbP_lin+1);
+	for(CFuint i = 0; i <= nbP_lin  ; ++i) {
+    vP_lin[i] = _pmin + i*_deltaP;
+  }
+
+	//__________________________________
+	//Logarithmic scale for the pressure
+	//----------------------------------
+  //Assumption : Pressure >= 1
+	// step 0: Writing P in a Scientific expression form -> a.10^b 
+	int b_min = log10(_pmin);
+	CFdouble a_min = _pmin*pow(10,-b_min);
+	int b_max = log10(_pmax);
+	CFdouble a_max = _pmax*pow(10,-b_max);
+	int pixels = (_pmax-_pmin)/_deltaP;
+	CFdouble NbPowerOfTen = 0;
+
+	/* 
+	 * STEP 1: Number of 10th-power between _pmin and _pmax
+	 */
+	if(a_max == 1)  NbPowerOfTen = b_max - b_min + 1;
+	else            NbPowerOfTen = b_max - b_min + 2;
+	/* 
+	 * STEP 2: Number of logarithmic units (bloc of size 10 => StartBloc[i+1]/StartBloc[i] = 10)
+	 */
+ 	vector<CFdouble> StartBloc;                 
+	for(CFuint i=0; i<NbPowerOfTen - 1;++i){
+		StartBloc.push_back(pow(10,b_min+i));
+	}	
+	CFuint nbBlocs = NbPowerOfTen -1;
+	/* 
+	 * STEP 3: EquiDistribution of the pixels in each blocs 
+	 */ 
+	CFuint NbPixPerBloc = CFuint (pixels/nbBlocs); 
+	/* 
+	 * STEP 4: Set the boundaries of each blocs in the vector	
+	 */
+		CFuint nbP_log = nbBlocs*NbPixPerBloc + 1;
+		vector<CFdouble>  vPbis(nbP_log);
+		CFuint PixelPmax;
+		for(CFuint i=0 ; i<nbBlocs ; ++i){
+			vPbis[i*NbPixPerBloc] = StartBloc[i];
+		}
+		if (a_max ==1){
+				 PixelPmax = nbBlocs*NbPixPerBloc;
+				 vPbis[PixelPmax] = _pmax;
+		}
+		else vPbis[nbBlocs*NbPixPerBloc] = pow(10,b_max+1);
+	/* 
+	 * STEP 5: set pmin, pmax and the values 2, 3, 4, ...,9 between each bloc of ratio 10 in the vector
+	 *					_pmin - 100 - 200 - ... - 1000 - 1100 - ... - 10 000 - 10 100 - ... - 100 000 - 100 100 - ... - _pmax
+	 */
+	vector<CFdouble> Res(9);
+	CFuint PixelPmin = int(log10(a_min)*NbPixPerBloc);
+	PixelPmax = int(log10(a_max)*NbPixPerBloc + (nbBlocs-1)*NbPixPerBloc);
+	vPbis[PixelPmin] = _pmin;
+	if(a_max>1) vPbis[PixelPmax] = _pmax;
+	for(CFuint i=0 ; i<nbBlocs ; ++i){
+			for(CFuint j=1 ; j<10 ; ++j){
+					vPbis[int(NbPixPerBloc*log10(j)) + i*NbPixPerBloc] = j*StartBloc[i];
+			}   
+	}	
+	/* 
+	 * STEP 6: set the other values between the ones set previously (step 5)
+	 */ 
+	for(CFdouble pix=0 ; pix<NbPixPerBloc ; ++pix){	 	
+	  for(CFuint k=0 ; k<nbBlocs ; ++k){
+	    if(vPbis[pix+k*NbPixPerBloc] ==0){
+	      vPbis[pix+k*NbPixPerBloc] = pow(10,double(pix/NbPixPerBloc))	*StartBloc[k];	
+	    }
+	  }		
+	}
+	/* 
+	 * STEP 7: Resize the vector vPbis by removing the values in excess () in the boundaries
+	 *        (10^bmin ...) - pmin - ........- pmax - (... 10^bmax+1)
+	 */
+	CFuint k = 0;
+	nbP_log = PixelPmax-PixelPmin+1;
+	vector<CFdouble> vP_log(nbP_log+1);
+	 for(CFuint pix=PixelPmin ; pix<=PixelPmax ; ++pix){
+	   vP_log[k]=vPbis[pix];
+	   k=k+1;
+	 }
+	///... END STEPS
+
+	// _________________________________________________________________
+	// CHOICE (linear or logarithmic) OF THE PRESSURE SCALE BY THE USER:
+	CFuint nbP = (1-_pLogScale)*nbP_lin + _pLogScale*nbP_log;
+	vector<CFdouble>  vP( nbP +1 );
+	if(_pLogScale){
+		CFLog(NOTICE, ">> 	           __________________________________\n");
+		CFLog(NOTICE, ">> In setTables(): Logarithmic scale for the pressure\n");
+		CFLog(NOTICE, ">> In setTables(): pmin   = "<<a_min<<"x 10^"<<b_min<<"\n");
+		CFLog(NOTICE, ">> In setTables(): pmax   = "<<a_max<<"x 10^"<<b_max<<"\n");
+		CFLog(NOTICE, ">> In setTables(): deltaP = "<<_deltaP<<"\n");
+		CFLog(NOTICE, ">> In setTables(): nbP_log before truncation = "<< pixels<<"\n");
+		CFLog(NOTICE, ">> In setTables(): NbPowerOfTen = "<<NbPowerOfTen<<"\n");
+		CFLog(NOTICE, ">> In setTables(): nbBlocs = "<<nbBlocs<<"\n");
+		CFLog(NOTICE, ">> In setTables(): NbPixPerBloc = "<<NbPixPerBloc<<"\n");
+	  CFLog(NOTICE, ">> In setTables(): nbP_log after removing the excess values = "<< nbP_log<<"\n");
+		vP = vP_log;
+		CFLog(NOTICE, ">> In setTables(): vP[0] = "<<vP[0]<<",  vP[1] = "<<vP[1]<<",  vP[2] = "<<vP[2]<<"... "<<"vP["<<nbP-1<<"] = "<<vP[nbP-1]<<"\n");
+
+	}
+	else{
+		CFLog(NOTICE, ">> In setTables(): nbP_lin = "<<nbP_lin<<"\n");
+		CFLog(NOTICE, ">> 	           __________________________________\n");
+		CFLog(NOTICE, ">> In setTables(): Linear scale for the pressure\n");
+		CFLog(NOTICE, ">> In setTables(): Pmin           = "<<_pmin<<"\n");
+		CFLog(NOTICE, ">> In setTables(): Pmax           = "<<_pmax<<"\n");
+		CFLog(NOTICE, ">> In setTables(): deltaP         = "<<_deltaP<<"\n");
+		CFLog(NOTICE, ">> In setTables(): nb subinterval = "<<nbP_lin<<"\n");
+		vP = vP_lin;
+		CFLog(NOTICE, ">> In setTables(): vP[0] = "<<vP[0]<<",  vP[1] = "<<vP[1]<<",  vP[2] = "<<vP[2]<<"... "<<"vP["<<nbP-1<<"] = "<<vP[nbP-1]<<"\n");
+	}
+
+	//_____________________________________________________________________________
+  // INITIALIZE THE TABLE AND INSERT THE VALUES
+	//https://github.com/andrealani/COOLFluiD/blob/master/src/Common/LookupTable2D.ci
+  _lookUpTables.initialize(vT, vP, nbLookUpVars);
+		CFLog(NOTICE, ">> 	           ____________________________________________\n");
+	CFLog(NOTICE, ">> In setTables(): inserting the values in the _lookUpTables (Takes time...) \n");
+	CFdouble result;
+	for(CFuint i = 0; i < nbT; ++i) {
+    for(CFuint j = 0; j < nbP; ++j) {
+
+      // set the composition at first (Here _useLookUpTable is still at false)
+      setComposition(vT[i],vP[j], CFNULL); 
+      for (CFuint iVar  = 0; iVar < nbLookUpVars; ++iVar) {
+				
+       result = (this->*varComputeVec[iVar])(vT[i],vP[j]); 
+			 // Meaning of this command at each iter:
+			 // result := varComputeVec[0](vT[i],vP[j]) := SoundSpeed(vT[i],vP[j])
+			 // result := varComputeVec[1](vT[i],vP[j]) := Energy(vT[i],vP[j])
+			 // result := varComputeVec[2](vT[i],vP[j]) := Enthalpy(vT[i],vP[j])
+			 // result := varComputeVec[3](vT[i],vP[j]) := Density(vT[i],vP[j])
+
+
+       _lookUpTables.insert(vT[i],vP[j], _nameToIdxVar.find(_lkpVarNames[iVar]),result);
+      }
+    }
+  }
+	//_____________________________________________________________________________
+  // WRITE IN A FILE THE VALUES INSERTED IN THE LKT
+	/*
+  ofstream fichier("bliblablou.dat", ios::out | ios::trunc);  
+	if(fichier){
+		CFLog(NOTICE, "\n>> In setTables(): printing values computed in a .dat file:\n\n");
+
+		//for(CFuint i = 0; i < nbT; ++i) {
+			for(CFuint j = 0; j < nbP; ++j) {
+				fichier << vP[j]<< "  "<<_lookUpTables.get(vP[j],vT[0], _nameToIdxVar.find("h"))<<endl;
+			}
+		//}
+
+		fichier.close();
+	}
+	else cerr << "CAN NOT OPEN THE  !" << endl;
+	*/
+}
+////////////////////////////////////////////////////////////////////////////////
 
 void MutationLibrarypp::getSourceTermVT(CFdouble& temperature,
 					RealVector& tVec,

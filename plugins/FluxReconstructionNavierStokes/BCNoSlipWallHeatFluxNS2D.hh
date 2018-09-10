@@ -90,6 +90,12 @@ protected: // data
   
   /// iteration after which is changed to an isothermal wall BC
   CFuint m_changeToIsoT;
+  
+  /// wall x-velocity
+  CFreal m_wallU;
+  
+  /// wall y-velocity
+  CFreal m_wallV;
 
 }; // class BCNoSlipWallHeatFluxNS2D
 

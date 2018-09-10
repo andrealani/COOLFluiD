@@ -39,7 +39,6 @@ void NS2DAxiSourceTerm::defineConfigOptions(Config::OptionList& options)
 NS2DAxiSourceTerm::NS2DAxiSourceTerm(const std::string& name) :
     StdSourceTerm(name),
     socket_gradients("gradients"),
-    m_srcTerm(),
     m_dim(),
     m_eulerVarSet(CFNULL),
     m_diffVarSet(CFNULL),
@@ -157,9 +156,6 @@ void NS2DAxiSourceTerm::setup()
 
   // get dimensionality
   m_dim = PhysicalModelStack::getActive()->getDim ();
-
-  // resize m_srcTerm
-  m_srcTerm.resize(m_nbrEqs);
   
   // get NS 2D varset
   m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
