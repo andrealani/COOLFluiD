@@ -351,7 +351,7 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
       }  
     }
     else if (dim == 3 || is2DHalf){
-	
+      dim = 3;	
       const CFreal nx = normals[XX];
       const CFreal ny = normals[YY];
       CFreal nz = 0;
@@ -368,7 +368,7 @@ void MultiFluidMHDVarSet<BASE>::computeFlux (const RealVector& pdata, const Real
 	const CFreal P_i = pdata[firstTemperature + 4*i + 1]; 
 	//const CFreal T_i = pdata[firstTemperature + 4*i];      
 	const CFreal H_i = pdata[firstTemperature + 4*i + 3];      
-	
+
         this->_fluxArray[endEM + i] = rhoVn_i;
         this->_fluxArray[endEM + nbSpecies + i*dim] = rhoVn_i*u_i +  P_i*nx;
         this->_fluxArray[endEM + nbSpecies + i*dim + 1] = rhoVn_i*v_i + P_i*ny;
