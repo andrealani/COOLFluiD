@@ -5,7 +5,6 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include <fstream>
-
 #include "Common/PE.hh"
 #include "Common/MPI/MPIIOFunctions.hh"
 #include "Common/CFMap.hh"
@@ -24,6 +23,7 @@
 #include "Framework/DataHandleOutput.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/WriteListMap.hh"
+#include "Framework/VarSetTransformer.hh"
 
 #include "TecplotWriter/TecplotWriter.hh"
 #include "TecplotWriter/ParWriteSolution.hh"
@@ -712,6 +712,8 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
   SafePtr<ConvectiveVarSet> outputVarSet = getMethodData().getOutputVarSet();
   SafePtr<DataHandleOutput> datahandle_output = getMethodData().getDataHOutput();
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  SafePtr<VarSetTransformer> updateToOutput = getMethodData().getUpdateToOutputVarSetTransformer();
   vector<string> extraVarNames = outputVarSet->getExtraVarNames();
   const CFuint nbExtraVars = extraVarNames.size();
   
@@ -747,12 +749,10 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
   const CFuint nbElementTypes = 1; // just nodes
   const CFuint nbLocalElements = tt.nodesInType[iType].size();
   const CFuint totNbNodes = tt.totalNbNodesInType[iType];
-  RealVector dimState(nbEqs);
   // size should be set in the VarSet but for safety we resize it here too
   RealVector extraValues;
   if (nbExtraVars > 0) extraValues.resize(nbExtraVars);
   
-  State tempState;
   
   const string writerName = getMethodData().getNamespace() + "_Writers";
   Group& wg = PE::GetPE().getGroup(writerName);
@@ -816,27 +816,33 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
 	  }
 	  
 	  if (!getMethodData().onlyCoordinates()) {
+            // get state for updateVarSet
 	    const RealVector& currState = *nodalStates.getState(nodeID);
 	    const CFuint stateID = nodalStates.getStateLocalID(nodeID);
+
+      State tempState;
+
 	    tempState.setLocalID(stateID);
 	    // the node is set  in the temporary state
 	    tempState.setSpaceCoordinates(nodes[nodeID]);
 	    for (CFuint ieq = 0; ieq < nbEqs; ++ieq) {
 	      tempState[ieq] = currState[ieq];
 	    }
-	    
+      State* updateDimState = new State(RealVector(nbEqs));
+      State* outputDimState;
+
 	    if (getMethodData().shouldPrintExtraValues()) {
 	      // dimensionalize the solution
-	      outputVarSet->setDimensionalValuesPlusExtraValues
-		(tempState, dimState, extraValues);
-	      
+              updateVarSet->setDimensionalValuesPlusExtraValues
+                (tempState, *updateDimState, extraValues);
+              outputDimState = updateToOutput->transform(updateDimState);
+
 	      if (getMethodData().withEquations()) {
-		for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+                for (CFuint in = 0; in < outputDimState->size(); ++in, ++isend) {
 		  cf_assert(isend < sendElements.size());
-		  sendElements[isend] = dimState[in];
+                  sendElements[isend] = (*outputDimState)[in];
 		}
 	      }
-	      
 	      for (CFuint in = 0; in < extraValues.size(); ++in, ++isend) {
 		cf_assert(isend < sendElements.size());
 		sendElements[isend] = extraValues[in];
@@ -844,14 +850,15 @@ void ParWriteSolution::writeNodeList(ofstream* fout, const CFuint iType,
 	    }
 	    else {
 	      if (getMethodData().withEquations()) {
-		outputVarSet->setDimensionalValues(tempState, dimState);
-		for (CFuint in = 0; in < dimState.size(); ++in, ++isend) {
+                updateVarSet->setDimensionalValues(tempState, *updateDimState);
+                outputDimState = updateToOutput->transform(updateDimState);
+                for (CFuint in = 0; in < outputDimState->size(); ++in, ++isend) {
 		  cf_assert(isend < sendElements.size());
-		  sendElements[isend] = dimState[in];
+                  sendElements[isend] = (*outputDimState)[in];
 		}
 	      }
 	    }	    
-	    
+	    delete updateDimState; 
 	    datahandle_output->fillStateData(&sendElements[0], stateID, isend);
 	  }
 	}
