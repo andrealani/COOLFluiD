@@ -165,7 +165,10 @@ private:
 
   /// Configuration of boundary
   bool m_isPeriodicBoundary;
-
+  
+  /// Array of size 3 telling start position, end position, number of cells
+  std::vector<CFreal> m_startEndN;
+  
 }; // end class MeshGenerator1DImpl
 
 //////////////////////////////////////////////////////////////////////////////
