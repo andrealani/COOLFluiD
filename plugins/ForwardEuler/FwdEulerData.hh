@@ -100,7 +100,13 @@ public: // functions
   {
     return m_isTimeAccurate;
   }
-
+  
+  /// Gets the flag that indicates if global time step is used
+  bool isGlobalTimeStep() const
+  {
+    return m_isGlobalTimeStep;
+  }
+  
   /// Gets the flag that indicates we are at the last iteration
   bool isAchieved() const
   {
@@ -130,6 +136,9 @@ private: // data
   /// flag to indicate if time accurate
   bool m_isTimeAccurate;
 
+  /// flag to indicate if global time stepping
+  bool m_isGlobalTimeStep;
+  
 }; // end of class FwdEulerData
 
 //////////////////////////////////////////////////////////////////////////////

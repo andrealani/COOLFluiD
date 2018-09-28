@@ -121,6 +121,11 @@ public: // methods
   /// @post pushs and pops the Namespace to which this Method belongs
   void postProcessSolution();
 
+  /// PreProcess the solution.
+  /// For instance for the application of a limiter or a filter.
+  /// @post pushs and pops the Namespace to which this Method belongs
+  void preProcessSolution();
+
   /// Compute the diagonal block jacobian contributions
   /// coming from the space discretization
   /// @param factor is used to multiply the residual and jacobians
@@ -159,6 +164,9 @@ public: // methods
 
   /// Set the flag telling to compute the jacobians
   void setComputeJacobianFlag(bool flag);
+
+  /// Set the flag telling to preprocess the solution only once
+  void setOnlyPreprocessSolution(bool flag);
   
   /// Get the volume integrator of the space method.
   virtual Common::SafePtr<Framework::VolumeIntegrator> getVolumeIntegrator() {return CFNULL;}
@@ -232,9 +240,13 @@ protected: // abstract interface implementations
   /// Postprocess the solution.
   /// For instance for the application of a limiter or a filter..
   /// This is the abstract function that the concrete methods must implement.
-  /// @todo KVDA: it is not abstract here, as I do not have access to all the spacemethods and thus cannot put the function everywhere
   virtual void postProcessSolutionImpl() {}
 
+  /// Preprocess the solution.
+  /// For instance for the application of a limiter or a filter..
+  /// This is the abstract function that the concrete methods must implement.
+  virtual void preProcessSolutionImpl() {}
+  
   /// Compute the diagonal block jacobian contributions
   /// coming from the space discretization
   /// This function should be overwritten by the concrete method.

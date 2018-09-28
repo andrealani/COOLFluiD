@@ -146,6 +146,18 @@ public:
   /// Get the CFL from the convergence method
   Common::SafePtr<Framework::CFL> getCFL();
 
+  /// Set the flag telling if to preprocess solution only once
+  void setOnlyPreprocessSolution(bool onlyPreprocessSolution)
+  {
+    _onlyPreprocessSolution = onlyPreprocessSolution;
+  }
+  
+  /// Get the flag telling if to preprocess solution only once
+  bool doOnlyPreprocessSolution() const
+  {
+    return _onlyPreprocessSolution;
+  }
+  
   /// Set the flag telling if the jacobian has to be computed
   void setComputeJacobianFlag(bool computeJacobian)
   {
@@ -239,10 +251,13 @@ protected:
   
   /// Flag to fill the preconditioner matrix
   bool _fillPreconditionerMatrix;
+
+  /// flag telling if to preprocess solution only once
+  bool _onlyPreprocessSolution;
   
   /// flag telling if the jacobian has to be computed
   bool _computeJacobian;
-
+  
   /// Freezed System matrix
   bool _sysMatFrozen;
 

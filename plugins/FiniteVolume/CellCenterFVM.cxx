@@ -451,20 +451,15 @@ void CellCenterFVM::computeSpaceResidualImpl(CFreal factor)
 {
   CFAUTOTRACE;
   
-  // pre-process commands
-  for(CFuint i=0; i < _preProcess.size();i++){
-    cf_assert(_preProcess[i].isNotNull());
-    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing start"
-	  << _preProcess[i]->getName() << " \n");
-    _preProcess[i]->execute();
-    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing end"
-	  << _preProcess[i]->getName() << " \n");
+  if (!_data->doOnlyPreprocessSolution()) {
+    // preprocess solution
+    preProcessSolution();
   }
   
   // set the residual factor for which residual and jacobian have to
   // be multiplied
   _data->setResFactor(factor);
-
+  
   // apply the BC
   applyBC();
   
@@ -524,6 +519,27 @@ void CellCenterFVM::postProcessSolutionImpl()
 {
   CFAUTOTRACE;
   // currently doing nothing
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CellCenterFVM::preProcessSolutionImpl()
+{
+  CFAUTOTRACE;
+
+  CFLog(VERBOSE, "CellCenterFVM::preProcessSolutionImpl() => START\n");
+  
+  // pre-process commands
+  for(CFuint i=0; i < _preProcess.size();i++){
+    cf_assert(_preProcess[i].isNotNull());
+    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing start"
+	  << _preProcess[i]->getName() << " \n");
+    _preProcess[i]->execute();
+    CFLog(VERBOSE, "CellCenterFVM::computeSpaceResidualImpl() => pre-processing end"
+	  << _preProcess[i]->getName() << " \n");
+  }
+  
+  CFLog(VERBOSE, "CellCenterFVM::preProcessSolutionImpl() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
