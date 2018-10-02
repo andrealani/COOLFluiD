@@ -107,8 +107,8 @@ CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
   _diffusiveFluxStr = "Null";
   setParameter("DiffusiveFlux",&_diffusiveFluxStr);
   
-  setParameter("DerivativeStrategy",&_derivComputerStr);
   _derivComputerStr = "Null";
+  setParameter("DerivativeStrategy",&_derivComputerStr);
   
   _polyRecStr = "Constant";
   setParameter("PolyRec",&_polyRecStr);
