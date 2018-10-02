@@ -86,9 +86,9 @@ UnsteadySuperInletFromInputMHD3DProjection::~UnsteadySuperInletFromInputMHD3DPro
 boost::filesystem::path UnsteadySuperInletFromInputMHD3DProjection::constructFilename()
 {
   boost::filesystem::path fpath(_nameInputFile);
-
-  CFout << "Reading ACE solar wind data from: " << fpath.string() << "\n";
-
+  
+  CFLog(INFO, "Reading ACE solar wind data from: " << fpath.string() << "\n");
+  
   return fpath;
 }
 
@@ -177,9 +177,59 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
       bzFile[iLine] = atof(bz.c_str());
       pFile[iLine] = atof(p.c_str());
   }
-
+  
   fhandle->close();
 
+  // sanity check and removal of NaN's
+  const CFuint nbL1 = nbLines-1;
+  vector<bool>   hasNan(nbL1, false);
+  vector<CFuint> validLines;
+  validLines.reserve(nbL1);
+
+  bool fixNeeded = false;
+  for (CFuint iLine = 0; iLine < nbL1; ++iLine) {
+    if (isnan(rhoFile[iLine])   || isnan(uFile[iLine])  || isnan(vFile[iLine])
+	|| isnan(wFile[iLine])  || isnan(bxFile[iLine]) || isnan(byFile[iLine])
+	|| isnan(bzFile[iLine]) || isnan(pFile[iLine])) {
+      hasNan[iLine] = true;
+      fixNeeded = true;
+    }
+    else {
+      validLines.push_back(iLine);
+    }
+  }
+
+  if (fixNeeded) {
+    const CFuint TOL = 10000000;
+    for (CFuint iLine = 0; iLine < nbL1; ++iLine) {
+      if (hasNan[iLine]) {
+	CFuint minDiff = TOL;
+	CFuint useLine  = TOL;
+	for (CFuint idx = 0; idx < validLines.size(); ++idx) {
+	  const CFuint adiff = std::abs<int>(validLines[idx]-iLine);
+	  if (adiff <  minDiff) {
+	    minDiff = adiff;
+	    useLine = validLines[idx];
+	  }
+	}
+	cf_assert(minDiff < TOL);
+	cf_assert(useLine < TOL);
+	
+	CFLog(INFO, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => line[" <<
+	      iLine << "] has NaN and is replaced with line[" << useLine << "]\n");
+	
+	rhoFile[iLine] = rhoFile[useLine];
+	uFile[iLine]   = uFile[useLine];
+	vFile[iLine]   = vFile[useLine];
+	wFile[iLine]   = wFile[useLine];
+	bxFile[iLine]  = bxFile[useLine];
+	byFile[iLine]  = byFile[useLine];
+	bzFile[iLine]  = bzFile[useLine];
+	pFile[iLine]   = pFile[useLine];
+      }
+    }
+  }
+  
   const CFreal maxDT = SubSystemStatusStack::getActive()->getDT();
 
   const CFreal tInitial = tFile[0];
