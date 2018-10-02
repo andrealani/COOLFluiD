@@ -118,6 +118,11 @@ protected: // interface implementation functions
   /// Postprocess the solution.
   void postProcessSolutionImpl();
 
+  /// Preprocess the solution.
+  /// For instance for the application of a limiter or a filter..
+  /// This is the abstract function that the concrete methods must implement.
+  void preProcessSolutionImpl();
+  
   /// Action which is executed by the ActionLinstener for the "CF_ON_MESHADAPTER_BEFOREMESHUPDATE" Event
   /// @param eBefore the event which provoked this action
   /// @return an Event with a message in its body

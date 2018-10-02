@@ -30,6 +30,7 @@ void FwdEulerData::defineConfigOptions(Config::OptionList& options)
 {
    options.addConfigOption< CFuint >("VarID","Variable for which to compute the Norm of the dU");
    options.addConfigOption< bool >("TimeAccurate","True if time accurate");
+   options.addConfigOption< bool >("GlobalTimeStep","True if global time stepping is used");
    options.addConfigOption< bool >("PrintHistory","Print convergence history for each iteration");
 }
 
@@ -49,6 +50,9 @@ FwdEulerData::FwdEulerData(Common::SafePtr<Framework::Method> owner)
 
   m_isTimeAccurate = false;
   setParameter("TimeAccurate",&m_isTimeAccurate);
+
+  m_isGlobalTimeStep = false;
+  setParameter("GlobalTimeStep",&m_isGlobalTimeStep);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -94,6 +94,12 @@ public: // functions
   {
     return m_freezeJacobian;
   }
+  
+  /// Flag telling whether only preprocessing the solution once
+  bool onlyPreprocessSolution() const
+  {
+    return m_onlyPreprocessSolution;
+  }
 
   /// Get the number of systems to solve in the convergence method
   CFint getNbLSSToSolveAtOnce() const
@@ -171,7 +177,10 @@ private: // data
   
   /// flag to tell to freeze the jacobian during the iterative process
   bool m_freezeJacobian;
-  
+
+  /// flag to tell to preprocess the solution once
+  bool m_onlyPreprocessSolution;
+    
   /// number of linear system solvers to solve at once
   CFint m_nbLSSToSolveAtOnce;
   

@@ -49,7 +49,7 @@ void UpdateSol::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >
     ("Validate","Check that each update creates variables with physical meaning");
-  
+
   options.addConfigOption< bool >
     ("ClipResidual","Clips residual to 0 if < 1e-16 (useful in saome cases)");
   
@@ -95,11 +95,20 @@ void UpdateSol::execute()
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbStates = states.size();
   const bool isTimeAccurate = getMethodData().isTimeAccurate();
+  const bool isGlobalTimeStep = getMethodData().isGlobalTimeStep();
   bool isTimeStepTooLarge = false;
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
-  DataHandle<CFreal> volumes(CFNULL);
-  if(isTimeAccurate){ volumes = socket_volumes.getDataHandle(); }
-
+  CFreal maxUpdateCoeff = 0.;
+  if(isGlobalTimeStep){
+    for (CFuint i = 0; i < nbStates; ++i) {
+      cf_assert(updateCoeff[i] > 0.);
+      maxUpdateCoeff = std::max(maxUpdateCoeff, updateCoeff[i]);
+    }
+    cf_assert(maxUpdateCoeff > 0.);
+  }
+  
   CFreal dt = 0.;
   CFreal maxCFL = 1.;
   for (CFuint i = 0; i < nbStates; ++i)
@@ -114,36 +123,42 @@ void UpdateSol::execute()
       CFLogDebugMax( "updateCoeff[i] = " << updateCoeff[i]
         << (isZeroUpdateCoeff? " (ZERO)\n" : "\n") );
 
-      if(!isTimeAccurate)  // non time accurate update
-      {
-        dt = (isZeroUpdateCoeff? 0. : CFL / updateCoeff[i]);
-        if (isZeroUpdateCoeff) {
-          for (CFuint j = 0; j < nbEqs; ++j)
+      if (!isGlobalTimeStep) {
+	if(!isTimeAccurate)  // non time accurate update
+	  {
+	    dt = (isZeroUpdateCoeff? 0. : CFL / updateCoeff[i]);
+	    if (isZeroUpdateCoeff) {
+	      for (CFuint j = 0; j < nbEqs; ++j)
             if (MathChecks::isNotZero(rhs(i, j, nbEqs))) {
               CFLog(VERBOSE,"Residual contribution to state "
                     << i << " with null characteristic speed.\n");
               break;
             }
-        }
+	    }
+	  }
+	else // if time accurate update
+	  {
+	    // Compute maximum DT
+	    const CFreal dtmax = 1./updateCoeff[i];
+	    dt = sys_dt / volumes[i];
+	    
+	    // Compute equivalent CFL
+	    const CFreal ratio = dt/dtmax;
+	    
+	    if(ratio > 1.)
+	      {
+		isTimeStepTooLarge = true;
+		maxCFL = max(maxCFL,ratio);
+	      }
+	  }
       }
-      else // if time accurate update
-      {
-        // Compute maximum DT
-        const CFreal dtmax = 1./updateCoeff[i];
-        dt = sys_dt / volumes[i];
-
-        // Compute equivalent CFL
-        const CFreal ratio = dt/dtmax;
-
-        if(ratio > 1.)
-        {
-          isTimeStepTooLarge = true;
-          maxCFL = max(maxCFL,ratio);
-        }
+      else {
+	// AL: this assumes same volume... needs to be generalized
+	dt = CFL/maxUpdateCoeff;
       }
-       
+      
       CFLogDebugMax( "dt = " << dt << "\n");
-
+      
       CFLogDebugMed("rhs = ");
       // update of the state values
       for (CFuint j = 0; j < nbEqs; ++j)
@@ -267,7 +282,13 @@ void UpdateSol::execute()
 
   if(isTimeAccurate)
       SubSystemStatusStack::getActive()->setMaxDT(SubSystemStatusStack::getActive()->getDT()/maxCFL);
-
+  
+  //if(isGlobalTimeStep) {
+    // AL: I am assuming constant volume here ... needs to be modified with non uniform mesh!!!
+    ////SubSystemStatusStack::getActive()->setDT(CFL/maxUpdateCoeff*volumes[0]);
+    //SubSystemStatusStack::getActive()->setMaxDT(CFL/maxUpdateCoeff*volumes[0]);
+  // }
+  
   // computation of the norm of the dU (a.k.a rhs)
   CFreal value = 0.0;
   for (CFuint iState = 0; iState < nbStates; ++iState) {

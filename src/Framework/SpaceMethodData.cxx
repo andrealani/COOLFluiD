@@ -44,6 +44,7 @@ SpaceMethodData::SpaceMethodData(Common::SafePtr<Method> owner)
     m_isRestart(false),
     _iPerturbVar(0),
     _fillPreconditionerMatrix(false),
+    _onlyPreprocessSolution(false),
     _computeJacobian(true),
     _sysMatFrozen(false)
 {

@@ -202,10 +202,17 @@ void NewtonIterator::takeStepImpl()
   // iterations in unsteady
   std::auto_ptr<Framework::ConvergenceStatus> cvgst(new Framework::ConvergenceStatus);
   CFuint& k = getConvergenceMethodData()->getConvergenceStatus().iter; // use the convergence status iter of the method
+  
+  if (getConvergenceMethodData()->onlyPreprocessSolution()) {
+    getMethodData()->getCollaborator<SpaceMethod>()->setOnlyPreprocessSolution(true);
+    // start by preprocessing the solution (once for the whole simulation) w/o solving anything
+    getMethodData()->getCollaborator<SpaceMethod>()->preProcessSolution();
+  }
+  
   for(k = 1; !m_data->isAchieved(); ++k)
-  {
+  {    
     *cvgst = subSysStatus->getConvergenceStatus();
-    
+	
     timer.restart();
     
     subSysStatus->setFirstStep( k == 1 );
@@ -280,7 +287,7 @@ void NewtonIterator::takeStepImpl()
 
     m_data->setAchieved(m_stopCondControler->isAchieved(getConvergenceMethodData()->getConvergenceStatus()));
   }
-
+  
   CFLog (VERBOSE, "Newton convergence took: " << total_timer << "s\n");
 
   if (subSysStatus->isSubIterationLastStep()) subSysStatus->updateCurrentTime();

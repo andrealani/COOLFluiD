@@ -51,9 +51,11 @@ MeshGenerator1DImpl::MeshGenerator1DImpl (const std::string& name)
 {
   addConfigOptionsTo(this);
   
-    m_isPeriodicBoundary = false;
-    setParameter("PeriodicBoundary",&m_isPeriodicBoundary);
+  m_isPeriodicBoundary = false;
+  setParameter("PeriodicBoundary",&m_isPeriodicBoundary);
 
+  m_startEndN = vector<CFreal>();
+  setParameter("StartEndN",&m_startEndN);
 }
 
 ////////////////////////////////////////////////////////////////////////////// 
@@ -67,7 +69,8 @@ MeshGenerator1DImpl::~MeshGenerator1DImpl()
 void MeshGenerator1DImpl::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("PeriodicBoundary","Are the boundaries periodic?");
-
+  options.addConfigOption< vector<CFreal> >
+    ("StartEndN","Array of size 3 telling start position, end position and number cells");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -91,6 +94,7 @@ void MeshGenerator1DImpl::readFiles(const boost::filesystem::path& filepath)
 {
   CFAUTOTRACE;
 
+  if (m_startEndN.size() != 3) {
   using namespace boost::filesystem;
   path meshFile = change_extension(filepath, getOriginExtension());
 
@@ -264,8 +268,29 @@ void MeshGenerator1DImpl::readFiles(const boost::filesystem::path& filepath)
   } else { 
      shockRadius();
   }
-
+  }
+  else {
+    const CFreal start   = m_startEndN[0];
+    const CFreal end     = m_startEndN[1];
+    const CFreal nbCells = m_startEndN[2];
+    _nbCells = (CFuint)nbCells;
+    const CFreal dx    = (end - start)/nbCells;
+    
+    _nbUpdatableNodes = _nbCells + 1;
+    
+    _coordinate.reserve(_nbUpdatableNodes);
+    _coordinate.push_back(start);
+    
+    CFreal currX = start;
+    for (CFuint i = 0; i < _nbCells; ++i) {
+      currX += dx;
+      _coordinate.push_back(currX);
+    }
+    
+    cf_assert(std::abs(currX - end) < 1e-14);
+  }
 }
+  
 ////////////////////////////////////////////////////////////////////////////// 10
 
 void MeshGenerator1DImpl::writeContinuousElements(ofstream& fout)

@@ -43,6 +43,7 @@ void SpaceMethod::build_dynamic_functions()
   add_dynamic_function("prepareComputation",&SpaceMethod::prepareComputation);
   add_dynamic_function("applyBC",&SpaceMethod::applyBC);
   add_dynamic_function("postProcessSolution",&SpaceMethod::postProcessSolution);
+  add_dynamic_function("preProcessSolution",&SpaceMethod::preProcessSolution);
   add_dynamic_function("extrapolateStatesToNodes",&SpaceMethod::extrapolateStatesToNodes);
 }
 
@@ -218,6 +219,22 @@ void SpaceMethod::postProcessSolution()
 
   postProcessSolutionImpl();
 
+  popNamespace();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SpaceMethod::preProcessSolution()
+{
+  CFAUTOTRACE;
+
+  cf_assert(isConfigured());
+  cf_assert(isSetup());
+
+  pushNamespace();
+  
+  preProcessSolutionImpl();
+  
   popNamespace();
 }
 
@@ -403,6 +420,13 @@ Common::Signal::return_t SpaceMethod::afterMeshUpdateAction(Common::Signal::arg_
 void SpaceMethod::setComputeJacobianFlag(bool flag)
 {
   getSpaceMethodData()->setComputeJacobianFlag(flag);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SpaceMethod::setOnlyPreprocessSolution(bool flag)
+{
+  getSpaceMethodData()->setOnlyPreprocessSolution(flag);
 }
 
 //////////////////////////////////////////////////////////////////////////////
