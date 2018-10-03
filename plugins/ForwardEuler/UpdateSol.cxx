@@ -285,11 +285,10 @@ void UpdateSol::execute()
   if(isTimeAccurate)
       SubSystemStatusStack::getActive()->setMaxDT(SubSystemStatusStack::getActive()->getDT()/maxCFL);
   
-  //if(isGlobalTimeStep) {
+  if(isGlobalTimeStep) {
     // AL: I am assuming constant volume here ... needs to be modified with non uniform mesh!!!
-    ////SubSystemStatusStack::getActive()->setDT(CFL/maxUpdateCoeff*volumes[0]);
-    //SubSystemStatusStack::getActive()->setMaxDT(CFL/maxUpdateCoeff*volumes[0]);
-  // }
+    SubSystemStatusStack::getActive()->setMaxDT(CFL/maxUpdateCoeff*volumes[0]);
+  }
   
   // computation of the norm of the dU (a.k.a rhs)
   CFreal value = 0.0;

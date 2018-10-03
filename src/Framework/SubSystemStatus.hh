@@ -182,10 +182,10 @@ public: // methods
   /// Update the current Time using the current Time Step
   void updateCurrentTime()
   {
-    if(m_timeStep >= 0.)
-      m_currentTime += m_timeStep;
+    if (m_timeStep > 0.) {m_currentTime += m_timeStep;}
+    if (m_timeStep <= 0. && m_maxDT > 0.) {m_currentTime += m_maxDT;}
   }
-
+  
   /// Get the current (adimensional) Time
   CFreal getCurrentTime() const { return m_currentTime; }
 
