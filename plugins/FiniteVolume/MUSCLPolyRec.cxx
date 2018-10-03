@@ -151,8 +151,13 @@ void MUSCLPolyRec::extrapolateInner(GeometricEntity* const face)
       }
     }
   }
-  
-  _midNode = 0.5*(*face->getNode(0) + *face->getNode(1));
+
+  if (PhysicalModelStack::getActive()->getDim() > DIM_1D) {
+    _midNode = 0.5*(*face->getNode(0) + *face->getNode(1));
+  }
+  else {
+    _midNode = *face->getNode(0);
+  }
 
   State& leftValues  = getValues(LEFT);
   State& rightValues = getValues(RIGHT);
@@ -195,7 +200,13 @@ void MUSCLPolyRec::extrapolateBoundary(GeometricEntity* const face)
   //   DataHandle<vector<State*> > stencil = socket_stencil.getDataHandle();
   //   const vector<State*>& ss = stencil[face->getID()];
   
-  _midNode = 0.5*(*face->getNode(0) + *face->getNode(1));
+  if (PhysicalModelStack::getActive()->getDim() > DIM_1D) {
+    _midNode = 0.5*(*face->getNode(0) + *face->getNode(1));
+  }
+  else {
+    _midNode = *face->getNode(0);
+  }
+  
   getValues(LEFT) = (*cs[0]) + 0.5*((*cs[1]) - (*cs[0]));
   //*getValues(LEFT)[0] = (*cs[0]) + 0.5*((*cs[0]) - (*cs[2]));
 }
