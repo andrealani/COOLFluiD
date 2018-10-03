@@ -103,8 +103,10 @@ void UpdateSol::execute()
   CFreal maxUpdateCoeff = 0.;
   if(isGlobalTimeStep){
     for (CFuint i = 0; i < nbStates; ++i) {
-      cf_assert(updateCoeff[i] > 0.);
-      maxUpdateCoeff = std::max(maxUpdateCoeff, updateCoeff[i]);
+      if (states[i]->isParUpdatable()) {
+	cf_assert(updateCoeff[i] > 0.);
+	maxUpdateCoeff = std::max(maxUpdateCoeff, updateCoeff[i]);
+      }
     }
     cf_assert(maxUpdateCoeff > 0.);
   }
