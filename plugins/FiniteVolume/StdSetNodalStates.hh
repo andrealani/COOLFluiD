@@ -33,6 +33,12 @@ public:
    * Default destructor
    */
   virtual ~StdSetNodalStates();
+
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
   
   /**
    * Set up private data and data of the aggregated classes 
@@ -60,6 +66,9 @@ protected:
   /// object computing the solution extrapolation in the nodal states
   Common::SelfRegistPtr<Framework::NodalStatesExtrapolator<CellCenterFVMData> > 
   _nStatesExtrapolator;
+
+  /// flag telling to recompute the gradients after the solution update
+  bool m_updateGradients;
   
 }; // end of class StdSetNodalStates
 

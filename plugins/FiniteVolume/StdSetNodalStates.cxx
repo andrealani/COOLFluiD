@@ -27,9 +27,13 @@ stdSetNodalStatesProvider("StdSetNodalStates");
 StdSetNodalStates::StdSetNodalStates(const std::string& name) :
   CellCenterFVMCom(name)
 {
+  addConfigOptionsTo(this);
+  
+  m_updateGradients = false;
+  setParameter("updateGradients",&m_updateGradients);
 }
 
-//////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////
 
 StdSetNodalStates::~StdSetNodalStates()
 {
@@ -37,11 +41,25 @@ StdSetNodalStates::~StdSetNodalStates()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void StdSetNodalStates::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >
+    ("updateGradients", "Flag telling wheether to recompute the gradients."); 
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
 void StdSetNodalStates::execute()
 {
    CFAUTOTRACE;
 
+   // extrapolate the solution from cell centers to nodes
    getMethodData().getNodalStatesExtrapolator()->extrapolateInAllNodes();
+
+   if (m_updateGradients) {
+     // compute the gradients
+     getMethodData().getPolyReconstructor()->computeGradients();
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
