@@ -79,6 +79,12 @@ private:
   
   /// storage of states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
+
+  /// storage of the ghost states
+  Framework::DataSocketSink<Framework::State*> socket_gstates;
+  
+  /// storage of nodes
+  Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
   
   /// socket for uX values
   Framework::DataSocketSink<CFreal> socket_otherUX;
@@ -100,6 +106,9 @@ private:
 
   /// radius corresponding to the internal boundary between donor and current grids
   CFreal m_interRadius;
+  
+  /// distance within which points in the smaller mesh are selected
+  CFreal m_deltaSelection;
   
 }; // end of class ComputeFieldFromPotential
       
