@@ -103,6 +103,8 @@ SuperInletPhi.cxx
 SuperInletPhi.hh
 SuperInletPhi3D.cxx
 SuperInletPhi3D.hh
+SuperOutletBr.cxx
+SuperOutletBr.hh
 SuperOutletPhi.cxx
 SuperOutletPhi.hh
 SuperOutletLimiter.cxx
