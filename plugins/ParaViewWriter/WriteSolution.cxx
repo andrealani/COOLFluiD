@@ -142,38 +142,19 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
 
   // variable that holds the indices of the variables that are vector components
-  vector<CFuint> vectorComponentIdxs(0);
+  vector<CFuint> vectorComponentIdxs;
   /// @note this is a rather ugly piece of code, a check is made on the number of equations
   /// to avoid that vector components are searched when the physical model is a linear advection for instance
   /// this piece of code puts the velocity components (or the momentum components) in a vector
   /// the magnetic inductance vector B in the case of MHD is not put in a vector here like this!
-  if (nbEqs >= 3)
-  {
-    switch (dim)
-    {
-      case DIM_2D:
-      {
-        vectorComponentIdxs.resize(2);
-        vectorComponentIdxs[XX] = 1;
-        vectorComponentIdxs[YY] = 2;
-      } break;
-      case DIM_3D:
-      {
-        vectorComponentIdxs.resize(3);
-        vectorComponentIdxs[XX] = 1;
-        vectorComponentIdxs[YY] = 2;
-        vectorComponentIdxs[ZZ] = 3;
-      } break;
-      default:
-      {
-      }
-    }
-    cf_assert(dim == vectorComponentIdxs.size());
-  }
-
+  /// AL: fix to get the velocity IDs directly from the physics
+  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
+  updateVarSet->setStateVelocityIDs(vectorComponentIdxs);
+  
   // variable tht holds the indices of the scalar variables
   const CFuint nbVecComponents = vectorComponentIdxs.size();
   const CFuint nbScalars = nbEqs-nbVecComponents;
+  
   vector<CFuint> scalarVarIdxs(nbScalars);
   CFuint iScalar = 0;
   for  (CFuint iEq = 0; iEq < nbEqs; ++iEq)
@@ -193,10 +174,7 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
     }
   }
   cf_assert(iScalar == nbScalars);
-
-  // get ConvectiveVarSet
-  SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
-
+  
   // get variable names
   const vector<std::string>& varNames = updateVarSet->getVarNames();
   cf_assert(varNames.size() == nbEqs);
