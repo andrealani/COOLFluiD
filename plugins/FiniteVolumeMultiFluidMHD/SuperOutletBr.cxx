@@ -90,6 +90,12 @@ void SuperOutletBr::setGhostState(GeometricEntity *const face)
   // we impose B_theta=0 and B_phi = 0 => therefore By=Bx*y/x and Bz=Bx*z/x
   const CFuint dim = _bCoord.size();
   const CFreal Bx = (*innerState)[0]; // Bx_b (at the boundary)
+
+  // Br = std::sqrt((*innerState)[0]*(*innerState)[0] +
+  //                (*innerState)[1]*(*innerState)[1] +
+  //                (*innerState)[2]*(*innerState)[2]);
+  // const CFreal Bx = Br;
+  
   const CFreal By = Bx*_bCoord[YY]/_bCoord[XX];
   // AL: is it correct to impose Bz=0 in 2D case???
   const CFreal Bz = (dim == DIM_3D) ? Bx*_bCoord[ZZ]/_bCoord[XX] : 0.;
