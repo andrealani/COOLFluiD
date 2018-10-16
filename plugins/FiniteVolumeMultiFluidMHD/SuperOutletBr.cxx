@@ -89,7 +89,7 @@ void SuperOutletBr::setGhostState(GeometricEntity *const face)
   // (*ghostState)[0] = (*innerState)[0]; // already ensured by ghostState->copyData(*innerState)
   // we impose B_theta=0 and B_phi = 0 => therefore By=Bx*y/x and Bz=Bx*z/x
   const CFuint dim = _bCoord.size();
-  const CFreal Bx = (*innerState)[0]; // Bx_b (at the boundary)
+  const CFreal Bx = (*innerState)[0]; // Bx_b=Bx_I (at the boundary)
 
   // Br = std::sqrt((*innerState)[0]*(*innerState)[0] +
   //                (*innerState)[1]*(*innerState)[1] +
