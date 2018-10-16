@@ -178,13 +178,9 @@ public: // methods
 
   /// Reset to zero the current time
   void resetCurrentTime() { m_currentTime = 0.; }
-
+  
   /// Update the current Time using the current Time Step
-  void updateCurrentTime()
-  {
-    if (m_timeStep > 0.) {m_currentTime += m_timeStep;}
-    if (m_timeStep <= 0. && m_maxDT > 0.) {m_currentTime += m_maxDT;}
-  }
+  void updateCurrentTime();
   
   /// Get the current (adimensional) Time
   CFreal getCurrentTime() const { return m_currentTime; }
@@ -434,6 +430,9 @@ private: // member data
   /// the Simulation residual number stored
   RealVector m_residual;
 
+  /// Maximum Allowable Time Step
+  CFreal m_maxDT;
+  
   /// the index of the variable for which the residual is monitored
   CFuint m_monitored_var;
 
@@ -449,32 +448,26 @@ private: // member data
   ///flag: tells if it is a setup phase
   bool m_isSetup;
   
-  /// Maximum Allowable Time Step
-  CFreal m_maxDT;
-
-  /// maximum time expected time for simulation
-  CFreal m_max_time;
-
   ///flag: is this subsystem using a moving mesh
   bool m_movingMesh;
-
+  
   ///flag: should the iteration number be append to the filename
   bool m_appendIter;
 
   ///flag: should the current time be append to the filename
   bool m_appendTime;
+
+  ///Do we do subiterations
+  bool m_subIterationFlag;
+  
+  ///Is it the last step of the subiteration process
+  bool m_lastSubIter;
+  
+  ///flag: tells the simulation to stop
+  bool m_stopSim;
   
   /// Name of the subsystem
   std::string m_subSystemName;
-
-  /// the TimeStep value
-  CFreal m_timeStep;
-
-  /// the DT value read from the Interactive Parameter Reader
-  CFreal m_interactiveTimeStep;
-
-  /// Number of DT to be stored (for multi-layer spacetime,for example)
-  CFuint m_timeStepLayers;
 
   /// vector of the inner DeltaT
   /// used for computation
@@ -488,26 +481,26 @@ private: // member data
   /// used at configuration time
   std::vector<CFreal> m_innerDTConf;
 
+  /// the value of the previous DT
+  CFreal m_previousTimeStep;
+  
+  /// the value of the previous previous DT
+  CFreal m_prevprevTimeStep;
+    
+  /// maximum time expected time for simulation
+  CFreal m_max_time;
+  
+  /// the TimeStep value
+  CFreal m_timeStep;
+  
+  /// Number of DT to be stored (for multi-layer spacetime,for example)
+  CFuint m_timeStepLayers;
+  
   /// string for configuration of the DT term computer
   std::string m_computeDTStr;
 
   /// DT calculator
   Common::SelfRegistPtr<ComputeDT> m_computeDT;
-
-  /// the value of the previous DT
-  CFreal m_previousTimeStep;
-
-  /// the value of the previous previous DT
-  CFreal m_prevprevTimeStep;
-
-  ///Do we do subiterations
-  bool m_subIterationFlag;
-
-  ///Is it the last step of the subiteration process
-  bool m_lastSubIter;
-  
-  ///flag: tells the simulation to stop
-  bool m_stopSim;
   
 }; // end of class SubSystemStatus
 

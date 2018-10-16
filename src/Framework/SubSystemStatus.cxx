@@ -36,26 +36,34 @@ SubSystemStatus::SubSystemStatus(const std::string& name) :
   m_var_registry ( new VarRegistry() ),
   m_iter(0),
   m_subIter(0),
+  m_currentTime(0.),
   m_residual(0),
+  m_maxDT(0.),
   m_monitored_var(0),
+  m_global_res(false),
+  m_firstStep(false),
+  m_lastStep(false),
+  m_isSetup(false),
+  m_movingMesh(false),
+  m_appendIter(false),
+  m_appendTime(false),
+  m_subIterationFlag(false),
+  m_lastSubIter(false),
+  m_stopSim(false),
   m_subSystemName(),
-  m_timeStep(-1.0),
-  m_timeStepLayers(),
   m_innerDT(),
   m_innerDTRatio(),
   m_innerDTConf(0),
   m_previousTimeStep(0.),
-  m_subIterationFlag(false),
-  m_lastSubIter(false),
-  m_stopSim(false)
+  m_prevprevTimeStep(0.)  
 {
   addConfigOptionsTo(this);
 
   m_max_time = 0.;
-
+  
   m_timeStep = -1.0;
   setParameter("TimeStep",&m_timeStep);
-
+  
   m_computeDTStr = "Null";
   setParameter("ComputeDT",&m_computeDTStr);
 
@@ -205,9 +213,27 @@ const
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal SubSystemStatus::getCurrentTimeDim() const { return (PhysicalModelStack::getActive()->getImplementor()->getRefTime())*m_currentTime; }
+CFreal SubSystemStatus::getCurrentTimeDim() const
+{
+  cf_assert(PhysicalModelStack::getActive()->getImplementor()->getRefTime() > 0.);
+  CFLog(VERBOSE, "SubSystemStatus::getCurrentTimeDim(): [refTime, currTime] = [" <<
+	PhysicalModelStack::getActive()->getImplementor()->getRefTime() << ", "
+	<< m_currentTime << "]\n");
+  return (PhysicalModelStack::getActive()->getImplementor()->getRefTime())*m_currentTime;
+}
 
-void SubSystemStatus::setCurrentTimeDim(CFreal const p) { m_currentTime = p/(PhysicalModelStack::getActive()->getImplementor()->getRefTime()); }
+//////////////////////////////////////////////////////////////////////////////
+
+void SubSystemStatus::setCurrentTimeDim(CFreal const p)
+{
+  cf_assert(PhysicalModelStack::getActive()->getImplementor()->getRefTime() > 0.);
+  m_currentTime = p/(PhysicalModelStack::getActive()->getImplementor()->getRefTime());
+  CFLog(VERBOSE, "SubSystemStatus::setCurrentTimeDim(): [refTime, currTime] = [" <<
+	PhysicalModelStack::getActive()->getImplementor()->getRefTime() << ", "
+	<< m_currentTime << "]\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 CFreal SubSystemStatus::getMaxTimeDim() const { return m_max_time*(PhysicalModelStack::getActive()->getImplementor()->getRefTime()); }
 
@@ -215,7 +241,10 @@ void SubSystemStatus::setMaxTimeDim(CFreal time) { m_max_time = time/(PhysicalMo
 
 CFreal SubSystemStatus::getMaxDTDim() const { return m_maxDT*(PhysicalModelStack::getActive()->getImplementor()->getRefTime()); }
 
-void SubSystemStatus::setMaxDTDim(CFreal p) { m_maxDT = p/(PhysicalModelStack::getActive()->getImplementor()->getRefTime()); }
+void SubSystemStatus::setMaxDTDim(CFreal p)
+{
+  m_maxDT = p/(PhysicalModelStack::getActive()->getImplementor()->getRefTime());
+}
 
 CFreal SubSystemStatus::getDTDim() const { return m_timeStep*(PhysicalModelStack::getActive()->getImplementor()->getRefTime());  }
 
@@ -242,6 +271,15 @@ void SubSystemStatus::setDTDim(const CFreal DT)
 #endif
   return m_fr;
  }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SubSystemStatus::updateCurrentTime()
+{
+  if (m_timeStep > 0.) {m_currentTime += m_timeStep;}
+  if (m_timeStep <= 0. && m_maxDT > 0. &&
+      m_maxDT < MathTools::MathConsts::CFrealMax()) {m_currentTime += m_maxDT;}
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
