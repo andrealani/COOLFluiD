@@ -48,7 +48,7 @@ public:
   /**
    * Default destructor
    */
-  ~RMSJouleHeatSourceTerm();
+  virtual ~RMSJouleHeatSourceTerm();
 
   /**
    * Configure the object
@@ -62,27 +62,32 @@ public:
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
-  void setup();
+  virtual void setup();
 
   /**
    * Set the variable set
    * @pre the input pointer is non const to allow dynamic_cast
    */
-  void setVarSet(Common::SafePtr<Framework::ConvectiveVarSet> varSet)
+  virtual void setVarSet(Common::SafePtr<Framework::ConvectiveVarSet> varSet)
   {
   }
   
   /**
    * Compute the source term and jacobian
    */
-  void computeSource(Framework::GeometricEntity *const element,
-                     RealVector& source, RealMatrix& jacobian);
+  virtual void computeSource(Framework::GeometricEntity *const element,
+                             RealVector& source, RealMatrix& jacobian);
   
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
+
+protected:
+  
+   /// Compute the radiation loss term 
+   virtual CFreal computeRadiationLoss(Framework::GeometricEntity *const element);
 
 private: // data
   /// socket for the time-averaged Joule heat source storage
@@ -91,9 +96,22 @@ private: // data
   /// pointer to the physical-chemical library
   Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
 
+  /// Euler physical data
+  RealVector m_physicalData;
+
   /// flag to add joule heating to both energy equations (wrong)
-  bool m_addToBothEnergyEquations;  
-  
+  bool m_addToBothEnergyEquations;
+
+  /// flag to calculate the Simple Radiation Heat Transfer Model
+  bool m_computeArgonRadiativeHeatTransferLoss;
+
+  CFreal m_ArRadC1;
+  CFreal m_ArRadC2;
+  CFreal m_ArRadC3;
+  CFreal m_ArRadC4;
+  CFreal m_ArRadC5;
+  CFreal m_ArRadC6;
+
 }; // end of class RMSJouleHeatSourceTerm
 
 //////////////////////////////////////////////////////////////////////////////
