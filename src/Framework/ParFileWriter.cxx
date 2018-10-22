@@ -45,6 +45,7 @@ ParFileWriter::ParFileWriter() :
   _nbWriters = 1;
   _nbWritersPerNode = 0;
   _maxBuffSize = 2147479200;
+  _firstWithoutSolution = false;
 }
     
 //////////////////////////////////////////////////////////////////////////////

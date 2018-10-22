@@ -69,6 +69,9 @@ ParCFmeshBinaryFileWriter::ParCFmeshBinaryFileWriter() :
   
   _maxBuffSize = 2147479200; // (CFuint) std::numeric_limits<int>::max();
   setParameter("MaxBuffSize",&_maxBuffSize);
+
+  _firstWithoutSolution = false;
+  setParameter("FirstWithoutSolution",&_firstWithoutSolution);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -84,6 +87,7 @@ void ParCFmeshBinaryFileWriter::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("NbWriters", "Number of writers");
   options.addConfigOption< CFuint >("NbWritersPerNode", "Number of writers per node");
   options.addConfigOption< int >("MaxBuffSize", "Maximum buffer size for MPI I/O");
+  options.addConfigOption< bool >("FirstWithoutSolution", "Flag telling to write the FIRST CFmesh w/o solution");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -911,6 +915,19 @@ void ParCFmeshBinaryFileWriter::writeStateList(MPI_File* fh)
     MPI_File_seek(*fh, _offset[0].nodes.second, MPI_SEEK_SET);
   }
   
+  // AL: hack to just write the FIRST CFmesh w/o solution
+  /*  static int count = 0;
+  if (_firstWithoutSolution && count == 0) {
+    getWriteData().setWithSolution(false);
+    count++;
+  }
+  if (_firstWithoutSolution && count > 0) {
+    getWriteData().setWithSolution(true);
+    } */
+  if (_firstWithoutSolution) {
+    getWriteData().setWithSolution(false);
+  }
+  
   if (_myRank == _ioRank) {
     MPIIOFunctions::MPIIOFunctions::writeKeyValue<CFuint>(fh, "\n!LIST_STATE ", false, getWriteData().isWithSolution());
     MPIIOFunctions::MPIIOFunctions::writeKeyValue<char>(fh, "\n");
@@ -919,11 +936,12 @@ void ParCFmeshBinaryFileWriter::writeStateList(MPI_File* fh)
   const string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   const string writerName = nsp + "_Writers";
   Group& wg = PE::GetPE().getGroup(writerName);
+
+  MPI_Offset offset;
+  MPI_File_get_position(*fh, &offset);
+  MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
   
   if (getWriteData().isWithSolution()){
-    MPI_Offset offset;
-    MPI_File_get_position(*fh, &offset);
-    MPI_Bcast(&offset, 1, MPIStructDef::getMPIOffsetType(), _ioRank, _comm);
     // wOffset is initialized with current offset
     vector<MPI_Offset> wOffset(_nbWriters, offset); 
     
@@ -1098,7 +1116,12 @@ void ParCFmeshBinaryFileWriter::writeStateList(MPI_File* fh)
   
   if (_isWriterRank) {
     MPI_Barrier(wg.comm);
-    MPI_File_seek(*fh, _offset[0].states.second, MPI_SEEK_SET);
+    if (getWriteData().isWithSolution()) {
+      MPI_File_seek(*fh, _offset[0].states.second, MPI_SEEK_SET);
+    }
+    else {
+      MPI_File_seek(*fh, offset-1, MPI_SEEK_SET);
+    }
   }
   
   CFLogInfo("States written \n");

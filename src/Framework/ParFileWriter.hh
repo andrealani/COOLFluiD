@@ -110,8 +110,11 @@ public:
   /// number of writers per node
   CFuint _nbWritersPerNode;
   
-  /// maximu size of the buffer to write with MPI I/O
+  /// maximum size of the buffer to write with MPI I/O
   int _maxBuffSize;
+  
+  /// flag telling to write the FIRST CFmesh w/o solution
+  bool _firstWithoutSolution;
   
 }; // end of class ParFileWriter
 
