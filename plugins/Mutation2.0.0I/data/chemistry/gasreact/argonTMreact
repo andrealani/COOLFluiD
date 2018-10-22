@@ -1,0 +1,10 @@
+A+em=Ap+em+em    :7.40406E+10/+1.51100/141480.00/+0.00/3
+A+A=Ap+em+A      :0.00000E-10/+1.05870/182127.56/+0.00/3
+STOP
+
+
+#A+em=Ap+em+em    :4.04075E+13/+0.60503/182585.37/+0.00/3
+#A+A=Ap+em+A      :3.75010E+05/+1.05870/182127.56/+0.00/3
+
+# I think units here are in (cm)^3 instead of (m)^3, so
+# I have boosted rates by *1E+06.
