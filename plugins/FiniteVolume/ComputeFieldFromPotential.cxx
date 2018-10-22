@@ -314,8 +314,8 @@ void ComputeFieldFromPotential::execute()
       // 2) closestStates[k]    gives the State from SMALLER mesh to be used for extrapolation
       // 3) closestStateDist[k] gives the distance between 1) and 2)
       // 4) closestInternalStates[k]->getLocalID() gives the state ID to be used to fetch the gradient in uX, uY, uZ
-      CFLog(INFO, "size internalStates => " << internalStates[0]->size() << "\n");
-      CFLog(INFO, "size closestInternalStates  => " << closestInternalStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size internalStates => " << internalStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size closestInternalStates  => " << closestInternalStates[0]->size() << "\n");
 
       // array to keep track of the state IDs that correspond to internal and external states
       vector<bool> flag(nbStates, false);
@@ -333,15 +333,15 @@ void ComputeFieldFromPotential::execute()
       }
 
       // from here on:
-      // 1) internalStates[k]   gives the State from LARGER mesh with radius > m_interRadius 
+      // 1) internalStates[k]   gives the State from LARGER mesh with radius < m_interRadius 
       // 2) closestStates[k]    gives the State from SMALLER mesh to be used for extrapolation
       // 3) closestStateDist[k] gives the distance between 1) and 2)
       // 4) closestStates[k]->getLocalID() gives the state ID to be used to fetch the gradient in uX, uY, uZ
             
-      CFLog(INFO, "size internalStates => " << internalStates[0]->size() << "\n");
-      CFLog(INFO, "size closestStates  => " << closestStates[0]->size() << "\n");
-      CFLog(INFO, "size internalStates => " << internalStates[0]->size() << "\n");
-      CFLog(INFO, "size closestInternalStates  => " << closestInternalStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size internalStates => " << internalStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size closestStates  => " << closestStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size internalStates => " << internalStates[0]->size() << "\n");
+      CFLog(VERBOSE, "size closestInternalStates  => " << closestInternalStates[0]->size() << "\n");
       
       for (CFuint iState = 0; iState < nbInternalStates; ++iState) {
 	const CFuint istateID = internalStates[iState]->getLocalID();
