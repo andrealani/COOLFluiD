@@ -61,22 +61,14 @@ void StegerWarmingMaxwellProjection2D<UPDATEVAR>::setup()
 {
   using namespace COOLFluiD::Framework;
   
-  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup()\n");
-  
   FVMCC_FluxSplitter::setup();
-  
-  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 1\n");
   
   m_tempUnitNormal.resize(PhysicalModelStack::getActive()->getDim());
 
   PhysicalModelStack::getActive()->getImplementor()->
     getConvectiveTerm()->resizePhysicalData(m_pdata);
   
-  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 2\n");
-  
   m_updateVarSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
-  
-  CFLog(NOTICE, "StegerWarmingMaxwellProjection2D::setup() 3\n");
   
   // Roe scheme related data
   const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
