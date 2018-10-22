@@ -182,9 +182,6 @@ protected:
   /// interactive flag to run adiabatic
   bool m_adiabatic;
   
-  /// name of the file where the temperature distribution is provided
-  std::string m_fileNameTw;
-  
 }; // end of class NoSlipWallIsothermalNSvt
 
 //////////////////////////////////////////////////////////////////////////////

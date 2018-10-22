@@ -35,8 +35,6 @@ void NoSlipWallIsothermalNSvt<MODEL>::defineConfigOptions(Config::OptionList& op
     ("DistantBodyTemp","Distant body temperature");
   options.template addConfigOption<bool >
     ("Adiabatic", "Flag telling if to run adiabatic");
-  options.template addConfigOption<std::string>
-    ("FileNameTw", "Name of the file with the temperature distribution"); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -83,11 +81,6 @@ NoSlipWallIsothermalNSvt<MODEL>::NoSlipWallIsothermalNSvt(const std::string& nam
 
   m_adiabatic = false;
   setParameter("Adiabatic",&m_adiabatic);
-
-  m_fileNameTw = "";
-  setParameter("FileNameTw",&m_fileNameTw);
-  
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////
