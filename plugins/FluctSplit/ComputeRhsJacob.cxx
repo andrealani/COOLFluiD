@@ -110,7 +110,7 @@ void ComputeRhsJacob::executeOnTrs()
       GeometricEntity& cell = *geoBuilder->buildGE();
       vector<State*> *const states = cell.getStates();
 
-      cf_assert(cell.getID() == iCell);
+      //cf_assert(cell.getID() == iCell);
 
       distdata.cell   = &cell;
       distdata.cellID = cell.getID();
