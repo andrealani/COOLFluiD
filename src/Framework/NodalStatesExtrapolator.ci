@@ -194,7 +194,7 @@ void NodalStatesExtrapolator<DATA>::setup()
 	  
           // number of nodes in the current face
           const CFuint nbFaceNodes = faceTrs->getNbNodesInGeo(faceIdx);
-	  cf_assert(nbFaceNodes >= 2);
+	  cf_assert(nbFaceNodes >= 2 && dim >= DIM_2D || nbFaceNodes==1 && dim==DIM_1D);
           faceNodeIDs.resize(nbFaceNodes);
           // build a list of all the local nodeIDs in the current face
           for (CFuint jn = 0; jn < nbFaceNodes; ++jn) {
