@@ -79,6 +79,8 @@ LeastSquareP1PolyRec2D::needsSockets()
       
 void LeastSquareP1PolyRec2D::computeGradients()
 {
+  CFLog(VERBOSE, "LeastSquareP1PolyRec2D::computeGradients() => START\n");
+  
   prepareReconstruction();
  
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
@@ -147,6 +149,8 @@ void LeastSquareP1PolyRec2D::computeGradients()
 		     << "\n");
     }
   }
+  
+  CFLog(VERBOSE, "LeastSquareP1PolyRec2D::computeGradients() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
