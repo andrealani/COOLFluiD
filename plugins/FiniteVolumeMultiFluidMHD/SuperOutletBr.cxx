@@ -89,19 +89,28 @@ void SuperOutletBr::setGhostState(GeometricEntity *const face)
   // (*ghostState)[0] = (*innerState)[0]; // already ensured by ghostState->copyData(*innerState)
   // we impose B_theta=0 and B_phi = 0 => therefore By=Bx*y/x and Bz=Bx*z/x
   const CFuint dim = _bCoord.size();
-  const CFreal Bx = (*innerState)[0]; // Bx_b=Bx_I (at the boundary)
-
-  // Br = std::sqrt((*innerState)[0]*(*innerState)[0] +
-  //                (*innerState)[1]*(*innerState)[1] +
-  //                (*innerState)[2]*(*innerState)[2]);
-  // const CFreal Bx = Br;
+  cf_assert(dim == DIM_3D);
   
-  const CFreal By = Bx*_bCoord[YY]/_bCoord[XX];
-  // AL: is it correct to impose Bz=0 in 2D case???
-  const CFreal Bz = (dim == DIM_3D) ? Bx*_bCoord[ZZ]/_bCoord[XX] : 0.;
+  const CFreal xI = innerState->getCoordinates()[XX];
+  const CFreal yI = innerState->getCoordinates()[YY];
+  const CFreal zI = (dim == DIM_3D) ? innerState->getCoordinates()[ZZ] : 0.;
+  const CFreal rI = innerState->getCoordinates().norm2();
   
-  (*ghostState)[1] = 2.*By - (*innerState)[1];	//By
-  (*ghostState)[2] = 2.*Bz - (*innerState)[2];  //Bz
+  // Br in the internal cell
+  // Br = x/r*Bx + y/r*By + z/r*Bz
+  const CFreal BrI = (xI*(*innerState)[0] + yI*(*innerState)[1] + zI*(*innerState)[2])/rI;
+  
+  const CFreal rB = _bCoord.norm2();
+  
+  // Br at the boundary
+  const CFreal BrB = BrI; //*(rI*rI/(rB*rB))
+  const CFreal BxB = _bCoord[XX]/rB*BrB;
+  const CFreal ByB = _bCoord[YY]/rB*BrB;
+  const CFreal BzB = (dim == DIM_3D) ? _bCoord[ZZ]/rB*BrB : 0.;
+  
+  (*ghostState)[0] = 2.*BxB - (*innerState)[0];	// Bx
+  (*ghostState)[1] = 2.*ByB - (*innerState)[1];	// By
+  (*ghostState)[2] = 2.*BzB - (*innerState)[2]; // Bz
   
   // AL: what about the electric field components???
   // (*ghostState)[3],(*ghostState)[4], (*ghostState)[5] 
