@@ -99,11 +99,11 @@ void SuperOutletBr::setGhostState(GeometricEntity *const face)
   // Br in the internal cell
   // Br = x/r*Bx + y/r*By + z/r*Bz
   const CFreal BrI = (xI*(*innerState)[0] + yI*(*innerState)[1] + zI*(*innerState)[2])/rI;
-  
   const CFreal rB = _bCoord.norm2();
   
   // Br at the boundary
-  const CFreal BrB = BrI; //*(rI*rI/(rB*rB))
+  const CFreal rBI = MathFunctions::getDistance(innerState->getCoordinates(),_bCoord);
+  const CFreal BrB = BrI/(rBI*rBI);
   const CFreal BxB = _bCoord[XX]/rB*BrB;
   const CFreal ByB = _bCoord[YY]/rB*BrB;
   const CFreal BzB = (dim == DIM_3D) ? _bCoord[ZZ]/rB*BrB : 0.;
