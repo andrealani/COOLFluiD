@@ -32,25 +32,34 @@ FVMCC_BaseBC<BASE>::FVMCC_BaseBC(const std::string& name) :
   m_tempGhostNode(), 
   m_tempGhostNodeBkp(), 
   m_faceNormal(),
+  m_initialSolutionMap(),
   m_fullLoop(true)
 {
   this->addConfigOptionsTo(this);
-  
-  m_sInterpolatorStr = "Null";
-  this->setParameter("StateInterpolator",&m_sInterpolatorStr); 
   
   _zeroGradient = std::vector<bool>();
   this->setParameter("ZeroGradientFlags",&_zeroGradient); 
   
   m_coeff = 2.0; 
-  this->setParameter("CoeffMove",&m_coeff); 
+  this->setParameter("CoeffMove",&m_coeff);
+  
+  m_initialSolutionIDs = std::vector<CFuint>();
+  this->setParameter("InitialSolutionIDs",&m_initialSolutionIDs);
+  
+  m_sInterpolatorStr = "Null";
+  this->setParameter("StateInterpolator",&m_sInterpolatorStr); 
 }
-
+    
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>
 FVMCC_BaseBC<BASE>::~FVMCC_BaseBC()
 {
+  if (m_initialSolutionMap.size() > 0) {
+    for (CFuint i = 0; i < m_initialSolutionMap.size(); ++i) {
+      deletePtr(m_initialSolutionMap[i]);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -66,7 +75,10 @@ void FVMCC_BaseBC<BASE>::defineConfigOptions(Config::OptionList& options)
      "Flag specifying constantly extrapolated variables");
   
   options.template addConfigOption< CFreal > 
-    ("CoeffMove", "coefficient for the ghost node movement"); 
+    ("CoeffMove", "coefficient for the ghost node movement");
+
+  options.addConfigOption< std::vector<CFuint> >
+    ("InitialSolutionIDs", "IDs of initial solution components that will be used as BC value.");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -203,6 +215,54 @@ FVMCC_BaseBC<BASE>::needsSockets()
 template <typename BASE>
 void FVMCC_BaseBC<BASE>::preProcess()
 {
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  const CFuint initialSSize = m_initialSolutionIDs.size();
+  if (initialSSize > 0 && this->getMethodData().isPreProcessedSolution()) {
+    SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
+    CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName()
+	  << " ] => START\n");
+
+    if (!m_initialSolutionMap.exists(trs->getName())) {
+      Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
+	geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
+      SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
+      
+      FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+      geoData.isBFace = true;
+      geoData.trs = trs;
+      
+      const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
+          
+      RealVector* initialState = new RealVector(nbTrsFaces*initialSSize);
+      cf_assert(initialState != CFNULL);
+      
+      CFuint counter = 0;
+      for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+	// build the GeometricEntity
+	geoData.idx = iFace;
+	GeometricEntity *const face = geoBuilder->buildGE();
+	
+	for (CFuint i = 0; i < m_initialSolutionIDs.size(); ++i, ++counter) {
+	  const CFuint varID = m_initialSolutionIDs[i];
+	  cf_assert(counter < initialState->size());
+	  
+	  const State& innerState = *face->getState(0);
+	  cf_assert(varID < innerState.size());
+	  (*initialState)[counter] = innerState[varID];
+	}
+	
+	// release the GeometricEntity
+	geoBuilder->releaseGE();
+      }
+      
+      m_initialSolutionMap.insert(trs->getName(), initialState);
+    }
+    
+    CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName() << " ] => END\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

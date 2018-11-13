@@ -223,7 +223,7 @@ protected: // data
   
   /// flag telling which variables to ignore
   std::vector<bool> m_computeVars;
-  
+
   /// temporary coefficient  
   CFreal m_t;  
   
@@ -260,6 +260,9 @@ protected: // data
   /// temporary face normal 
   RealVector m_faceNormal; 
   
+  /// map TRS name -> initial solution array that will be used as BC value
+  Common::CFMap<std::string, RealVector*> m_initialSolutionMap;
+  
   /// flag telling if a full BC loop over all the TRS faces is done
   bool m_fullLoop;
   
@@ -269,6 +272,9 @@ protected: // data
 
   /// coefficient controlling the ghost node movement 
   CFreal m_coeff; 
+  
+  /// array specifying IDs of initial solution components that will be used as BC value
+  std::vector<CFuint> m_initialSolutionIDs;
   
   /// name of state interpolator object
   std::string m_sInterpolatorStr;
@@ -280,7 +286,7 @@ protected: // data
 template <typename BASE>
 template <typename T1, typename T2> 
 void FVMCC_BaseBC<BASE>::repositionNode(const T1& innerValue, T1& ghostValue, 
-				  const T2& bValue, const T2& minValue) 
+					const T2& bValue, const T2& minValue) 
 { 
   using std::cout; 
   using std::endl; 
