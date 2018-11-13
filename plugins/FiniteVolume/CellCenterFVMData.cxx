@@ -57,6 +57,7 @@ void CellCenterFVMData::defineConfigOptions(Config::OptionList& options)
 CellCenterFVMData::CellCenterFVMData(Common::SafePtr<Framework::Method> owner) :
   SpaceMethodData(owner),
   _isInitializationPhase(false),
+  _isPreProcessedSolution(false),
   _volumeIntegrator(),
   _diffusiveFlux(),
   _geoDataComputer(),

@@ -91,7 +91,7 @@ void PureDiffFlux::computeFlux(RealVector& result)
   result = _varSet->getFlux(_avState, _gradients, getMethodData().getUnitNormal());
   result *= faceArea;
 
-  CFLog(VERBOSE, "PureDiffFlux::computeFlux() => result = " << result << "\n");
+  CFLog(DEBUG_MED, "PureDiffFlux::computeFlux() => result = " << result << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

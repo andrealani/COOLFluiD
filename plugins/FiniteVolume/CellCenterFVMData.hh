@@ -385,6 +385,22 @@ public:
   }
 
   /**
+   * Set the preprocessing phase
+   */
+  void setIsPreProcessedSolution(bool flag)
+  {
+    _isPreProcessedSolution = flag;
+  }
+
+  /**
+   * Tell if the preprocessing phase has been accomplished
+   */
+  bool isPreProcessedSolution() const
+  {
+    return _isPreProcessedSolution;
+  }
+  
+  /**
    * Set the initialization phase
    */
   void setIsInitializationPhase(bool flag)
@@ -533,6 +549,9 @@ private:
   
   /// flag indicating if solution initialization is ongoing
   bool  _isInitializationPhase;
+
+  /// flag indicating if preprocesing has been accomplished
+  bool  _isPreProcessedSolution;
   
   /// volume integrator
   Framework::VolumeIntegrator _volumeIntegrator;

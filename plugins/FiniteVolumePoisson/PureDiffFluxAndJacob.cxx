@@ -92,7 +92,7 @@ void PureDiffFluxAndJacob::computeFlux(RealVector& result)
     PureDiffFlux::computeFlux(result);
   }
   
-  CFLog(VERBOSE, "PureDiffFluxAndJacob::computeFlux() => result = " << result << "\n");
+  CFLog(DEBUG_MED, "PureDiffFluxAndJacob::computeFlux() => result = " << result << "\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

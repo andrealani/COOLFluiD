@@ -28,7 +28,7 @@ void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("refPhi","Reference phi value imposed at the supersonic inlet.");
   options.addConfigOption< vector<CFuint> >("ProjectionIDs","IDs corresponding to projection fields.");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 SuperInletProjection::SuperInletProjection(const std::string& name) :
@@ -80,6 +80,24 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   for (CFuint i = 0; i < _projectionIDs.size(); ++i) {
     const CFuint varID = _projectionIDs[i];
     (*ghostState)[varID] = (*innerState)[varID];
+  }
+
+  // during initialization phase we store the initial solution values to be used as BC 
+  if (m_initialSolutionMap.size() > 0) {
+    /// map faces to corresponding TRS and index inside that TRS
+    SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs =
+      MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+    const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(face->getID());
+    const string name = getCurrentTRS()->getName();
+    SafePtr<RealVector> initialValues = m_initialSolutionMap.find(name);
+    const CFuint nbVars = m_initialSolutionIDs.size();
+    const CFuint startID = faceIdx*nbVars;
+    for (CFuint i = 0; i < nbVars; ++i) {
+      const CFuint varID = m_initialSolutionIDs[i];
+      const CFuint idx = startID+i;
+      cf_assert(idx < initialValues->size());
+      (*ghostState)[varID] = 2.*(*initialValues)[idx] - (*innerState)[varID];
+    }
   }
 }
 

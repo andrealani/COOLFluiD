@@ -40,15 +40,15 @@ public:
   /**
    * Default destructor
    */
-  ~SuperInletProjection();
+  virtual ~SuperInletProjection();
 
   /**
    * Apply boundary condition on the given face
    */
-  void setGhostState(Framework::GeometricEntity *const face);
-
+  virtual void setGhostState(Framework::GeometricEntity *const face);
+  
 private: //data
-
+  
   /// phi value that is to be fixed
   CFreal _refPhi;
   
