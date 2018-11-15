@@ -222,10 +222,11 @@ void FVMCC_BaseBC<BASE>::preProcess()
   const CFuint initialSSize = m_initialSolutionIDs.size();
   if (initialSSize > 0 && this->getMethodData().isPreProcessedSolution()) {
     SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();
-    CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName()
-	  << " ] => START\n");
-
+    
     if (!m_initialSolutionMap.exists(trs->getName())) {
+      CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName()
+	  << " ] => START\n");
+      
       Common::SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> >
 	geoBuilder = this->getMethodData().getFaceTrsGeoBuilder();
       SafePtr<FaceTrsGeoBuilder> geoBuilderPtr = geoBuilder->getGeoBuilder();
@@ -259,9 +260,8 @@ void FVMCC_BaseBC<BASE>::preProcess()
       }
       
       m_initialSolutionMap.insert(trs->getName(), initialState);
+      CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName() << " ] => END\n");
     }
-    
-    CFLog(INFO, "FVMCC_BaseBC<BASE>::preProcess() => TRS[ " << trs->getName() << " ] => END\n");
   }
 }
 
