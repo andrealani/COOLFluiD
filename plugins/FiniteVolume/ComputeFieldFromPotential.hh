@@ -74,7 +74,7 @@ public:
    * @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
-  
+
 private:
   
   /// storage of states
