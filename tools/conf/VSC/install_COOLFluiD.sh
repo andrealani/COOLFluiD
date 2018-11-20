@@ -7,7 +7,8 @@ module load Subversion/1.8.14-foss-2015a
 module load CMake/3.1.0-foss-2015a
 module load OpenMPI/1.8.4-GCC-4.9.2
 #module load cURL/7.43.0-foss-2015a
-module load Boost/1.66.0-foss-2015a-Python-2.7.9
+module load Boost/1.59.0-foss-2015a-Python-2.7.9
+#module load Boost/1.66.0-foss-2015a-Python-2.7.9
 module load PETSc/3.6.3-foss-2015a-Python-2.7.9
 module load ParMETIS/4.0.3-foss-2015a
 
