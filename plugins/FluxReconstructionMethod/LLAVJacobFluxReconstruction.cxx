@@ -76,6 +76,7 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
   m_unitNormalFlxPnts2(),
   socket_artVisc("artVisc"),
   socket_monPhysVar("monPhysVar"),
+  socket_smoothness("smoothness"),
   m_epsBackUp()
   {
     addConfigOptionsTo(this);
@@ -85,6 +86,9 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
     
     m_peclet = 2.0;
     setParameter( "Peclet", &m_peclet);
+    
+    m_s0 = 3.0;
+    setParameter( "S0", &m_s0);
     
     m_freezeLimiterRes = -20.0;
     setParameter( "FreezeLimiterRes", &m_freezeLimiterRes);
@@ -121,6 +125,8 @@ void LLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& option
   
   options.addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
   
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("S0","Reference smoothness factor, will be multiplied by -log(P).");
+  
   options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
@@ -153,6 +159,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   std::vector< Common::SafePtr< BaseDataSocketSource > > result;
   result.push_back(&socket_artVisc);
   result.push_back(&socket_monPhysVar);
+  result.push_back(&socket_smoothness);
   return result;
 }
 
@@ -1264,6 +1271,14 @@ void LLAVJacobFluxReconstruction::computeSmoothness()
   {
     m_s = log10(sNum/sDenom);
   }
+  
+  // get datahandle
+  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1615,12 +1630,14 @@ void LLAVJacobFluxReconstruction::setup()
   // get datahandle
   DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
   DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
   
   const CFuint nbStates = nbrCells*m_nbrSolPnts;
 
   // resize socket
   artVisc.resize(nbStates);
   monPhysVar.resize(nbStates);
+  smoothness.resize(nbStates);
   
   m_nodeEpsilons.resize(nbrNodes);
   m_nbNodeNeighbors.resize(nbrNodes);
@@ -1658,7 +1675,7 @@ void LLAVJacobFluxReconstruction::setup()
   
   m_transformationMatrix = (*vdm)*temp*(*vdmInv);
   
-  m_s0 = -3.0*log10(static_cast<CFreal>(m_order));
+  m_s0 = -m_s0*log10(static_cast<CFreal>(m_order));
   
   m_nbNodeNeighbors = 0.0;
   

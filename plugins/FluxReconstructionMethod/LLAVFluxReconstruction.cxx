@@ -83,6 +83,7 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_subcellRes(),
   socket_artVisc("artVisc"),
   socket_monPhysVar("monPhysVar"),
+  socket_smoothness("smoothness"),
   m_maxLambda(),
   m_unitNormalFlxPnts2(),
   m_faceJacobVecSizeFlxPnts2(),
@@ -95,6 +96,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
     
     m_peclet = 2.0;
     setParameter( "Peclet", &m_peclet);
+    
+    m_s0 = 3.0;
+    setParameter( "S0", &m_s0);
     
     m_freezeLimiterRes = -20.0;
     setParameter( "FreezeLimiterRes", &m_freezeLimiterRes);
@@ -131,6 +135,8 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
   
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("S0","Reference smoothness factor, will be multiplied by -log(P).");
+  
   options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
@@ -163,6 +169,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   std::vector< Common::SafePtr< BaseDataSocketSource > > result;
   result.push_back(&socket_artVisc);
   result.push_back(&socket_monPhysVar);
+  result.push_back(&socket_smoothness);
   return result;
 }
 
@@ -948,6 +955,10 @@ void LLAVFluxReconstruction::computeEpsilon0()
   if (m_addPosPrev) addPositivityPreservation();
 
   //CFLog(INFO, "lambda: " << wavespeed << "\n");
+  
+  //CFreal vol = m_cell->computeVolume();
+  //m_epsilon0 = m_peclet*sqrt(vol);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1022,6 +1033,14 @@ void LLAVFluxReconstruction::computeSmoothness()
   else
   {
     m_s = log10(sNum/sDenom);
+  }
+  
+  // get datahandle
+  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
   }
 //   CFuint ID = m_cell->getID();
 //   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
@@ -1126,12 +1145,14 @@ void LLAVFluxReconstruction::setup()
   // get datahandle
   DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
   DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
+  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
   
   const CFuint nbStates = nbrCells*m_nbrSolPnts;;
 
   // resize socket
   artVisc.resize(nbStates);
   monPhysVar.resize(nbStates);
+  smoothness.resize(nbStates);
   
   m_nodeEpsilons.resize(nbrNodes);
   m_nbNodeNeighbors.resize(nbrNodes);
@@ -1166,7 +1187,7 @@ void LLAVFluxReconstruction::setup()
   
   m_transformationMatrix = (*vdm)*temp*(*vdmInv);
   
-  m_s0 = -3.0*log10(static_cast<CFreal>(m_order));
+  m_s0 = -m_s0*log10(static_cast<CFreal>(m_order));
   
   m_nbNodeNeighbors = 0.0;
   

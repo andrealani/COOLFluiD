@@ -280,6 +280,9 @@ protected: //data
   /// storage for the monitored phys var
   Framework::DataSocketSource<CFreal> socket_monPhysVar;
   
+  /// storage for the smoothness
+  Framework::DataSocketSource<CFreal> socket_smoothness;
+  
   /// variable to monitor lambda, solely for debugging
   CFreal m_maxLambda;
 

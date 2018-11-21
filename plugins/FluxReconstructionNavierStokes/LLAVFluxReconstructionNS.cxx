@@ -315,6 +315,14 @@ void LLAVFluxReconstructionNS::computeSmoothness()
   {
     m_s = log10(sNum/sDenom);
   }
+  
+  // get datahandle
+  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
