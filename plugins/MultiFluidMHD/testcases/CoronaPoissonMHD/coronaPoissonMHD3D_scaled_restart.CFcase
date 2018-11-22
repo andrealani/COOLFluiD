@@ -235,15 +235,30 @@ Simulator.SubSystem.Flow.Restart = true
 Simulator.SubSystem.Flow.InitComds = InitStateAddVar 
 Simulator.SubSystem.Flow.InitNames = InField 
 Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
-Simulator.SubSystem.Flow.InField.InitVars = x y z
-Simulator.SubSystem.Flow.InField.Vars = x y z r  
-Simulator.SubSystem.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
-Simulator.SubSystem.Flow.InField.Def = 0. 0. 0. 0. 0. 0. 0. 0. \
-2.89e-13*sqrt(r/6.9551e8)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1/1.035))) \
-sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
-sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
-cos(atan2(sqrt(x^2+y^2),z))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
-1.5e6*sqrt(6.9551e8/r)
+Simulator.SubSystem.Flow.InField.InitVars = xx yy zz
+Simulator.SubSystem.Flow.InField.Vars = xx yy zz r x y z   
+Simulator.SubSystem.Flow.InField.InitDef = sqrt(xx^2+yy^2+zz^2)/695509927.012 xx/695509927.012 yy/695509927.012 zz/695509927.012 
+Simulator.SubSystem.Flow.InField.Def = \
+        0.\
+        0.\
+        0.\
+        0.\
+        0.\
+        0.\
+        0.\
+        0.\
+        2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(1/r)-sqrt(1/1.035)))\
+        sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+        sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+        cos(atan2(sqrt(x^2+y^2),z))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+        1.5e6*sqrt(1/r)
+
+#Simulator.SubSystem.Flow.InField.Def = 0. 0. 0. 0. 0. 0. 0. 0. \
+#	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
+#	sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	cos(atan2(sqrt(x^2+y^2),z))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	1.5e6*sqrt(6.9551e8/r)
 
 # Jens' model:
 # density: 2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8))*(sqrt(1/r)-sqrt(1/1.035))
