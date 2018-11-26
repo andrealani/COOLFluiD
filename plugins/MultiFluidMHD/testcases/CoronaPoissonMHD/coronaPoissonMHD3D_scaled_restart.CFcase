@@ -52,7 +52,8 @@ Simulator.SubSystem.FlowNamespace.PhysicalModelType = MultiFluidMHD3D
 Simulator.SubSystem.FlowNamespace.PhysicalModelName = MultiFluidMHD3D
 
 # Multi-Fluid MHD model settings
-Simulator.SubSystem.MultiFluidMHD3D.refValues = 0.112099824326 0.112099824326 1e-12 1e-12 1e-12 11.21 1e-8 1e-5 1e-24 100. 100. 100. 605.
+Simulator.SubSystem.MultiFluidMHD3D.refValues = 1e-12 1e-12 1e-12 1e-12 1e-12 1e-12 1e-8 1e-5 1e-24 0.001 0.001 0.01 1e5
+#Simulator.SubSystem.MultiFluidMHD3D.refValues = 0.112099824326 0.112099824326 1e-12 1e-12 1e-12 11.21 1e-8 1e-5 1e-24 100. 100. 100. 605.
 Simulator.SubSystem.MultiFluidMHD3D.refLength = 1.0
 #Simulator.SubSystem.MultiFluidMHD3D.Is2DHalf = true 
 Simulator.SubSystem.MultiFluidMHD3D.nbSpecies = 1
@@ -167,7 +168,7 @@ Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader0
 Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
 Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
 Simulator.SubSystem.CFmeshFileReader0.Data.FileName = corona.CFmesh
-Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 0.000000001437794
+Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1. #0.000000001437794
 # comment this out to Restart
 #Simulator.SubSystem.CFmeshFileReader0.convertFrom = Gmsh2CFmesh
 #Simulator.SubSystem.CFmeshFileReader0.Gmsh2CFmesh.Discontinuous = true
