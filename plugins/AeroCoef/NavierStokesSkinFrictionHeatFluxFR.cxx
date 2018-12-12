@@ -63,7 +63,7 @@ NavierStokesSkinFrictionHeatFluxFR::NavierStokesSkinFrictionHeatFluxFR(const std
 {
   addConfigOptionsTo(this);
   
-  m_stantonNumID = 0;
+  m_stantonNumID = 1;
   setParameter("StantonNumberID",&m_stantonNumID);
 }
 
@@ -539,6 +539,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
   } 
   
   const CFreal heatFlux = m_diffVar->getHeatFlux( *(m_cellStatesFlxPnt[flxIdx]), m_cellGradFlxPnt[flxIdx], m_unitNormalFlxPnts[flxIdx])*heatFluxRef + m_heatFluxRad;
+  //CFLog(INFO, "state: " << *(m_cellStatesFlxPnt[flxIdx]) << ", Tgrad: " << (*(m_cellGradFlxPnt[flxIdx][3])) << ", ref: " << heatFluxRef << "\n");
   
   CFreal pDim = 0.;
   CFreal rhoDim = 0.;
@@ -580,7 +581,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     updateValuesMatAndResidual(4, index, heatFlux);    
     updateValuesMatAndResidual(5, index, stantonNumber);
     updateValuesMatAndResidual(6, index, this->m_yPlus);
-    updateValuesMatAndResidual(7, index, this->m_Cf);
+    updateValuesMatAndResidual(7, index, -(this->m_Cf));
     updateValuesMatAndResidual(8, index, m_muWall);
     updateValuesMatAndResidual(9, index, m_heatFluxRad);
   }
