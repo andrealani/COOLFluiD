@@ -97,7 +97,7 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
     m_peclet = 2.0;
     setParameter( "Peclet", &m_peclet);
     
-    m_s0 = 3.0;
+    m_s0 = 0.0;
     setParameter( "S0", &m_s0);
     
     m_freezeLimiterRes = -20.0;
@@ -936,8 +936,8 @@ void LLAVFluxReconstruction::computeEpsilon0()
   
   const CFreal wavespeed = updateCoeff[(*m_cellStates)[0]->getLocalID()];
   
-  if (wavespeed < 1e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
-  if (wavespeed > 1e4) CFLog(INFO, "state HW: " << *((*m_cellStates)[0]) << "\n");
+  //if (wavespeed < 1e-8) CFLog(INFO, "wvsp: " << wavespeed << "\n");
+  //if (wavespeed > 1e5) CFLog(INFO, "state HW: " << *((*m_cellStates)[0]) << "\n");
   
   m_maxLambda = max(m_maxLambda,wavespeed);
   
@@ -1187,7 +1187,7 @@ void LLAVFluxReconstruction::setup()
   
   m_transformationMatrix = (*vdm)*temp*(*vdmInv);
   
-  m_s0 = -m_s0*log10(static_cast<CFreal>(m_order));
+  //m_s0 = -m_s0*log10(static_cast<CFreal>(m_order)) + m_s0;
   
   m_nbNodeNeighbors = 0.0;
   

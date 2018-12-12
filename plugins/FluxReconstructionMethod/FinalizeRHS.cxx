@@ -50,6 +50,9 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   
   m_useAnalyticalMatrix = false;
   setParameter("useAnalyticalMatrix",&m_useAnalyticalMatrix);
+  
+  m_doVarTrans = true;
+  setParameter("doVarTransformation",&m_doVarTrans);
 
 }
 
@@ -78,46 +81,51 @@ void FinalizeRHS::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >
     ("useAnalyticalMatrix", "Flag telling if to use analytical matrix."); 
+  options.addConfigOption< bool >
+    ("doVarTransformation", "Flag telling if variable transformation is necessary."); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FinalizeRHS::execute()
 {
-  // get the number of equations
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-
-  // get the state socket
-  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
-
-  // get total nb of states and initialize vars
-  const CFuint nbStates = states.size();
-
-  // get rhs socket
-  DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
-  
-  // loop over states to transform residual
-  for(CFuint iState = 0; iState < nbStates; ++iState) 
+  if (m_doVarTrans)
   {
-    // set and get the transformation matrix in the update variables
-    const RealMatrix& matrix = (m_useAnalyticalMatrix) ? computeAnalyticalTransMatrix(*states[iState]) : computeNumericalTransMatrix(*states[iState]);
+    // get the number of equations
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
 
-    // copy the rhs in a given temporary array
-    const CFuint startID = iState*nbEqs;
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
+    // get the state socket
+    DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+
+    // get total nb of states and initialize vars
+    const CFuint nbStates = states.size();
+
+    // get rhs socket
+    DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  
+    // loop over states to transform residual
+    for(CFuint iState = 0; iState < nbStates; ++iState) 
     {
-      m_tempRes[iEq] = rhs[startID + iEq];
-      if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", temp rhs: " << rhs[startID + iEq] << "\n");
-    }
+      // set and get the transformation matrix in the update variables
+      const RealMatrix& matrix = (m_useAnalyticalMatrix) ? computeAnalyticalTransMatrix(*states[iState]) : computeNumericalTransMatrix(*states[iState]);
 
-    // compute the transformed residual
-    m_tempRes = matrix*m_tempRes;
+      // copy the rhs in a given temporary array
+      const CFuint startID = iState*nbEqs;
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
+      {
+        m_tempRes[iEq] = rhs[startID + iEq];
+        //if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", temp rhs: " << rhs[startID + iEq] << "\n");
+      }
+
+      // compute the transformed residual
+      m_tempRes = matrix*m_tempRes;
     
-    // store transformed residual in rhs
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
-    {
-      rhs[startID + iEq] = m_tempRes[iEq];
-      if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", rhs: " << rhs[startID + iEq] << "\n");//states[iState]->getLocalID()==704
+      // store transformed residual in rhs
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
+      {
+        rhs[startID + iEq] = m_tempRes[iEq];
+        //if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", rhs: " << rhs[startID + iEq] << "\n");//states[iState]->getLocalID()==704
+      }
     }
   }
 }

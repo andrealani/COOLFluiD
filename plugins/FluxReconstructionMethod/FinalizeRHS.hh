@@ -114,6 +114,9 @@ protected: // data
   
   /// flag telling if to use analytical transformation matrix
   bool m_useAnalyticalMatrix;
+  
+  /// flag telling if variable transformation is needed
+  bool m_doVarTrans;
 
 }; // class FinalizeRHS
 

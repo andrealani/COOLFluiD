@@ -30,11 +30,11 @@ MethodCommandProvider<MLPLimiter, FluxReconstructionSolverData, FluxReconstructi
 
 void MLPLimiter::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFreal >("LimFactor","K factor in the MLP-u2 limiting part.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("LimFactor","K factor in the MLP-u2 limiting part.");
   
-  options.addConfigOption< CFreal >("FreezeLimiterRes","Residual after which to freeze the residual.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
-  options.addConfigOption< CFuint >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -290,8 +290,9 @@ void MLPLimiter::execute()
 	  }
         }
       
-        const bool unphysical = !checkPhysicality();
-
+        //const bool unphysical = !checkPhysicality();
+        const bool unphysical = false; 
+        
         if (limitFlag || unphysical)
         {
 	
