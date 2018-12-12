@@ -56,6 +56,9 @@ BCNoSlipWallHeatFluxNS2D::BCNoSlipWallHeatFluxNS2D(const std::string& name) :
    
   m_changeToIsoT = MathTools::MathConsts::CFuintMax();
    setParameter("ChangeToIsoT",&m_changeToIsoT);
+   
+   m_strongT= false;
+   setParameter("StrongT",&m_strongT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -75,6 +78,7 @@ void BCNoSlipWallHeatFluxNS2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
   options.addConfigOption< CFreal,Config::DynamicOption<> >("U","wall x-velocity");
   options.addConfigOption< CFreal,Config::DynamicOption<> >("V","wall y-velocity");
+  options.addConfigOption< bool,Config::DynamicOption<> >("StrongT","bool to tell wether the stong ghost T should be used, default false.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -159,7 +163,17 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       const CFreal R = m_eulerVarSet->getModel()->getR();
       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
-      const CFreal ghostT = m_wallT;//max(2.0*m_wallT - innerT,10.0); //
+      CFreal ghostT;
+      
+      if (m_strongT)
+      {
+        ghostT = max(2.0*m_wallT - innerT,1.0);
+      }
+      else
+      {
+        ghostT = m_wallT;
+      }
+      
       CFreal ghostP;
       if (getMethodData().getUpdateVarStr() == "Cons")
       {

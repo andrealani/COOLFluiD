@@ -82,6 +82,9 @@ protected: // data
   /// boolean telling if the wall has constant heat flux
   bool m_heatFlux;
   
+  /// boolean telling whether the strong ghost T should be used
+  bool m_strongT;
+  
   /// wall static temperature
   CFreal m_wallT;
   
