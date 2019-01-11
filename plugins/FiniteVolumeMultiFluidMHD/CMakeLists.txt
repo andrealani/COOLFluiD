@@ -46,6 +46,9 @@ EnergyIntegration.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
 HartmannSourceTerm.hh
+HeatingMHDST3D.ci
+HeatingMHDST3D.cxx
+HeatingMHDST3D.hh
 # to be removed after testing
 InitStateMF.cxx
 InitStateMF.hh

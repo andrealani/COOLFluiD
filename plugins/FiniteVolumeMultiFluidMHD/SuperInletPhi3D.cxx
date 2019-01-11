@@ -95,7 +95,7 @@ void SuperInletPhi3D::setup()
 void SuperInletPhi3D::configure ( Config::ConfigArgs& args )
 {
   using namespace COOLFluiD::Framework;
-
+  
   FVMCC_BC::configure(args);
 
   if(!_functions.empty())

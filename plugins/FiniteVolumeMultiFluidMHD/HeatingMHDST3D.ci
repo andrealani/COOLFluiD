@@ -1,0 +1,169 @@
+#include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/PhysicalConsts.hh"
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Common/NoSuchValueException.hh"
+#include "FiniteVolume/ComputeDiffusiveFlux.hh"
+#include "FiniteVolume/DerivativeComputer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HeatingMHDST3D<UPDATEVAR>::HeatingMHDST3D(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  _varSet(CFNULL),
+  _nstates(CFNULL),
+  _physicalData(),
+  _temp(),
+  _states(),
+  _values(),
+  _NonInducedEMField(),
+  _dummyGradients(),
+  _Btotal(),
+  _Etotal()
+{
+  addConfigOptionsTo(this);
+  _modelID = 1;
+  setParameter("ModelID",&_modelID);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+HeatingMHDST3D<UPDATEVAR>::~HeatingMHDST3D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSource> >
+HeatingMHDST3D<UPDATEVAR>::providesSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result = 
+    ComputeSourceTermFVMCC::providesSockets();
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HeatingMHDST3D<UPDATEVAR>::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFuint >("ModelID","ID corresponding to the heating model");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HeatingMHDST3D<UPDATEVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  
+  ComputeSourceTermFVMCC::setup();
+  
+  _varSet = this->getMethodData().getUpdateVar().template d_castTo<UPDATEVAR>();
+  _varSet->getModel()->resizePhysicalData(_physicalData);
+  cf_assert(_varSet.isNotNull());
+  
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  _nstates = _sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  
+  //SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  //const CFuint nbSpecies = term->getNbScalarVars(0);
+  
+  _temp.resize(PhysicalModelStack::getActive()->getNbEq());
+  
+  //Example4: Here I resize the vectors defined in the .hh
+  _NonInducedEMField.resize(6);
+  _NonInducedEMField = 0.;
+  _Btotal.resize(3);
+  _Etotal.resize(3);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HeatingMHDST3D<UPDATEVAR>::computeSource
+(Framework::GeometricEntity *const element, RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+
+  //AAL: Setting up some needed variables
+  SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
+  const vector<State*>* const states = element->getStates();
+  const CFuint elemID = element->getID();
+
+  cf_assert(states->size() == 1);
+  State *const currState = (*states)[0];
+  _varSet->computePhysicalData(*(*states)[0], _physicalData);
+
+  computeEMField();
+    
+  // SIMPLE AXISYMMETRIC HEATING MODEL 1 - Downs et al. 2010: Towards a realistic thermodynamic MHD model
+  // Exponential scale height heating term
+  const CFreal H0 = 7.28e-6; // J m**-3 s**-1, Local heating rate of the quiet Sun at the surface
+  const CFreal RSun = 6.957e8; // m
+  const CFreal lambda = 4.e7;  // m, Heating scale height
+  const CFreal radial_coord_of_node = currState->getCoordinates().norm2(); // I doubt this line will work..., how to get x,y,z?
+  const CFreal Qh1 = H0*std::exp(-(radial_coord_of_node - RSun)/lambda);
+  
+  // B-FIELD WEIGHTED 3-D HEATING MODEL - Petsov et al. 2003
+  // First attempt: Instead of summing /int /psi dV over all tetrahedrons, which has to be done prior to calling this function
+  // we can simply use the constant factor provided by Downs et al. 2010 of 4e-8 J/s T
+  // Then the heating term is simply
+  const CFreal const_Downs2010 = 4.e-8;    
+  const CFreal Qh2 = const_Downs2010*std::sqrt(_Btotal[XX]*_Btotal[XX] + _Btotal[YY]*_Btotal[YY] + _Btotal[ZZ]*_Btotal[ZZ]);
+  //                 or rather           _physicalData[0]*_physicalData[0] + ... as described in the header file?
+  if (_modelID == 1) {
+    source[12] = Qh1;
+  }
+  else if (_modelID == 2) {
+    source[12] = Qh2;
+  }
+  
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  source *= volumes[elemID];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class UPDATEVAR>
+void HeatingMHDST3D<UPDATEVAR>::computeEMField()
+{
+  //************************************************************
+  // AAL: This is the function where we compute the total current em field
+  //************************************************************
+
+  //// Total Electromagnetic Field
+  _Btotal[XX] = _physicalData[UPDATEVAR::PTERM::BX] + _NonInducedEMField[0];
+  _Btotal[YY] = _physicalData[UPDATEVAR::PTERM::BY] + _NonInducedEMField[1];
+  _Btotal[ZZ] = _physicalData[UPDATEVAR::PTERM::BZ] + _NonInducedEMField[2];
+  _Etotal[XX] = _physicalData[UPDATEVAR::PTERM::EX] + _NonInducedEMField[3];
+  _Etotal[YY] = _physicalData[UPDATEVAR::PTERM::EY] + _NonInducedEMField[4];
+  _Etotal[ZZ] = _physicalData[UPDATEVAR::PTERM::EZ] + _NonInducedEMField[5];
+
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
