@@ -212,6 +212,9 @@ protected: //data
   /// peclet number
   CFreal m_peclet;
   
+  /// damping coefficient of recalculation of epsilon
+  CFreal m_dampingCoeff;
+  
   /// average artificial viscosities in the nodes
   RealVector m_nodeEpsilons;
   

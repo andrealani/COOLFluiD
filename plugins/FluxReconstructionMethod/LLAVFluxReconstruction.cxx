@@ -1178,9 +1178,19 @@ void LLAVFluxReconstruction::setup()
   
   RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
   temp = 0.0;
-  for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+  if (m_dim == 2)
   {
-    temp(idx,idx) = 1.0;
+    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  else if (m_dim == 3)
+  {
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
   }
   
   m_transformationMatrix.resize(m_nbrSolPnts,m_nbrSolPnts);

@@ -1248,6 +1248,9 @@ void HexaFluxReconstructionElementData::createVandermondeMatrix()
   // number of solution points in 1D
   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
   
+  CFuint order;
+  CFuint idx;
+  
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   
@@ -1256,13 +1259,21 @@ void HexaFluxReconstructionElementData::createVandermondeMatrix()
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       CFuint modalDof = 0;
+      RealVector orderIdx(nbrSolPnts1D);
+      orderIdx = 0.0;
+      
       for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
       {
         for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
         {
           for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++modalDof)
           {
-            m_vandermonde(iSol,modalDof) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iZta);
+            order = max(iKsi,iEta);
+            order = max(order,iZta);
+            idx = order*order*order+orderIdx[order];
+            orderIdx[order] += 1;
+              
+            m_vandermonde(iSol,idx) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iZta);
           }
         }
       }

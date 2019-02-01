@@ -87,8 +87,11 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
     m_peclet = 2.0;
     setParameter( "Peclet", &m_peclet);
     
-    m_s0 = 3.0;
+    m_s0 = 0.0;
     setParameter( "S0", &m_s0);
+    
+    m_dampingCoeff = 0.2;
+    setParameter( "DampingCoeff", &m_dampingCoeff);
     
     m_freezeLimiterRes = -20.0;
     setParameter( "FreezeLimiterRes", &m_freezeLimiterRes);
@@ -126,6 +129,8 @@ void LLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& option
   options.addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
   
   options.addConfigOption< CFreal,Config::DynamicOption<> >("S0","Reference smoothness factor, will be multiplied by -log(P).");
+  
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("DampingCoeff","Damping coefficient for reculculation of eps (0<coeff<1).");
   
   options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
@@ -1183,7 +1188,7 @@ void LLAVJacobFluxReconstruction::computeEpsilon0(const CFuint side)
   
   const CFreal peclet = computePeclet();
   
-  m_epsilon0 = wavespeed*(2.0/peclet - m_subcellRes/peclet);
+  m_epsilon0 = max(wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
   
   if (m_addPosPrev) addPositivityPreservation();
 }
@@ -1317,9 +1322,10 @@ void LLAVJacobFluxReconstruction::storeEpsilon()
 
     if (!m_useMax) 
     {
-      m_nodeEpsilons[nodeID] += m_epsilon;
-      m_cellEpsilons[m_cell->getID()] = m_epsilon;
-      m_totalEps += m_epsilon;
+      const CFreal newEps = (1.0-m_dampingCoeff)*m_cellEpsilons[m_cell->getID()] + m_dampingCoeff*m_epsilon;
+      m_nodeEpsilons[nodeID] += newEps;
+      m_cellEpsilons[m_cell->getID()] = newEps;
+      m_totalEps += newEps;
     }
     else
     {
@@ -1675,7 +1681,7 @@ void LLAVJacobFluxReconstruction::setup()
   
   m_transformationMatrix = (*vdm)*temp*(*vdmInv);
   
-  m_s0 = -m_s0*log10(static_cast<CFreal>(m_order));
+  //m_s0 = -m_s0*log10(static_cast<CFreal>(m_order));
   
   m_nbNodeNeighbors = 0.0;
   
