@@ -1,7 +1,8 @@
 #!MC 1200
 # Created by Tecplot 360 build 12.0.0.3454
-$!VarSet |MFBD| = '/data/leuven/310/vsc31047/VSWMC_MODEL/COOLFluiD/TESTCASES/Unsteady_Euhforia_Test/RESULTS'
-$!READDATASET  '"|MFBD|/output.plt.bin" '
+$!VarSet |MFBD| = '/software/alternate/coolfluid/VSWMC2_CASES/TestSteady/RESULTS'
+#$!VarSet |MFBD| = '/data/leuven/310/vsc31047/vswmc_runs/coolfluid/test1/RESULTS'
+$!READDATASET  '"|MFBD|/Steady06042000Storm_Final.plt.bin" '
   READDATAOPTION = NEW
   RESETSTYLE = YES
   INCLUDETEXT = NO
@@ -11,16 +12,16 @@ $!READDATASET  '"|MFBD|/output.plt.bin" '
   ASSIGNSTRANDIDS = YES
   INITIALPLOTTYPE = CARTESIAN3D
   VARNAMELIST = '"x0" "x1" "x2" "rho" "u" "v" "w" "Bx" "By" "Bz" "p" "phi"'
-$!READDATASET  '"|MFBD|/output.surf.plt.bin" '
-  READDATAOPTION = APPEND
-  RESETSTYLE = NO
-  INCLUDETEXT = NO
-  INCLUDEGEOM = NO
-  INCLUDECUSTOMLABELS = NO
-  VARLOADMODE = BYNAME
-  ASSIGNSTRANDIDS = YES
-  INITIALPLOTTYPE = CARTESIAN3D
-  VARNAMELIST = '"x0" "x1" "x2" "rho" "u" "v" "w" "Bx" "By" "Bz" "p" "phi"'
+#$!READDATASET  '"|MFBD|/Steady06042000Storm_Final.surf.plt.bin" '
+#  READDATAOPTION = APPEND
+#  RESETSTYLE = NO
+#  INCLUDETEXT = NO
+#  INCLUDEGEOM = NO
+#  INCLUDECUSTOMLABELS = NO
+#  VARLOADMODE = BYNAME
+#  ASSIGNSTRANDIDS = YES
+#  INITIALPLOTTYPE = CARTESIAN3D
+#  VARNAMELIST = '"x0" "x1" "x2" "rho" "u" "v" "w" "Bx" "By" "Bz" "p" "phi"'
 $!VIEW FIT
 $!CREATESLICEZONEFROMPLANE 
   SLICESOURCE = VOLUMEZONES
@@ -220,11 +221,71 @@ $!VIEW TRANSLATE
 $!VIEW TRANSLATE
   X = -0.138377931555
   Y = 0.466562986003
+$!ThreeDAxis XDetail{ShowAxis = Yes}
+$!ThreeDAxis YDetail{ShowAxis = Yes}
+$!ThreeDAxis ZDetail{ShowAxis = Yes}
+$!RedrawAll 
+$!View DataFit
+  ConsiderBlanking = Yes
+$!Pick AddAtPosition
+  X = 8.69866444073
+  Y = 1.31844741235
+  ConsiderStyle = Yes
+$!Pick Shift
+  X = -6.01001669449
+  Y = 0.480801335559
+$!Pick AddAtPosition
+  X = 7.55008347245
+  Y = 6.17988313856
+  ConsiderStyle = Yes
+$!RedrawAll 
+$!Pick AddAtPosition
+  X = 6.26794657763
+  Y = 5.9929048414
+  ConsiderStyle = Yes
+$!ThreeDAxis XDetail{TickLabel{TextShape{Height = 8}}}
+$!ThreeDAxis YDetail{TickLabel{TextShape{Height = 8}}}
+$!ThreeDAxis ZDetail{TickLabel{TextShape{Height = 8}}}
+$!RedrawAll 
+$!Pick AddAtPosition
+  X = 6.76210350584
+  Y = 5.8459933222
+  ConsiderStyle = Yes
+$!ThreeDAxis XDetail{Title{TitleMode = UseText}}
+$!ThreeDAxis XDetail{Title{Text = 'x/R_e'}}
+$!ThreeDAxis XDetail{Title{TextShape{Height = 10}}}
+$!ThreeDAxis YDetail{Title{TitleMode = UseText}}
+$!ThreeDAxis YDetail{Title{Text = 'y/R_e'}}
+$!ThreeDAxis YDetail{Title{TextShape{Height = 10}}}
+$!ThreeDAxis ZDetail{Title{TitleMode = UseText}}
+$!ThreeDAxis ZDetail{Title{Text = 'z/R_e'}}
+$!ThreeDAxis ZDetail{Title{TextShape{Height = 10}}}
+$!RedrawAll
+$!View DataFit
+  ConsiderBlanking = Yes
+$!ThreeDAxis XDetail{Title{Offset = 16}}
+$!ThreeDAxis YDetail{Title{Offset = 16}}
+$!ThreeDAxis ZDetail{Title{Offset = 16}}
+$!RedrawAll
+$!GlobalContour 1  Legend{Box{BoxType = Filled}}
+$!RedrawAll
+$!Pick AddAtPosition
+  X = 8.69866444073
+  Y = 1.39858096828
+  ConsiderStyle = Yes
+$!Pick Shift
+  X = -0.0534223706177
+  Y = 5.36894824708
+$!Pick AddAtPosition
+  X = 9.01919866444
+  Y = 7.7825542571
+  ConsiderStyle = Yes
 $!VIEW PUSH
 $!EXPORTSETUP EXPORTFORMAT = PNG
 $!EXPORTSETUP EXPORTREGION = ALLFRAMES
 $!EXPORTSETUP IMAGEWIDTH = 722
-$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/VSWMC_MODEL/COOLFluiD/TESTCASES/Unsteady_Euhforia_Test/RESULTS/rho_final.png'
+$!EXPORTSETUP EXPORTFNAME = '/software/alternate/coolfluid/VSWMC2_CASES/TestSteady/RESULTS/rho_final.png'
+#$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/vswmc_runs/coolfluid/test1/RESULTS/rho_final.png'
 $!EXPORT 
   EXPORTREGION = ALLFRAMES
 $!GLOBALCONTOUR 1  VAR = 10
@@ -237,7 +298,8 @@ $!VIEW PUSH
 $!EXPORTSETUP EXPORTFORMAT = PNG
 $!EXPORTSETUP EXPORTREGION = ALLFRAMES
 $!EXPORTSETUP IMAGEWIDTH = 722
-$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/VSWMC_MODEL/COOLFluiD/TESTCASES/Unsteady_Euhforia_Test/RESULTS/Bz_final.png'
+$!EXPORTSETUP EXPORTFNAME = '/software/alternate/coolfluid/VSWMC2_CASES/TestSteady/RESULTS/Bz_final.png'
+#$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/vswmc_runs/coolfluid/test1/RESULTS/Bz_final.png'
 $!EXPORT
   EXPORTREGION = ALLFRAMES
 $!GLOBALCONTOUR 1  VAR = 11
@@ -250,7 +312,8 @@ $!VIEW PUSH
 $!EXPORTSETUP EXPORTFORMAT = PNG
 $!EXPORTSETUP EXPORTREGION = ALLFRAMES
 $!EXPORTSETUP IMAGEWIDTH = 722
-$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/VSWMC_MODEL/COOLFluiD/TESTCASES/Unsteady_Euhforia_Test/RESULTS/p_final.png'
+$!EXPORTSETUP EXPORTFNAME = '/software/alternate/coolfluid/VSWMC2_CASES/TestSteady/RESULTS/p_final.png'
+#$!EXPORTSETUP EXPORTFNAME = '/data/leuven/310/vsc31047/vswmc_runs/coolfluid/test1/RESULTS/p_final.png'
 $!EXPORT
   EXPORTREGION = ALLFRAMES
 $!RemoveVar |MFBD|
