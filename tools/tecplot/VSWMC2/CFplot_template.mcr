@@ -223,29 +223,29 @@ $!VIEW TRANSLATE
 $!ThreeDAxis XDetail{ShowAxis = Yes}
 $!ThreeDAxis YDetail{ShowAxis = Yes}
 $!ThreeDAxis ZDetail{ShowAxis = Yes}
-$!RedrawAll 
+$!RedrawAll
 $!View DataFit
-  ConsiderBlanking = Yes
+#  ConsiderBlanking = Yes
 $!Pick AddAtPosition
-  X = 8.69866444073
-  Y = 1.31844741235
-  ConsiderStyle = Yes
+X = 8.69866444073
+Y = 1.31844741235
+ConsiderStyle = Yes
 $!Pick Shift
-  X = -6.01001669449
-  Y = 0.480801335559
+X = -6.01001669449
+Y = 0.480801335559
 $!Pick AddAtPosition
-  X = 7.55008347245
-  Y = 6.17988313856
-  ConsiderStyle = Yes
-$!RedrawAll 
+X = 7.55008347245
+Y = 6.17988313856
+ConsiderStyle = Yes
+$!RedrawAll
 $!Pick AddAtPosition
-  X = 6.26794657763
-  Y = 5.9929048414
-  ConsiderStyle = Yes
+X = 6.26794657763
+Y = 5.9929048414
+ConsiderStyle = Yes
 $!ThreeDAxis XDetail{TickLabel{TextShape{Height = 8}}}
 $!ThreeDAxis YDetail{TickLabel{TextShape{Height = 8}}}
 $!ThreeDAxis ZDetail{TickLabel{TextShape{Height = 8}}}
-$!RedrawAll 
+$!RedrawAll
 $!Pick AddAtPosition
   X = 6.76210350584
   Y = 5.8459933222
@@ -261,7 +261,7 @@ $!ThreeDAxis ZDetail{Title{Text = 'z/R_e'}}
 $!ThreeDAxis ZDetail{Title{TextShape{Height = 10}}}
 $!RedrawAll
 $!View DataFit
-  ConsiderBlanking = Yes
+#  ConsiderBlanking = Yes
 $!ThreeDAxis XDetail{Title{Offset = 16}}
 $!ThreeDAxis YDetail{Title{Offset = 16}}
 $!ThreeDAxis ZDetail{Title{Offset = 16}}
@@ -272,13 +272,14 @@ $!Pick AddAtPosition
   X = 8.69866444073
   Y = 1.39858096828
   ConsiderStyle = Yes
-$!Pick Shift
-  X = -0.0534223706177
-  Y = 5.36894824708
+#$!Pick Shift
+#  X = -0.0534223706177
+#  Y = 5.36894824708
 $!Pick AddAtPosition
   X = 9.01919866444
   Y = 7.7825542571
   ConsiderStyle = Yes
+# old stuff
 $!VIEW PUSH
 $!EXPORTSETUP EXPORTFORMAT = PNG
 $!EXPORTSETUP EXPORTREGION = ALLFRAMES
