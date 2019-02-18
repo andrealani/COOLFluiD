@@ -280,6 +280,13 @@ $!Pick AddAtPosition
   Y = 7.7825542571
   ConsiderStyle = Yes
 # old stuff
+$!GlobalContour 1  Legend{Show = Yes}
+$!RedrawAll 
+$!Pick AddAtPosition
+  X = 8.72537562604
+  Y = 1.33180300501
+  ConsiderStyle = Yes
+$!RedrawAll
 $!VIEW PUSH
 $!EXPORTSETUP EXPORTFORMAT = PNG
 $!EXPORTSETUP EXPORTREGION = ALLFRAMES
