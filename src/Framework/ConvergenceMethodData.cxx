@@ -31,6 +31,7 @@ void ConvergenceMethodData::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< std::string >("NormRes","Norm type to monitor residual.");
    options.addConfigOption< std::string >("FilterState","Filter to apply on state variables.");
    options.addConfigOption< std::string >("FilterRHS","Filter to apply on the RHS.");
+   options.addConfigOption< CFuint >("SolvingRate","Number of steps after which the convergence method has to be applied.");
    options.addConfigOption< bool >("DoComputeJacobian","Flag to tell to compute the jacobian.");
    options.addConfigOption< bool >("DoUpdateSolution","Flag to tell to update the solution.");
    options.addConfigOption< bool >("FreezeJacobian","Flag to tell to freeze the jacobian during the iterative process.");
@@ -54,6 +55,9 @@ ConvergenceMethodData::ConvergenceMethodData(Common::SafePtr<Method> owner)
   m_filterRHSStr = "Identity";
   setParameter("FilterRHS",&m_filterRHSStr);
 
+  m_solvingRate = 1;
+  setParameter("SolvingRate",&m_solvingRate);  
+  
   m_doComputeJacob = true;
   setParameter("DoComputeJacobian",&m_doComputeJacob);  
   

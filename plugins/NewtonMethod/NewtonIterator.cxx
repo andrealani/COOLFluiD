@@ -188,20 +188,26 @@ void NewtonIterator::takeStepImpl()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "NewtonIterator::takeStepImpl() START\n");
-  
-  // do the prepare step, usually backing up the solution to past states
-  prepare ();
 
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
-
+  
+  // AL: temporary solution only checking the solution rate
+  const bool solveSystem =
+    (subSysStatus->getNbIter() == 0 ||
+     (subSysStatus->getNbIter()+1)%getConvergenceMethodData()->getSolvingRate() == 0);
+  
+  // do the prepare step, usually backing up the solution to past states
+  prepare();
+  
   Common::Stopwatch<WallTime> timer;
   Common::Stopwatch<WallTime> total_timer;
   total_timer.restart();
-
+  
   // We use this convergence status to be able to change the CFL in the pseudo-time
   // iterations in unsteady
   std::auto_ptr<Framework::ConvergenceStatus> cvgst(new Framework::ConvergenceStatus);
-  CFuint& k = getConvergenceMethodData()->getConvergenceStatus().iter; // use the convergence status iter of the method
+  // use the convergence status iter of the method
+  CFuint& k = getConvergenceMethodData()->getConvergenceStatus().iter;
   
   if (getConvergenceMethodData()->onlyPreprocessSolution()) {
     getMethodData()->getCollaborator<SpaceMethod>()->setOnlyPreprocessSolution(true);
@@ -209,6 +215,9 @@ void NewtonIterator::takeStepImpl()
     getMethodData()->getCollaborator<SpaceMethod>()->preProcessSolution();
   }
   
+  if (solveSystem) {
+    CFLog(VERBOSE, "NewtonIterator::takeStepImpl() for " << getName() << "\n");
+    
   for(k = 1; !m_data->isAchieved(); ++k)
   {    
     *cvgst = subSysStatus->getConvergenceStatus();
@@ -289,7 +298,8 @@ void NewtonIterator::takeStepImpl()
   }
   
   CFLog (VERBOSE, "Newton convergence took: " << total_timer << "s\n");
-
+  }
+  
   if (subSysStatus->isSubIterationLastStep()) subSysStatus->updateCurrentTime();
   
   CFLog(VERBOSE, "NewtonIterator::takeStepImpl() END\n");

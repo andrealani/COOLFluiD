@@ -70,6 +70,12 @@ public: // functions
   
   /// Updates the residual and places it in the SubSystemStatus
   void updateResidual();
+
+  /// Get the solving rate
+  CFuint getSolvingRate() const
+  {
+    return m_solvingRate;
+  }
   
   /// Reset the flag telling if to compute the jacobian
   void setDoComputeJacobFlag(bool doComputeJacobian)
@@ -168,6 +174,9 @@ private: // data
   
   /// Filter RHS to apply some fixes
   Common::SelfRegistPtr<Framework::FilterRHS>  m_filterRHS;
+
+  /// flag telling the solving rate
+  CFuint m_solvingRate;
   
   /// flag to tell to compute the jacobian
   bool m_doComputeJacob;

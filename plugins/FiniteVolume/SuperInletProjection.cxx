@@ -75,7 +75,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   
   *ghostState *= 2.;
   *ghostState -= *innerState;
-
+  
   cf_assert(_projectionIDs.size() > 0);
   for (CFuint i = 0; i < _projectionIDs.size(); ++i) {
     const CFuint varID = _projectionIDs[i];
@@ -97,8 +97,24 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       const CFuint idx = startID+i;
       cf_assert(idx < initialValues->size());
       (*ghostState)[varID] = 2.*(*initialValues)[idx] - (*innerState)[varID];
+      CFLog(DEBUG_MIN, "SuperInletProjection::setGhostState() => [" << varID << "] => " << (*initialValues)[idx] << " | " << (*innerState)[varID] << "\n");
     }
   }
+
+  //CFLog(INFO, "SuperInletProjection::setGhostState() => ghost,dimst,inner = "
+  //	<< (*ghostState)[8] << ", " << (*_dimState)[8] << ", e" << (*innerState)[8] << "\n");
+  
+  /*if ((*ghostState)[8] < 1e-32) {
+    CFLog(INFO, "SuperInletProjection::setGhostState() => ghost = " << (*ghostState)[8] <<"\n");
+  }
+
+  if ((*innerState)[8] < 1e-32) {
+    CFLog(INFO, "SuperInletProjection::setGhostState() => inner = " << (*innerState)[8] <<"\n");
+  }
+
+  if ((*_dimState)[8] < 1e-32) {
+    CFLog(INFO, "SuperInletProjection::setGhostState() => dimst = " << (*_dimState)[8] <<"\n");
+    }*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

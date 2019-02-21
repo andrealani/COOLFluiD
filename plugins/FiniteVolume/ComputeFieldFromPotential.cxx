@@ -62,7 +62,8 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
   socket_otherUX("uX"),
   socket_otherUY("uY"),
   socket_otherUZ("uZ"),
-  socket_otherStates("states")
+  socket_otherStates("states"),
+  m_applyProcessing(true)
 {
   addConfigOptionsTo(this);
   
@@ -71,9 +72,8 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
   
   m_otherNamespace = "";
   setParameter("OtherNamespace", &m_otherNamespace);
-
-  //m_interRadius = -1.;
-  m_interRadius = 2.5;
+  
+  m_interRadius = -1.; // 2.5;
   setParameter("InterRadius", &m_interRadius);
 
   m_deltaSelection = 0.;
@@ -140,9 +140,9 @@ void ComputeFieldFromPotential::execute()
 {
   CFAUTOTRACE;
 
-  CFLog(INFO, "ComputeFieldFromPotential::executeSerial() => START\n");
+  CFLog(VERBOSE, "ComputeFieldFromPotential::execute() => START\n");
 
-  if (SubSystemStatusStack::getActive()->getNbIter() >= 1) {
+  if (SubSystemStatusStack::getActive()->getNbIter() >= 1 && m_applyProcessing) {
     const CFuint dim = PhysicalModelStack::getActive()->getDim();
     const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
     
@@ -172,6 +172,8 @@ void ComputeFieldFromPotential::execute()
     stp.start();
     
     if (m_interRadius <= 0.) {
+      CFLog(INFO, "ComputeFieldFromPotential::execute() => transferring field\n");
+      
       for (CFuint iState = 0; iState < nbStates; ++iState) {
 	(*states[iState])[xVar] = ux[iState];
 	(*states[iState])[yVar] = uy[iState];
@@ -223,7 +225,7 @@ void ComputeFieldFromPotential::execute()
 	  const CFreal radius0 = face->getState(0)->getCoordinates().norm2();
 	  const CFreal radius1 = face->getState(1)->getCoordinates().norm2();
 	  (radius0 < radius1) ? interStates.push_back(face->getState(0)) : interStates.push_back(face->getState(1)); 
-	  CFLog(DEBUG_MIN, "ComputeFieldFromPotential::executeSerial() => #" << interStates.size() <<  " face with radius [" << radius << "] detected\n");
+	  CFLog(DEBUG_MIN, "ComputeFieldFromPotential::execute() => #" << interStates.size() <<  " face with radius [" << radius << "] detected\n");
 	}
 	faceBuilder->releaseGE();
       }
@@ -245,7 +247,7 @@ void ComputeFieldFromPotential::execute()
 	  }
 	}
 	
-	CFLog(DEBUG_MIN, "ComputeFieldFromPotential::executeSerial() => distMin[" << iState << "] = " << std::sqrt(distMin[iState]) << "\n");
+	CFLog(DEBUG_MIN, "ComputeFieldFromPotential::execute() => distMin[" << iState << "] = " << std::sqrt(distMin[iState]) << "\n");
       }
       
       // count the external states and store the corresponding state IDs in a list
@@ -266,7 +268,7 @@ void ComputeFieldFromPotential::execute()
       }
       cf_assert(externalStates.size() + internalStates.size() == nbStates);
       
-      CFLog(INFO, "ComputeFieldFromPotential::executeSerial() => detected [" << externalStates.size() << "] external states\n");
+      CFLog(INFO, "ComputeFieldFromPotential::execute() => detected [" << externalStates.size() << "] external states\n");
       
       // loop over all otherStates
       //   if state radius > m_interRadius
@@ -423,17 +425,20 @@ void ComputeFieldFromPotential::execute()
       
       for (CFuint i = 0; i < nbStates; ++i) {
 	if (!flag[i]) {
-	  CFLog(INFO, "ComputeFieldFromPotential::executeSerial() => stateID [" << i<< "] not found during extrapolation\n");
+	  CFLog(INFO, "ComputeFieldFromPotential::execute() => stateID [" << i<< "] not found during extrapolation\n");
 	  cf_assert(flag[i]);
 	}
       }
       
-      CFLog(INFO,"ComputeFieldFromPotential::executeSerial() => extrapolation took " << stp.read() << "s\n");
-      /// missing states inside the m_interRadius
+      CFLog(INFO,"ComputeFieldFromPotential::execute() => extrapolation took " << stp.read() << "s\n");
     }
+
+    // AL: this has to be changed when doing unsteady cases!!!!!!
+    // We need to implement a generic logic to aply the processing only when Poisson is solved
+    m_applyProcessing = false;
   } 
   
-  CFLog(INFO, "ComputeFieldFromPotential::executeSerial() => END\n");
+  CFLog(VERBOSE, "ComputeFieldFromPotential::execute() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

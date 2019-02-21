@@ -97,6 +97,9 @@ private:
 
   /// socket for nodes
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_otherStates;
+
+  /// flag telling whether to apply the post processing
+  bool m_applyProcessing;
   
   /// IDs of the state variables to assign to the newly computed field
   std::vector<CFuint> m_variableIDs;
