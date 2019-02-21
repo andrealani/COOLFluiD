@@ -1,0 +1,532 @@
+# COOLFluiD Startfile
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -1.13829
+##-1.14417
+#
+
+###############################################################################
+# Assertion For Debugging
+
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts     = true
+#CFEnv.ExceptionDumps       = false
+#CFEnv.ExceptionOutputs     = false
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut        = true
+#CFEnv.TraceActive          = true
+#
+# this will always fail with GAMBIT
+#CFEnv.ErrorOnUnusedConfig = true
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libParaViewWriter libTecplotWriter libNavierStokes libPoisson libMaxwell libMultiFluidMHD libFiniteVolume libFiniteVolumePoisson libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGmsh2CFmesh libGambit2CFmesh libForwardEuler libPetscI libBackwardEuler
+
+#SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
+Simulator.Paths.ResultsDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
+
+Simulator.Maestro = SimpleMaestro
+Simulator.SubSystems = SubSystem
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+#SubSystem Parameters
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/corona.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace 
+
+#Simulator.SubSystem.Ranks = 0:0 0:0
+
+Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystem.FlowMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
+Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.FlowNamespace.PhysicalModelType = MultiFluidMHD3D
+Simulator.SubSystem.FlowNamespace.PhysicalModelName = MultiFluidMHD3D
+
+# Multi-Fluid MHD model settings
+Simulator.SubSystem.MultiFluidMHD3D.refValues = 1e-12 1e-12 1e-12 1e-12 1e-12 1e-12 1e-8 1e-5 1e-24 0.001 0.001 0.01 1e5
+#Simulator.SubSystem.MultiFluidMHD3D.refValues = 0.112099824326 0.112099824326 1e-12 1e-12 1e-12 11.21 1e-8 1e-5 1e-24 100. 100. 100. 605.
+Simulator.SubSystem.MultiFluidMHD3D.refLength = 1.0
+#Simulator.SubSystem.MultiFluidMHD3D.Is2DHalf = true 
+Simulator.SubSystem.MultiFluidMHD3D.nbSpecies = 1
+#Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass1 = 6.69048e-29
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass1 = 1.67262177774e-24
+#Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.molecularMass3 = 1.6735327160314e-27
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.IsLeake = false
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.gamma = 1.05
+#Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.gamma = 1.6666666666667 #Default 5/3
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.divBCleaningConst = 10.
+#Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.nbSpecies = 1
+#Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.dynViscosity = 1000. 
+#Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.thermConductivity = 8254.39760724 
+#Simulator.SubSystem.MultiFluidMHD3D.DiffTerm.BraginskiiTransport = true
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.lightSpeedMax = 1e4  #2.7590285e3 #299792458
+Simulator.SubSystem.MultiFluidMHD3D.ConvTerm.lightSpeedMF = 1e4 #2.7590285e3 #299792458
+
+# Poisson model settings
+Simulator.SubSystem.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystem.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystem.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystem.EMNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSystem.EMNamespace.PhysicalModelName = Poisson3D
+Simulator.SubSystem.Poisson3D.refValues    = 1.0
+Simulator.SubSystem.Poisson3D.refLength    = 1.0
+
+###############################################################################
+# Output
+Simulator.SubSystem.OutputFormat        = Tecplot ParaView CFmesh Tecplot ParaView
+Simulator.SubSystem.OutputFormatNames   = Tecplot1 ParaView1 CFmesh1 Tecplot2 ParaView2
+
+Simulator.SubSystem.CFmesh1.FileName     = corona.CFmesh
+Simulator.SubSystem.CFmesh1.SaveRate     = 1000
+Simulator.SubSystem.CFmesh1.AppendTime   = false 
+Simulator.SubSystem.CFmesh1.AppendIter   = false
+Simulator.SubSystem.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.Tecplot1.FileName    = corona.plt
+Simulator.SubSystem.Tecplot1.Data.outputVar = RhoiViTi
+Simulator.SubSystem.Tecplot1.SaveRate    = 10
+#Simulator.SubSystem.Tecplot1.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot1.Data.SurfaceTRS = Inlet Outlet
+Simulator.SubSystem.Tecplot1.AppendTime = false
+Simulator.SubSystem.Tecplot1.AppendIter = false
+Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
+# Extra Values from Data Processing
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCSocketNames = divB Current
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCVariableNames = divB Current
+#Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1
+#Simulator.SubSystem.Tecplot1.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.ParaView1.FileName    = corona.vtu
+Simulator.SubSystem.ParaView1.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView1.Data.updateVar = RhoiViTi
+Simulator.SubSystem.ParaView1.SaveRate = 10
+Simulator.SubSystem.ParaView1.AppendTime = false
+Simulator.SubSystem.ParaView1.AppendIter = false
+Simulator.SubSystem.ParaView1.Namespace = FlowNamespace
+Simulator.SubSystem.ParaView1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.Tecplot2.FileName    = corona_poisson.plt
+Simulator.SubSystem.Tecplot2.Data.outputVar = Cons
+Simulator.SubSystem.Tecplot2.SaveRate = 10
+Simulator.SubSystem.Tecplot2.AppendTime = false
+Simulator.SubSystem.Tecplot2.AppendIter = false
+Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystem.Tecplot2.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystem.ParaView2.FileName    = corona_poisson.vtu
+#Simulator.SubSystem.ParaView2.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView2.Data.updateVar = Cons
+Simulator.SubSystem.ParaView2.SaveRate = 10
+Simulator.SubSystem.ParaView2.AppendTime = false
+Simulator.SubSystem.ParaView2.AppendIter = false
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystem.ParaView2.Namespace = EMNamespace
+Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Time Marching
+
+# Stop Condition
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 0.295
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -8.0
+
+###############################################################################
+
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = FlowLSS EMLSS
+
+Simulator.SubSystem.FlowLSS.Data.PCType = PCASM
+Simulator.SubSystem.FlowLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.FlowLSS.Data.MaxIter = 1000
+Simulator.SubSystem.FlowLSS.Data.NbKrylovSpaces = 150
+Simulator.SubSystem.FlowLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.FlowLSS.Namespace = FlowNamespace
+Simulator.SubSystem.FlowLSS.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.EMLSS.Data.KSPType = KSPGMRES #KSPBICG
+Simulator.SubSystem.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.EMLSS.Data.MaxIter = 1000
+Simulator.SubSystem.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.EMLSS.Data.PCType = PCASM #PCHYPRE #PCBJACOBI #PCASM
+#Simulator.SubSystem.EMLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.EMLSS.Data.UseAIJ = true
+#Simulator.SubSystem.EMLSS.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.EMLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.EMLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.EMLSS.Namespace = EMNamespace
+Simulator.SubSystem.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Implicit time integration
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator NewtonIterator 
+Simulator.SubSystem.ConvergenceMethodNames = EMIterator FlowIterator # This order decides whether EM comes before Flow  
+
+Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
+Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
+Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.FlowIterator.StdUpdateSol.Relaxation= 1.
+# CFL definition
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def =\
+#if(i<160,1e4,if(i<250,1e5,if(i<670,1e6,if(i<2690,1e7,1e8))))
+#Simulator.SubSystem.FlowIterator.Data.CFL.Value = 1e4
+Simulator.SubSystem.FlowIterator.Data.CFL.Interactive.CFL = 1.0
+#Simulator.SubSystem.FlowIterator.Data.MaxSteps = 20
+Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 12	
+#Simulator.SubSystem.FlowIterator.Data.FilterState = Max
+#Simulator.SubSystem.FlowIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 0 0 0 1 
+#Simulator.SubSystem.FlowIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 5.
+
+# stop after initialization
+Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 0
+Simulator.SubSystem.FlowIterator.Data.OnlyPreprocessSolution = true
+
+Simulator.SubSystem.EMIterator.Namespace = EMNamespace
+Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.
+Simulator.SubSystem.EMIterator.Data.PrintHistory = true
+
+###############################################################################
+
+# Mesh Reader
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader 
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
+
+Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
+#Simulator.SubSystem.CFmeshFileReader0.Data.FileName = CB.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = corona-a30.CFmesh # my new mesh without source-surface interface
+Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 0.000000001437794 # 1.
+# comment this out to Restart
+Simulator.SubSystem.CFmeshFileReader0.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Gmsh2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader0.Gmsh2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
+#Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona3D_60_tet_full.CFmesh
+#Simulator.SubSystem.CFmeshFileReader1.Data.FileName = CS.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona-a30.CFmesh # my new mesh without source-surface interface
+Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 0.000000001437794 #1.
+# comment this out to Restart
+Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Gmsh2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader1.Gmsh2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystem.SpaceMethodNames = Flow EM
+
+###############################################################################
+###############################################################################
+# Flow solver
+###############################################################################
+###############################################################################
+
+Simulator.SubSystem.Flow.Namespace = FlowNamespace
+Simulator.SubSystem.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
+Simulator.SubSystem.Flow.ComputeRHS = NumJacob
+#Simulator.SubSystem.Flow.NumJacob.FreezeDiffCoeff = true
+
+# First Order Time stepping
+Simulator.SubSystem.Flow.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystem.Flow.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
+#Simulator.SubSystem.Flow.PseudoSteadyTimeRhs.useGlobalDT = true 
+
+### second order: uncomment this
+Simulator.SubSystem.Flow.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.Flow.SetupNames = Setup1
+Simulator.SubSystem.Flow.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.Flow.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.Flow.UnSetupNames = UnSetup1
+
+# AL: this pre-processing command computes the coupling between EM and Flow solvers
+# pre-processing to transfer solution of EM system to Flow by computing B field out of potential 
+# and filling corresponding "PreProcess1.VariableIDs" entries in the Flow equations 
+#Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
+#Simulator.SubSystem.Flow.PreProcessNames = PreProcess1
+#Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 0 1 2
+#Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace 
+#Simulator.SubSystem.Flow.PreProcess1.InterRadius = 1738774817.53 #2.5
+#Simulator.SubSystem.Flow.PreProcess1.InterRadius = 15996730000.0 #23 RS # prevent the 1/r^2-extrapolation
+#Simulator.SubSystem.Flow.PreProcess1.DeltaSelection = 1000. #1e-4
+
+## second order: uncomment this
+Simulator.SubSystem.Flow.Data.PolyRec = LinearLS3D
+Simulator.SubSystem.Flow.Data.LinearLS3D.limitRes = -4.0
+Simulator.SubSystem.Flow.Data.LinearLS3D.limitIter = 10000
+Simulator.SubSystem.Flow.Data.LinearLS3D.gradientFactor = 1.
+Simulator.SubSystem.Flow.Data.Limiter = Venktn3D
+Simulator.SubSystem.Flow.Data.Venktn3D.coeffEps = 1
+
+Simulator.SubSystem.Flow.Data.FluxSplitter = AUSMPlusUpMultiFluid3D
+Simulator.SubSystem.Flow.Data.AUSMPlusUpMultiFluid3D.choiceA12 = 1
+Simulator.SubSystem.Flow.Data.AUSMPlusUpMultiFluid3D.machInf = 1. #0.0125
+Simulator.SubSystem.Flow.Data.AUSMPlusUpMultiFluid3D.useMacCormackScaling = true
+Simulator.SubSystem.Flow.Data.AUSMPlusUpMultiFluid3D.Coeff = 1e6
+#Simulator.SubSystem.Flow.Data.AUSMPlusUpMultiFluid3D.sigma = 0.25
+
+Simulator.SubSystem.Flow.Data.UpdateVar = RhoiViTi
+Simulator.SubSystem.Flow.Data.SolutionVar = Cons
+#Simulator.SubSystem.Flow.Data.DiffusiveVar = RhoiViTi
+#Simulator.SubSystem.Flow.Data.DerivativeStrategy = Corrected3D
+
+#Simulator.SubSystem.Flow.Data.DiffusiveFlux = NavierStokesMF
+#Simulator.SubSystem.Flow.Data.isAxisymm = true
+
+# in reality we will use another source term
+#Simulator.SubSystem.Flow.Data.SourceTerm = HartmannSourceTerm3D
+#Simulator.SubSystem.Flow.Data.HartmannSourceTerm3D.electricalConductivity = 7.95774715482e7 #7.95774715482e14 #5e6 #1256.6370614359
+
+###############################################################################
+# Initial Conditions
+#Simulator.SubSystem.Flow.Restart = true
+Simulator.SubSystem.Flow.InitComds = InitStateAddVar 
+Simulator.SubSystem.Flow.InitNames = InField 
+Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystem.Flow.InField.InitVars = x y z
+Simulator.SubSystem.Flow.InField.Vars = x y z r   
+Simulator.SubSystem.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
+#Simulator.SubSystem.Flow.InField.InitVars = xx yy zz
+#Simulator.SubSystem.Flow.InField.Vars = xx yy zz r x y z   
+#Simulator.SubSystem.Flow.InField.InitDef = sqrt(xx^2+yy^2+zz^2)/695509927.012 xx/695509927.012 yy/695509927.012 zz/695509927.012 
+Simulator.SubSystem.Flow.InField.Def = \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
+	sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(1.62047094e1-1.86518481e-8*r+1.29908291e-17*r^2-1.86656448e-27*r^3+1.14059202e-37*r^4-2.57005017e-48*r^5)*1e3 \
+	sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(1.62047094e1-1.86518481e-8*r+1.29908291e-17*r^2-1.86656448e-27*r^3+1.14059202e-37*r^4-2.57005017e-48*r^5)*1e3 \
+	cos(atan2(sqrt(x^2+y^2),z))*(1.62047094e1-1.86518481e-8*r+1.29908291e-17*r^2-1.86656448e-27*r^3+1.14059202e-37*r^4-2.57005017e-48*r^5)*1e3 \
+	1.5e6*sqrt(6.9551e8/r)
+
+
+# What we had before increasing Vr to chromospheric BCs (original Parker-solution):
+#Simulator.SubSystem.Flow.InField.Def = \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
+#	#sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) #\
+#	#sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) #\
+#	#cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) #\
+#	1.5e6*sqrt(6.9551e8/r)
+#
+
+#Simulator.SubSystem.Flow.InField.Def = \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        0. \
+#        2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(1/r)-sqrt(1/1.035))) \
+#        sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+#        sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+#        cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+#        1.5e6*sqrt(1/r)
+
+
+# Parkers solution for r in units of solar radii
+# sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+# sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+# cos(atan2(sqrt(x^2+y^2),z))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3)\
+# and Vr for r in units of m
+# -2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2
+
+
+#Simulator.SubSystem.Flow.InField.Def = 0. 0. 0. 0. 0. 0. 0. 0. \
+#	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
+#	sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	cos(atan2(sqrt(x^2+y^2),z))*(-4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3) \
+#	1.5e6*sqrt(6.9551e8/r)
+
+# Jens' model:
+# density: 2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8))*(sqrt(1/r)-sqrt(1/1.035))
+# temperature: 1.5e6*sqrt(1/r) 
+
+# Baumbach-Allen density and temperature
+# density: 2.12e-27*(1e14*(2.99/r^16+1.55/r^6+0.036/r^1.5)+(1+tanh(1.0*(r-1.5)))/2*(7.2e11/r^2-1e14*(2.99/r^(16)+1.55/r^6+0.036/r^1.5)))
+# temperature: 6.957e8*(0.04217244397769248*(0.5*(7.2e11*r^2-1.0e14*(2.99*r^16+1.55*r^6+0.036*r^1.5))*(tanh(1.0*(1/r-1.5))+1)+1.0e14*(2.99*r^16+1.55*r^6+0.036*r^(1.5))))/(0.5*((1.44e12)/r-1.0e14*(0.054/r^0.5+9.3/r^5+47.84/r^(15)))*(tanh(1.0*(r-1.5))+1)-0.5*((7.2e11)/r^2-1.0e14*(0.036/r^1.5+1.55/r^6+2.99/r^(16)))*r^2/cosh(1.0*(r-1.5))^2+1.0e14*(0.054/r^0.5+9.3/r^5+47.84/r^(15)))
+
+#vx= sin(theta)*cos(phi)*vr
+#vy= sin(theta)*sin(phi)*vr
+#vz= cos(theta)*vr
+#vr= -4.2108e-1*r^5+2.6794e1*r^4-6.2889e2*r^3+6.2797e3*r^2-1.2900e4*r+6.0262e3+1196.3
+#vx= sin(atan2(sqrt(x^2+y^2)))*cos(atan2(y,x))*(-4.2108e-1*sqrt(x^2+y^2+z^2)^5+2.6794e1*sqrt(x^2+y^2+z^2)^4-6.2889e2*sqrt(x^2+y^2+z^2)^3+6.2797e3*sqrt(x^2+y^2+z^2)^2-1.2900e4*sqrt(x^2+y^2+z^2)+6.0262e3+1196.3)
+#vy= sin(atan2(sqrt(x^2+y^2)))*sin(atan2(y,x))*(-4.2108e-1*sqrt(x^2+y^2+z^2)^5+2.6794e1*sqrt(x^2+y^2+z^2)^4-6.2889e2*sqrt(x^2+y^2+z^2)^3+6.2797e3*sqrt(x^2+y^2+z^2)^2-1.2900e4*sqrt(x^2+y^2+z^2)+6.0262e3+1196.3)
+#vz= cos(atan2(sqrt(x^2+y^2)))*(-4.2108e-1*sqrt(x^2+y^2+z^2)^5+2.6794e1*sqrt(x^2+y^2+z^2)^4-6.2889e2*sqrt(x^2+y^2+z^2)^3+6.2797e3*sqrt(x^2+y^2+z^2)^2-1.2900e4*sqrt(x^2+y^2+z^2)+6.0262e3+1196.3)
+
+###############################################################################
+# Boundary Conditions
+Simulator.SubSystem.Flow.BcComds = SuperInletProjectionFVMCC SuperOutletBrFVMCC
+#SuperOutletFVMCC
+Simulator.SubSystem.Flow.BcNames = Jet1 Jet2   
+
+Simulator.SubSystem.Flow.Jet1.applyTRS = Inlet
+#Simulator.SubSystem.Flow.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.Flow.Jet1.Vars = x y z 
+# Before increasing Vr:
+#Simulator.SubSystem.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 5.63428813037151e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*248.93426424 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*248.93426424 cos(atan2(sqrt(x^2+y^2),z))*248.93426424 1.5e6
+Simulator.SubSystem.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 5.63428813037151e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*8.91455121e3 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*8.91455121e3 cos(atan2(sqrt(x^2+y^2),z))*8.91455121e3 1.5e6
+
+# rho(1.0 R_Sun) = 5.63428813037151e-13 # kg/m**3 (pressure-gravity-balance)
+# vr(1.0 R_Sun) = 0.024457 # m/s (Parker's hydrodynamical model)
+# vx(1.0 R_Sun) = sin(theta)*cos(phi)*vr
+# vy(1.0 R_Sun) = sin(theta)*sin(phi)*vr
+# vz(1.0 R_Sun) = cos(theta)*vr
+# T(1.0 R_Sun)  = 1.5e6
+
+# extrapolated temperature
+Simulator.SubSystem.Flow.Jet1.ProjectionIDs = 6 7 12
+Simulator.SubSystem.Flow.Jet1.InitialSolutionIDs = 0 1 2
+Simulator.SubSystem.Flow.Jet1.ZeroGradientFlags = 1 1 1 0 0 0 0 0 0 0 0 0 1
+
+Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
+# those flags need to be rechecked
+Simulator.SubSystem.Flow.Jet2.ZeroGradientFlags = 0 0 0 1 1 1 1 1 1 1 1 0 0
+Simulator.SubSystem.Flow.Jet2.refPhi = 0.
+Simulator.SubSystem.Flow.Jet2.refPsi = 0.
+#Simulator.SubSystem.Flow.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
+#Simulator.SubSystem.Flow.Jet2.OnlyRadialGradient = true true true true true...?
+#Simulator.SubSystem.Flow.Jet2.OnlyRadialGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
+
+###############################################################################
+# Inner Boundary: Inlet condition
+#Simulator.SubSystem.Flow.Jet1.applyTRS = x0
+#Simulator.SubSystem.Flow.Jet1.Def =\
+#					    -40.003633234188*((cosh(10*(y)/0.05)/cosh(10))-1)\
+#					    0.\
+#					   288.2076994
+#Simulator.SubSystem.Flow.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 0 0 0
+
+#Simulator.SubSystem.Flow.Jet1.Vx = 1
+#Simulator.SubSystem.Flow.Jet1.Vy = 1
+#Simulator.SubSystem.Flow.Jet1.Ti = 200
+
+###############################################################################
+###############################################################################
+# EM solver
+###############################################################################
+###############################################################################
+
+Simulator.SubSystem.EM.Namespace = EMNamespace
+Simulator.SubSystem.EM.Data.CollaboratorNames = EMLSS EMIterator
+Simulator.SubSystem.EM.ComputeRHS = NumJacob
+Simulator.SubSystem.EM.SetNodalStatesCom = StdSetNodalStates
+Simulator.SubSystem.EM.StdSetNodalStates.updateGradients = true
+
+Simulator.SubSystem.EM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.EM.SetupNames = Setup1
+Simulator.SubSystem.EM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.EM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.EM.UnSetupNames = UnSetup1
+
+Simulator.SubSystem.EM.Data.FluxSplitter = Null
+
+Simulator.SubSystem.EM.Data.UpdateVar  = Cons
+Simulator.SubSystem.EM.Data.SolutionVar = Cons
+Simulator.SubSystem.EM.Data.DiffusiveVar = Cons
+Simulator.SubSystem.EM.Data.DiffusiveFlux = PureDiffFlux
+#Simulator.SubSystem.EM.Data.SourceTerm = FunctionST
+#Simulator.SubSystem.EM.Data.FunctionST.Vars = x y phi
+#Simulator.SubSystem.EM.Data.FunctionST.Def = 0.
+
+#Simulator.SubSystem.EM.Data.NodalExtrapolation = HolmesConnell
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = StateDiff
+Simulator.SubSystem.EM.Data.DerivativeStrategy = Corrected3D
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = CorrectedGG3D
+#Simulator.SubSystem.EM.Data.DerivativeStrategy = DiamondVolume3D
+
+Simulator.SubSystem.EM.Data.PolyRec = LinearLS3D
+
+Simulator.SubSystem.EM.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystem.EM.Data.DistanceBased.TRSName = Inlet
+#Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2018-04-27-scaled-meters.dat
+#Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2012-11-27.dat # it is scaled in meters, don't worry
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/dipole.dat
+Simulator.SubSystem.EM.Data.DistanceBased.TemperatureID = 0
+Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
+
+Simulator.SubSystem.EM.InitComds = InitState
+Simulator.SubSystem.EM.InitNames = InField
+Simulator.SubSystem.EM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.EM.InField.Vars = x y z
+Simulator.SubSystem.EM.InField.Def = 0.
+
+Simulator.SubSystem.EM.BcComds = NeumannBCFromFileFVMCC SuperInletFVMCC
+Simulator.SubSystem.EM.BcNames = Inlet Outlet
+
+Simulator.SubSystem.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.EM.Inlet.Vars = x y z
+#Simulator.SubSystem.EM.Inlet.Def = 0.01*x/(x^2+y^2+z^2)^4 
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+#if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
+
+Simulator.SubSystem.EM.Outlet.applyTRS = Outlet
+Simulator.SubSystem.EM.Outlet.Vars = x y z
+Simulator.SubSystem.EM.Outlet.Def = 0.0
+#Simulator.SubSystem.EM.Outlet.OnlyRadialGradient = true
+
+#Simulator.SubSystem.EM.Outlet.Vars = x y z
+#Simulator.SubSystem.EM.Outlet.Def = 0.
+#Simulator.SubSystem.EM.Outlet.ZeroGradientFlags = 1
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing 
+Simulator.SubSystem.DataPostProcessingNames = EMPostProcessing 
+Simulator.SubSystem.EMPostProcessing.Comds = SphericalDerivatives
+Simulator.SubSystem.EMPostProcessing.Names = BrThetaPhi
+Simulator.SubSystem.EMPostProcessing.SkipFirstIteration = false # true
+Simulator.SubSystem.EMPostProcessing.ProcessRate = 1
+Simulator.SubSystem.EMPostProcessing.Namespace = EMNamespace
+Simulator.SubSystem.EMPostProcessing.Data.CollaboratorNames = EM
