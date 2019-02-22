@@ -99,7 +99,7 @@ Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
 
 Simulator.SubSystem.Tecplot1.FileName    = corona.plt
 Simulator.SubSystem.Tecplot1.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot1.SaveRate    = 10
+Simulator.SubSystem.Tecplot1.SaveRate    = 100
 #Simulator.SubSystem.Tecplot1.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot1.Data.SurfaceTRS = Inlet Outlet
 Simulator.SubSystem.Tecplot1.AppendTime = false
@@ -115,7 +115,7 @@ Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
 Simulator.SubSystem.ParaView1.FileName    = corona.vtu
 Simulator.SubSystem.ParaView1.WriteSol    = WriteSolution
 Simulator.SubSystem.ParaView1.Data.updateVar = RhoiViTi
-Simulator.SubSystem.ParaView1.SaveRate = 10
+Simulator.SubSystem.ParaView1.SaveRate = 100
 Simulator.SubSystem.ParaView1.AppendTime = false
 Simulator.SubSystem.ParaView1.AppendIter = false
 Simulator.SubSystem.ParaView1.Namespace = FlowNamespace
@@ -209,8 +209,8 @@ Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 12
 #Simulator.SubSystem.FlowIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 5.
 
 # stop after initialization
-Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 0
-Simulator.SubSystem.FlowIterator.Data.OnlyPreprocessSolution = true
+Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+#Simulator.SubSystem.FlowIterator.Data.OnlyPreprocessSolution = true
 
 Simulator.SubSystem.EMIterator.Namespace = EMNamespace
 Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
@@ -280,13 +280,13 @@ Simulator.SubSystem.Flow.UnSetupNames = UnSetup1
 # AL: this pre-processing command computes the coupling between EM and Flow solvers
 # pre-processing to transfer solution of EM system to Flow by computing B field out of potential 
 # and filling corresponding "PreProcess1.VariableIDs" entries in the Flow equations 
-#Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
-#Simulator.SubSystem.Flow.PreProcessNames = PreProcess1
-#Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 0 1 2
-#Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace 
+Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
+Simulator.SubSystem.Flow.PreProcessNames = PreProcess1
+Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 0 1 2
+Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace 
 #Simulator.SubSystem.Flow.PreProcess1.InterRadius = 1738774817.53 #2.5
-#Simulator.SubSystem.Flow.PreProcess1.InterRadius = 15996730000.0 #23 RS # prevent the 1/r^2-extrapolation
-#Simulator.SubSystem.Flow.PreProcess1.DeltaSelection = 1000. #1e-4
+Simulator.SubSystem.Flow.PreProcess1.InterRadius = -1. #1e20 #15996730000.0 #23 RS # prevent the 1/r^2-extrapolation
+Simulator.SubSystem.Flow.PreProcess1.DeltaSelection = 1000. #1e-4
 
 ## second order: uncomment this
 Simulator.SubSystem.Flow.Data.PolyRec = LinearLS3D
