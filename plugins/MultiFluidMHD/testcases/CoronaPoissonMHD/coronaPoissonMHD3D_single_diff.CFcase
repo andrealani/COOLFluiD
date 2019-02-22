@@ -30,8 +30,8 @@ CFEnv.ExceptionOutputs     = false
 Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libParaViewWriter libTecplotWriter libNavierStokes libPoisson libMaxwell libMultiFluidMHD libFiniteVolume libFiniteVolumePoisson libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGmsh2CFmesh libGambit2CFmesh libForwardEuler libPetscI libBackwardEuler
 
 #SubSystem Parameters
-Simulator.Paths.WorkingDir = ./
-Simulator.Paths.ResultsDir = ./RESULTS
+Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
+Simulator.Paths.ResultsDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
@@ -40,7 +40,7 @@ Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
 Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = ./corona.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/corona.inter
 Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace 
@@ -494,7 +494,7 @@ Simulator.SubSystem.EM.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.EM.Data.DistanceBased.TRSName = Inlet
 #Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2018-04-27-scaled-meters.dat
 #Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2012-11-27.dat # it is scaled in meters, don't worry
-Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ./dipole.dat
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/dipole.dat
 Simulator.SubSystem.EM.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
 
