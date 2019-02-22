@@ -166,10 +166,25 @@ protected:
   virtual void computeTransportProperties(const RealVector& state,
 					  const std::vector<RealVector*>& gradients,
 					  const RealVector& normal);
+
+  /// Compute the solar properties for single-fluid
+  void computeSolarProperties1F(const RealVector& state,
+				const std::vector<RealVector*>& gradients,
+				RealVector& diffMFMHDData);
   
-  /// Compute the braginskii thermal conductivity coefficients
+  /// Compute the Braginskii properties
+  void computeBraginskiiProperties(const RealVector& state,
+				   const std::vector<RealVector*>& gradients,
+				   RealVector& diffMFMHDData);
+  
+  /// Compute the Braginskii thermal conductivity coefficients
   void computeBraginskiiThermConduct(const RealVector& state);
 
+  /// Compute the properties in a user-defined extended domain
+  void computePropertiesInExtendedDomain(const RealVector& state,
+					 const std::vector<RealVector*>& gradients,
+					 RealVector& diffMFMHDData);
+  
   /// Compute the variable viscosity and thermal conductivity for ions and neutrals
   // as done in Leake et al. 2013
   void computeVariableCoeffs(const RealVector& state);

@@ -81,7 +81,7 @@ public:
   {
     //to test the Braginskii transport
     if (m_braginskiiTransport) {
-      return 10; 				//2 Viscosities + 7 ThermConductiv (ion) + 1 ThermConductiv (neutral)
+      return 10; //2 Viscosities + 7 ThermConductiv (ion) + 1 ThermConductiv (neutral)
     }
     else{
       return 2*m_nbSpecies;
@@ -138,6 +138,11 @@ public:
   bool isExtendedDomain() const {return m_isExtended;}
 
   /**
+   * @return is using the solar transport model for 1 fluid
+   */
+  bool isSolarTransport1F() const {return m_solarTransport1F;}
+  
+  /**
    * @return TopHeight
   */
   CFreal getTopHeight() const {return m_topHeight;}
@@ -176,6 +181,9 @@ private:
   /// Flag to use the Braginskii properties
   bool m_braginskiiTransport;
 
+  /// Flag to use the solar transport properties for 1 fluid
+  bool m_solarTransport1F;
+  
   /// Flag to use variable coefficients (variable viscosity of ions
   // and neutrals in the two-fluid model for partially ionized plasma)
   bool m_varCoeffs;

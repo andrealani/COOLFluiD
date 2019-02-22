@@ -31,7 +31,10 @@ void DiffMFMHDTerm::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption<bool>
     ("BraginskiiTransport", "Braginskii Transport properties");
-
+  
+  options.addConfigOption<bool>
+    ("SolarTransport1F", "Solar transport for 1 fluid");
+  
   options.addConfigOption<bool>
     ("ExtendedDomain", "The viscosity is increased to damp the waves in the extended domain");
 
@@ -74,7 +77,10 @@ DiffMFMHDTerm::DiffMFMHDTerm(const std::string& name) :
   
   m_braginskiiTransport = false;
   setParameter("BraginskiiTransport",&m_braginskiiTransport);
-
+  
+  m_solarTransport1F = false;
+  setParameter("SolarTransport1F",&m_solarTransport1F);
+  
   m_isExtended = false;
   setParameter("ExtendedDomain",&m_isExtended);
 
