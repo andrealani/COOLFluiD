@@ -150,12 +150,12 @@ Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
 # Time Marching
 
 # Stop Condition
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.295
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -8.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -9.0
 
 ###############################################################################
 
