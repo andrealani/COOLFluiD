@@ -16,8 +16,8 @@
 #CFEnv.AssertThrows         = true
 #CFEnv.AssertDumps          = true
 ##CFEnv.ExceptionAborts     = true
-#CFEnv.ExceptionDumps       = false
-#CFEnv.ExceptionOutputs     = false
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 #CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut        = true
 #CFEnv.TraceActive          = true
@@ -31,7 +31,7 @@ Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWrit
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
-Simulator.Paths.ResultsDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
+Simulator.Paths.ResultsDir = ./RESULTS
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
@@ -99,11 +99,11 @@ Simulator.SubSystem.CFmesh1.Data.CollaboratorNames = Flow
 
 Simulator.SubSystem.Tecplot1.FileName    = corona.plt
 Simulator.SubSystem.Tecplot1.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot1.SaveRate    = 100
+Simulator.SubSystem.Tecplot1.SaveRate    = 200
 #Simulator.SubSystem.Tecplot1.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot1.Data.SurfaceTRS = Inlet Outlet
 Simulator.SubSystem.Tecplot1.AppendTime = false
-Simulator.SubSystem.Tecplot1.AppendIter = false
+Simulator.SubSystem.Tecplot1.AppendIter = true
 Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
 # Extra Values from Data Processing
 #Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.CCSocketNames = divB Current
@@ -150,12 +150,12 @@ Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
 # Time Marching
 
 # Stop Condition
-#Simulator.SubSystem.StopCondition       = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.295
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -9.0
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -9.0
 
 ###############################################################################
 
@@ -208,8 +208,9 @@ Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 12
 #Simulator.SubSystem.FlowIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 0 0 0 1 
 #Simulator.SubSystem.FlowIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 5.
 
-# stop after initialization
 Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+# stop after initialization
+#Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 0
 #Simulator.SubSystem.FlowIterator.Data.OnlyPreprocessSolution = true
 
 Simulator.SubSystem.EMIterator.Namespace = EMNamespace
@@ -217,6 +218,7 @@ Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
 Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 5
 Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.
 Simulator.SubSystem.EMIterator.Data.PrintHistory = true
+Simulator.SubSystem.EMIterator.Data.SolvingRate = 100000000
 
 ###############################################################################
 
