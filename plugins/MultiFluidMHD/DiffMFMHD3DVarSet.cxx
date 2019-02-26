@@ -155,7 +155,7 @@ void DiffMFMHD3DVarSet::computeHeatFluxBraginskii(const vector<RealVector*>& gra
 {
   const CFuint nbSpecies = getModel().getNbSpecies();  
   if (nbSpecies == 2){ // Model with plasma + neutrals
-    const RealVector& DiffMFMHDData = getModel().getPhysicalData();
+    const RealVector& diffMFMHDData = getModel().getPhysicalData();
     const CFuint endVisc = 2;
     const RealVector& gradTi = *gradients[m_TID[i]];
     
@@ -165,12 +165,12 @@ void DiffMFMHD3DVarSet::computeHeatFluxBraginskii(const vector<RealVector*>& gra
       const CFreal Tz = gradTi[ZZ];
       
       // AL: the following needs to be extended properly to 3D, is even the 2D correct?
-      _qFluxVect[0][XX] = -((DiffMFMHDData[endVisc + 0] + DiffMFMHDData[endVisc + 3])*Tx + (DiffMFMHDData[endVisc + 1] + DiffMFMHDData[endVisc + 4])*Ty);
-      _qFluxVect[0][YY] = -((DiffMFMHDData[endVisc + 1] + DiffMFMHDData[endVisc + 4])*Tx + (DiffMFMHDData[endVisc + 2] + DiffMFMHDData[endVisc + 5])*Ty);
+      _qFluxVect[0][XX] = -((diffMFMHDData[endVisc + 0] + diffMFMHDData[endVisc + 3])*Tx + (diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Ty);
+      _qFluxVect[0][YY] = -((diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Tx + (diffMFMHDData[endVisc + 2] + diffMFMHDData[endVisc + 5])*Ty);
       _qFluxVect[0][ZZ] = 0.; // missing implementation
     }
     else { //neutrals
-      _qFluxVect[i] = -DiffMFMHDData[endVisc + 7]*gradTi;
+      _qFluxVect[i] = -diffMFMHDData[endVisc + 7]*gradTi;
     }
     
     if (normal != CFNULL) {
@@ -188,8 +188,9 @@ void DiffMFMHD3DVarSet::computeHeatFluxSolar1F(const vector<RealVector*>& gradie
  
   const CFuint nbSpecies = getModel().getNbSpecies();  
   cf_assert(nbSpecies == 1);
-
-  const RealVector& DiffMFMHDData = getModel().getPhysicalData();
+  cf_assert(i == 0);
+  
+  const RealVector& diffMFMHDData = getModel().getPhysicalData();
   const CFuint endVisc = 1;
   const RealVector& gradTi = *gradients[m_TID[i]];
   const CFreal Tx = gradTi[XX];
@@ -200,14 +201,14 @@ void DiffMFMHD3DVarSet::computeHeatFluxSolar1F(const vector<RealVector*>& gradie
   
   // Peter: here is your part to fill in !!!!
   // AL: the following needs to be extended properly to 3D, is even the 2D correct?
-  _qFluxVect[0][XX] = -((DiffMFMHDData[endVisc + 0] + DiffMFMHDData[endVisc + 3])*Tx + (DiffMFMHDData[endVisc + 1] + DiffMFMHDData[endVisc + 4])*Ty);
-  _qFluxVect[0][YY] = -((DiffMFMHDData[endVisc + 1] + DiffMFMHDData[endVisc + 4])*Tx + (DiffMFMHDData[endVisc + 2] + DiffMFMHDData[endVisc + 5])*Ty);
+  _qFluxVect[0][XX] = -((diffMFMHDData[endVisc + 0] + diffMFMHDData[endVisc + 3])*Tx + (diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Ty);
+  _qFluxVect[0][YY] = -((diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Tx + (diffMFMHDData[endVisc + 2] + diffMFMHDData[endVisc + 5])*Ty);
   _qFluxVect[0][ZZ] = 0.; // missing implementation
-
+  
   //--------------------------------------------------------//
   
   if (normal != CFNULL) {
-    _qFlux[i] = MathFunctions::innerProd(_qFluxVect[i], *normal);
+    _qFlux[0] = MathFunctions::innerProd(_qFluxVect[i], *normal);
   }
 }
 
@@ -217,9 +218,9 @@ void DiffMFMHD3DVarSet::computeHeatFluxScalar(const vector<RealVector*>& gradien
 					      const RealVector* normal,
 					      const CFuint i)
 {
-  const RealVector& DiffMFMHDData = getModel().getPhysicalData();
+  const RealVector& diffMFMHDData = getModel().getPhysicalData();
   const CFuint nbSpecies = getModel().getNbSpecies();
-  const CFreal lambda = DiffMFMHDData[nbSpecies + i]; //WATCH OUT: only reads single value
+  const CFreal lambda = diffMFMHDData[nbSpecies + i]; //WATCH OUT: only reads single value
   _qFluxVect[i] = -lambda*(*gradients[m_TID[i]]);
   if (normal != CFNULL) {
     _qFlux[i] = MathFunctions::innerProd(_qFluxVect[i], *normal);
