@@ -157,6 +157,9 @@ void DiffMFMHDVarSet::computeSolarProperties1F(const RealVector& state,
 {
   CFLog(DEBUG_MAX, "DiffMFMHDVarSet::computeSolarTransport1F()\n");
   
+  // Peter: here is your part to compute and store the thermal conductivities to be used later
+  //        inside DiffMFMHD3DVarSet::computeHeatFluxSolar1F()
+  
   // diffMFMHDData[0] = ...; 
   // diffMFMHDData[1] = ...; 
 }
@@ -313,37 +316,8 @@ void DiffMFMHDVarSet::computeStressTensor(const RealVector& state,
       m_tau[i](ZZ,ZZ) = coeffTauMu*(2.*gradW[ZZ] - twoThirdDivV);
     }
   }
- 
-  for (CFuint i = 0; i < nbSpecies; ++i) {  
-    CFreal divTerm = 0.0;
-    if (dim == DIM_2D && radius > MathConsts::CFrealEps()) {
-      // if the face is a boundary face, the radius could be 0
-      // check against eps instead of 0. for safety
-      divTerm = _gradState[m_vID[i]]/radius;
-    }
-    else if (dim == DIM_3D) {
-      const RealVector& gradW = *gradients[m_wID[i]];
-      divTerm = gradW[ZZ];
-    }
-    
-    const RealVector& gradU = *gradients[m_uID[i]];
-    const RealVector& gradV = *gradients[m_vID[i]];
-    const CFreal twoThirdDivV = _twoThird*(gradU[XX] + gradV[YY] + divTerm);
-    const RealVector& diffMFMHDData = getModel().getPhysicalData();
-    const CFreal coeffTauMu = diffMFMHDData[i];
-    m_tau[i](XX,XX) = coeffTauMu*(2.*gradU[XX] - twoThirdDivV);
-    m_tau[i](XX,YY) = m_tau[i](YY,XX) = coeffTauMu*(gradU[YY] + gradV[XX]);
-    m_tau[i](YY,YY) = coeffTauMu*(2.*gradV[YY] - twoThirdDivV);
-    
-    if (dim == DIM_3D) {
-      const RealVector& gradW = *gradients[m_wID[i]];
-      m_tau[i](XX,ZZ) = m_tau[i](ZZ,XX) = coeffTauMu*(gradU[ZZ] + gradW[XX]);
-      m_tau[i](YY,ZZ) = m_tau[i](ZZ,YY) = coeffTauMu*(gradV[ZZ] + gradW[YY]);
-      m_tau[i](ZZ,ZZ) = coeffTauMu*(2.*gradW[ZZ] - twoThirdDivV);
-    }
-  }
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
 
 RealVector& DiffMFMHDVarSet::getHeatFlux(const RealVector& state,

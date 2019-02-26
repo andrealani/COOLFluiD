@@ -73,15 +73,30 @@ public: // classes
                               const RealVector& normal,
                               const CFreal& radius);
 protected:
+
+  /// Compute the heat flux using Braginskii model
+  void computeHeatFluxBraginskii(const std::vector<RealVector*>& gradients,
+				 const RealVector* normal,
+				 const CFuint i);
+  
+  /// Compute the heat flux using solar 1-fluid model
+  void computeHeatFluxSolar1F(const std::vector<RealVector*>& gradients,
+			      const RealVector* normal,
+			      const CFuint i);
+  
+  /// Compute the heat flux using scalar model
+  void computeHeatFluxScalar(const std::vector<RealVector*>& gradients,
+			     const RealVector* normal,
+			     const CFuint i);
+  
+protected:
   
   ///heat flux vector
   std::vector<RealVector> _qFluxVect;
   
   /// heatFlux projected into the normal
   RealVector _qFlux;
-  
-  
-  
+    
 }; // end of class DiffMFMHD3DVarSet
 
 //////////////////////////////////////////////////////////////////////////////

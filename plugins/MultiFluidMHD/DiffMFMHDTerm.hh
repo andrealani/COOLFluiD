@@ -80,10 +80,13 @@ public:
   CFuint getDataSize() const
   {
     //to test the Braginskii transport
-    if (m_braginskiiTransport) {
+    if (m_braginskiiTransport) { //AL: this needs modification for >2 fluids I guess
       return 10; //2 Viscosities + 7 ThermConductiv (ion) + 1 ThermConductiv (neutral)
     }
-    else{
+    else if(m_solarTransport1F) {
+      return 10; // 1 Viscosity + 9 ThermConductiv 
+    }
+    else {
       return 2*m_nbSpecies;
     }
   }
