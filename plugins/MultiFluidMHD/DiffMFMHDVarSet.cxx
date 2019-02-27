@@ -29,6 +29,8 @@ DiffMFMHDVarSet::DiffMFMHDVarSet(const std::string& name,
   _useBackUpValues(false),
   _setBackUpValues(false),
   _wallDistance(0.),
+  _qFluxVect(),
+  _qFlux(),
   _gradState(),
   _normal(),
   _heatFlux(),
@@ -54,11 +56,18 @@ DiffMFMHDVarSet::~DiffMFMHDVarSet()
 void DiffMFMHDVarSet::setup()
 {
   DiffusiveVarSet::setup();
-  _gradState.resize(PhysicalModelStack::getActive()->getNbEq());
- 
+  
+  const CFuint nbSpecies = getModel().getNbSpecies();
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  _qFluxVect.resize(nbSpecies);
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    _qFluxVect[i].resize(dim);
+  }  
+  _qFlux.resize(nbSpecies);
+  
+  _gradState.resize(PhysicalModelStack::getActive()->getNbEq());
   _normal.resize(dim);
-  const CFuint nbSpecies = getModel().getNbSpecies(); 
   const CFuint endEM = 8;
   
   _heatFlux.resize(nbSpecies);
@@ -495,6 +504,17 @@ void DiffMFMHDVarSet::computeVariableCoeffs(const RealVector& state){
   //cout << "_neutralVisc = " << _neutralVisc << "\n";
   //cout << "_neutralThermCond = " << _neutralThermCond << "\n";
   //cout << "_ionVisc = " << _ionVisc << "\n";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffMFMHDVarSet::computeHeatFluxScalar(const vector<RealVector*>& gradients,
+					    const CFuint i)
+{
+  const RealVector& diffMFMHDData = getModel().getPhysicalData();
+  const CFuint nbSpecies = getModel().getNbSpecies();
+  const CFreal lambda = diffMFMHDData[nbSpecies + i]; // single value
+  _qFluxVect[i] = -lambda*(*gradients[m_TID[i]]);
 }
 
 //////////////////////////////////////////////////////////////////////////////

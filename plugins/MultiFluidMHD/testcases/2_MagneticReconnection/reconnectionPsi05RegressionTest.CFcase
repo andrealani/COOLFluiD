@@ -86,8 +86,8 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = GammaIon GammaRec #divB  
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = emMomX emMomy #divB 
 Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 #1 
-#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
-Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionBlockFV
 
 
 ###############################################################################

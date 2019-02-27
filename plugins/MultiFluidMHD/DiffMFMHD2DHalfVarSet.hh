@@ -19,9 +19,9 @@ namespace COOLFluiD {
    * This class represents a MultiFluidMHD physical model 2.5D for primitive
    * variables
    *
-   * @author ALejandro Alvarez
-   * YM: 2.5D, Oct. 2015
-   * To be carefully checked before usage!!
+   * @author Alejandro Alvarez
+   * @author Yana Maneva (Oct. 2015, To be carefully checked before usage!!)
+   * @author Andrea Lani (major refactoring)
    */
 class DiffMFMHD2DHalfVarSet : public DiffMFMHDVarSet {
 public: // classes
@@ -32,9 +32,7 @@ public: // classes
    */
   DiffMFMHD2DHalfVarSet(const std::string& name, 
 		    Common::SafePtr<Framework::PhysicalModelImpl> model) :
-    DiffMFMHDVarSet(name, model),
-    _qFluxVect(),
-    _qFlux()
+    DiffMFMHDVarSet(name, model)
   {
   }
   
@@ -44,12 +42,12 @@ public: // classes
   virtual ~DiffMFMHD2DHalfVarSet()
   {
   }
-
+  
   /**
    * Set up private data
    */
   virtual void setup();
-
+  
   /**
    * Get the diffusive flux vector
    */
@@ -73,15 +71,12 @@ public: // classes
                               const std::vector<RealVector*>& gradients,
                               const RealVector& normal,
                               const CFreal& radius);
+
 protected:
   
-  ///heat flux vector
-  std::vector<RealVector> _qFluxVect;
-  
-  /// heatFlux projected into the normal
-  RealVector _qFlux;
-  
-  
+  /// Compute the heat flux using Braginskii model
+  void computeHeatFluxBraginskii(const std::vector<RealVector*>& gradients,
+				 const CFuint i);
   
 }; // end of class DiffMFMHD2DHalfVarSet
 

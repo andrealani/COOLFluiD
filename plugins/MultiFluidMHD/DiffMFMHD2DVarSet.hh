@@ -31,9 +31,7 @@ public: // classes
    */
   DiffMFMHD2DVarSet(const std::string& name, 
 		    Common::SafePtr<Framework::PhysicalModelImpl> model) :
-    DiffMFMHDVarSet(name, model),
-    _qFluxVect(),
-    _qFlux()
+    DiffMFMHDVarSet(name, model)
   {
   }
   
@@ -72,15 +70,12 @@ public: // classes
                               const std::vector<RealVector*>& gradients,
                               const RealVector& normal,
                               const CFreal& radius);
+
 protected:
-  
-  ///heat flux vector
-  std::vector<RealVector> _qFluxVect;
-  
-  /// heatFlux projected into the normal
-  RealVector _qFlux;
-  
-  
+
+  /// Compute the heat flux using Braginskii model
+  void computeHeatFluxBraginskii(const std::vector<RealVector*>& gradients,
+				 const CFuint i);
   
 }; // end of class DiffMFMHD2DVarSet
 

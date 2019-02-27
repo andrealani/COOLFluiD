@@ -205,15 +205,20 @@ protected:
    */
   virtual RealVector& getThermConductivityVec(const RealVector& state,
 			      const CFreal& dynViscosity) = 0;
+
+  
+  /// Compute the heat flux using scalar model
+  virtual void computeHeatFluxScalar(const std::vector<RealVector*>& gradients,
+				     const CFuint i);
   
 private:
-
+  
   /// physical model
   Common::SafePtr<DiffMFMHDTerm> m_model;
   
   /// convective model
   Common::SafePtr<PTERM> m_eulerModel;
-
+  
 protected:
   
   /// 2./3.
@@ -227,6 +232,12 @@ protected:
   
   /// wall distance
   CFreal _wallDistance;
+
+  ///heat flux vector
+  std::vector<RealVector> _qFluxVect;
+  
+  /// heatFlux projected into the normal
+  RealVector _qFlux;
   
   /// gradient variables
   RealVector _gradState;

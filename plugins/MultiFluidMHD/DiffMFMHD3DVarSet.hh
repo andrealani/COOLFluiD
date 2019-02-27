@@ -31,9 +31,7 @@ public: // classes
    */
   DiffMFMHD3DVarSet(const std::string& name, 
 		    Common::SafePtr<Framework::PhysicalModelImpl> model) :
-    DiffMFMHDVarSet(name, model),
-    _qFluxVect(),
-    _qFlux()
+    DiffMFMHDVarSet(name, model)
   {
   }
   
@@ -72,33 +70,19 @@ public: // classes
                               const std::vector<RealVector*>& gradients,
                               const RealVector& normal,
                               const CFreal& radius);
+
 protected:
 
   /// Compute the heat flux using Braginskii model
   void computeHeatFluxBraginskii(const std::vector<RealVector*>& gradients,
-				 const RealVector* normal,
 				 const CFuint i);
   
   /// Compute the heat flux using solar 1-fluid model
   void computeHeatFluxSolar1F(const std::vector<RealVector*>& gradients,
-			      const RealVector* normal,
 			      const CFuint i);
-  
-  /// Compute the heat flux using scalar model
-  void computeHeatFluxScalar(const std::vector<RealVector*>& gradients,
-			     const RealVector* normal,
-			     const CFuint i);
-  
-protected:
-  
-  ///heat flux vector
-  std::vector<RealVector> _qFluxVect;
-  
-  /// heatFlux projected into the normal
-  RealVector _qFlux;
-    
-}; // end of class DiffMFMHD3DVarSet
 
+}; // end of class DiffMFMHD3DVarSet
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace MultiFluidMHD
