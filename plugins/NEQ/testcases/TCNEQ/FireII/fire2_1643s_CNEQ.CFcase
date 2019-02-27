@@ -41,7 +41,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.refValues = \
 
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary = Mutation2OLD
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.mixtureName = air11
-Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.reactionName = parkair93
+Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.reactionName = parkair93cneq
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.transfName = air11cneq
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.TminFix = 100.
 Simulator.SubSystem.NavierStokes2DNEQ.Mutation2OLD.dynViscAlgo = CG
