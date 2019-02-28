@@ -1,0 +1,12 @@
+Species: N2 N CH4 CH3 CH2 CH C2 C H2 H NH HCN CN 
+CO2 Treatment (if any): LS
+
+Atomic systems: (single row, seperated by whitespace, leave following row empty to ignore atomic species)
+
+Diatomic systems: (single row per species, SpeciesName/ProcessName WHITESPACE TypeDopplerPDF[E] WHITESPACE NonUniformPathTreatment[T/CG/LS])
+CN/CNred    H CG
+CN/CNvio    H CG
+
+Continuum systems: (single row per species, SpeciesName/ProcessName WHITESPACE ProcessType [BF/FF])
+
+

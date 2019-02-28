@@ -1,0 +1,54 @@
+Species: CO2 CO O2 C2 N2 NO CN O C N
+CO2 Treatment (if any): LS
+
+Atomic systems: (single row, seperated by whitespace, leave following row empty to ignore atomic species)
+N O C
+
+Diatomic systems: (single row per species, SpeciesName/ProcessName WHITESPACE TypeDopplerPDF[E] WHITESPACE NonUniformPathTreatment[T/CG/LS])
+N2/N2_1+    E T
+N2/N2_2+    E T
+N2/N2BH1    E CG
+N2/N2BH2    E CG
+N2/N2CY     E CG
+N2/N2W      E CG
+N2/N2WJ     E CG
+O2/O2SR     E CG
+NO/NOb      E CG
+NO/NObp     E CG
+NO/NOd      E CG
+NO/NOe      E CG
+NO/NOg      E CG
+NO/NOgp     E CG
+NO/NO11000  E T
+NO/NOin     E T
+CO/COin     H T
+CO/CO_3+    H T
+CO/CO_4+    H T
+CO/COBH     H T
+C2/C2BR     H T
+C2/C2DD     H T
+C2/C2FH     H T
+C2/C2M      H T
+C2/C2P      H T
+C2/C2S      H CG
+CN/CNbla    H T
+CN/CNred    H T
+CN/CNvio    H CG
+
+Continuum systems: (single row per species, SpeciesName/ProcessName WHITESPACE ProcessType [BF/FF])
+C/C_bf	    BF
+CN/CN_bf    BF
+C2/C2_bf    BF
+CO/CO_bf    BF
+N/N_bf      BF
+O/O_bf      BF
+N2/N2_bf    BF
+O2/O2_bf    BF
+NO/NO_bf    BF
+O2/O2_bf_SR BF
+N/N_ff      FF
+O/O_ff      FF
+O2/O2_ff    FF
+N2/N2_ff    FF
+C/C_ff      FF
+
