@@ -24,6 +24,8 @@ m_nbContinua=0;
 m_nbSpecies=0;
 m_kappa0=0;
 m_mechLocalID=0;
+m_co2Exists=false;
+
 
 }
 
@@ -41,7 +43,7 @@ HSNBPhotonTrace::~HSNBPhotonTrace()
     //std::cout <<" ....and finished \n";
 }
 
-void HSNBPhotonTrace::setup(CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies)
+void HSNBPhotonTrace::setup(CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies,bool co2Exists)
 {
         m_nbCellsCrossed=0;
         m_nbAtoms=nbAtoms;
@@ -49,11 +51,15 @@ void HSNBPhotonTrace::setup(CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies)
         m_nbContinua=nbContinua;
         m_nbSpecies=nbSpecies;
         m_nbDiatomics=0;
+        m_co2Exists=co2Exists;
+
+
 
         m_thickDiatomics.clear();
         m_thinDiatomics.clear();
         m_continua.clear();
         m_atoms.clear();
+        m_co2.reset();
 
         m_continua.resize(m_nbContinua);
         m_atoms.resize(m_nbAtoms);
@@ -86,6 +92,11 @@ void HSNBPhotonTrace::addContinuumParams(CFuint mechID, CFreal ku)
 {
 
     m_continua[mechID].addState(ku);
+}
+
+void HSNBPhotonTrace::addCO2Params(CFreal ku)
+{
+    m_co2.addState(ku);
 }
 
 
@@ -139,6 +150,7 @@ void HSNBPhotonTrace::clear()
     m_thickDiatomics.clear();
     m_continua.clear();
     m_atoms.clear();
+    m_co2.reset();
 
     m_continua.resize(m_nbContinua);
     m_atoms.resize(m_nbAtoms);
@@ -147,7 +159,8 @@ void HSNBPhotonTrace::clear()
 
 bool HSNBPhotonTrace::isUninitialised() const
 {
-    return ((m_thinDiatomics.size()+m_thickDiatomics.size())==0);
+//    return ((m_thinDiatomics.size()+m_thickDiatomics.size())==0);
+    return (m_nbCellsCrossed==0);
 }
 
 void HSNBPhotonTrace::print(bool printAll)
@@ -155,12 +168,19 @@ void HSNBPhotonTrace::print(bool printAll)
     if (printAll) {
         std::cout << "HSNBPhotonTrace::print()=> Print Trace: \n";
         std::cout << "HSNBPhotonTrace::print()=> Total Bytesize:"<< byteSize() << " // " << getBufferRealCount()<<  " REAL values \n";
-        std::cout << "HSNBPhotonTrace::print()=> nbSpecies" << m_nbSpecies << " \n";
-        std::cout << "HSNBPhotonTrace::print()=> nbDiatomics" << m_nbDiatomics << " \n";
-        std::cout << "HSNBPhotonTrace::print()=> nbContinua" << m_nbContinua << " \n";
+        std::cout << "HSNBPhotonTrace::print()=> nbSpecies " << m_nbSpecies << " \n";
+        std::cout << "HSNBPhotonTrace::print()=> nbDiatomics " << m_nbDiatomics << " \n";
+        std::cout << "HSNBPhotonTrace::print()=> nbContinua " << m_nbContinua << " \n";
         std::cout << "HSNBPhotonTrace::print()=> nbAtoms" << m_nbAtoms << " \n";
         std::cout << "HSNBPhotonTrace::print()=> starting Distance" << m_distance0 << " \n";
         std::cout << "HSNBPhotonTrace::print()=> nbCellsCrossed" << m_nbCellsCrossed << " \n";
+
+        if (m_co2Exists) {
+            std::cout << "HSNBPhotonTrace::print()=> CO2 is present in the mixture  \n";
+        }
+        else {
+            std::cout << "HSNBPhotonTrace::print()=> CO2 is NOT present in the mixture  \n";
+        }
 
         std::cout << "HSNBPhotonTrace::print()=> cellIDs: \n";
         for (int i=0; i<cellID.size(); i++) {
@@ -187,6 +207,11 @@ void HSNBPhotonTrace::print(bool printAll)
         for (int i=0; i<m_atoms.size(); i++) {
             m_atoms[i].print(true);
         }
+
+        if (m_co2Exists) {
+            m_co2.print(true);
+        }
+
     }
     else {
 
@@ -197,6 +222,13 @@ void HSNBPhotonTrace::print(bool printAll)
         CFLog(INFO, "HSNBPhotonTrace::print()=> nbContinua" << m_nbContinua << " \n");
         CFLog(INFO, "HSNBPhotonTrace::print()=> nbAtoms" << m_nbAtoms << " \n");
         CFLog(INFO, "HSNBPhotonTrace::print()=> nbCellsCrossed" << m_nbCellsCrossed << " \n");
+
+        if (m_co2Exists) {
+             CFLog(INFO, "HSNBPhotonTrace::print()=> CO2 is present in the mixture  \n");
+        }
+        else {
+             CFLog(INFO, "HSNBPhotonTrace::print()=> CO2 is NOT present in the mixture  \n");
+        }
 
         CFLog(INFO, "HSNBPhotonTrace::print()=> cellIDs: \n");
         for (int i=0; i<cellID.size(); i++) {
@@ -224,6 +256,10 @@ void HSNBPhotonTrace::print(bool printAll)
             m_atoms[i].print();
         }
 
+        if (m_co2Exists) {
+            m_co2.print();
+        }
+
     }
 
     cf_assert(m_atoms.size()==m_nbAtoms);
@@ -241,6 +277,7 @@ CFuint HSNBPhotonTrace::getBufferRealCount()
     //Real Variables in diatomic traces
     if (m_thinDiatomics.empty()==false) {
         count+=m_thinDiatomics[0].getRealCount()*m_thinDiatomics.size();
+
     }
 
     //Real Variables in diatomic traces
@@ -257,6 +294,11 @@ CFuint HSNBPhotonTrace::getBufferRealCount()
     if (m_atoms.empty()==false) {
         count+=m_atoms[0].getRealCount()*m_atoms.size();
     }
+
+    if (m_co2Exists) {
+        count+=m_co2.getRealCount();
+    }
+
 
     //Static header variables
     count +=TraceStaticRealCount;

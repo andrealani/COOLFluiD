@@ -3,6 +3,7 @@
 
 #include <string>
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/StringUtils.h"
+#include "Environment/CFEnv.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,6 +28,7 @@ struct SpeciesLoadData {
     std::string baseDirectory;
     std::string speciesName;
     std::string systemName;
+
 
     void print(){
         std::cout << "Loaded species data "<< baseDirectory <<"/" << speciesName << systemName << " \n" << std::endl;

@@ -26,6 +26,10 @@ void RadiationPhysicsHandler::defineConfigOptions(Config::OptionList& options)
       ("NumberLoops","Number of loops to divide the spectra calculations");
   options.addConfigOption< CFint >
       ("TempID","ID of the first temperature state");
+  options.addConfigOption< bool >
+      ("TwoTemperatureModel","Enables a two temperature model with Tr and Tv");
+  options.addConfigOption< CFint >
+      ("TempVID","ID of the vibrational temperature state");
   options.addConfigOption< std::vector <std::string> >
       ("RadiationPhysicsNames","Names to attach a Radiation Physics class");
 }
@@ -64,7 +68,13 @@ RadiationPhysicsHandler::RadiationPhysicsHandler(const std::string& name) :
   
   m_TempID = -1;
   setParameter("TempID",&m_TempID);
-  
+
+  m_TempVID = -1;
+  setParameter("TempVID",&m_TempVID);
+
+  m_useTwoTemps = false;
+  setParameter("TwoTemperatureModel",&m_useTwoTemps);
+
   setParameter("RadiationPhysicsNames",&m_radiationPhysicsNames);
 }
 

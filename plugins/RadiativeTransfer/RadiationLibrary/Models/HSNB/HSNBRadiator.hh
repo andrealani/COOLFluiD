@@ -1,19 +1,14 @@
 #ifndef COOLFluiD_RadiativeTransfer_HSNBRadiator_hh
 #define COOLFluiD_RadiativeTransfer_HSNBRadiator_hh
 
-#include <vector>
-#include <string>
-
-
-#include "MathTools/RealMatrix.hh"
 #include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 #include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SnbDiatomicSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SnbAtomicSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SnbContinuumSystem.h"
+#include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SnbCO2System.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/AtomicLines.h"
-//#include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/HSNBSharedPtr.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ProbDistFunc.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/StringUtils.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/PhotonPath.h"
@@ -21,41 +16,26 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SpeciesLoadData.h"
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBPhotonTrace.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBLocalParameterSet.hh"
-
-#include "RadiativeTransfer/RadiationLibrary/Radiator.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBPhotonData.hh"
+
+#include "LagrangianSolver/ParallelVector/ParallelVector.hh"
 
 #include "MathTools/RealMatrix.hh"
 #include "MathTools/RealVector.hh"
-#include "Common/OSystem.hh"
 #include "boost/filesystem.hpp"
-#include "Framework/ProxyDofIterator.hh"
 #include "Framework/DofDataHandleIterator.hh"
-#include "Common/StringOps.hh"
-#include "Framework/PhysicalChemicalLibrary.hh"
-#include "Common/CFMap.hh"
-#include "Common/Stopwatch.hh"
 #include "Common/SafePtr.hh"
-#include "Environment/FileHandlerInput.hh"
-
-#include "Environment/ObjectProvider.hh"
-#include "Environment/CFEnv.hh"
-#include "Environment/FileHandlerOutput.hh"
-#include "Environment/FileHandlerInput.hh"
-#include "Environment/SingleBehaviorFactory.hh"
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-namespace Environment {
-class FileHandlerInput;
-}
+  namespace Framework {
+    class PhysicalChemicalLibrary;
+  }
 
-namespace RadiativeTransfer {
-
+  namespace RadiativeTransfer {
+    
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -100,16 +80,40 @@ public:
     /// is lower than a certain tolerance
     CFreal computeAbsorbedEnergy(HSNBDataContainer &traceSet, CFint curCell);
 
+    ///
+    /// \brief Stores the parameters necessary to compute absorption for all systems in the photon's trace
+    /// \param photonTraceSet container for the photon's telemetry data and the absorption trace 
+    /// \param cellID id of the current cell
+    /// \param raydistance distance crossed in the current tracking step of the raytracing
+    ///
     void addStateParams(HSNBDataContainer& photonTraceSet, CFuint cellID, CFreal raydistance);
 
     void setAbsorptionTolerance(const CFreal tol);
 
+    ///
+    /// \brief Initializes a new trace for a photon's first tracking step
+    /// Sets up arrays for optically thick and non-thick systems and keeps track of the emitting mechanism of the
+    /// photon
+    /// \param trace photon trace to initialise 
+    /// \param mechID mechanism emitting the current photon
+    /// \param startDistance distance crossed during the first tracking step
+    ///
     void initTrace(HSNBPhotonTrace &trace, CFuint mechID, CFreal startDistance);
 
     /// Computes transmission as the negative exponential of the optical thickness.
     /// The optical thickness is computed using the HSNBRadiator using an HSNB model
     /// for radiative properties
     CFreal computeTransmission(HSNBDataContainer &traceSet);
+
+    /// Determines whether a wavenumber lies in the spectrum to be considered.
+    /// The full range of valid wavenumber is either given by the variables
+    /// m_sigMin, m_sigMax (which can be set in the CFCase file using the option
+    /// WavenumberMin, WavenumberMax) or simply is given by all positive numbers (if
+    /// the full available band is considered)
+    bool wavenumberIsValid(CFreal sig);
+
+    /// Returns true if co2 is part of the mixture composition
+    bool co2Exists() const;
 
     CFreal getAbsorption(CFreal lambda, RealVector &s_o);
 
@@ -168,6 +172,19 @@ public:
     CFuint getNbAtoms() const;
 
     CFuint getNbContinua() const;
+
+    /**
+     * @brief Exports emission per state into a file to reuse it in multiple runs with the same setup
+     * @param exportPath
+     * @param stateRadPower Vector of state emissive powers (per state)
+     * @param gStateRadPower
+     * @param totalStatePower Total power emitted by all states
+     * @param totalGhostStateRadPower Total power emitted by ghost states
+     */
+    void exportEmissionData(LagrangianSolver::ParallelVector<CFreal>& stateRadPower, std::vector<CFreal>& gStateRadPower, CFreal totalStatePower, CFreal totalGhostStateRadPower);
+
+    bool readEmissionData(LagrangianSolver::ParallelVector<CFreal>& stateRadPower, std::vector<CFreal>& gStateRadPower, CFreal& totalStatePower, CFreal& totalGhostStateRadPower);
+
 private:
 
     std::string m_libPath;
@@ -230,6 +247,13 @@ private:
     /// Reuse existing radiative data (requires the same number of processors as in the previous run).
     bool m_reuseProperties;
 
+    /// Precomputes parameters for emission and absorption for all cells and bands in all species except continua. Potentially takes up a lot of memory.
+    bool m_usePrecomputedParameters;
+
+    bool m_usePrecomputedContinuumParameters;
+
+    bool m_co2Exists;
+
     ///Minimum number density
     CFreal m_ndminFix = 1e+10;
 
@@ -248,6 +272,10 @@ private:
     std::size_t m_nbands;
 
     CFuint m_nbMechanisms;
+
+    //Max and minimum wave numbers
+    CFreal m_sigMax;
+    CFreal m_sigMin;
 
     //Specific to the current state, has to be reset if the state is changed
     CFuint m_curMechanismID;
@@ -282,6 +310,7 @@ private:
     std::vector<SnbDiatomicSystem> m_diatomics;
     std::vector<SnbContinuumSystem> m_continua;
     std::vector<AtomicLines>  m_atoms;
+    Common::SafePtr<SnbCO2System> m_co2;
 
     CFuint m_nbDiatomics;
     CFuint m_nbContinua;

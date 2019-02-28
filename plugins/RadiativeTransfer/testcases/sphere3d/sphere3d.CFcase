@@ -195,6 +195,9 @@ Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
 Simulator.SubSystem.DataProcessing1.RT.nbRaysCycle      = 1000
 Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 500
 
+Simulator.SubSystem.DataProcessing1.RT.plotTrajectories     = true
+Simulator.SubSystem.DataProcessing1.RT.MaxNbTrajectories    = 10 
+
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops           = 1
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID                = 4
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax         = 1e10

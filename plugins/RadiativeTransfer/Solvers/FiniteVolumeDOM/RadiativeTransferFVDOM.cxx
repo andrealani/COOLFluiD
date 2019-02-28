@@ -2250,7 +2250,7 @@ void RadiativeTransferFVDOM::loopOverDirs(const CFuint startBin,
     const CFuint bEnd   = (d != m_startEndDir.second) ? m_nbBins : endBin;
     // precompute dot products for all faces and directions (a part from the sign)
     computeDotProdInFace(d, m_dotProdInFace);
-    
+
     for(CFuint ib = startBin; ib < endBin; ++ib) {
       // old algorithm: opacities computed for all cells at once for a given bin
       CFLog(INFO, ib << " ");

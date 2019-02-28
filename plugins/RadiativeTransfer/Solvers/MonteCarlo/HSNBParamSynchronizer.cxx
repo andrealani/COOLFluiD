@@ -27,22 +27,31 @@ HSNBParamSynchronizer::HSNBParamSynchronizer()
     m_avgTotalBufByteSizeGlobal=0;
     m_maxTotalBufByteSize=0;
     m_maxTotalBufByteSizeGlobal=0;
+    m_sendBufferByteSize=0;
+    m_recvBufferByteSize=0;
 
 }
 
 
 
-void HSNBParamSynchronizer::setup(COOLFluiD::CFuint mRank, COOLFluiD::CFuint nbProcs, CFuint nbThickDiatomics, CFuint nbNonThickDiatomics, CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies)
+void HSNBParamSynchronizer::setup(COOLFluiD::CFuint mRank, COOLFluiD::CFuint nbProcs, CFuint nbThickDiatomics, CFuint nbNonThickDiatomics, CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies, bool co2Exists)
 {
 m_rank=mRank;
 m_nbProcs=nbProcs;
 m_nbSpecies=nbSpecies;
+m_co2Exists=co2Exists;
 
 m_nbThickDiatomics=nbThickDiatomics;
 m_nbNonThickDiatomics=nbNonThickDiatomics;
 m_nbAtoms=nbAtoms;
 m_nbContinua=nbContinua;
 m_nbDiatomics=nbThickDiatomics+nbNonThickDiatomics;
+
+m_totalSendBufCount=0;
+m_totalRecvBufCount=0;
+
+
+std::cout << "HSNBParamSynchronizer::setup => m_nbDiatomics=" << m_nbDiatomics << std::endl;
 
 const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
 m_comm = Common::PE::GetPE().GetCommunicator(nsp);
@@ -113,8 +122,8 @@ void HSNBParamSynchronizer::bufferCommitParticle(HSNBDataContainer &newParticle)
     m_totalSendBufCount+=addCount;
     m_nbTracesCommitted++;
 
-    //std::cout << "HSNBParamSynchronizer::bufferCommitParticle => newParticle.trace->m_nbCellsCrossed=" << newParticle.trace->m_nbCellsCrossed << ", m_curHeader->nbCrossedCells=" << m_curHeader->nbCrossedCells << std::endl;
-
+//    std::cout << "HSNBParamSynchronizer::bufferCommitParticle => newParticle.trace->m_nbCellsCrossed=" << newParticle.trace->m_nbCellsCrossed << ", m_curHeader->nbCrossedCells=" << m_curHeader->nbCrossedCells << std::endl;
+//    std::cout << "HSNBParamSynchronizer::bufferCommitParticle => addCount=" << addCount << std::endl;
     cf_assert(newParticle.trace->m_nbCellsCrossed==m_curHeader->nbCrossedCells);
 
 }
@@ -150,7 +159,7 @@ void HSNBParamSynchronizer::synchronize(std::vector<Photon> &photonStack)
 
     m_avgTotalBufByteSize+=(int((m_sendBufferByteSize+m_recvBufferByteSize))-int(m_avgTotalBufByteSize))/m_nbSyncSteps;
 
-    CFLog(VERBOSE, "HSNBParamSynchronizer::synchronize => Total recvbuffer size is "<< m_totalRecvBufCount*sizeof(CFreal)<< " bytes. / " << m_totalSendBufCount << " elements. \n");
+    CFLog(VERBOSE, "HSNBParamSynchronizer::synchronize => Total recvbuffer size is "<< m_totalRecvBufCount*sizeof(CFreal)<< " bytes. / " << m_totalRecvBufCount << " elements. \n");
 
     CFuint nbPhotonsSend=0;
     std::vector<int> displacements(m_nbProcs);
@@ -338,6 +347,16 @@ void HSNBParamSynchronizer::appendAtomicParamSetToBuffer(HSNBAtomicParameterSet 
     m_sendAllBuffer.push_back(paramSet.optThick);
 }
 
+void HSNBParamSynchronizer::appendCO2ParamSetToBuffer(HSNBCO2ParameterSet &paramSet)
+{
+//    m_sendAllBuffer.push_back(paramSet.betaD);
+//    m_sendAllBuffer.push_back(paramSet.betaL);
+//    m_sendAllBuffer.push_back(paramSet.kappaD);
+//    m_sendAllBuffer.push_back(paramSet.kappaL);
+
+    m_sendAllBuffer.push_back(paramSet.kappa);
+}
+
 void HSNBParamSynchronizer::appendTraceToBuffer(TracePtr newTrace)
 {
 
@@ -348,6 +367,8 @@ void HSNBParamSynchronizer::appendTraceToBuffer(TracePtr newTrace)
    m_sendAllBuffer.push_back(newTrace->m_distance0);
 
 
+//   std::cout << "newTrace->m_thinDiatomics.size()=" << newTrace->m_thinDiatomics.size() << " newTrace->m_thickDiatomics.size()="
+//   << newTrace->m_thickDiatomics.size() << " m_nbDiatomics="<< m_nbDiatomics << std::endl;
    cf_assert(m_nbDiatomics==(newTrace->m_thinDiatomics.size()+newTrace->m_thickDiatomics.size()));
    cf_assert(m_nbContinua==newTrace->m_continua.size());
    cf_assert(m_nbAtoms==newTrace->m_atoms.size());
@@ -370,6 +391,12 @@ void HSNBParamSynchronizer::appendTraceToBuffer(TracePtr newTrace)
    for (int i=0; i<newTrace->m_nbAtoms; i++) {
        appendAtomicParamSetToBuffer(newTrace->m_atoms[i]);
    }
+
+   if (m_co2Exists) {
+       appendCO2ParamSetToBuffer(newTrace->m_co2);
+   }
+
+
 
 }
 
@@ -413,9 +440,11 @@ void HSNBParamSynchronizer::setupReceiveContainer(std::vector<Photon> &photonSta
 
 void HSNBParamSynchronizer::setupSendContainer()
 {
+    m_sendAllBuffer.clear();
     m_sendAllBuffer.reserve(m_totalSendBufCount);
 
     //std::cout << "PhotonTraces.size=" << photonTraces.size() <<"=!=" << m_nbProcs << "\n";
+
 
     for (int pi=0; pi<photonTraces.size(); pi++) {
 
@@ -430,7 +459,7 @@ void HSNBParamSynchronizer::setupSendContainer()
     }
 
 
-    //std::cout << "PROC " << m_rank << " FINISHED " << sendAllBuffer.size() << " " << m_totalSendBufCount<< std::endl;
+//    std::cout << "PROC " << m_rank << " FINISHED " << m_sendAllBuffer.size() << " " << m_totalSendBufCount<< std::endl;
 
 
     cf_assert(m_sendAllBuffer.size()==m_totalSendBufCount);
@@ -536,6 +565,13 @@ void HSNBParamSynchronizer::parseReceiveBuffer(std::vector<Photon> &photonStack)
             curPos++;
         }
 
+        if (m_co2Exists) {
+            curTrace->m_co2.kappa=m_recvAllBuffer[curPos];
+            curTrace->m_co2Exists=true;
+
+            curPos++;
+        }
+
 
         cf_assert(curPos==traceRealCount(nbCells));
 
@@ -574,6 +610,19 @@ void HSNBParamSynchronizer::printPerformanceMetrics() const
     CFLog(INFO, "HSNBParamSynchronizer::printPerformanceMetrics => avgSyncDurationGlobal=" << m_avgSyncDurationGlobal << "\n");
 }
 
+bool HSNBParamSynchronizer::totalMemoryUsageExceeds(CFreal byteSize)
+{
+    CFuint totalLocalBufferSize= m_sendBufferByteSize+m_recvBufferByteSize;
+    CFuint totalGlobalBufferSize=0;
+
+    //Sum over the total memory usage and broadcast to all processes
+    MPI_Allreduce(&totalLocalBufferSize, &totalGlobalBufferSize, 1,
+                                                 Common::MPIStructDef::getMPIType(&totalLocalBufferSize), MPI_SUM, m_comm);
+
+    return totalGlobalBufferSize>byteSize;
+
+}
+
 
 CFuint HSNBParamSynchronizer::traceRealCount(CFuint nbCells) const
 {
@@ -588,6 +637,12 @@ CFuint HSNBParamSynchronizer::traceRealCount(CFuint nbCells) const
     count+=nbAtomicParameters*m_nbAtoms;
     count+=nbNonThickParameters*m_nbNonThickDiatomics;
     count+=nbNonThickParameters*m_nbContinua;
+
+    if (m_co2Exists) {
+        count+=nbCO2Parameters;
+    }
+
+//    std::cout << " HSNBParamSynchronizer::traceRealCount =>" << count << std::endl;
 
     return count;
 }

@@ -319,6 +319,13 @@ private:
   /// Counts the number of traces committed in the current cycle
   CFuint m_nbTracesCommittedCycle;
 
+  /// The total size allowed for all buffers used in trace parallelization in Byte
+  ///
+  /// The default value = 0 allows for unlimited buffer memory usage (if no other limitations
+  /// such as maximum sendbuffer size etc. are imposed). Note that obeying this
+  /// memory limitation will potentially force processes to idle until enough memory is free
+  CFuint m_maxGlobalBufferByteSize;
+
   RealVector m_ghostStateInRadPowers;
 
   CFuint m_dim2;
@@ -372,6 +379,7 @@ private:
   CFuint m_avgNewPhotonsTracedCycleGlobal;
   CFreal m_avgIdleTime;
   CFreal m_avgIdleTimeGlobal;
+  CFuint m_avgPhotonsCycle;
   CFint m_nbPhotonsTracedCycle;
   CFreal m_avgCycleTime;
   bool m_trackTelemetry;
@@ -435,6 +443,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::defineConfigOptions
   options.addConfigOption< CFuint >("nbRaysCycle","Number of rays to emit before communication step");
   options.addConfigOption< CFreal >("relaxationFactor","Relaxation Factor");
   options.addConfigOption< CFreal >("MaxSecondsBetweenSyncs","The maximum allowable time between synchronization steps");
+
+  options.addConfigOption< CFuint >("MaxGlobalBufferByteSize","The maximum allowable memory usage by all buffers used for trace parallelization (in total, in byte)");
 
   options.addConfigOption< CFuint >("totalNbRays","total number of rays to be distributed over all cells in accordance with the cells emissive power");
   options.addConfigOption< CFuint >("traceBufferMaxByteSize","Margin to enforce sync for photon traces to avoid excessive memory usage.");
@@ -505,6 +515,10 @@ RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::RadiativeTransferMonteCarloH
 
   m_maxSecondsBetweenSyncs=60.0;
   setParameter("MaxSecondsBetweenSyncs",&m_maxSecondsBetweenSyncs);
+
+  //Default 0 means no limitation
+  m_maxGlobalBufferByteSize = 0;
+  setParameter("MaxGlobalBufferByteSize",&m_maxGlobalBufferByteSize);
 
   m_dynamicRayDistribution=true;
   setParameter("DynamicRayDistribution",&m_dynamicRayDistribution);
@@ -713,7 +727,16 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::setup()
   // setting up the cell builder
   m_cellBuilder.setup();
   m_cellBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+
+
   CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
+
+//  How to get cell volumes:
+//  cellData.idx = cellIdx;
+//  GeometricEntity *const cell = m_cellBuilder.buildGE();
+//  cell->computeVolume();
+//  m_cellBuilder.releaseGE();
+
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
   cellData.trs = cells;
 
@@ -738,9 +761,16 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::setup()
   m_nbThickDiatomics=m_HSNBRadiator->getNbThickDiatomics();
   m_nbDiatomics=m_nbNonThickDiatomics+m_nbThickDiatomics;
 
+
+
   CFuint nbSpecies=PhysicalModelStack::getActive()->getImplementor()->
         getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->getNbSpecies();
-  m_paramSynchronizer.setup(m_myProcessRank,m_nbProcesses,m_nbThickDiatomics,m_nbNonThickDiatomics, m_nbContinua,m_nbAtomics,nbSpecies);
+
+  std::cout << "RadiativeTransferMonteCarloHSNB::setup => " << " m_nbContinua=" << m_nbContinua
+            << " m_nbAtomics=" << m_nbAtomics << " m_nbNonThickDiatomics=" << m_nbNonThickDiatomics <<
+            " m_nbThickDiatomics=" << m_nbThickDiatomics << " m_nbThickDiatomics=" << m_nbThickDiatomics << std::endl;
+
+               m_paramSynchronizer.setup(m_myProcessRank,m_nbProcesses,m_nbThickDiatomics,m_nbNonThickDiatomics, m_nbContinua,m_nbAtomics,nbSpecies, m_HSNBRadiator->co2Exists());
 
   //std::cout << "NB DIATOMICS " << m_nbDiatomics<< " OF WHICH " << m_nbNonThickDiatomics << " ARE NONTHICK, NB ATOMICS " << m_nbAtomics << ", NB CONTINUA " << m_nbContinua  << std::endl;
 
@@ -813,8 +843,12 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::executeOnTrs()
   //m_stateInRadPowers=0.;
   //m_RHSGas.assign(m_RHSGas.size(), 0.);
 
+
+
   MonteCarlo();
   computeHeatFlux();
+
+
 
   CFLog(INFO, "MonteCarlo() took " << s << "s\n");
 
@@ -838,6 +872,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
 
   CFuint nbStates = m_radiation->getNbStates();
   CFuint nbGhostStates = m_radiation->getNbGhostStates();
+  CFreal stateRadPower =  0.0;
+  CFreal gStateRadPower =  0.0;
 
   m_stateRadPower.resize(nbStates);
   m_stateNetRadPower.resize(nbStates);
@@ -846,6 +882,9 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
   m_ghostStateRadPower.resize(nbGhostStates);
   m_nbPhotonsGhostState.resize(nbGhostStates);
 
+  m_HSNBRadiator=SharedPtr<HSNBRadiator>(static_cast<HSNBRadiator*>(&(*m_baseRadiatorPtr)));
+
+
   //CFreal nbPhotons = nbStates ;//* m_nbRaysElem / m_radiation->getNumberLoops();
   //cout<<"nbPhotons: "<< nbPhotons <<endl;
 
@@ -853,61 +892,74 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
   CFLog(VERBOSE, "RadiativeTransferMonteCarloHSNB::getTotalEnergy() => m_nbRaysCycle=" << m_nbRaysCycle << "\n");
   CFLog(VERBOSE, "RadiativeTransferMonteCarloHSNB::getTotalEnergy() => m_nbRaysCell=" << m_nbRaysElem << "\n");
 
+  CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getTotalEnergy() => Starting computation of emission for " << nbStates << " states. \n");
+  boost::progress_display* progressBar = NULL;
+  if (m_myProcessRank == 0) progressBar = new boost::progress_display(nbStates+nbGhostStates);
+
   if (m_dynamicRayDistribution) {
 
       //Get the total radiative power of the Cells
-      CFreal stateRadPower =  0;
-      for(CFuint state=0; state<nbStates; ++state){
-          if ( !m_radiation->isStateNull(state) ){
-              //cout<<"is not ghost!"<<endl;
 
-              m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
-                      ->getRadiatorPtr()->getSpectraLoopPower();
+      if (m_HSNBRadiator->readEmissionData(m_stateRadPower, m_ghostStateRadPower,stateRadPower, gStateRadPower)==false) {
+          //If the emission data had not been precomputed and loaded -> do the work now:
+          for(CFuint state=0; state<nbStates; ++state){
+              if ( !m_radiation->isStateNull(state) ){
+                  //cout<<"is not ghost!"<<endl;
 
-              m_stateNetRadPower=0.0;
+                  m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
+                          ->getRadiatorPtr()->getSpectraLoopPower();
 
-              stateRadPower += m_stateRadPower[state];
+                  m_stateNetRadPower=0.0;
+
+                  stateRadPower += m_stateRadPower[state];
 
 
-              //cf_assert(isnormal(m_stateRadPower[state])==true);
+                  //cf_assert(isnormal(m_stateRadPower[state])==true);
 
-              //CFLog(INFO, "RadiativeTransferMonteCarlo::getTotalEnergy =>  m_stateRadPower[" << state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n");
-              //      std::cout << "RadiativeTransferMonteCarlo::getTotalEnergy => m_stateRadPower["<< state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n";
-              //m_baseRadiatorPtr = m_radiation->getCellDistPtr(state)->getRadiatorPtr();
-              //m_HSNBRadiator=SharedPtr<HSNBRadiator>(dynamic_cast<HSNBRadiator*>(&(*m_baseRadiatorPtr)));
+                  CFLog(DEBUG_MED, "RadiativeTransferMonteCarlo::getTotalEnergy =>  m_stateRadPower[" << state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n");
+                  //      std::cout << "RadiativeTransferMonteCarlo::getTotalEnergy => m_stateRadPower["<< state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n";
+                  //m_baseRadiatorPtr = m_radiation->getCellDistPtr(state)->getRadiatorPtr();
+                  //m_HSNBRadiator=SharedPtr<HSNBRadiator>(dynamic_cast<HSNBRadiator*>(&(*m_baseRadiatorPtr)));
 
+              }
+              else{
+                  //cout<<"is ghost!"<<endl;
+                  m_stateRadPower[state] = .0;
+              }
+
+              if (m_myProcessRank == 0)  ++*(progressBar);
           }
-          else{
-              //cout<<"is ghost!"<<endl;
-              m_stateRadPower[state] = .0;
+
+
+          //  for(CFuint state=0; state<nbStates; ++state){
+          //    m_HSNBRadiator=SharedPtr<HSNBRadiator>(dynamic_cast<HSNBRadiator*>(&(*m_baseRadiatorPtr)));
+          //    m_stateRadPower[state]/=m_HSNBRadiator->getTotalEmissivePower();
+          //  }
+
+          //Get the total radiative power of the Wall Faces
+          for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
+              if ( !m_radiation->isGhostStateNull(gstate) ){
+                  m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
+                          ->getRadiatorPtr()->getSpectraLoopPower();
+
+                  //      cout<<"m_ghostStateRadPower[" << gstate << "]=" << m_ghostStateRadPower[gstate]<<endl;
+
+                  gStateRadPower += m_ghostStateRadPower[gstate];
+              }
+              else{
+                  //cout<<"is ghost!"<<endl;
+                  m_ghostStateRadPower[gstate] = 0.;
+              }
+
+              if (m_myProcessRank == 0)  ++*(progressBar);
           }
+          //cout<<" walls rad power : "<< gStateRadPower<<endl;
       }
 
-
-      //  for(CFuint state=0; state<nbStates; ++state){
-      //    m_HSNBRadiator=SharedPtr<HSNBRadiator>(dynamic_cast<HSNBRadiator*>(&(*m_baseRadiatorPtr)));
-      //    m_stateRadPower[state]/=m_HSNBRadiator->getTotalEmissivePower();
-      //  }
-
-      //Get the total radiative power of the Wall Faces
-      CFreal gStateRadPower =  0;
-      for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
-          if ( !m_radiation->isGhostStateNull(gstate) ){
-              m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
-                      ->getRadiatorPtr()->getSpectraLoopPower();
-
-              //      cout<<"m_ghostStateRadPower[" << gstate << "]=" << m_ghostStateRadPower[gstate]<<endl;
-
-              gStateRadPower += m_ghostStateRadPower[gstate];
-          }
-          else{
-              //cout<<"is ghost!"<<endl;
-              m_ghostStateRadPower[gstate] = 0.;
-          }
-      }
-      //cout<<" walls rad power : "<< gStateRadPower<<endl;
 
       m_totalSubdomainRadPower = stateRadPower + gStateRadPower;
+
+
 
       //std::cout << "Total emitted power = " << m_totalSubdomainRadPower << std::endl;
 
@@ -917,13 +969,16 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
       //Determine raynumber to be distributed among this domain according to the domain's share of the total emissive power
       m_nbRaysTotal*=m_totalSubdomainRadPower/m_totalGlobalRadPower;
 
+
+      CFLog(INFO, "RadiativeTransferMonteCarlo::getTotalEnergy =>  total rad. power is " << m_totalGlobalRadPower << "\n");
+
       std::cout << "RadiativeTransferMonteCarloHSNB::getTotalEnergy => P " << m_myProcessRank << " emits " << m_totalSubdomainRadPower << " / " << m_totalGlobalRadPower << " which corresponds to " <<
                    100*m_totalSubdomainRadPower/m_totalGlobalRadPower << "% or "<< m_nbRaysTotal << " rays for "<< nbStates+nbGhostStates
                 << " cells / faces. The ratio rays/cells is "<< m_nbRaysTotal / (nbStates+nbGhostStates) << ". \n";
 
       CFuint curPhotonCount=0;
 
-      //cout<<"statePhotons"<<endl;
+//      std::cout<<"statePhotons"<<endl;
       for(CFuint i= 0; i< m_stateRadPower.size(); ++i){
 
           m_nbPhotonsState[i] =( m_stateRadPower[i] > 0. )? (m_nbRaysTotal*m_stateRadPower[i]/m_totalSubdomainRadPower) : 0 ;
@@ -932,7 +987,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
           // cout<<"nbPhotons: m_nbPhotonsState[i]="<<m_nbPhotonsState[i]<< ' '<<m_stateRadPower[i] <<endl;
       }
 
-      //cout<<"ghostPhotons"<<endl;
+//      std::cout<<"ghostPhotons"<<endl;
       for(CFuint i= 0; i< m_ghostStateRadPower.size(); ++i){
 
           m_nbPhotonsGhostState[i] =( m_ghostStateRadPower[i] > 0.)? (m_nbRaysTotal*m_ghostStateRadPower[i]/m_totalSubdomainRadPower) : 0 ;
@@ -941,55 +996,54 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
           //cout<<"nbPhotons: m_nbPhotonsGhostState[i]="<<m_nbPhotonsGhostState[i]<< ' '<<m_ghostStateRadPower[i] <<endl;
       }
 
-      //Distribute the rest of the photons over all states
-      int i = 0;
-      while (curPhotonCount++ != m_nbRaysTotal) {
-          m_nbPhotonsState[i++]++;
-
-          if (i == m_nbPhotonsState.size()) {
-              i = 0;
-          }
-      }
 
   }
   else {
+
       //Associate a fixed number of rays with every cell in the grid which is potentially wasteful but might improve resolution at boundaries:
       //Get the total radiative power of the Cells
-      CFreal stateRadPower =  0;
       m_nbRaysTotal=0;
-      for(CFuint state=0; state<nbStates; ++state){
-          if ( !m_radiation->isStateNull(state) ){
-              //cout<<"is not ghost!"<<endl;
-              m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
-                      ->getRadiatorPtr()->getSpectraLoopPower();
-              stateRadPower += m_stateRadPower[state];
-              //cout<<"state radPower: "<<m_stateRadPower[state]<<endl;
-              //cout<<"THE OTER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
-              //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
-              //CFLog(INFO, "RadiativeTransferMonteCarlo::getTotalEnergy =>  m_stateRadPower[" << state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n");
-          }
-          else{
-              //cout<<"is ghost!"<<endl;
-              m_stateRadPower[state] = .0;
-          }
-      }
 
-      //Get the total radiative power of the Wall Faces
-      CFreal gStateRadPower =  0;
-      for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
-          if ( !m_radiation->isGhostStateNull(gstate) ){
-              m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
-                      ->getRadiatorPtr()->getSpectraLoopPower();
-              //cout<<"gstate radPower: "<<m_ghostStateRadPower[gstate]<<endl;
+      //Try to read a precomputed table first (if it exists)
+      if (m_HSNBRadiator->readEmissionData(m_stateRadPower, m_ghostStateRadPower,stateRadPower, gStateRadPower)==false) {
+          //If the emission data could not be read from a precomputed table -> do the work now!
+          for(CFuint state=0; state<nbStates; ++state){
+              if ( !m_radiation->isStateNull(state) ){
+                  //cout<<"is not ghost!"<<endl;
+                  m_stateRadPower[state]= m_radiation->getCellDistPtr(state)
+                          ->getRadiatorPtr()->getSpectraLoopPower();
+                  stateRadPower += m_stateRadPower[state];
+                  //cout<<"state radPower: "<<m_stateRadPower[state]<<endl;
+                  //cout<<"THE OTER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
+                  //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
+                  CFLog(DEBUG_MED, "RadiativeTransferMonteCarlo::getTotalEnergy =>  m_stateRadPower[" << state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n");
+              }
+              else{
+                  //cout<<"is ghost!"<<endl;
+                  m_stateRadPower[state] = .0;
+              }
 
-              gStateRadPower += m_ghostStateRadPower[gstate];
+              if (m_myProcessRank == 0)  ++*(progressBar);
           }
-          else{
-              //cout<<"is ghost!"<<endl;
-              m_ghostStateRadPower[gstate] = 0.;
+
+          //Get the total radiative power of the Wall Faces
+          for(CFuint gstate=0; gstate<nbGhostStates; ++gstate){
+              if ( !m_radiation->isGhostStateNull(gstate) ){
+                  m_ghostStateRadPower[gstate]= m_radiation->getWallDistPtr(gstate)
+                          ->getRadiatorPtr()->getSpectraLoopPower();
+                  //cout<<"gstate radPower: "<<m_ghostStateRadPower[gstate]<<endl;
+
+                  gStateRadPower += m_ghostStateRadPower[gstate];
+              }
+              else{
+                  //cout<<"is ghost!"<<endl;
+                  m_ghostStateRadPower[gstate] = 0.;
+              }
+
+              if (m_myProcessRank == 0)  ++*(progressBar);
           }
+          //cout<<" walls rad power : "<< gStateRadPower<<endl;
       }
-      //cout<<" walls rad power : "<< gStateRadPower<<endl;
 
       m_totalRadPower = stateRadPower + gStateRadPower;
       std::cout << "P " << m_myProcessRank << " m_totalRadPower=" << m_totalRadPower << "\n";
@@ -1015,17 +1069,25 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getTotalEnergy()
 
   }
 
-//  //std::cout << "P "  << m_myProcessRank << " finished getTotalEnergy() \n";
+
 //  MPI_Reduce(&m_nbRaysTotal, &m_maxRaysSingleProcess, 1,
 //        Common::MPIStructDef::getMPIType(&m_nbRaysTotal), MPI_MAX, 0, m_comm);
 
 
+  //If no precomputed table exists yet -> write it to a file so that it can be reused
+  m_HSNBRadiator->exportEmissionData(m_stateRadPower, m_ghostStateRadPower,stateRadPower, gStateRadPower);
+
+
+delete progressBar;
+
+//  std::cout << "P "  << m_myProcessRank << " finished getTotalEnergy() \n";
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-bool RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getCellPhotonData(Photon &ray)
+bool RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::
+getCellPhotonData(Photon &ray)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -1048,8 +1110,8 @@ bool RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getCellPhotonData(Photo
 //              cout<<"P " << m_myProcessRank<< ": m_nbPhotonsState[state]: "<<m_nbPhotonsState[m_istate_cell_fix]<<" m_iphoton_cell_fix="
 //                 << m_iphoton_cell_fix << "\n";
 
-      //CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => m_istate_cell_fix=" << m_istate_cell_fix << ", m_iphoton_cell_fix=" << m_iphoton_cell_fix << ", m_nbPhotonsState[=" << m_istate_cell_fix << "]="
-      //      << m_nbPhotonsState[ m_istate_cell_fix ]  << "\n");
+      CFLog(DEBUG_MIN, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => m_istate_cell_fix=" << m_istate_cell_fix << ", m_iphoton_cell_fix=" << m_iphoton_cell_fix << ", m_nbPhotonsState[=" << m_istate_cell_fix << "]="
+            << m_nbPhotonsState[ m_istate_cell_fix ]  << "\n");
 
       //cellData.idx =  state;
 
@@ -1060,12 +1122,13 @@ bool RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getCellPhotonData(Photo
     getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, m_direction );
 
       //cout<<"ray directions: ";
-      CFLog(DEBUG_MED, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => Emission direction: [ " );
+//      CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => Emission direction: [ " );
       for(CFuint ii=0; ii<m_dim2; ++ii){
           ray.commonData.direction[ii]=m_direction[ii];
-          CFLog(DEBUG_MED, ray.commonData.direction[ii] << " ");
+//          CFLog(INFO, ray.commonData.direction[ii] << " ");
       }
-      CFLog(DEBUG_MED, "] \n" );
+//      CFLog(INFO, "] \n" );
+
 
 
       //Get the beam max optical path Ks
@@ -1102,11 +1165,27 @@ bool RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::getCellPhotonData(Photo
       //Assign an energy, emitting mechanism and a wavelength / wavenumber to the new photon using the HSNBRadiator
       m_HSNBRadiator->generateCellPhotonData(m_istate_nextCell_fix, ray.userData.energyFraction,ray.userData.mechanismIndex, ray.userData.mechType,ray.userData.wavelength);
 
+//       DEBUG ONLY
+//            CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => Emission direction: [ " );
+//            for(CFuint ii=0; ii<m_dim2; ++ii){
+//                ray.commonData.direction[ii]=ii;
+//                CFLog(INFO, ray.commonData.direction[ii] << " ");
+//            }
+//            CFLog(INFO, "] \n" );
+//            ray.userData.energyFraction=61.4424;
+//            ray.userData.mechanismIndex=1;
+//            ray.userData.mechType=0;
+//            ray.userData.wavelength=4.0448e-05;
+//            ray.commonData.direction[0]=  0.128173;
+//            ray.commonData.direction[1]= -0.297606;
+//            ray.commonData.direction[2]=  0.946046;
 
-      //CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData AFTER INIT=>m_istate_nextCell_fix=" << m_istate_nextCell_fix
-      //      << ", ray.userData.energyFraction="
-      //      << ray.userData.energyFraction << ", ray.userData.mechType=" << ray.userData.mechType
-      //      << ", ray.userData.wavelength=" << ray.userData.wavelength << "\n");
+
+
+//      CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData AFTER INIT=>m_istate_nextCell_fix=" << m_istate_nextCell_fix
+//            << ", ray.userData.energyFraction="
+//            << ray.userData.energyFraction << ", ray.userData.mechType=" << ray.userData.mechType
+//            << ", ray.userData.wavelength=" << ray.userData.wavelength << ", ray.userData.mechanismIndex=" << ray.userData.mechanismIndex<< "\n");
 
       ray.userData.energyResiduum=ray.userData.energyFraction;
 
@@ -1313,7 +1392,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::checkSyncForceCondition
 //            m_enforceSync=true;
 //        }
         if (m_paramSynchronizer.totalSendBufferByteSize()>=m_maxTraceBufferByteSize) {
-            //std::cout << "RadiativeTransferMonteCarloHSNB::checkSyncForceConditions => m_paramSynchronizer.totalSendBufferByteSize=" << m_paramSynchronizer.totalSendBufferByteSize() << "\n";
+//            std::cout << "RadiativeTransferMonteCarloHSNB::checkSyncForceConditions => m_paramSynchronizer.totalSendBufferByteSize=" << m_paramSynchronizer.totalSendBufferByteSize() << "\n";
             m_enforceSync=true;
         }
         else if (m_nbTracesCommittedCycle>m_maxTraceBufferTracesCommitted){
@@ -1382,6 +1461,15 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
   //cf_assert(totalnbPhotons==m_nbRaysTotal);
 
 
+  CFuint totalNbPhotonsLeftGlobal=totalnbPhotons;
+  if (m_trackTelemetry) {
+      //Get actual total number of photons:
+      MPI_Reduce(&totalnbPhotons, &totalNbPhotonsLeftGlobal, 1,
+                                                   Common::MPIStructDef::getMPIType(&totalnbPhotons), MPI_SUM, 0, m_comm);
+      CFLog(INFO, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => The net total photon count is " << totalNbPhotonsLeftGlobal << "\n");
+  }
+
+
   boost::progress_display* progressBar = NULL;
   if (m_myProcessRank == 0) progressBar = new boost::progress_display(totalnbPhotons);
 
@@ -1396,8 +1484,10 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
   m_nbIterations=0;
 
   CFuint nbCellsBeforeRaytracing=0;
+  CFuint totalNbPhotonsLeftGlobalLastCycle=totalNbPhotonsLeftGlobal;
 
   m_avgCellsPerPhotonTotal=0;
+  m_avgPhotonsCycle=0;
   m_avgIdleTime=0;
   m_avgTimePerPhoton=0;
   m_avgCycleTime=0.0;
@@ -1410,6 +1500,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
   m_nbCrossingForty=0;
   m_emittedPhotonEnergyState=0.0;
   CFuint genPhotonsCycle=0;
+
   CFuint maxNbPhotonsLeftGlobal=0;
   CFuint totalNbPhotonsLeftLocal=0;
   CFuint approxSecondsLeft=0.0;
@@ -1425,6 +1516,11 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
   //HAS TO BE DONE BEFORE GENERATING PHOTONS IN A NEW CELL
   m_HSNBRadiator->setState(m_nbPhotonsState[ m_istate_cell_fix ]);
 
+  bool stopPhotonGenOnBufferExceed  = (m_maxGlobalBufferByteSize != 0);
+
+  if (stopPhotonGenOnBufferExceed) {
+      CFLog(VERBOSE, "RadiativeTransferMonteCarloHSNB::getCellPhotonData => Maximum allowable total buffer usage is restricted to " << m_maxGlobalBufferByteSize << " bytes. \n");
+  }
 
   while( !done ){
 
@@ -1441,6 +1537,12 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
     recvSize = photonStack.size();
     //generate and raytrace the inner photons
 
+
+
+
+    if (stopPhotonGenOnBufferExceed) {
+        m_enforceSync=m_paramSynchronizer.totalMemoryUsageExceeds(m_maxGlobalBufferByteSize);
+    }
 
     CFuint nbCellPhotons =
         std::min(std::max(CFint(m_nbRaysCycle) - CFint(recvSize),(CFint)0), CFint(toGenerateCellPhotons) );
@@ -1469,6 +1571,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
         m_curTraceSet.reset();
     }
 
+    checkSyncForceConditions();
+
 
     for(CFuint i=0; i < nbCellPhotons ; ++i ){
         //CFLog(INFO, "RadiativeTransferMonteCarloHSNB::computePhotons => i=" << i << ", nbCellPhotons=" << nbCellPhotons << ", toGenerateCellPhotons=" << toGenerateCellPhotons << "\n");
@@ -1495,9 +1599,13 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
 //          rayTracingFullAbsorption(photon);
 
 
+
+
             m_avgCellsPerPhotonCycle+=int((photon.userData.nbCrossedCells-m_avgCellsPerPhotonCycle))/m_nbPhotonsTracedCycle;
 
         }
+
+
         --toGenerateCellPhotons;
         if (m_myProcessRank == 0)  ++*(progressBar);
     }
@@ -1516,7 +1624,6 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
             m_curTraceSet.reset();
             m_curTraceSet.headerData=&photon.userData;
             genPhotonsCycle++;
-
             rayTracing(photon);
 //          rayTracingFullAbsorption(photon);
 
@@ -1615,7 +1722,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
 
         m_avgProcessEfficiency+=(m_stpTracing.read()/m_stpCycle.read()-m_avgProcessEfficiency)/m_nbIterations;
 
-        totalNbPhotonsLeftLocal=toGenerateCellPhotons+toGenerateWallPhotons;
+        totalNbPhotonsLeftGlobalLastCycle=totalNbPhotonsLeftGlobal;
+        totalNbPhotonsLeftLocal=toGenerateCellPhotons+toGenerateWallPhotons+photonStack.size();
 
         MPI_Reduce(&m_avgCellsPerPhotonTotal, &m_avgCellsPerPhotonGlobal, 1,
                    Common::MPIStructDef::getMPIType(&m_avgCellsPerPhotonTotal), MPI_SUM, 0, m_comm);
@@ -1629,8 +1737,13 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
                    Common::MPIStructDef::getMPIType(&m_avgNewPhotonsTracedCycle), MPI_SUM, 0, m_comm);
         MPI_Reduce(&totalNbPhotonsLeftLocal, &maxNbPhotonsLeftGlobal, 1,
                    Common::MPIStructDef::getMPIType(&totalNbPhotonsLeftLocal), MPI_MAX, 0, m_comm);
+        MPI_Reduce(&totalNbPhotonsLeftLocal, &totalNbPhotonsLeftGlobal, 1,
+                                                     Common::MPIStructDef::getMPIType(&totalNbPhotonsLeftLocal), MPI_SUM, 0, m_comm);
+
         //    MPI_Reduce(&m_avgTimePerPhoton, &m_maxAvgTimePerPhoton, 1,
         //          Common::MPIStructDef::getMPIType(&m_avgTimePerPhoton), MPI_MAX, 0, m_comm);
+
+        m_avgPhotonsCycle+=int((totalNbPhotonsLeftGlobalLastCycle-totalNbPhotonsLeftGlobal)-m_avgPhotonsCycle)/m_nbIterations;
 
         if (m_myProcessRank==0) {
             m_avgCellsPerPhotonGlobal/=m_nbProcesses;
@@ -1640,7 +1753,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
         }
 
 
-        approxSecondsLeft=int(CFreal(maxNbPhotonsLeftGlobal)*m_avgTimePerPhotonGlobal);
+//        approxSecondsLeft=int(CFreal(maxNbPhotonsLeftGlobal)*m_avgTimePerPhotonGlobal);
+        approxSecondsLeft=int((m_avgCycleTime/CFreal(m_avgPhotonsCycle))*CFreal(totalNbPhotonsLeftGlobal));
 
 
         //    printPerformanceMetrics();
@@ -1648,8 +1762,10 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computePhotons()
 
         CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Received "<<photonStack.size()<< " photons and has generated "<< genPhotonsCycle <<" photons\n");
         CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Number of photons left for this process: "<< totalNbPhotonsLeftLocal <<"\n");
+        CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Total number of photons left: "<< totalNbPhotonsLeftGlobal <<"\n");
+
         CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Max number of photons left / single process: "<< maxNbPhotonsLeftGlobal <<"\n");
-        CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Approx. extrapolated time left: "  << int(approxSecondsLeft/3600)<< " h "
+        CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Approx. extrapolated net ray-tracing time left: "  << int(approxSecondsLeft/3600)<< " h "
               << int((approxSecondsLeft/60)%60) << " m " << int(approxSecondsLeft%60)<<  " s \n");
         CFLog(VERBOSE,"RadiativeTransferMonteCarloHSNB::computePhotons => Photon generation cycle took "<< m_stpCycle.read() <<" seconds. \n");
     }
@@ -1708,6 +1824,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::printPerformanceMetrics
 {
 
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Average computation time / cycle=" << m_avgCycleTime << " seconds. \n");
+    CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Average number of photons completely traced / cycle="<< m_avgPhotonsCycle << "\n");
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Local average idle time=" << m_avgIdleTime << " seconds. \n");
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Global average idle time=" << m_avgIdleTimeGlobal << " seconds. \n");
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Local average time / photon=" << m_avgTimePerPhoton << " seconds. \n");
@@ -1716,6 +1833,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::printPerformanceMetrics
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Local average cells per photon / total=" << m_avgCellsPerPhotonTotal << " cells. \n");
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Global average cells per photon / total=" << m_avgCellsPerPhotonGlobal << " cells. \n");
     CFLog(INFO, "RadiativeTransferMonteCarloHSNB::printPerformanceMetrics => Avg global efficiency=" << m_avgProcessEfficiencyGlobal*100 << "%.  \n");
+
 
 }
 
@@ -1740,6 +1858,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::MonteCarlo()
   for(CFuint i=0; i< nbLoops; ++i){
     m_radiation->setupWavStride(i);
     getTotalEnergy();
+
 
     computePhotons();
 
@@ -1924,7 +2043,7 @@ CFuint RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::rayTracingFullAbsorpt
             return 0;
         }
     }
-    CFLog(INFO, "RadiativeTransferMonteCarlo::rayTracing() => Max number of steps reached! \n");
+    CFLog(DEBUG_MED, "RadiativeTransferMonteCarlo::rayTracing() => Max number of steps reached! \n");
     return 0;
 }
 
@@ -1945,7 +2064,7 @@ CFuint RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::rayTracing(Photon& be
     CFreal stepDistance;
     m_nbPhotonsTracedCycle++;
     CFuint nbCrossedCells = 0;
-    CFuint nbIter = 0;
+    CFuint nbIter = beam.userData.nbCrossedCells;
     CFint exitCellID = 0;
     CFint exitFaceID = 0;
     CFint currentCellID = 0;
@@ -2001,6 +2120,7 @@ CFuint RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::rayTracing(Photon& be
             m_HSNBRadiator->addStateParams(m_curTraceSet,currentCellID,stepDistance);
 
             CFreal tempRes=m_HSNBRadiator->computeAbsorbedEnergy(m_curTraceSet,currentCellID);
+
             CFLog(DEBUG_MED, "RadiativeTransferMonteCarloHSNB::rayTracing => absorbed energy "<< tempRes << ", m_stateInRadPowers["<< currentCellID << "]="<< m_stateInRadPowers[currentCellID] << "\n");
 //            CFLog(INFO, "sizeof(m_HSNBRadiator)=" << sizeof(*m_HSNBRadiator) << "\n");
             m_stateInRadPowers[currentCellID]+=tempRes;
@@ -2132,7 +2252,7 @@ CFuint RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::rayTracing(Photon& be
             return 0;
         }
     }
-    CFLog(INFO, "RadiativeTransferMonteCarloHSNB::rayTracing() => Max number of steps reached! \n");
+    CFLog(DEBUG_MIN, "RadiativeTransferMonteCarloHSNB::rayTracing() => Max number of steps reached! \n");
     return 0;
 }
 
@@ -2209,8 +2329,8 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computeHeatFlux()
 
       gasRadiativeHeatSource[istate] = (1.-m_relaxationFactor)*gasRadiativeHeatSource[istate] +
                                        m_relaxationFactor*(m_stateInRadPowers[istate]-m_stateNetRadPower[istate])/volume;
-      //cout<<"state: "<<m_stateInRadPowers[istate]<<
-      //	      ' '<< m_stateRadPower[istate]<<' '<<gasRadiativeHeatSource[istate]<<endl;
+//      cout<< m_stateInRadPowers[istate] <<" hsnbstate("<<istate<<")="
+//              << gasRadiativeHeatSource[istate]<< " m_stateNetRadPower[istate]=" << m_stateNetRadPower[istate] << endl;
 
       //}
   }
@@ -2244,10 +2364,12 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computeHeatFlux()
       CFreal area = faceAreas[faceGeoID];
       area *= (m_isAxi) ? 6.283185307179586*faceCenters[faceGeoID*DIM_2D + YY] : 1.;
 
-      //CFLog(INFO, "face[" << f << "] =>" <<  m_ghostStateInRadPowers[faceGhostStateID] << ", "
-      //  << m_ghostStateRadPower[faceGhostStateID] << "\n");
+//      CFLog(INFO, "face[" << f << "] =>" <<  m_ghostStateInRadPowers[faceGhostStateID] << ", "
+//        << m_ghostStateRadPower[faceGhostStateID] << "\n");
       wallRadiativeHeatSource[ff] = (-m_ghostStateInRadPowers[faceGhostStateID]
                                      +m_ghostStateRadPower[faceGhostStateID] ) / area;
+
+
       m_wallFaceBuilder.releaseGE();
     }
     //cout<<"CPU "<< Common::PE::GetPE().GetRank()<<" done " <<endl;
@@ -2261,7 +2383,11 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::computeHeatFlux()
    gasRadiativeHeatSource[i] *= -1.;
   }
 
+
+
   CFLog(VERBOSE, "RadiativeTransferMonteCarloHSNB computeHeatFlux() END\n");
+
+
 }
 
 /////////////////////////////////////////////////////////////////////////////

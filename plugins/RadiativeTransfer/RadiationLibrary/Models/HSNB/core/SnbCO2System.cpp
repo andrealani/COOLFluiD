@@ -12,31 +12,57 @@
 #include "StringUtils.h"
 
 using namespace std;
+using namespace COOLFluiD;
+using namespace COOLFluiD::RadiativeTransfer;
 
 SnbCO2System::SnbCO2System(const std::string& directory, const std::string& nup, const ThermoData& thermo)
-    : m_directory(directory)
+
 {
+
     m_species_index = thermo.speciesIndex("CO2");
     
     // Add the full path to the default data directory
-    if (m_directory == "CO2") {
-        m_directory = std::getenv("HTGR_DATA_DIRECTORY");
-        if (m_directory[m_directory.size()-1] != '/')
-            m_directory += '/';
-        m_directory += "modele_msbe/CO2";
-    }
+
+    m_directory = directory+"/data/modele_msbe/CO2";
+
+//    cout << "DIRECTORY SnbCO2System: " << m_directory << " \n";
 
     if (m_species_index < 0) {
         cout << "Error loading CO2 system ! "
-             << "The species isn't loaded." << endl;
-        exit(1);
+             << "The species apparently isn't present in the atm. composition." << endl;
+        cf_assert(m_species_index>=0);
     }
+
+    m_nbLocalParams=nbLocalParameters;
 
     // Determine the min and max band
     determineBandRange();
+
+    if (thermo.sigMin()!=-1) {
+        CFuint lowWav=round(thermo.sigMin() / 25.0);
+        CFuint hiWav=round(thermo.sigMax() / 25.0);
+
+        if (lowWav<hiWav) {
+            if (waveNumberIsInBandRange(lowWav)) {
+                m_band1_down=lowWav;
+            }
+            if (waveNumberIsInBandRange(hiWav)) {
+                m_bandn_down=hiWav;
+            }
+
+            // If the custom spectrum is not contained by the database information skip species
+            if (m_band1_down>hiWav || m_bandn_down<lowWav) {
+                m_band1_down=m_bandn_down+1;
+            }
+        }
+
+        m_nbands_down = m_bandn_down - m_band1_down + 1;
+
+    }
     
     // Load the temperature grid and determine number of parameters
     loadTemperatureGrid();
+    m_nParamdata = m_nparams*m_nbands_down;
 
     if (nup == "LS")
         m_nup = LINDQUIST_SIMMONS;
@@ -45,10 +71,11 @@ SnbCO2System::SnbCO2System(const std::string& directory, const std::string& nup,
 
     m_lorentz = false;
 
-    cout << "Loading CO2 system "
-         << " (" << m_band1_up << " - " << m_bandn_up << ") "
+    CFLog(INFO, "SnbCO2System::SnbCO2System => Loading CO2 system "
+         << " (" << m_band1_down << " - " << m_bandn_down << ") "
          << ", Non uniform path approximation = " 
-         << (m_nup == CURTIS_GODSON ? "CG" : "LS" ) << endl;
+         << (m_nup == CURTIS_GODSON ? "CG" : "LS" ) << "\n");
+    CFLog(INFO, "SnbCO2System::SnbCO2System => "<< m_nbands_down << "\n");
     
     // Allocate storage for the parameter information
     mp_params = new double [m_npoints * m_nbands_down * m_nparams];
@@ -56,9 +83,17 @@ SnbCO2System::SnbCO2System(const std::string& directory, const std::string& nup,
     mp_locparams_down = NULL;
     
     // Now load the parameter information
-    #pragma omp parallel for
-    for (size_t i = 0; i < m_nbands_down; ++i)
+
+    for (size_t i = 0; i < m_nbands_down; ++i) {
         loadBandParameters(i);
+    }
+
+
+}
+
+bool SnbCO2System::waveNumberIsInBandRange(CFuint waveNumber)
+{
+    return ((waveNumber>=lowBand()) && (waveNumber<=highBand()));
 }
 
 SnbCO2System::SnbCO2System(const SnbCO2System& system)
@@ -116,6 +151,381 @@ SnbCO2System::~SnbCO2System()
         delete [] mp_locparams_down;
 }
 
+void SnbCO2System::addStateParams(ThermoData &thermo, HSNBCO2ParameterSet &co2Params, CFreal cellDistance, CFuint localCellID, CFreal sig)
+{
+//            std::cout << "NBCELLS" << co2Params.nbCells<< std::endl;
+            int b = int(sig / 25.0);
+
+
+            // Convert band to local indexing, check whether Band is in database
+            if (b < lowBand() || b > highBand()) {
+        //        CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>NONTHICK, " << this->speciesName()<<", b=" << b << " out of bounds. \n");
+                co2Params.addState(0.0);
+                return;
+            }
+
+            b -= lowBand();
+
+
+            if (thermo.usePrecomputedDiatomicParameters()) {
+
+
+                switch (m_nup) {
+                case CURTIS_GODSON:
+                {
+
+                    m_tempKD = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+0] * cellDistance;
+                    m_tempKL = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+1] * cellDistance;
+
+                    // Doppler broadening, formal Curtis-Godson approximation
+                    m_tempBetaD = m_tempKD/(mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+2]+1e-20);
+                    // Lorentz broadening, classical Curtis-Godson approximation
+                    m_tempBetaL = m_tempKL*mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+3];
+
+
+                    if (m_tempKD == 0.0 || m_tempBetaD == 0.0)
+                        m_tempBetaD = 1.0e-20;
+                    else
+                        m_tempBetaD = m_tempKD / m_tempBetaD;
+
+                    if (m_tempKL == 0.0 || m_tempBetaL == 0.0)
+                        m_tempBetaL = 1.0e-20;
+                    else
+                        m_tempBetaL = m_tempBetaL / m_tempKL;
+
+
+                    //New optical thickness
+                    if(m_tempBetaD == 0.0)
+                        //wlod(kl,bl);
+                        m_tempKappa= wlod(m_tempKD,m_tempBetaL);
+                    else if (m_tempKL == 0.0)
+                        //wdod(kd,bd)
+                        m_tempKappa = wdod(m_tempKD,m_tempBetaD);
+                    else
+                        //wvod(kd, kl, wdod(kd, bd), wlod(kl, bl))
+                        m_tempKappa = wvod(m_tempKD, m_tempKL, wdod(m_tempKD, m_tempBetaD), wlod(m_tempKL, m_tempBetaL)); // Voigt profile
+
+
+                    break;
+                }
+                case LINDQUIST_SIMMONS:
+                {
+
+                    m_tempKD = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+0] * cellDistance;
+                    m_tempKL = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+1] * cellDistance;
+                    m_tempBetaD = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+2];
+                    m_tempBetaL = mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+3];
+                    if (m_tempBetaD == 0.0) m_tempBetaD = 1e-20;
+                    if (m_tempBetaL == 0.0) m_tempBetaL = 1e-20;
+
+
+                    double p_kb [6] = {0, 0, 0, 0, 0, 0};
+
+                    if (co2Params.isEmpty()) {
+
+
+                        p_kb[0] = m_tempKD;
+                        p_kb[1] = m_tempKL;
+                        p_kb[2] = m_tempKD/m_tempBetaD;
+                        p_kb[3] = m_tempBetaL*m_tempKL;
+                        p_kb[4] = wdod(m_tempKD, m_tempBetaD);
+                        p_kb[5] = wlod(m_tempKL, m_tempBetaL); // Voigt profile
+
+                        if(m_tempKD == 0.0)
+                            m_tempKappa = wlod(m_tempKL,m_tempBetaL);
+                        else if (m_tempKL == 0.0)
+                            m_tempKappa = wdod(m_tempKD,m_tempBetaD);
+                        else
+                            m_tempKappa = wvod(p_kb[0], p_kb[1], p_kb[4], p_kb[5]);
+
+                    } else {
+
+                        wquad(m_tempKD, m_tempKL, m_tempBetaD, m_tempBetaL, p_kb);
+
+                        if (p_kb[0] == 0.0)
+                            m_tempKappa = p_kb[5];
+                        else if (p_kb[1] == 0.0)
+                            m_tempKappa = p_kb[4];
+                        else
+                            m_tempKappa = wvod(p_kb[0], p_kb[1], p_kb[4], p_kb[5]);
+                    }
+
+                    break;
+
+                }
+                default:
+                    std::cout << "This integration model is not supported yet!" << std::endl;
+
+                }
+
+//                std::cout << "SnbCO2System::addStateParams => Precomputed mp_locparams_down[" <<localCellID<<"*"<<m_ndata<<"+"<<b<<"*"<<m_nbLocalParams<<"+0]=" << mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+0] << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Precomputed mp_locparams_down[" <<localCellID<<"*"<<m_ndata<<"+"<<b<<"*"<<m_nbLocalParams<<"+1]=" << mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+1] << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Precomputed mp_locparams_down[" <<localCellID<<"*"<<m_ndata<<"+"<<b<<"*"<<m_nbLocalParams<<"+2]=" << mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+2] << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Precomputed mp_locparams_down[" <<localCellID<<"*"<<m_ndata<<"+"<<b<<"*"<<m_nbLocalParams<<"+3]=" << mp_locparams_down[localCellID*m_ndata+b*m_nbLocalParams+3] << std::endl;
+            }
+            else {
+                //TODO: USE PROPER FUNCTION HEADER
+                double kd, kl, betad, betal;
+
+                getAbsorptionSingleBand(thermo,localCellID,b,kd,kl,betad,betal);
+
+//                std::cout << "SnbCO2System::addStateParams => Single Band kappaD="<< kd << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Single Band kappaL=" << kl << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Single Band betaD=" << betad << std::endl;
+//                std::cout << "SnbCO2System::addStateParams => Single Band betaL=" << betal << std::endl;
+
+
+                switch (m_nup) {
+                case CURTIS_GODSON:
+                {
+
+                    m_tempKD = kd * cellDistance;
+                    m_tempKL = kl * cellDistance;
+
+                    // Doppler broadening, formal Curtis-Godson approximation
+                    m_tempBetaD = m_tempKD/(betad+1e-20);
+                    // Lorentz broadening, classical Curtis-Godson approximation
+                    m_tempBetaL = m_tempKL*betal;
+
+
+                    if (m_tempKD == 0.0 || m_tempBetaD == 0.0)
+                        m_tempBetaD = 1.0e-20;
+                    else
+                        m_tempBetaD = m_tempKD / m_tempBetaD;
+
+                    if (m_tempKL == 0.0 || m_tempBetaL == 0.0)
+                        m_tempBetaL = 1.0e-20;
+                    else
+                        m_tempBetaL = m_tempBetaL / m_tempKL;
+
+
+                    //New optical thickness
+                    if(m_tempBetaD == 0.0)
+                        //wlod(kl,bl);
+                        m_tempKappa= wlod(m_tempKD,m_tempBetaL);
+                    else if (m_tempKL == 0.0)
+                        //wdod(kd,bd)
+                        m_tempKappa = wdod(m_tempKD,m_tempBetaD);
+                    else
+                        //wvod(kd, kl, wdod(kd, bd), wlod(kl, bl))
+                        m_tempKappa = wvod(m_tempKD, m_tempKL, wdod(m_tempKD, m_tempBetaD), wlod(m_tempKL, m_tempBetaL)); // Voigt profile
+
+
+                    break;
+                }
+                case LINDQUIST_SIMMONS:
+                {
+
+                    m_tempKD = kd * cellDistance;
+                    m_tempKL = kl * cellDistance;
+                    m_tempBetaD = betad;
+                    m_tempBetaL = betal;
+                    if (m_tempBetaD == 0.0) m_tempBetaD = 1e-20;
+                    if (m_tempBetaL == 0.0) m_tempBetaL = 1e-20;
+
+                    double p_kb [6] = {0, 0, 0, 0, 0, 0};
+
+                    if (co2Params.isEmpty()) {
+
+
+                        p_kb[0] = m_tempKD;
+                        p_kb[1] = m_tempKL;
+                        p_kb[2] = m_tempKD/m_tempBetaD;
+                        p_kb[3] = m_tempBetaL*m_tempKL;
+                        p_kb[4] = wdod(m_tempKD, m_tempBetaD);
+                        p_kb[5] = wlod(m_tempKL, m_tempBetaL); // Voigt profile
+
+                        if(m_tempKD == 0.0)
+                            m_tempKappa = wlod(m_tempKL,m_tempBetaL);
+                        else if (m_tempKL == 0.0)
+                            m_tempKappa = wdod(m_tempKD,m_tempBetaD);
+                        else
+                            m_tempKappa = wvod(p_kb[0], p_kb[1], p_kb[4], p_kb[5]);
+
+                    } else {
+
+                        wquad(m_tempKD, m_tempKL, m_tempBetaD, m_tempBetaL, p_kb);
+
+                        if (p_kb[0] == 0.0)
+                            m_tempKappa = p_kb[5];
+                        else if (p_kb[1] == 0.0)
+                            m_tempKappa = p_kb[4];
+                        else
+                            m_tempKappa = wvod(p_kb[0], p_kb[1], p_kb[4], p_kb[5]);
+                    }
+
+
+                    break;
+
+                }
+                default:
+                    std::cout << "This integration model is not supported yet!" << std::endl;
+
+                }
+            }
+
+//            std::cout << "co2Params.kappa=" << co2Params.kappa << "+" << "m_tempKappa=" << m_tempKappa << std::endl;
+            m_tempKappa+=co2Params.kappa;
+//            std::cout << "m_tempKappa=" << m_tempKappa << " co2Params.nbCells=" << co2Params.nbCells << std::endl;
+
+            co2Params.addState(m_tempKappa);
+
+//            co2Params.print();
+}
+
+void SnbCO2System::getAbsorptionSingleBand(ThermoData &thermo, CFuint cellID, double band, double &KD, double &KL, double &betaD, double &betaL)
+{
+    double ptot, T, pco2, xco2;
+
+        thermo.setState(cellID);
+
+        ptot = thermo.P();
+        T    = thermo.Tr();
+        pco2 = thermo.N(m_species_index) * KB * T;
+        xco2 = thermo.X(m_species_index);
+
+
+        float* p_lower = std::lower_bound(mp_t, mp_t+m_npoints, (float)T);
+
+        size_t it;
+        if (p_lower == mp_t+m_npoints)
+            it = m_npoints-2;
+        else
+            it = (mp_t == p_lower ? 0 : std::distance(mp_t, p_lower)-1);
+
+        const double t1 = mp_t[it];
+        const double t2 = mp_t[it+1];
+
+        const double w1 = (t2-T)/(t2-t1);
+        const double w2 = (T-t1)/(t2-t1);
+
+        const size_t nParamdata = m_nparams*m_nbands_down;
+        const double* const p1 = mp_params + it*nParamdata;
+        const double* const p2 = p1 + nParamdata;
+
+
+        int i = m_nparams*band;
+
+//        std::cout << "cellID= " << cellID << ", it=" << it << std::endl;
+//        std::cout << "i=" << i << " m_nparams=" << m_nparams << ", band=" << band << std::endl;
+
+        //Interpolate values
+        KD = (w1*p1[i] + w2*p2[i]) * pco2; // kappa doppler
+        KL = (w1*p1[i+3] + w2*p2[i+3]) * pco2; // kappa lorentz
+        betaD = w1*p1[i+2] + w2*p2[i+2] ; // beta doppler
+        betaL = ( (w1*p1[i+5] + w2*p2[i+5]) * xco2
+                + (w1*p1[i+6] + w2*p2[i+6]) ) * ptot ; // beta lorentz
+
+
+        if (KD<0.0) {
+            KD=0.0;
+        }
+        if (KL<0.0) {
+            KL=0.0;
+        }
+
+        if (betaD<0.0) {
+            betaD=0.0;
+        }
+        if (betaL<0.0) {
+            betaL=0.0;
+        }
+
+
+
+
+
+}
+
+double SnbCO2System::getEmissionSingleBand(ThermoData &thermo, CFuint cellID, double band)
+{
+
+    double eta;
+    thermo.setState(cellID);
+    double T=thermo.Tr();
+
+    float* p_lower = std::lower_bound(mp_t, mp_t+m_npoints, (float)T);
+    size_t it;
+    if (p_lower == mp_t+m_npoints)
+        it = m_npoints-2;
+    else
+        it = (mp_t == p_lower ? 0 : std::distance(mp_t, p_lower)-1);
+
+    // Step 2: Compute the linear interpolation
+    const double t1 = mp_t[it];
+    const double t2 = mp_t[it+1];
+
+    const double w1 = (t2-T)/(t2-t1);
+    const double w2 = (T-t1)/(t2-t1);
+
+    const size_t nParamdata = m_nparams*m_nbands_down;
+    const double* const p1 = mp_params + it*nParamdata;
+    const double* const p2 = p1 + nParamdata;
+
+    int i = m_nparams*band;
+
+
+    if (m_lorentz) {
+        eta = w1*p1[i+4] + w2*p2[i+4]; // eta lorentz
+    }
+    else {
+        eta = w1*p1[i+1] + w2*p2[i+1]; // eta doppler
+    }
+
+    if (eta<0.0) {
+        return 0.0;
+    }
+    else {
+        return eta;
+    }
+}
+
+double SnbCO2System::getEmissionSingleBandFixedCell(CFuint band)
+{
+
+    int i = m_nparams*band;
+
+
+    if (m_lorentz) {
+        m_eta = m_w1*m_p1[i+4] + m_w2*m_p2[i+4]; // eta lorentz
+    }
+    else {
+        m_eta = m_w1*m_p1[i+1] + m_w2*m_p2[i+1]; // eta doppler
+    }
+
+    if (m_eta<0.0) {
+        return 0.0;
+    }
+    else {
+        return m_eta;
+    }
+}
+
+double SnbCO2System::setupParamInterpolation(ThermoData& thermo, CFuint cellID)
+{
+
+//    std::cout << "SnbCO2System::setupParamInterpolation => start" << std::endl;
+    thermo.setState(cellID);
+    double T=thermo.Tr();
+    float* p_lower = std::lower_bound(mp_t, mp_t+m_npoints, (float)T);
+
+    if (p_lower == mp_t+m_npoints)
+        m_it = m_npoints-2;
+    else
+        m_it = (mp_t == p_lower ? 0 : std::distance(mp_t, p_lower)-1);
+
+    // Step 2: Compute the linear interpolation
+    m_t1 = mp_t[m_it];
+    m_t2 = mp_t[m_it+1];
+
+    m_w1 = (m_t2-T)/(m_t2-m_t1);
+    m_w2 = (T-m_t1)/(m_t2-m_t1);
+
+    m_p1 = mp_params + m_it*m_nParamdata;
+    m_p2 = m_p1 + m_nParamdata;
+//    std::cout << "SnbCO2System::setupParamInterpolation => end" << std::endl;
+}
+
 void SnbCO2System::getParameters(
     double T, double* const p_params) const
 {
@@ -138,12 +548,19 @@ void SnbCO2System::getParameters(
     const double w1 = (t2-T)/(t2-t1);
     const double w2 = (T-t1)/(t2-t1);
 
-    const size_t ndata = m_nparams*m_nbands_down;
-    const double* const p1 = mp_params + it*ndata;
-    const double* const p2 = p1 + ndata;
+    const size_t nParamdata = m_nparams*m_nbands_down;
+    const double* const p1 = mp_params + it*nParamdata;
+    const double* const p2 = p1 + nParamdata;
 
-    for (int i = 0; i < ndata; ++i) {
+//    std::cout<< "it= " << it << std::endl;
+//    std::cout << "nParamdata=" << nParamdata << " m_nparams=" << m_nparams << " m_nbands_down=" << m_nbands_down << std::endl;
+
+    for (int i = 0; i < nParamdata; ++i) {
         p_params[i] = w1*p1[i] + w2*p2[i];
+
+//        std::cout << "SnbCO2System::getParameters =>"<< " w1=" << w1 << ", p1[" << i << "]=" << p1[i] << ", w2=" << w2
+//                  << ", p2[" << i << "]=" << p2[i]  << std::endl;
+
         if (p_params[i]<0.0)
             p_params[i]=0.0;
     }
@@ -162,79 +579,78 @@ double eqInt(double nu,double t)
 
 void SnbCO2System::setupLocalParameters(ThermoData& thermo)
 {
-    double ptot, t, tv, pco2, xco2, pmoy;
-    double *p_params = new double [m_nparams*m_nbands_down];
-    const size_t ndata = m_nbands_down*4;
+    if (thermo.usePrecomputedDiatomicParameters()) {
+        double ptot, t, tv, pco2, xco2, pmoy;
+        double *p_params = new double [m_nparams*m_nbands_down];
 
-    if (mp_locparams_up) {
-        delete [] mp_locparams_up;
-    }
-    if (mp_locparams_down) {
-        delete [] mp_locparams_down;
-    }
 
-    // Up local parameters (Planck function over large bands)
-    mp_locparams_up = new double [thermo.nCells()*m_nbands_up];
-    for (int i=0; i<thermo.nCells(); i++) {
-        thermo.setState(i);
-
-        t    = thermo.Tr();
-        tv   = thermo.Tv();
-        if (tv != t)
-           cout << "WARNING: Thermal non equilibrium is not supported for CO2 !" << endl;
-
-        for (int b = 0; b < m_nbands_up; ++b)
-            mp_locparams_up[i*m_nbands_up+b] = eqInt(b*1000.0+500.0, t);
-    }
-
-    // Down local parameters (transmissivity calculations)
-    mp_locparams_down = new double [thermo.nCells()*ndata];
-    for (int i=0; i<thermo.nCells(); i++) {
-        thermo.setState(i);
-
-        ptot = thermo.P();
-        t    = thermo.Tr();
-        pco2 = thermo.N(m_species_index) * KB * t;
-        xco2 = thermo.X(m_species_index);
-        
-        getParameters(t, p_params);
-
-        #pragma omp parallel for
-        for (int b = 0; b < m_nbands_down; ++b) {
-            mp_locparams_down[i*ndata+b*4+0] = p_params[b*m_nparams+0] * pco2; // kappa doppler
-            mp_locparams_down[i*ndata+b*4+1] = p_params[b*m_nparams+3] * pco2; // kappa lorentz
-            mp_locparams_down[i*ndata+b*4+2] = p_params[b*m_nparams+2] ; // beta doppler
-            mp_locparams_down[i*ndata+b*4+3] = ( p_params[b*m_nparams+5] * xco2
-                                               + p_params[b*m_nparams+6] ) * ptot ; // beta lorentz
+        if (mp_locparams_down) {
+            delete [] mp_locparams_down;
         }
 
-//        pmoy += ptot * (thermo.loc(i+1)-field.loc(i));
+        //    cout << "SnbCO2System::setupLocalParameters => thermo.nCells()*m_ndata=" << thermo.nCells()*m_ndata << endl;
+
+
+        // Down local parameters (transmissivity calculations)
+        mp_locparams_down = new double [thermo.nCells()*m_ndata];
+
+
+        for (int i=0; i<thermo.nCells(); i++) {
+            thermo.setState(i);
+
+            ptot = thermo.P();
+            t    = thermo.Tr();
+            pco2 = thermo.N(m_species_index) * KB * t;
+
+
+
+            xco2 = thermo.X(m_species_index);
+
+//            cout << m_species_index <<" ptot=" << ptot << " t=" << t << " pco2=" << pco2 <<" xco2=" << xco2 << endl;
+
+//            std::cout << "SnbCO2System::setupLocalParameters => State=" << i << std::endl;
+            getParameters(t, p_params);
+
+            for (int b = 0; b < m_nbands_down; ++b) {
+                mp_locparams_down[i*m_ndata+b*m_nbLocalParams+0] = p_params[b*m_nparams+0] * pco2; // kappa doppler
+                mp_locparams_down[i*m_ndata+b*m_nbLocalParams+1] = p_params[b*m_nparams+3] * pco2; // kappa lorentz
+                mp_locparams_down[i*m_ndata+b*m_nbLocalParams+2] = p_params[b*m_nparams+2] ; // beta doppler
+                mp_locparams_down[i*m_ndata+b*m_nbLocalParams+3] = ( p_params[b*m_nparams+5] * xco2
+                        + p_params[b*m_nparams+6] ) * ptot ; // beta lorentz
+                if (m_lorentz) {
+                    mp_locparams_down[i*m_ndata+b*m_nbLocalParams+4] = p_params[b*m_nparams+4]; // eta lorentz
+                }
+                else {
+                    mp_locparams_down[i*m_ndata+b*m_nbLocalParams+4] = p_params[b*m_nparams+1]; // eta doppler
+                }
+
+            }
+
+            // Avg pressure is precomputed in setupProfileType
+
+        }
+
+
+        delete [] p_params;
     }
-
-//    //NOTEJB: ??
-//    pmoy = pmoy / (field.loc(field.nPoints()-1)-field.loc(0));
-//    if (pmoy >= 1000.0) m_lorentz = true;
-
-    delete [] p_params;
 }
 
 double SnbCO2System::getLocalParameter(const int& i, const int& j, const int& k) const
 // Cell (i), Band (j) and Parameter (k) indices
 {
-    return mp_locparams_up[i*m_nbands_up+j];
+    return mp_locparams_down[i*m_nbands_down+j];
 }
 
 void SnbCO2System::determineBandRange()
 {
-    // Up SNB common to all systems : bands of 1000 cm-1
-    m_band1_up = 0;
-    m_bandn_up = 8;
-    m_nbands_up = m_bandn_up - m_band1_up + 1;
 
     // Down SNB for CO2 : bands of 25 cm-1
     m_band1_down = 10;
     m_bandn_down = 332;
     m_nbands_down = m_bandn_down - m_band1_down + 1;
+
+    m_ndata=m_nbLocalParams*m_nbands_down;
+
 }
 
 void SnbCO2System::loadTemperatureGrid()
@@ -306,29 +722,6 @@ void SnbCO2System::loadBandParameters(const size_t& iband)
     file.close();
 }
 
-void SnbCO2System::downToUpSnb(const double* const p_down, double* const p_up)
-{
-    int j_up = 0;
-    double sigjp1_down, sigjp1_up = 1000.0;
-    double delta_nu = 0.025;
-
-    for (int j_down=0; j_down<m_nbands_down; j_down++) {
-        sigjp1_down = (j_down+10)*25+12.5;
-
-        if (sigjp1_down > sigjp1_up) { 
-            p_up[j_up] += p_down[j_down]*delta_nu/2.0;
-            ++j_up;
-            sigjp1_up +=1000.0;
-            p_up[j_up] += p_down[j_down]*delta_nu/2.0;
-        } else { 
-            p_up[j_up] += p_down[j_down]*delta_nu;
-        }
-    }
-    // Rescale first and last up band intervals
-    p_up[0] /= 0.7625;
-    p_up[m_nbands_up-1] /= 0.3125;
-
-}
 
 double hquad_alpha(double x)
 {
@@ -465,5 +858,126 @@ void SnbCO2System::wquad(const double kd, const double kl,
     p_kbw[3] += kl*bl;
     p_kbw[4] += kd*dwd;
     p_kbw[5] += kl*dwl;
+}
+
+
+void SnbCO2System::setupProfileType(const std::vector<CFreal>& cellVolumes, ThermoData& thermo)
+{
+
+    //Compute average pressure over the total volume by weighting cell pressure with the cell's volume
+    std::vector<CFreal>::const_iterator it = cellVolumes.begin();
+    CFreal ptot;
+    CFreal pavg=0;
+    CFreal totalVolume=0;
+    for (int i=0; i<thermo.nCells(); i++) {
+        thermo.setState(i);
+        ptot = thermo.P();
+        pavg += ptot * (*it);
+        totalVolume+=(*it);
+
+//        std::cout <<"SnbCO2System::setupProfileType => Current Volume: " << (*it)  << ",  ptot= " << ptot << std::endl;
+        it++;
+    }
+
+
+
+    //cm^-3 or m^-3 does not matter (divided out)
+    pavg = pavg / (totalVolume);
+
+    std::cout << "SnbCO2System::setupProfileType => Total volume: " << totalVolume << std::endl;
+//    std::cout << "pavg: " << pavg << std::endl;
+
+    if (pavg >= 1000.0)
+    {
+        m_lorentz = true;
+    }
+    else {
+        m_lorentz = false;
+    }
+}
+
+double SnbCO2System::emittedPower(int cellID, ThermoData &thermo)
+{
+    thermo.setState(cellID);
+//    double ptot  = thermo.P();
+
+    //p = N/V*KV*T "ideal gas"
+    double pa  = thermo.N(m_species_index) * KB * thermo.Tr();
+
+//    According to JB: Use total pressure instead?
+//    double pa = thermo.P();
+
+
+    double sum = 0;
+    if (thermo.usePrecomputedDiatomicParameters()) {
+
+        //use eta
+        for (int b = 0; b < m_nbands_down; ++b) {
+            sum += mp_locparams_down[cellID*m_ndata+b*m_nbLocalParams+4];
+            //            CFLog(INFO, "SnbCO2System::emittedPower => band " << b <<" emission coeff=" <<  mp_locparams_down[cellID*m_ndata+b*m_nbLocalParams+4] << "\n");
+        }
+
+    }
+    else {
+//        for (int b = 0; b < m_nbands_down; ++b) {
+//            sum += getEmissionSingleBand(thermo,cellID,b);
+//        }
+
+        setupParamInterpolation(thermo,cellID);
+        for (int b = 0; b < m_nbands_down; ++b) {
+            sum += getEmissionSingleBandFixedCell(b);
+//            CFLog(INFO, "SnbCO2System::emittedPower => band " << b <<" emission coeff=" <<  getEmissionSingleBandFixedCell(b) << " INPLACE" << "\n");
+
+        }
+
+    }
+
+//    CFLog(INFO, "SnbCO2System::emittedPower => " << " emission coeff=" <<  sum * pa  * 1000.0 << " pa=" << pa << " ptot  =" << thermo.P()<< "\n");
+
+
+    return (sum * pa * 1000.0);
+}
+
+void SnbCO2System::bandEmission(const int cellID, ThermoData &thermo, double * const p_emis)
+{
+    thermo.setState(cellID);
+
+//    double ptot  = thermo.P();
+    double pa  = thermo.N(m_species_index) * KB * thermo.Tr();
+
+
+    if (thermo.usePrecomputedDiatomicParameters()) {        
+        // eta
+        for (int b = 0; b < m_nbands_down; ++b) {
+            p_emis[b] = mp_locparams_down[cellID*m_ndata+b*m_nbLocalParams+4] * pa * 1000.0;
+        }
+    }
+    else {
+//        for (int b = 0; b < m_nbands_down; ++b) {
+//            p_emis[b] = getEmissionSingleBand(thermo,cellID,b) * pa * 1000.0;
+//        }
+
+        //More efficient to setup the interpolation just once!
+        setupParamInterpolation(thermo, cellID);
+        for (int b = 0; b < m_nbands_down; ++b) {
+            p_emis[b] = getEmissionSingleBandFixedCell(b) * pa * 1000.0;
+        }
+    }
+
+
+}
+
+double SnbCO2System::opticalThickness(const HSNBCO2ParameterSet &pathParams)
+{
+
+   CFLog(DEBUG_MAX, "SnbCO2::opticalThickness => kappa=" <<  pathParams.kappa << " \n");
+
+   return pathParams.kappa;
+
+}
+
+double SnbCO2System::tau(const HSNBCO2ParameterSet &pathParams)
+{
+   return std::exp(-opticalThickness(pathParams));
 }
 

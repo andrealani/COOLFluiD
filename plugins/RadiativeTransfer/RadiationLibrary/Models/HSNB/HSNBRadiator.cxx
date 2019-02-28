@@ -8,6 +8,7 @@
 #include "Common/CFLog.hh"
 #include "Common/DebugFunctions.hh"
 #include "Common/CFPrintContainer.hh"
+#include "Common/OSystem.hh"
 
 #include "Environment/ObjectProvider.hh"
 #include "Environment/CFEnv.hh"
@@ -59,6 +60,13 @@ void HSNBRadiator::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("NonUniformPathTreatment","Specifies how to treat radiative properties along a non-uniform path");
   options.addConfigOption< std::string >("Namespace","Namespace that the HSNBRadiator is run in in parallel");
   options.addConfigOption< std::string >("compositionType", "Describe how species composition is described (moleFractions/partialDensity)");
+  options.addConfigOption< CFreal >("WavenumberMin", "Specify a global lower bound for the spectra which significantly influences memory reqs.");
+  options.addConfigOption< CFreal >("WavenumberMax", "Specify a global lower bound for the spectra which significantly influences memory reqs.");
+  options.addConfigOption< bool, Config::DynamicOption<> >
+    ("UsePrecomputedProperties", "Precomputes parameters for emission and absorption for all cells and bands in all species EXCEPT continua. Potentially takes up a lot of memory.");
+  options.addConfigOption< bool, Config::DynamicOption<> >
+    ("UsePrecomputedContinuumProperties", "Precomputes parameters for emission and absorption for all cells and bands for continua systems. Potentially takes up a lot of memory but saves computation time since evaluation of continua is generally most expensive");
+
 
 }
 
@@ -227,6 +235,82 @@ CFuint HSNBRadiator::getNbContinua() const
     return m_continua.size();
 }
 
+bool HSNBRadiator::readEmissionData(LagrangianSolver::ParallelVector<CFreal> &stateRadPower, std::vector<CFreal> &gStateRadPower, CFreal &totalStatePower, CFreal &totalGhostStateRadPower)
+{
+    if (m_reuseProperties) {
+        boost::filesystem::path loc("precomputedEmissionData");
+        boost::filesystem::path infile = m_hsnbDir / loc;
+        bool readSuccessful=false;
+
+        m_inFileHandle  = COOLFluiD::Environment::SingleBehaviorFactory<COOLFluiD::Environment::FileHandlerInput>::getInstance().create();
+
+        // Open the file
+        std::ifstream& fin = m_inFileHandle->open(infile);
+
+
+
+        if (fin.is_open()) {
+
+            std::string line;
+
+            //Load total state power
+            std::getline(fin, line);
+            totalStatePower=atof(line.c_str());
+
+            //Load total ghost-state power
+            std::getline(fin, line);
+            totalGhostStateRadPower=atof(line.c_str());
+
+            for (int i=0; i<stateRadPower.size(); i++) {
+                std::getline(fin, line);
+                stateRadPower[i]=atof(line.c_str());
+            }
+
+            for (int i=0; i<gStateRadPower.size(); i++) {
+                std::getline(fin, line);
+                gStateRadPower[i]=atof(line.c_str());
+            }
+
+            readSuccessful=true;
+        }
+
+        else {
+            CFLog(ERROR, "HSNBRadiator::readEmissionData => File '"<< infile.c_str() << " couldn't be opened. " << "\n");
+        }
+
+        m_inFileHandle->close();
+        return readSuccessful;
+    }
+    else {
+        return false;
+    }
+}
+
+void HSNBRadiator::exportEmissionData(LagrangianSolver::ParallelVector<CFreal> &stateRadPower, std::vector<CFreal> &gStateRadPower, CFreal totalStatePower, CFreal totalGhostStateRadPower)
+{
+    if (m_reuseProperties==false) {
+        CFLog(INFO, "HSNBRadiator::exportEmissionData =>  = Exporting emission data... \n");
+        COOLFluiD::Common::SelfRegistPtr<COOLFluiD::Environment::FileHandlerOutput> outFileHandle  = COOLFluiD::Environment::SingleBehaviorFactory<COOLFluiD::Environment::FileHandlerOutput>::getInstance().create();
+
+        boost::filesystem::path loc("precomputedEmissionData");
+        boost::filesystem::path outfile = m_hsnbDir / loc;
+        ofstream& fout = outFileHandle->open(outfile);
+
+        fout << totalStatePower << std::endl;
+        fout << totalGhostStateRadPower << std::endl;
+
+        for (int i=0; i<stateRadPower.size(); i++) {
+            fout << stateRadPower[i] << std::endl;
+        }
+
+        for (int i=0; i<gStateRadPower.size(); i++) {
+            fout << gStateRadPower[i] << std::endl;
+        }
+
+        fout.close();
+    }
+}
+
 void HSNBRadiator::setUpRadiationField()
 {
 //    Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states = m_radPhysicsHandlerPtr->getDataSockets()->states;
@@ -244,14 +328,19 @@ void HSNBRadiator::setUpRadiationField()
 
     CFLog(INFO, "HSNBRadiator::setUpRadiationField => Setup " << m_statesID.size() << " states. \n");
 
+    std::cout << "HSNBRadiator::setUpRadiationField => P"<< m_rank <<" Setup " << m_statesID.size() << " states. \n";
+    CFLog(INFO, "HSNBRadiator::setup() => P " << m_rank << " nbSpecies="<<  m_thermoData.nSpecies() << "\n");
+
+
     for (int i=0; i<m_statesID.size(); i++) {
         //Get current state
-        //std::cout << "HSNBRadiator::setUpRadiationField => i=" << i << ", m_statesID[" << i<< "]="
-        //          << m_statesID[i] << "\n";
+//        std::cout << "HSNBRadiator::setUpRadiationField => i=" << i << ", m_statesID[" << i<< "]="
+//                  << m_statesID[i] << std::endl;
         stateData= (statesHandle[m_statesID[i]]->getData());
+
         m_thermoData.addState(stateData, m_statesID[i]);
     }
-    std::cout << "HSNBRadiator::setUpRadiationField => P"<< m_rank<<" HOLDING " << m_thermoData.nCells() << " CELLS \n";
+//    std::cout << "HSNBRadiator::setUpRadiationField => P"<< m_rank<<" HOLDING " << m_thermoData.nCells() << " CELLS \n";
 
 
     CFLog(INFO, "HSNBRadiator::setUpRadiationField => HOLDING " << m_thermoData.nCells() << " CELLS \n");
@@ -262,34 +351,80 @@ void HSNBRadiator::setUpRadiationField()
 
 void HSNBRadiator::setUpMechanisms()
 {
+    double diatomicPreomputedSizeMB=0.0;
+
     determineBandRange();
+
+
+//    cf_assert(m_usePrecomputedParameters==false);
+
+    if (m_usePrecomputedParameters) {
+        m_thermoData.precomputeParameters(true);
+    }
+    else {
+        m_thermoData.precomputeParameters(false);
+//        m_reuseProperties=false;
+    }
+
+
+    if (m_usePrecomputedContinuumParameters) {
+        m_thermoData.precomputeContinuumParameters(true);
+    }
+    else {
+        m_thermoData.precomputeContinuumParameters(false);
+        m_reuseProperties=false;
+    }
+
 
     Stopwatch<WallTime> stp;
     Stopwatch<WallTime> stpMechanism;
     stp.start();
     stpMechanism.start();
-    // Compute radiative properties in each cell for each system
+    // Compute radiative properties in each cell for each system   
     CFLog(INFO, "HSNBRadiator::setUpMechanisms => Computing spectral features... \n");
+
+
+
+    if (m_co2Exists) {
+
+        std::vector<CFreal> volumeVec;
+        for (int i=0; i<m_pstates->getSize();i++) {
+            volumeVec.push_back(getCellVolume( m_pstates->getStateLocalID(i)));
+        }
+
+        m_co2->setupProfileType(volumeVec, m_thermoData);
+        m_co2->setupLocalParameters(m_thermoData);
+        CFLog(INFO, "HSNBRadiator::setUpMechanisms => CO2 System loaded in " << stpMechanism.read() << " \n");
+    }
+
 
     for (int i = 0; i < m_diatomics.size(); ++i) {
         m_diatomics[i].setupLocalParameters(m_thermoData);
+        diatomicPreomputedSizeMB+=m_diatomics[i].getPrecomputedBufferByteSize()*(1e-6);
+
+        CFLog(DEBUG_MAX, "HSNBRadiator::setUpMechanisms => Precomputed parameters in diatomic system " << m_diatomics[i].systemName() << " use " << m_diatomics[i].getPrecomputedBufferByteSize()*(1e-6) << "MB of memory \n");
     }
     stpMechanism.stop();
     CFLog(INFO, "HSNBRadiator::setUpMechanisms => Diatomic features loaded in " << stpMechanism.read() << " \n");
+
+
+    std::cout << "HSNBRadiator::setUpMechanisms => P"<< m_rank << " Total precomputed size of diatomics is " << diatomicPreomputedSizeMB << " MB." << std::endl;
+
+ //    CFLog(INFO, "HSNBRadiator::setUpMechanisms => m_continua.size()=" << m_continua.size()<< " \n");
     stpMechanism.restart();
     if (m_reuseProperties==false) {
         for (int i = 0; i < m_continua.size(); ++i) {
             m_continua[i].setupLocalParameters(m_thermoData);
             m_continua[i].exportLocalParameters(m_hsnbDir, m_thermoData);
             CFLog(INFO, "HSNBRadiator::setUpMechanisms => Load" << m_continua[i].speciesName() << " / " << m_continua[i].systemName() <<"\n");
-            CFLog(INFO, "HSNBRadiator::setUpMechanisms => Setting up local rad data... " << std::setprecision(3) << (i/CFreal(m_continua.size())) << "% \n");
+            CFLog(INFO, "HSNBRadiator::setUpMechanisms => Setting up local rad data... " << std::setprecision(3) << (i/CFreal(m_continua.size()))*100.0 << "% \n");
         }
     }
     else {
         for (int i = 0; i < m_continua.size(); ++i) {
             m_continua[i].readLocalParameters(m_hsnbDir);
             CFLog(INFO, "HSNBRadiator::setUpMechanisms => Load" << m_continua[i].speciesName() << " / " << m_continua[i].systemName() <<"\n");
-            CFLog(INFO, "HSNBRadiator::setUpMechanisms => Loading local rad data... " << std::setprecision(3) << (i/CFreal(m_continua.size())) << "% \n");
+            CFLog(INFO, "HSNBRadiator::setUpMechanisms => Loading local rad data... " << std::setprecision(3) << (i/CFreal(m_continua.size()))*100.0 << "% \n");
         }
     }
     stpMechanism.stop();
@@ -308,6 +443,8 @@ void HSNBRadiator::setUpMechanisms()
     if (nlines > 0) {
         m_line_emis=std::vector<CFreal>(nlines,0.0);
     }
+
+    std::cout << "m_line_emis.size=" << m_line_emis.size() << std::endl;
 
     stp.stop();
 
@@ -349,10 +486,20 @@ void HSNBRadiator::load_BBCE_data()
 
 void HSNBRadiator::determineBandRange()
 {
-    if (m_diatomics.size() != 0) {
+    //Arbitrary initializer
+    m_bmin=1;
+    m_bmax=1;
+
+    if (m_co2Exists) {
+        m_bmin = m_co2->lowBand();
+        m_bmax = m_co2->highBand();
+    }
+    else if (m_diatomics.size() != 0) {
         m_bmin = m_diatomics[0].lowBand();
         m_bmax = m_diatomics[0].highBand();
-    } else {
+    }
+    else if (m_continua.size() != 0)
+    {
         m_bmin = m_continua[0].lowBand();
         m_bmax = m_continua[0].highBand();
     }
@@ -400,11 +547,24 @@ HSNBRadiator::HSNBRadiator(const std::string& name) :
     m_reuseProperties = false;
     setParameter("ReuseProperties", &m_reuseProperties);
 
+    m_usePrecomputedParameters =true;
+    setParameter("UsePrecomputedProperties", &m_usePrecomputedParameters);
+
+    m_usePrecomputedContinuumParameters = true;
+    setParameter("UsePrecomputedContinuumProperties", &m_usePrecomputedContinuumParameters);
+
+
     m_nuPathTreatment = "UNIFORM";
     setParameter("NonUniformPathTreatment", &m_nuPathTreatment);
 
     m_compositionType= "partialDensity";
     setParameter("compositionType", &m_compositionType);
+
+    m_sigMin = -1.0; // default value is on purpose <0
+    setParameter("WavenumberMin", &m_sigMin);
+
+    m_sigMax = -1.0; // default value is on purpose <0
+    setParameter("WavenumberMax", &m_sigMax);
 
     if (m_compositionType=="partialDensity") {
         m_convertPartialDensity=true;
@@ -468,17 +628,12 @@ void HSNBRadiator::setup(){
 
     MPI_Request sendRequest, recvRequest;
 
-    std::cout << "HSNBRadiator::setup() => P " << m_rank << " begins serial setup of HSNB data. \n";
-
     int active=0;
     if (m_rank == 0) {
         active = 1;
         //Copy datafiles into proc. directory
-        std::cout << "HSNBRadiator::setup() => P " << m_rank << "copy datafiles... \n";
-
         std::string command2   = "cp -r " + m_HSNBPath.string() + "/data" + " " + m_hsnbDir.string();
         Common::OSystem::getInstance().executeCommand(command2);
-        std::cout << "HSNBRadiator::setup() => P " << m_rank << "hsnb.con... \n";
         command2 = "cp -r " + Environment::DirPaths::getInstance().getWorkingDir().string() + "/hsnb.con" + " " + m_hsnbDir.string();
         Common::OSystem::getInstance().executeCommand(command2);
 
@@ -489,7 +644,7 @@ void HSNBRadiator::setup(){
         MPI_Isend(&active, 1, MPIStructDef::getMPIType(&active), m_rank+1, 0, PE::GetPE().GetCommunicator(m_namespace), &sendRequest);
     }
     else {
-        std::cout << "HSNBRadiator::setup() => P " << m_rank << "starts waiting for serial activation... \n";
+
         MPI_Recv(&active, 1, MPIStructDef::getMPIType(&active), m_rank-1, 0, PE::GetPE().GetCommunicator(m_namespace), MPI_STATUS_IGNORE);
         std::cout << "HSNBRadiator::setup() => P " << m_rank << " is set active. \n";
         //Copy datafiles into proc. directory
@@ -503,10 +658,9 @@ void HSNBRadiator::setup(){
         if (m_rank!=m_nbProc) {
             MPI_Isend(&active, 1, MPIStructDef::getMPIType(&active), m_rank+1, 0, PE::GetPE().GetCommunicator(m_namespace),&sendRequest);
         }
+        std::cout << "HSNBRadiator::setup() => P " << m_rank << " starts setting up files... \n";
 
     }
-
-    std::cout << "HSNBRadiator::setup() => P " << m_rank << " starts setting up files... \n";
 
     boost::filesystem::path processFile("/hsnb.con");
     m_processFile = m_HSNBPath / processFile;
@@ -516,12 +670,22 @@ void HSNBRadiator::setup(){
 
     loadProcessData();
 
+
+
+
     //get the statesID used for this Radiator
     m_radPhysicsPtr->getCellStateIDs( m_statesID );
 
     Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > states =
     m_radPhysicsHandlerPtr->getDataSockets()->states;
     DataHandle<State*, GLOBAL> statesHandle = states.getDataHandle();
+
+    // set up the TRS states
+    m_pstates.reset
+        (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(statesHandle, &m_statesID));
+
+
+
 
     //TODO Figure initialisation of matrices by ID
 
@@ -557,6 +721,7 @@ void HSNBRadiator::setup(){
 
 
     }
+
 
 
 //    // set up the TRS states
@@ -600,8 +765,7 @@ void HSNBRadiator::setup(){
     m_tolerance = 0.001;
 
 
-    m_pstates.reset
-        (new Framework::DofDataHandleIterator<CFreal, State, GLOBAL>(statesHandle, &m_statesID));
+
 
 //    CFLog(VERBOSE, "HSNBRadiator::setup => specific emissive power " << emissivePowerDebug(0) << " \n");
 
@@ -645,11 +809,14 @@ CFreal HSNBRadiator::getSpectraLoopPower()
     cf_assert(m_radPhysicsHandlerPtr->getCurrentCellTrsIdx()==m_tempLocalID);
 
     m_emissionByMechanisms.clear();
-    m_emissionByMechanisms.resize(m_nbDiatomics+m_nbContinua+(m_nbAtoms>0), 0.0);
+    m_emissionByMechanisms.resize(m_nbDiatomics+m_nbContinua+(m_nbAtoms>0)+m_co2Exists, 0.0);
+
+    CFLog(DEBUG_MAX, "HSNBRadiator::getSpectraLoopPower => m_emissionByMechanisms.size()=" << m_emissionByMechanisms.size() << "\n");
+
 
     m_totalEmissionCurrentCell=0.0;
 
-    m_nbMechanisms=m_nbDiatomics+m_nbContinua+(m_nbAtoms>0);
+    m_nbMechanisms=m_nbDiatomics+m_nbContinua+(m_nbAtoms>0)+m_co2Exists;
 
 
     for (int k = 0; k < m_nbDiatomics; ++k){
@@ -658,7 +825,7 @@ CFreal HSNBRadiator::getSpectraLoopPower()
     }
 
     for (int k = m_nbDiatomics; k < m_nbContinua+m_nbDiatomics; ++k){
-        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(m_tempLocalID);
+        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(m_thermoData, m_tempLocalID);
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[k];
     }
 
@@ -667,13 +834,17 @@ CFreal HSNBRadiator::getSpectraLoopPower()
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbDiatomics+m_nbContinua];
     }
 
+    if (m_co2Exists) {
+        m_emissionByMechanisms[m_nbMechanisms-1]=m_co2->emittedPower(m_tempLocalID,m_thermoData);
+        m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbMechanisms-1];
+    }
+
 
 
     //Volume in m3 convert to cm3
     CFreal currentCellPower=m_totalEmissionCurrentCell*getCurrentCellVolume() * 4.0* MathConsts::CFrealPi()*1e6;
     m_totalPower+=currentCellPower;
 //    CFLog(INFO, "HSNBRadiator::getSpectraLoopPower => m_totalEmissionCurrentCell="<< m_totalEmissionCurrentCell <<", currentCellVolume= "<< getCurrentCellVolume()<< ", m_totalPower="<<m_totalPower <<" \n");
-
     //std::cout << "HSNBRadiator::getSpectraLoopPower => m_totalEmissionCurrentCell=" << m_totalEmissionCurrentCell << ", currentCellVolume= "<< getCurrentCellVolume()<< ", m_totalPower="<< m_totalPower <<" \n";
     // P=4*pi*V*sum_mechanisms(emission)
     return currentCellPower;
@@ -693,7 +864,7 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
 
         ProbDistFunc line_pdf;
 
-        CFLog(DEBUG_MED, "HSNBRadiator::generateCellPhotonData => START, current cellID= "<< m_tempLocalID << "\n");
+        CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => START, current cellID= "<< m_tempLocalID << "\n");
 
         // Update the line emission PDF if need be
         if (m_nbAtoms > 0 && m_nBRaysPerSys[m_nbContinua+m_nbDiatomics] > 0) {
@@ -710,13 +881,25 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
 
         mechanismIndex=m_curMechanismID;
 
+//        std::cout << "HSNBRadiator::generateCellPhotonData => Mechanism Index " << mechanismIndex << std::endl;
+//        std::cout << "m_curMechanismRayCount " << m_curMechanismRayCount << std::endl;
+//        std::cout << "m_nBRaysPerSys[m_curMechanismID] " << m_nBRaysPerSys[m_curMechanismID] << std::endl;
+//        std::cout << "m_emissionByMechanisms[m_curMechanismID] " << m_emissionByMechanisms[m_curMechanismID] << std::endl;
+
+//        for (int i=0; i<m_nBRaysPerSys.size(); i++) {
+//            std::cout << "m_nBRaysPerSys["<< i<<"] " << m_nBRaysPerSys[i] << std::endl;
+//            std::cout << "m_emissionByMechanisms["<< i<<"] " << m_emissionByMechanisms[i] << std::endl;
+
+//        }
+
+
         CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => Mechanism Index " << mechanismIndex << " \n");
 
         if (m_curMechanismID < m_nbMechanisms) {
             // Energy associated with each ray fired for this mechanism
 
             m_tempEnergyFraction=m_emissionByMechanisms[m_curMechanismID]/m_nBRaysPerSys[m_curMechanismID];
-            CFLog(DEBUG_MED, "HSNBRadiator::generateCellPhotonData => m_tempEnergyFraction=" << m_tempEnergyFraction << ", m_emissionByMechanisms[" << m_curMechanismID
+            CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => m_tempEnergyFraction=" << m_tempEnergyFraction << ", m_emissionByMechanisms[" << m_curMechanismID
                   << "]=" << m_emissionByMechanisms[m_curMechanismID] << " / m_nBRaysPerSys[" << m_curMechanismID <<"]=" << m_nBRaysPerSys[m_curMechanismID] << " \n");
             energyFraction =( m_tempEnergyFraction > 0. ) ? m_tempEnergyFraction : 0 ;
 
@@ -739,20 +922,22 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
                         mechType=THICKDIATOMIC;
                     }
 
-
+//                    std::cout << "EMISSION BY " << m_diatomics[m_curMechanismID].speciesName() << ", energyFraction: " << energyFraction << std::endl;
                     band_emission.resize(m_diatomics[m_curMechanismID].spectralGridSize());
                     m_diatomics[m_curMechanismID].bandEmission(m_tempLocalID, m_thermoData, &band_emission[0]);
                 } else {
                     //Continuum system: Nonthick
                     mechType=CONTINUUM;
 
+//                    std::cout << "CONT EMISSION BY " << m_continua[m_curMechanismID-m_diatomics.size()].speciesName() << ", energyFraction: " << energyFraction << std::endl;
                     band_emission.resize(m_continua[m_curMechanismID-m_diatomics.size()].spectralGridSize());
-                    m_continua[m_curMechanismID-m_diatomics.size()].bandEmission(m_tempLocalID, &band_emission[0]);
+                    m_continua[m_curMechanismID-m_diatomics.size()].bandEmission(m_thermoData,m_tempLocalID, &band_emission[0]);
                 }
 
 //                for (int i=0; i<band_emission.size(); i++) {
 //                    CFLog(INFO, "HSNBRadiator::generateCellPhotonData => band_emission[" << i << "]=" << band_emission[i] << "\n");
 //                }
+
 
 
 
@@ -765,20 +950,34 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
 
 //                CFLog(INFO, "HSNBRadiator::generateCellPhotonData => band_offset[" << m_curMechanismID << "]=" << band_offset << "\n");
 
+//                    std::size_t pdeindex=pdf.index();
+////                    double uniform = Random::uniform(0.000001, 999.999999);
+//                    double uniform = Random::uniform(0.000001, 999.999999)-500.0;
 
-
-                    // Uniform random location in the band
+//                    // Uniform random location in the band
                     waveNumber = (pdf.index()+band_offset)*1000.0 +
-                        Random::uniform(0.000001, 999.999999);
+                        Random::uniform(0.000001, 999.999999)-500.0;
+
+//                    waveNumber = (pdeindex+band_offset)*1000.0 + uniform;
 
                     //Force positive waveNumber (shouldn't occur anyway!)
-                    while (waveNumber<0.0) {
+//                    while (waveNumber<0.0) {
+//                        waveNumber = (pdf.index()+band_offset)*1000.0 +
+//                           Random::uniform(0.000001, 999.999999);
+//                    }
+
+//                    cout << "Non-Atomic wavenumber=" << waveNumber << ", pdeindex=" << pdeindex << ", uniform=" << uniform << ", band_offset=" << band_offset << endl;
+
+                    while (wavenumberIsValid(waveNumber)==false) {
+                           CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => Diatomic waveNumber " << waveNumber << " is invalid." "\n");
+
+
                         waveNumber = (pdf.index()+band_offset)*1000.0 +
-                           Random::uniform(0.000001, 999.999999);
+                           Random::uniform(0.000001, 999.999999)-500.0;
                     }
 
 
-            } else {
+            } else if (m_curMechanismID==(m_nbMechanisms-1-m_co2Exists)) {
                     //Atomic line mechanism
                     mechType=ATOMICLINE;
 
@@ -796,15 +995,45 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
 
                     waveNumber = Random::voigt(line.gaml, line.gamd, line.sigc);
 
+//                    cout << "Atomic wavenumber=" << waveNumber << ", line.sigc=" << line.sigc << endl;
 
 
-                    while (waveNumber<0) {
+//                    while (waveNumber<0) {
+//                        waveNumber = Random::voigt(line.gaml, line.gamd, line.sigc);
+//                    }
+
+                    while (wavenumberIsValid(waveNumber)==false) {
+//                        cout << "NONVALID wavenumber=" << waveNumber << ", line.sigc=" << line.sigc << endl;
+
                         waveNumber = Random::voigt(line.gaml, line.gamd, line.sigc);
                     }
 
 
-
                 }
+                else { //CO2
+
+                mechType=CO2;
+
+                std::vector<double> band_emission;
+                band_emission.resize(m_co2->spectralGridSize());
+                m_co2->bandEmission(m_tempLocalID, m_thermoData, &band_emission[0]);
+
+                ProbDistFunc pdf(band_emission);
+
+                // Fire rays in cell i for system k
+                int band_offset = m_co2->lowBand();
+
+                // Uniform random location in the band
+                waveNumber = (pdf.index()+band_offset)*25.0 +
+                        Random::uniform(0.000001, 24.999999)-12.5;
+
+                while (wavenumberIsValid(waveNumber)==false) {
+                    CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => CO2 waveNumber " << waveNumber << " is invalid." "\n");
+
+                    waveNumber = (pdf.index()+band_offset)*25.0 +
+                            Random::uniform(0.000001, 24.999999)-12.5;
+                }
+            }
 
             }
 
@@ -812,7 +1041,8 @@ void HSNBRadiator::generateCellPhotonData(CFuint stateID, CFreal& energyFraction
 
           m_curMechanismRayCount++;
 
-//          CFLog(INFO, "HSNBRadiator::generateCellPhotonData => waveNumber=" << waveNumber << "\n");
+          CFLog(DEBUG_MAX, "HSNBRadiator::generateCellPhotonData => waveNumber=" << waveNumber << "\n");
+
 
           lambda=1/waveNumber;
 
@@ -845,12 +1075,13 @@ void HSNBRadiator::setState(CFuint nbRays)
     m_tempLocalID=m_thermoData.getCurrentLocalCellID();
 
     m_emissionByMechanisms.clear();
-    m_emissionByMechanisms.resize(m_nbDiatomics+m_nbContinua+(m_nbAtoms>0), 0.0);
+    m_nbMechanisms=m_nbDiatomics+m_nbContinua+(m_nbAtoms>0)+m_co2Exists;
+
+    m_emissionByMechanisms.resize(m_nbMechanisms, 0.0);
 
    // CFreal emissionByAtomicLines;
     m_totalEmissionCurrentCell=0.0;
 
-    m_nbMechanisms=m_nbDiatomics+m_nbContinua+(m_nbAtoms>0);
 
     for (int k = 0; k < m_nbDiatomics; ++k){
         m_emissionByMechanisms[k]=m_diatomics[k].emittedPower(m_tempLocalID,m_thermoData)*powerFactor;
@@ -861,7 +1092,7 @@ void HSNBRadiator::setState(CFuint nbRays)
 
     for (int k = m_nbDiatomics; k < m_nbContinua+m_nbDiatomics; ++k){
         //std::cout << "k - m_nbDiatomics " << (k-m_nbDiatomics) << " m_nbContinua " << m_nbContinua << " \n";
-        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(m_tempLocalID)*powerFactor;
+        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(m_thermoData,m_tempLocalID)*powerFactor;
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[k];
     }
 
@@ -870,9 +1101,23 @@ void HSNBRadiator::setState(CFuint nbRays)
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbDiatomics+m_nbContinua];
     }
 
-   // CFLog(VERBOSE, "HSNBRadiator::setState => m_totalEmissionCurrentCell=" << m_totalEmissionCurrentCell << "\n" );
+    if (m_co2Exists) {
+        m_emissionByMechanisms[m_nbMechanisms-1]=m_co2->emittedPower(m_tempLocalID,m_thermoData)*powerFactor;
+        m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbMechanisms-1];
+    }
+
+    CFLog(DEBUG_MAX, "HSNBRadiator::setState => m_totalEmissionCurrentCell=" << m_totalEmissionCurrentCell << "\n" );
     // Compute the number of rays associated with each system
+
+    CFLog(DEBUG_MAX, "HSNBRadiator::setState => m_emissionByMechanisms.size()=" << m_emissionByMechanisms.size() << "\n" );
+
     m_nBRaysPerSys = ProbDistFunc(m_emissionByMechanisms).sample(nbRays);
+
+
+//    for (int i=0; i<m_nBRaysPerSys.size(); i++) {
+//        CFLog(VERBOSE, "HSNBRadiator::setState => m_nBRaysPerSys["<< i << "]=" << m_nBRaysPerSys[i] << "\n" );
+//    }
+
 
 
 //    //Preserve total energy
@@ -912,6 +1157,9 @@ CFreal HSNBRadiator::computeAbsorbedEnergy(HSNBDataContainer &traceSet, CFint cu
 
     // Loop over each wall intersection
     m_tempTransp = computeTransmission(traceSet)*m_curPhoton->wallTransmissivity;
+
+
+
     cf_assert(!isnan(m_tempTransp));
 
     CFLog(DEBUG_MED, "HSNBRadiator::computeAbsorbedEnergy => m_tempTransp=" << m_tempTransp << "\n");
@@ -959,10 +1207,6 @@ CFreal HSNBRadiator::computeAbsorbedEnergy(HSNBDataContainer &traceSet, CFint cu
 
 }
 
-
-
-
-
 void HSNBRadiator::addStateParams(HSNBDataContainer& photonTraceSet, CFuint cellID, CFreal raydistance)
 {
 
@@ -985,10 +1229,12 @@ void HSNBRadiator::addStateParams(HSNBDataContainer& photonTraceSet, CFuint cell
 
         if (static_cast<HSNBMechanismType>(photonTraceSet.headerData->mechType)==THICKDIATOMIC) {
             m_tempMechIndex=photonTraceSet.headerData->mechanismIndex;
-            photonTraceSet.trace->m_kappa0=m_diatomics[m_tempMechIndex].getLocalParameter(m_tempLocalID, int(m_tempWavenumber/1000)-m_diatomics[m_tempMechIndex].lowBand(), 0);
+            photonTraceSet.trace->m_kappa0=m_diatomics[m_tempMechIndex].getKappa(m_thermoData, m_tempLocalID, m_tempWavenumber);
+//            std::cout <<  "HSNBRadiator::addStateParams => m_kappa0=" << photonTraceSet.trace->m_kappa0 <<std::endl;
+
         }
 
-        photonTraceSet.trace->setup(m_nbContinua,m_nbAtoms,m_nbSpecies);
+        photonTraceSet.trace->setup(m_nbContinua,m_nbAtoms,m_nbSpecies,m_co2Exists);
         initTrace(*photonTraceSet.trace, photonTraceSet.headerData->mechanismIndex, m_rayDistance);
         //std::cout << "NEW TRACE INITIALISED, m_nbThickDiatomics:" << m_nbThickDiatomics <<", m_nbNonThickDiatomics"
         //          << m_nbNonThickDiatomics << ", m_thickDiatomics.size()" << photonTraceSet.trace->m_thickDiatomics.size()  <<
@@ -1003,26 +1249,52 @@ void HSNBRadiator::addStateParams(HSNBDataContainer& photonTraceSet, CFuint cell
     photonTraceSet.headerData->nbCrossedCells++;
 
 
+//    Used to time in place computation
+//    Stopwatch<WallTime> stpStateAdd;
+//    stpStateAdd.restart();
 
     for (int i=0; i<m_thinDiatomicsIndices.size(); i++) {
         m_tempNewStateMechIndex=m_thinDiatomicsIndices[i];
         m_diatomics[m_tempNewStateMechIndex].addStateParams(m_thermoData,photonTraceSet.trace->m_thinDiatomics[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
     }
 
+//    std::cout << "HSNBRadiator::addStateParams => THIN ADD =" << stpStateAdd.read() << std::endl;
+//    stpStateAdd.restart();
+
     for (int i=0; i<m_thickDiatomicsIndices.size(); i++) {
         m_tempNewStateMechIndex=m_thickDiatomicsIndices[i];
-        m_diatomics[m_tempNewStateMechIndex].addStateParams(photonTraceSet.trace->m_thickDiatomics[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
+        m_diatomics[m_tempNewStateMechIndex].addStateParams(m_thermoData,photonTraceSet.trace->m_thickDiatomics[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
     }
+
+//    std::cout << "HSNBRadiator::addStateParams => THICK ADD =" << stpStateAdd.read() << std::endl;
+//    stpStateAdd.restart();
 
     for (int i=0; i<m_continua.size(); i++) {
-        m_continua[i].addStateParams(photonTraceSet.trace->m_continua[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
+        m_continua[i].addStateParams(m_thermoData,photonTraceSet.trace->m_continua[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
 
     }
+
+//    std::cout << "HSNBRadiator::addStateParams => CONTINUA ADD =" << stpStateAdd.read() << std::endl;
+//    stpStateAdd.restart();
+
     for (int i=0; i<m_atoms.size(); i++) {
         m_atoms[i].addStateParams(m_thermoData, photonTraceSet.trace->m_atoms[i], m_rayDistance, m_tempLocalID, m_tempWavenumber);
     }
 
-    //photonTraceSet.trace->print();
+//    std::cout << "HSNBRadiator::addStateParams => ATOMS ADD =" << stpStateAdd.read() << std::endl;
+//    stpStateAdd.restart();
+
+    //In case CO2 is present in the mixture
+    if (m_co2Exists) {
+//        photonTraceSet.trace->m_co2Exists=true;
+        m_co2->addStateParams(m_thermoData, photonTraceSet.trace->m_co2, m_rayDistance, m_tempLocalID, m_tempWavenumber);
+    }
+
+//    std::cout << "HSNBRadiator::addStateParams => CO2 ADD =" << stpStateAdd.read() << std::endl;
+//    stpStateAdd.stop();
+//    photonTraceSet.trace->print();
+
+
 
 
 }
@@ -1039,6 +1311,7 @@ void HSNBRadiator::initTrace(HSNBPhotonTrace& trace, CFuint mechID, CFreal start
 {
     //distance0=distance0-ds
     trace.m_distance0=startDistance;
+    trace.m_co2Exists=m_co2Exists;
 
     for (int i=0; i<m_diatomics.size(); i++) {
         if (m_diatomics[i].getMechanismType()==THIN) {
@@ -1064,7 +1337,7 @@ CFreal HSNBRadiator::computeTransmission(HSNBDataContainer &traceSet)
 
     //CFreal tempTau;
     m_tempTau = 0.0;
-
+//    CFreal oldTau;
     for (int j = 0; j< m_thinDiatomicsIndices.size(); ++j) {
         m_tempCurMechIndex=m_thinDiatomicsIndices[j];
 
@@ -1084,8 +1357,14 @@ CFreal HSNBRadiator::computeTransmission(HSNBDataContainer &traceSet)
 //            }
 //        }
 
+//        oldTau=m_tempTau;
+
         m_tempTau += m_diatomics[m_tempCurMechIndex].opticalThickness(traceSet.trace->m_thinDiatomics[j]);
+//        CFLog(INFO, "SnbDiatomicSystem::opticalThickness::Thin => kappa=" <<  m_tempTau-oldTau << " \n");
+
     }
+
+
 
     for (int j = 0; j< m_thickDiatomicsIndices.size(); ++j) {
         m_tempCurMechIndex=m_thickDiatomicsIndices[j];
@@ -1106,7 +1385,12 @@ CFreal HSNBRadiator::computeTransmission(HSNBDataContainer &traceSet)
 //            }
 //        }
 
+
+
         m_tempTau += m_diatomics[m_tempCurMechIndex].opticalThickness(traceSet.trace->m_thickDiatomics[j]);
+
+//        CFLog(INFO, "SnbDiatomicSystem::opticalThickness::Thick => kappa=" <<  m_tempTau-oldTau << " \n");
+
     }
 
     for (int j = 0; j < m_continua.size(); ++j) {
@@ -1149,6 +1433,17 @@ CFreal HSNBRadiator::computeTransmission(HSNBDataContainer &traceSet)
 
         m_tempTau += m_atoms[j].opticalThickness(traceSet.trace->m_atoms[j]);
     }
+
+    //"Add" absorption by CO2 systems which is computed only "stepwise", meaning that the
+    // overall tau value has to be mulitplied in each each photon tracing step
+    if (m_co2Exists) {
+        //FALSCH muss mit gesamt-tau multi. werden
+        m_tempTau += m_co2->opticalThickness(traceSet.trace->m_co2);
+    }
+
+//    if (m_co2Exists) {
+//        m_tempTau+=m_co2->opticalThickness(traceSet.trace->m_co2);
+//    }
 
 //    CFLog(DEBUG_MED, "HSNBRadiator::computeTransmission => tau=" << m_tempTau << " TraceSet=" << traceSet.trace->m_nbCellsCrossed << " \n");
 
@@ -1202,6 +1497,23 @@ CFreal HSNBRadiator::computeTransmission(HSNBDataContainer &traceSet)
     }
 
     return m_tempTau;
+}
+
+bool HSNBRadiator::wavenumberIsValid(CFreal sig)
+{
+    //Wavenumber is either in range or no custom range is specified(for negative values of m_sigMin, use full available dataset in that case)
+    if (sig<0) {
+        return false;
+    }
+    else {
+//        std::cout << "sig: " << sig <<  ", sigMax=" << m_sigMax << ", m_sigMin " << m_sigMin << std::endl;
+        return (((sig>=m_sigMin) && (sig<=m_sigMax)) || m_sigMin<0);
+    }
+}
+
+bool HSNBRadiator::co2Exists() const
+{
+    return m_co2Exists;
 }
 
 CFreal HSNBRadiator::getAbsorption(CFreal lambda, RealVector &s_o)
@@ -1352,8 +1664,47 @@ void HSNBRadiator::loadProcessData()
         //std::cout << tokens[i] << " " << m_thermoData.speciesIndex(tokens[i])<< " species" << std::endl;
     }
 
+    CFLog(INFO, "HSNBRadiator::loadProcessData => m_sigMin="<< m_sigMin << " m_sigMax=" << m_sigMax << "]\n");
+
+    m_thermoData.setSpectralRange(m_sigMin, m_sigMax);
+    CFLog(INFO, "HSNB PATH " << m_HSNBPath.string() << "\n");
+
+    //2nd row
     std::getline(procFile, line);
+
+    m_co2Exists=m_thermoData.speciesExists("CO2");
+
+    if (m_co2Exists) {
+        if (!line.empty()) {
+            String::tokenize(line, tokens, " \t\r\n");
+            m_co2 = new SnbCO2System(m_HSNBPath.string(),tokens[4], m_thermoData);
+            CFLog(INFO, "HSNBRadiator::loadProcessData => CO2 is present in the mixture. Path treatment: ["<< tokens[4] << "]\n");
+        }
+        else {
+//            CFLog(INFO, "HSNBRadiator::loadProcessData: CO2 has been detected to be part of the mixture but your" <<
+//                  " HSNB configuration does not specify a treatment for the CO2 species (Curtis-Godson [CG] or Linquist-Simmons [LS])." <<
+//                  " The simulation will default to a CG treatment for CO2. \n");
+//            m_co2 = new SnbCO2System(m_HSNBPath.string(),"CG", m_thermoData);
+
+              CFLog(INFO, "HSNBRadiator::loadProcessData: CO2 has been detected to be part of the mixture but your" <<
+                    " HSNB configuration does not specify a treatment for the CO2 species (Curtis-Godson [CG] or Linquist-Simmons [LS])." <<
+                    " The simulation will ignore CO2 contributions. \n");
+              m_co2Exists=false;
+        }
+    }
+
+    CFLog(INFO, line << "\n");
+
     std::getline(procFile, line);
+    CFLog(INFO, line <<"\n");
+
+    while (line.empty()) {
+        std::getline(procFile, line);
+    }
+    //Row to define atomic species
+    std::getline(procFile, line);
+    CFLog(INFO, "HSNBRadiator::loadProcessData => Atomic species: " << line << "\n");
+
 
     if (!line.empty()) {
         String::tokenize(line, tokens, " \t\r\n");
@@ -1362,14 +1713,21 @@ void HSNBRadiator::loadProcessData()
             m_atoms.push_back(AtomicLines(m_HSNBPath.string(), tokens[i], m_thermoData));
         }
 
+        std::getline(procFile, line);
     }
 
-    std::getline(procFile, line);
+
+    //Skip to Diatomic Header
+    while (line.empty()) {
+        std::getline(procFile, line);
+    }
 
     std::vector<SnbDiatomicSystem>::iterator it;
-
+    // Rows to define diatomic species
     // Load diatomics
     std::getline(procFile, line);
+    m_nbNonThickDiatomics=0;
+    m_nbThickDiatomics=0;
     while (!line.empty()) {
         tokens.clear();
         String::tokenize(line, tokens, " \t\r\n");
@@ -1377,6 +1735,7 @@ void HSNBRadiator::loadProcessData()
         m_diatomics.push_back(
             SnbDiatomicSystem(SpeciesLoadData(m_HSNBPath.string(),tokens[0]), tokens[1], tokens.size() > 2 ? tokens[2] : "",m_thermoData));
         it=m_diatomics.end()-1;
+
 
         if (m_diatomics.back().getMechanismType()==THIN){
             m_thinDiatomicsIndices.push_back(m_diatomics.size()-1);
@@ -1390,17 +1749,24 @@ void HSNBRadiator::loadProcessData()
         getline(procFile, line);
     }
 
+    //Skip to Continuum Header
+    while (line.empty()) {
+        std::getline(procFile, line);
+    }
+
     // Load continua
     getline(procFile, line);
     while (!line.empty()) {
         tokens.clear();
         String::tokenize(line, tokens, " \t\r\n");
+
         if (tokens[1] == "BF")
             m_continua.push_back(SnbContinuumSystem(SpeciesLoadData(m_HSNBPath.string(),tokens[0]), m_thermoData, BOUNDFREE));
         else
             m_continua.push_back(SnbContinuumSystem(SpeciesLoadData(m_HSNBPath.string(),tokens[0]), m_thermoData, FREEFREE));
         getline(procFile, line);
     }
+
 
     CFuint curMechIndex;
     for (int i=0; i<m_thinDiatomicsIndices.size(); i++) {
@@ -1418,7 +1784,20 @@ void HSNBRadiator::loadProcessData()
     }
 
 
+//    for (int i=0; i<m_diatomics.size(); i++) {
+//        cout << "m_diatomics(" << i << ")="<< m_diatomics[i].systemName() << ", lowBand=" << m_diatomics[i].lowBand() << endl;
+//    }
+//    for (int i=0; i<m_continua.size(); i++) {
+//        cout << "m_diatomics(" << i << ")="<< m_diatomics[i].systemName() << ", lowBand=" << m_diatomics[i].lowBand() << endl;
+//    }
+//    while (true){
+
+//    }
+
+
     m_inFileHandle->close();
+
+
 
 }
 
@@ -1434,13 +1813,14 @@ CFreal HSNBRadiator::emissivePowerDebug(CFuint stateID)
     m_nbContinua=m_continua.size();
     m_nbAtoms= m_atoms.size();
 
+    m_nbMechanisms=m_nbDiatomics+m_nbContinua+(m_nbAtoms>0)+m_co2Exists;
+
     m_thermoData.setState(cellID);
     m_emissionByMechanisms.clear();
-    m_emissionByMechanisms.resize(m_nbDiatomics+m_nbContinua+1, 0.0);
+    m_emissionByMechanisms.resize(m_nbMechanisms, 0.0);
 
     m_totalEmissionCurrentCell=0.0;
 
-    m_nbMechanisms=m_nbDiatomics+m_nbContinua+1;
 
 
     for (int k = 0; k < m_nbDiatomics; ++k){
@@ -1450,13 +1830,18 @@ CFreal HSNBRadiator::emissivePowerDebug(CFuint stateID)
     }
 
     for (int k = m_nbDiatomics; k < m_nbContinua+m_nbDiatomics; ++k){
-        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(cellID);
+        m_emissionByMechanisms[k]=m_continua[k-m_nbDiatomics].emittedPower(m_thermoData,cellID);
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[k];
     }
 
     if (m_atoms.size() > 0) {
         m_emissionByMechanisms[m_nbDiatomics+m_nbContinua]=updateLineEmission();
         m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbDiatomics+m_nbContinua];
+    }
+
+    if (m_co2Exists) {
+        m_emissionByMechanisms[m_nbMechanisms-1]=m_co2->emittedPower(m_tempLocalID,m_thermoData);
+        m_totalEmissionCurrentCell+=m_emissionByMechanisms[m_nbMechanisms-1];
     }
 
     CFreal currentCellSpecificPower=m_totalEmissionCurrentCell;

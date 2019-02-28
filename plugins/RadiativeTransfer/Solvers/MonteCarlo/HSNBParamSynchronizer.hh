@@ -2,6 +2,7 @@
 #define HSNBPARAMSYNCHRONIZER_H
 
 //////////////////////////////////////////////////////////////////////////////
+
 #include "Framework/DataProcessingData.hh"
 #include "Framework/FaceTrsGeoBuilder.hh"
 #include "Config/ConfigObject.hh"
@@ -17,7 +18,6 @@
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBPhotonTrace.hh"
 #include "LagrangianSolver/LagrangianSolver.hh"
 
-
 #include "Common/MPI/MPIStructDef.hh"
 #include "Common/CFPrintContainer.hh"
 #include "Common/MPI/MPIError.hh"
@@ -26,21 +26,19 @@
 #include "Common/CFLog.hh"
 #include "Common/Stopwatch.hh"
 #include "Common/SafePtr.hh"
-//#include <mpi.h>
 
-
-const CFuint nbAtomicParameters = 1;
-const CFuint nbNonThickParameters = 1;
-const CFuint nbThickParameters = 3;
-const CFuint nbSynchHeaderParameters=2;
-
-using namespace COOLFluiD::Common;
+const COOLFluiD::CFuint nbAtomicParameters = 1;
+const COOLFluiD::CFuint nbNonThickParameters = 1;
+const COOLFluiD::CFuint nbThickParameters = 3;
+const COOLFluiD::CFuint nbCO2Parameters = 1;
+const COOLFluiD::CFuint nbSynchHeaderParameters=2;
 
 namespace COOLFluiD {
 
     namespace RadiativeTransfer {
 
     typedef LagrangianSolver::Particle<HSNBPhotonData> Photon;
+      
 //////////////////////////////////////////////////////////////////////////////
 
     //!
@@ -61,7 +59,7 @@ namespace COOLFluiD {
 class HSNBParamSynchronizer {
 public:
     HSNBParamSynchronizer();
-    void setup(CFuint mRank, CFuint nbProcs, CFuint nbThickDiatomics, CFuint nbNonThickDiatomics, CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies);
+    void setup(CFuint mRank, CFuint nbProcs, CFuint nbThickDiatomics, CFuint nbNonThickDiatomics, CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies, bool co2Exists=false);
     void reset();
 
     /// Commit a new particle
@@ -89,7 +87,20 @@ public:
 
     void printAll();
     void printPerformanceMetrics() const;
+
+    /**
+     * @brief Checks whether all processes together reserve buffers with more than "byte" bytes of memory usage.
+     * Requires a synchronization operation between all processes.
+     * @param byte
+     * @return true if the total buffer size exceeds "byte"
+     */
+    bool totalMemoryUsageExceeds(CFreal byteSize);
+
+
 private:
+    bool m_co2Exists=false;
+
+    //Telemetry data
     CFint m_nbSyncSteps;
     CFuint m_avgSendBufByteSize;
     CFuint m_avgRecvBufByteSize;
@@ -103,6 +114,7 @@ private:
     CFreal m_avgSyncDuration;
     CFreal m_avgSyncDurationGlobal;
 
+    /// Total size of the continous send buffer in byte
     CFuint m_sendBufferByteSize;
     CFuint m_recvBufferByteSize;
 
@@ -162,20 +174,21 @@ private:
     CFuint m_totalSendBufCount;
     CFuint m_totalRecvBufCount;
 
-    SafePtr<HSNBThickParameterSet> m_tempThickData;
-    SafePtr<HSNBNonThickParameterSet> m_tempNonThickData;
-    SafePtr<HSNBAtomicParameterSet> m_tempAtomicData;
+  Common::SafePtr<HSNBThickParameterSet> m_tempThickData;
+  Common::SafePtr<HSNBNonThickParameterSet> m_tempNonThickData;
+  Common::SafePtr<HSNBAtomicParameterSet> m_tempAtomicData;
 
     boost::shared_ptr<HSNBThickParameterSet> m_tempThickPtr;
     boost::shared_ptr<HSNBNonThickParameterSet> m_tempNonThickPtr;
 
 private:
-
-    void appendParameterSetToBuffer(SafePtr<HSNBLocalParameterSet> paramSet);
-
+  
+  void appendParameterSetToBuffer(Common::SafePtr<HSNBLocalParameterSet> paramSet);
+  
     void appendThinParamSetToBuffer(HSNBNonThickParameterSet& paramSet);
     void appendThickParamSetToBuffer(HSNBThickParameterSet& paramSet);
     void appendAtomicParamSetToBuffer(HSNBAtomicParameterSet& paramSet);
+    void appendCO2ParamSetToBuffer(HSNBCO2ParameterSet &paramSet);
 
     void appendTraceToBuffer(TracePtr newTrace);
     void appendVector(std::vector<CFreal> &v1, std::vector<CFreal> &v2);
@@ -185,11 +198,7 @@ private:
     void setupReceiveContainer(std::vector<Photon> &photonStack);
     void setupSendContainer();
     void parseReceiveBuffer(std::vector<Photon> &photonStack);
-
-
-
-
-
+  
     CFuint traceRealCount(CFuint nbCells) const;
 
    };

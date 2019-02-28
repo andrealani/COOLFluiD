@@ -25,8 +25,10 @@ RadiativeTransferMonteCarlo3DFVMCCProvider("RadiativeTransferMonteCarlo3DFVMCC")
   
 MethodCommandProvider<RadiativeTransferMonteCarlo<LagrangianSolver::ParticleTracking2D>,
 		      DataProcessingData,    
-		      RadiativeTransferModule>
+RadiativeTransferModule>
 RadiativeTransferMonteCarlo2DFVMCCProvider("RadiativeTransferMonteCarlo2DFVMCC");
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 

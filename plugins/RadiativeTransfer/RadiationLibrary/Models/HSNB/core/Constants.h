@@ -29,5 +29,7 @@ const double LN2    = std::log(2.0);   // natural log of 2
 
 const double MAXLOG = std::log(std::numeric_limits<double>::max());
 
+const double F1TIMESSIGSQUARED = 0.25e-4*QE*QE/(C0*C0*ME*EPS0);
+
 
 #endif // CONSTANTS_H

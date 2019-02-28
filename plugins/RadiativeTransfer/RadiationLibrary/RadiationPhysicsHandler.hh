@@ -159,6 +159,10 @@ private:
   CFreal m_wavMax;
   CFuint m_nbLoops;
   CFint  m_TempID;
+  CFint  m_TempVID;
+  bool   m_useTwoTemps;
+
+
   
   std::vector< std::string > m_radiationPhysicsNames;
 };

@@ -12,8 +12,6 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/LblAtomicSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 class SnbAtomicSystem : public RadiativeSystem<SnbAtomicSystem>
 {
 public:
@@ -24,7 +22,7 @@ public:
     SnbAtomicSystem(const std::string& spectradir, 
                     const std::string& computespectra,
                     const std::string& grid_type,
-                    const std::vector<std::string>& systemlist, ThermoData &thermo);
+                    const std::vector<std::string>& systemlist, COOLFluiD::RadiativeTransfer::ThermoData &thermo);
     
     /**
      * Copy constructor.
@@ -80,7 +78,7 @@ public:
     int spectralGridSize() const { return m_nbands; }
     double waveNumber(int i) const { return (m_band1+i)*1000+500; }
 
-    void setupLocalParameters(ThermoData &thermo);
+    void setupLocalParameters(COOLFluiD::RadiativeTransfer::ThermoData &thermo);
 
     double getLocalParameter(const int& i, const int& j, const int& k) const;
 
@@ -95,9 +93,9 @@ private:
     void determineBandRange();
     void readLblSpectra(int index, double* const p_spectra);
     void writeLblSpectra(int index, const double* const p_spectra);
-    void computeLblSpectra(int index, ThermoData &thermo,
+    void computeLblSpectra(int index, COOLFluiD::RadiativeTransfer::ThermoData &thermo,
              double* const p_spectra);
-    void computeLblSpectraEq(int index, ThermoData &thermo,
+    void computeLblSpectraEq(int index, COOLFluiD::RadiativeTransfer::ThermoData &thermo,
              double* const p_spectra);
     void lblToSnb(double* const p_lbl, double* const p_snb);
     void lblToSnbInit();

@@ -12,6 +12,7 @@
 #include "StringUtils.h"
 
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
 void swap(SnbAtomicSystem& s1, SnbAtomicSystem& s2)
 {

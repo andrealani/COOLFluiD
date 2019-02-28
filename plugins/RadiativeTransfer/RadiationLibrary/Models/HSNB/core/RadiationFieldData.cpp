@@ -23,15 +23,23 @@ RadiationFieldData::RadiationFieldData(const CFuint pressureID, const CFuint trI
 
     CFreal p,Tr,Tv;
 
+//    std::cout << "RadiationFieldData::RadiationFieldData => m_stateVector->size=" << m_stateVector->size() << std::endl;
+//    std::cout << "RadiationFieldData::RadiationFieldData => pressureID=" << pressureID << " trID="  <<trID << " tvID=" << tvID <<std::endl;
+
+
+
     p= (*m_stateVector)[pressureID];
     Tr=(*m_stateVector)[trID];
     Tv=(*m_stateVector)[tvID];
 
+
     CFLog(DEBUG_MAX, "RadiationFieldData::RadiationFieldData => New state. P: " <<p << ", Tr " << Tr << ", Tv " << Tv << "\n");
-//    std::cout<< "\n";
+//    std::cout<< "RadiationFieldData::RadiationFieldData => New state. P: " <<p << ", Tr " << Tr << ", Tv " << Tv << std::endl;
 
     for (CFuint si=0; si<m_nbSpecies; si++) {
         //Need to convert all part. densities to nD first
+//       std::cout<< "RadiationFieldData::RadiationFieldData => m_stateVector).at(" << si << "):"<<si <<" nbSpecies=" << nbSpecies << std::endl;
+
        m_numberDensity[si]=((*m_stateVector).at(si)*(*avogadroOvMM).at(si));
 
 //       if (m_numberDensity[si]<0.0) {
@@ -40,17 +48,14 @@ RadiationFieldData::RadiationFieldData(const CFuint pressureID, const CFuint trI
 //           CFLog(INFO, "RadiationFieldData::RadiationFieldData => m_numberDensity[" << si << "]=" << m_numberDensity[si]<< "\n");
 //       }
 
+//       std::cout << "NUMBER DENSITY m_numberDensity[" << si << "]=" << m_numberDensity[si] << " Avogadro=" << (*avogadroOvMM).at(si) << " STATE=" <<(*m_stateVector).at(si) << std::endl;
 //       cf_assert(m_numberDensity[si]>=0.0);
 
     }
 
 
 //    std::cout<< "\n";
-//    for (int i=0; i<m_nbSpecies; i++) {
-//    //   CFLog(VERBOSE, "\n N(" << i << ")=" << m_numberDensity[i] <<"\n");
-//        std::cout << "N(" << i << ")=" << m_numberDensity[i] <<"\n";
-//    }
-//    std::cout<< "\n";
+
 
 
 

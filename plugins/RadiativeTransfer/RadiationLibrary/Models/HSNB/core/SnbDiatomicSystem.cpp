@@ -15,11 +15,17 @@
 
 using namespace std;
 using namespace COOLFluiD;
+using namespace COOLFluiD::RadiativeTransfer;
 
-SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData, const std::string& dpdf, const std::string& nup, const ThermoData& thermo)
-    : m_directory(loadData.baseDirectory)
+SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData,
+				     const std::string& dpdf,
+				     const std::string& nup,
+				     const ThermoData& thermo)
+  : m_directory(loadData.baseDirectory)
 {
 
+    m_usePrecomputedParams=true;
+    m_paramCount = 0;
 
     // Add the full path to the default data directory
 
@@ -55,7 +61,40 @@ SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData, const std::string
     
     // Determine the min and max band
     determineBandRange();
-    
+
+
+    if (thermo.sigMin()!=-1) {
+       CFuint lowWav=round(thermo.sigMin() / 1000.0);
+       CFuint hiWav=round(thermo.sigMax() / 1000.0);
+
+       if (lowWav<hiWav) {
+          if (waveNumberIsInBandRange(lowWav)) {
+               m_band1=lowWav;
+          }
+
+
+          if (waveNumberIsInBandRange(hiWav)) {
+               m_bandn=hiWav;
+          }
+
+          // If the custom spectrum is not contained by the database information skip species
+          if (m_band1>hiWav || m_bandn<lowWav) {
+               m_band1=m_bandn+1;
+          }
+
+          m_nbands = m_bandn - m_band1 + 1;
+//          cout <<"Diatomic species: " << speciesName() <<",lowWav " << lowWav << ", hiWav " << hiWav <<", m_band1 " << m_band1
+//               << ", m_bandn " << m_bandn << ", m_nbands: " << m_nbands << "\n";
+       }
+
+
+
+       m_nbands = m_bandn - m_band1 + 1;
+
+
+    }
+
+
     // Check if the band range could be loaded
     if (m_nbands < 0) {
         cout << "Could not find SNB system '" << m_system << "'" << endl;
@@ -150,12 +189,14 @@ SnbDiatomicSystem::~SnbDiatomicSystem()
     delete [] mp_tv;
     delete [] mp_iv;
     delete [] mp_params;
+
+
     if (mp_locparams)
         delete [] mp_locparams;
 }
 
 void SnbDiatomicSystem::getParameters(
-    double Tv, double Tr, double* const p_params) const
+    double Tv, double Tr, double* const p_params)
 {
     // Step 1: Determine the indices for Tv and Tr which either bound the
     // lower left corner of the the quad in which (Tv,Tr) falls or the
@@ -163,34 +204,35 @@ void SnbDiatomicSystem::getParameters(
     // if it falls out of the grid boundaries.
 
     // Index for Tv:  0 <= itv < nv-2
-    float* p_lower = std::lower_bound(mp_tv, mp_tv+m_nv, (float)Tv);
-    size_t itv;
-    if (p_lower == mp_tv+m_nv)
-        itv = m_nv-2;
+    m_pLower = std::lower_bound(mp_tv, mp_tv+m_nv, (float)Tv);
+
+//    size_t m_itv;
+    if (m_pLower == mp_tv+m_nv)
+        m_itv = m_nv-2;
     else
-        itv = (mp_tv == p_lower ? 0 : std::distance(mp_tv, p_lower)-1);
+        m_itv = (mp_tv == m_pLower ? 0 : std::distance(mp_tv, m_pLower)-1);
     
     // Index for Tr:  2 <= itr < min(nr(itv), nr(itv+1), the lower right
     // corner must also be available, otherwise itr is adjusted (itr
     // measures the distance from the maximum, thus the smaller it is, the
     // higher the temperature)
-    size_t nr0 = mp_iv[itv+1]-mp_iv[itv];
-    size_t nr1 = mp_iv[itv+2]-mp_iv[itv+1];
-    float* p_max = mp_tr + mp_iv[1];
-    float* p_min = p_max - nr0;
-    p_lower = std::lower_bound(p_min, p_max, (float)Tr);
-    size_t itr;
-    if (p_lower == p_max)
-        itr = 2;
+    m_nr0 = mp_iv[m_itv+1]-mp_iv[m_itv];
+    m_nr1 = mp_iv[m_itv+2]-mp_iv[m_itv+1];
+    m_pMax = mp_tr + mp_iv[1];
+    m_pMin = m_pMax - m_nr0;
+    m_pLower = std::lower_bound(m_pMin, m_pMax, (float)Tr);
+
+    if (m_pLower == m_pMax)
+        m_itr = 2;
     else
-        itr = std::min(
-            p_lower == p_min ? nr0 : std::distance(p_lower, p_max)+1, nr1);
+        m_itr = std::min(
+            m_pLower == m_pMin ? m_nr0 : std::distance(m_pLower, m_pMax)+1, m_nr1);
     
     // Step 2: Compute the bilinear interpolation
-    const double tv1 = mp_tv[itv];
-    const double tv2 = mp_tv[itv+1];
-    const double tr1 = mp_tr[mp_iv[1]-itr];
-    const double tr2 = mp_tr[mp_iv[1]-itr+1];
+    m_tv1 = mp_tv[m_itv];
+    m_tv2 = mp_tv[m_itv+1];
+    m_tr1 = mp_tr[mp_iv[1]-m_itr];
+    m_tr2 = mp_tr[mp_iv[1]-m_itr+1];
     
 //    cout << m_system << endl;
 //    cout << tv1 << ", " << tv2 << endl;
@@ -198,24 +240,214 @@ void SnbDiatomicSystem::getParameters(
 //    cout << Tv  << ", " << Tr  << endl;
 //    cout << itv << ", " << itr << endl;
 
-    const double area = (tv2-tv1)*(tr2-tr1);
+    m_area = (m_tv2-m_tv1)*(m_tr2-m_tr1);
 //    cout << "area = " << area << endl;
-    const double w11 = (tv2-Tv)*(tr2-Tr)/area;
-    const double w12 = (tv2-Tv)*(Tr-tr1)/area;
-    const double w21 = (Tv-tv1)*(tr2-Tr)/area;
-    const double w22 = (Tv-tv1)*(Tr-tr1)/area;
+    m_w11 = (m_tv2-Tv)*(m_tr2-Tr)/m_area;
+    m_w12 = (m_tv2-Tv)*(Tr-m_tr1)/m_area;
+    m_w21 = (Tv-m_tv1)*(m_tr2-Tr)/m_area;
+    m_w22 = (Tv-m_tv1)*(Tr-m_tr1)/m_area;
     
-    const size_t ndata = m_nparams*m_nbands;
-    const double* const p11 = mp_params + (mp_iv[itv]+(nr0-itr))*ndata;
-    const double* const p12 = p11 + ndata;
-    const double* const p21 = mp_params + (mp_iv[itv+1]+(nr1-itr))*ndata;
-    const double* const p22 = p21 + ndata;
+    m_ndata = m_nparams*m_nbands;
+    m_p11 = mp_params + (mp_iv[m_itv]+(m_nr0-m_itr))*m_ndata;
+    m_p12 = m_p11 + m_ndata;
+    m_p21 = mp_params + (mp_iv[m_itv+1]+(m_nr1-m_itr))*m_ndata;
+    m_p22 = m_p21 + m_ndata;
 
-    for (int i = 0; i < ndata; ++i) {
-        p_params[i] = w11*p11[i] + w12*p12[i] + w21*p21[i] + w22*p22[i];
+    for (int i = 0; i < m_ndata; ++i) {
+        p_params[i] = m_w11*m_p11[i] + m_w12*m_p12[i] + m_w21*m_p21[i] + m_w22*m_p22[i];
         if (p_params[i]<0.0)
             p_params[i]=0.0;
     }
+}
+
+
+
+void SnbDiatomicSystem::getThickParamsSingleBand(ThermoData &thermo,CFuint cellID, double band)
+{
+    thermo.setState(cellID);
+    mp_fac=1.0;
+//    m_nparams=4;
+
+    m_tr  = thermo.Tr();
+    m_tv  = thermo.Tv();
+
+    m_pa  = thermo.N(m_species_index) * KB * m_tr;
+    m_pLower = std::lower_bound(mp_tv, mp_tv+m_nv, (float)m_tv);
+
+    if (m_pLower == mp_tv+m_nv)
+        m_itv = m_nv-2;
+    else
+        m_itv = (mp_tv == m_pLower ? 0 : std::distance(mp_tv, m_pLower)-1);
+
+    m_nr0 = mp_iv[m_itv+1]-mp_iv[m_itv];
+    m_nr1 = mp_iv[m_itv+2]-mp_iv[m_itv+1];
+
+    m_pMax = mp_tr + mp_iv[1];
+    m_pMin = m_pMax - m_nr0;
+    m_pLower = std::lower_bound(m_pMin, m_pMax, (float)m_tr);
+
+    if (m_pLower == m_pMax)
+        m_itr = 2;
+    else
+        m_itr = std::min(
+            m_pLower == m_pMin ? m_nr0 : std::distance(m_pLower, m_pMax)+1, m_nr1);
+
+    // Step 2: Compute the bilinear interpolation
+    m_tv1 = mp_tv[m_itv];
+    m_tv2 = mp_tv[m_itv+1];
+    m_tr1 = mp_tr[mp_iv[1]-m_itr];
+    m_tr2 = mp_tr[mp_iv[1]-m_itr+1];
+
+    m_area = (m_tv2-m_tv1)*(m_tr2-m_tr1);
+//    cout << "area = " << area << endl;
+    m_w11 = (m_tv2-m_tv)*(m_tr2-m_tr)/m_area;
+    m_w12 = (m_tv2-m_tv)*(m_tr-m_tr1)/m_area;
+    m_w21 = (m_tv-m_tv1)*(m_tr2-m_tr)/m_area;
+    m_w22 = (m_tv-m_tv1)*(m_tr-m_tr1)/m_area;
+
+    m_ndata = m_nparams*m_nbands;
+
+
+    m_p11 = mp_params + (mp_iv[m_itv]+(m_nr0-m_itr))*m_ndata;
+    m_p12 = m_p11 + m_ndata;
+    m_p21 = mp_params + (mp_iv[m_itv+1]+(m_nr1-m_itr))*m_ndata;
+    m_p22 = m_p21 + m_ndata;
+
+    m_currentParamIndex = m_nparams*band;
+
+    //Has to be multiplied with cellDistance
+    m_tempKu = (m_w11*m_p11[m_currentParamIndex] + m_w12*m_p12[m_currentParamIndex] + m_w21*m_p21[m_currentParamIndex] + m_w22*m_p22[m_currentParamIndex]) * m_pa;
+
+    //        mp_locparams[i*ndata+b*4+1] = w11*p11[i+2] + w12*p12[i+2] + w21*p21[i+2] + w22*p22[i+2] * mp_fac;
+    m_tempBetaD = m_w11*m_p11[m_currentParamIndex+3] + m_w12*m_p12[m_currentParamIndex+3] + m_w21*m_p21[m_currentParamIndex+3] + m_w22*m_p22[m_currentParamIndex+3];
+
+
+
+    if (m_nparams < 6)
+        m_tempBetaL = (m_w11*m_p11[m_currentParamIndex+4] + m_w12*m_p12[m_currentParamIndex+4] + m_w21*m_p21[m_currentParamIndex+4] + m_w22*m_p22[m_currentParamIndex+4])*m_pa/100000.0;
+    else
+        m_tempBetaL = (m_w11*m_p11[m_currentParamIndex+4] + m_w12*m_p12[m_currentParamIndex+4] + m_w21*m_p21[m_currentParamIndex+4] + m_w22*m_p22[m_currentParamIndex+4])*m_pa
+                + m_w11*m_p11[m_currentParamIndex+5] + m_w12*m_p12[m_currentParamIndex+5] + m_w21*m_p21[m_currentParamIndex+5] + m_w22*m_p22[m_currentParamIndex+5];
+
+
+    if (m_tempKu<0.0) {
+        m_tempKu=0.0;
+    }
+
+    if (m_tempBetaD<0.0) {
+        m_tempBetaD=0.0;
+    }
+
+    if (m_tempBetaL<0.0) {
+        m_tempBetaL=0.0;
+    }
+
+}
+
+void SnbDiatomicSystem::getThinParamsSingleBand(ThermoData &thermo,CFuint cellID, double band)
+{
+    thermo.setState(cellID);
+//    m_nparams=2;
+
+    m_tr  = thermo.Tr();
+    m_tv  = thermo.Tv();
+    m_pa  = thermo.N(m_species_index) * KB * m_tr;
+
+    // Step 1: Determine the indices for Tv and Tr which either bound the
+    // lower left corner of the the quad in which (Tv,Tr) falls or the
+    // correct lower left corner which will be used to extrapolate to (Tv,Tr)
+    // if it falls out of the grid boundaries.
+
+    // Index for Tv:  0 <= itv < nv-2
+    m_pLower = std::lower_bound(mp_tv, mp_tv+m_nv, (float)m_tv);
+
+//    size_t m_itv;
+    if (m_pLower == mp_tv+m_nv)
+        m_itv = m_nv-2;
+    else
+        m_itv = (mp_tv == m_pLower ? 0 : std::distance(mp_tv, m_pLower)-1);
+
+    // Index for Tr:  2 <= itr < min(nr(itv), nr(itv+1), the lower right
+    // corner must also be available, otherwise itr is adjusted (itr
+    // measures the distance from the maximum, thus the smaller it is, the
+    // higher the temperature)
+    m_nr0 = mp_iv[m_itv+1]-mp_iv[m_itv];
+    m_nr1 = mp_iv[m_itv+2]-mp_iv[m_itv+1];
+    m_pMax = mp_tr + mp_iv[1];
+    m_pMin = m_pMax - m_nr0;
+    m_pLower = std::lower_bound(m_pMin, m_pMax, (float)m_tr);
+
+    if (m_pLower == m_pMax)
+        m_itr = 2;
+    else
+        m_itr = std::min(
+            m_pLower == m_pMin ? m_nr0 : std::distance(m_pLower, m_pMax)+1, m_nr1);
+
+    // Step 2: Compute the bilinear interpolation
+    m_tv1 = mp_tv[m_itv];
+    m_tv2 = mp_tv[m_itv+1];
+    m_tr1 = mp_tr[mp_iv[1]-m_itr];
+    m_tr2 = mp_tr[mp_iv[1]-m_itr+1];
+
+
+    m_area = (m_tv2-m_tv1)*(m_tr2-m_tr1);
+//    cout << "area = " << area << endl;
+    m_w11 = (m_tv2-m_tv)*(m_tr2-m_tr)/m_area;
+    m_w12 = (m_tv2-m_tv)*(m_tr-m_tr1)/m_area;
+    m_w21 = (m_tv-m_tv1)*(m_tr2-m_tr)/m_area;
+    m_w22 = (m_tv-m_tv1)*(m_tr-m_tr1)/m_area;
+
+    m_ndata = m_nparams*m_nbands;
+    m_p11 = mp_params + (mp_iv[m_itv]+(m_nr0-m_itr))*m_ndata;
+    m_p12 = m_p11 + m_ndata;
+    m_p21 = mp_params + (mp_iv[m_itv+1]+(m_nr1-m_itr))*m_ndata;
+    m_p22 = m_p21 + m_ndata;
+
+
+    //
+    m_currentParamIndex = m_nparams*band;
+    //Still has to be multiplied with cellDistance!
+    m_tempKu = (m_w11*m_p11[m_currentParamIndex] + m_w12*m_p12[m_currentParamIndex] + m_w21*m_p21[m_currentParamIndex] + m_w22*m_p22[m_currentParamIndex])*m_pa;
+
+
+    if (m_tempKu<0.0) {
+        m_tempKu=0.0;
+    }
+
+}
+
+
+
+CFreal SnbDiatomicSystem::getKappa(ThermoData &thermo, CFuint cellID, double sig)
+{
+
+    int b = int(sig / 1000.0);
+
+    // Convert band to local indexing
+    if (b < lowBand() || b > highBand()) {
+        return 0.0;
+    }
+    b -= lowBand();
+
+    if (thermo.usePrecomputedDiatomicParameters()) {
+        m_tempKu=getLocalParameter(cellID, b, 0);
+    }
+    else {
+
+        if (m_nparams < 4) { // Local parameters for thin systems
+            getThinParamsSingleBand(thermo,cellID, b);
+        }
+        else {
+            getThickParamsSingleBand(thermo,cellID,b);
+        }
+    }
+
+    return m_tempKu;
+}
+
+double SnbDiatomicSystem::getPrecomputedBufferByteSize() const
+{
+    return m_paramCount*8;
 }
 
 NonUniformPath SnbDiatomicSystem::getMechanismType() const
@@ -236,93 +468,103 @@ CFreal SnbDiatomicSystem::getBand(CFreal sig)
     return b;
 }
 
+bool SnbDiatomicSystem::bandEmissionComputed(int forCellID)
+{
+    return (m_currentBandEmissionCellIndex==forCellID);
+}
+
 
 void SnbDiatomicSystem::setupLocalParameters(ThermoData& thermo)
 {
-    localParamsSetup=true;
+    if (thermo.usePrecomputedDiatomicParameters()) {
+        localParamsSetup=true;
 
-    double pa, tr, tv, fac = 1.0;
-    double *p_params = new double [m_nparams*m_nbands];
-    double* p_fac = new double[thermo.nCells()];
-    fill(p_fac, p_fac+thermo.nCells(), 1.0);
+        double pa, tr, tv, fac = 1.0;
+        double *p_params = new double [m_nparams*m_nbands];
+        double* p_fac = new double[thermo.nCells()];
+        fill(p_fac, p_fac+thermo.nCells(), 1.0);
 
-    if (m_test_qss) {
-        QssMolecules qss(m_system, m_species);
-        for (int i=0; i<thermo.nCells(); i++) {
-            thermo.setState(i);
-            p_fac[i] = qss.levelCorrection(thermo);
-            cout << "i = " << i << ", QSS level correct = " << p_fac[i] << endl;
-        }
-    }
-
-    if (mp_locparams) {
-        delete [] mp_locparams;
-        mp_locparams = NULL;
-    }
-
-
-    if (m_nparams < 4) { // Local parameters for thin systems
-        const size_t ndata = m_nbands*2;
-
-        mp_locparams = new double [thermo.nCells()*ndata];
-        paramCount=thermo.nCells()*ndata;
-
-        for (int i=0; i<thermo.nCells(); i++) {
-
-            thermo.setState(i);
-
-            tr  = thermo.Tr();
-            tv  = thermo.Tv();
-            pa  = thermo.N(m_species_index) * KB * tr;
-
-            // std::cout << "m_species_index "<< m_species_index << " PARAMS tr:" << tr << " tv: " << tv << "pa: " << pa << " thermo.N: " << thermo.N(m_species_index) << " KB: " << KB  << std::endl;
-
-            getParameters(tv,tr,p_params);
-
-            #pragma omp parallel for
-            for (int b = 0; b < m_nbands; ++b) {
-                mp_locparams[i*ndata+b*2+0] = p_params[b*m_nparams+0] * pa;
-                mp_locparams[i*ndata+b*2+1] = p_params[b*m_nparams+1] * pa * p_fac[i];
+        if (m_test_qss) {
+            QssMolecules qss(m_system, m_species);
+            for (int i=0; i<thermo.nCells(); i++) {
+                thermo.setState(i);
+                p_fac[i] = qss.levelCorrection(thermo);
+                cout << "i = " << i << ", QSS level correct = " << p_fac[i] << endl;
             }
         }
 
-    } else { // Local parameters for thick systems
-        const size_t ndata = m_nbands*4;
-        mp_locparams = new double [thermo.nCells()*ndata];
-        paramCount=thermo.nCells()*ndata;
+        if (mp_locparams) {
+            delete [] mp_locparams;
+            mp_locparams = NULL;
+        }
 
-        for (int i=0; i<thermo.nCells(); i++) {
 
-            thermo.setState(i);
+        if (m_nparams < 4) { // Local parameters for thin systems
+            const size_t ndata = m_nbands*2;
 
-            tr  = thermo.Tr();
-            tv  = thermo.Tv();
-            pa  = thermo.N(m_species_index) * KB * tr;
+            mp_locparams = new double [thermo.nCells()*ndata];
+            m_paramCount=thermo.nCells()*ndata;
+//            std::cout << ndata << std::endl;
 
-            getParameters(tv,tr,p_params);
+            for (int i=0; i<thermo.nCells(); i++) {
 
-            #pragma omp parallel for
-            for (int b = 0; b < m_nbands; ++b) {
-                mp_locparams[i*ndata+b*4+0] = p_params[b*m_nparams+0] * pa;
-                mp_locparams[i*ndata+b*4+1] = p_params[b*m_nparams+2] * p_fac[i];
-                mp_locparams[i*ndata+b*4+2] = p_params[b*m_nparams+3] ;
-                if (m_nparams < 6)
-                    mp_locparams[i*ndata+b*4+3] = p_params[b*m_nparams+4]*pa/100000.0;
-                else
-                    mp_locparams[i*ndata+b*4+3] = p_params[b*m_nparams+4]*pa
-                      + p_params[b*m_nparams+5];
+                thermo.setState(i);
+
+                tr  = thermo.Tr();
+                tv  = thermo.Tv();
+                pa  = thermo.N(m_species_index) * KB * tr;
+
+                // std::cout << "m_species_index "<< m_species_index << " PARAMS tr:" << tr << " tv: " << tv << "pa: " << pa << " thermo.N: " << thermo.N(m_species_index) << " KB: " << KB  << std::endl;
+
+                getParameters(tv,tr,p_params);
+
+#pragma omp parallel for
+                for (int b = 0; b < m_nbands; ++b) {
+                    mp_locparams[i*ndata+b*2+0] = p_params[b*m_nparams+0] * pa;
+                    mp_locparams[i*ndata+b*2+1] = p_params[b*m_nparams+1] * pa * p_fac[i];
+                }
+            }
+
+        } else { // Local parameters for thick systems
+            const size_t ndata = m_nbands*4;
+            mp_locparams = new double [thermo.nCells()*ndata];
+            m_paramCount=thermo.nCells()*ndata;
+//            std::cout << ndata << std::endl;
+
+            for (int i=0; i<thermo.nCells(); i++) {
+
+                thermo.setState(i);
+
+                tr  = thermo.Tr();
+                tv  = thermo.Tv();
+                pa  = thermo.N(m_species_index) * KB * tr;
+
+                getParameters(tv,tr,p_params);
+
+#pragma omp parallel for
+                for (int b = 0; b < m_nbands; ++b) {
+                    mp_locparams[i*ndata+b*4+0] = p_params[b*m_nparams+0] * pa;
+                    mp_locparams[i*ndata+b*4+1] = p_params[b*m_nparams+2] * p_fac[i];
+                    mp_locparams[i*ndata+b*4+2] = p_params[b*m_nparams+3] ;
+                    if (m_nparams < 6)
+                        mp_locparams[i*ndata+b*4+3] = p_params[b*m_nparams+4]*pa/100000.0;
+                    else
+                        mp_locparams[i*ndata+b*4+3] = p_params[b*m_nparams+4]*pa
+                                + p_params[b*m_nparams+5];
+                }
             }
         }
+
+        delete [] p_params;
+        delete [] p_fac;
     }
-
-    delete [] p_params;
-    delete [] p_fac;
-
 }
 
 double SnbDiatomicSystem::getLocalParameter(const int& i, const int& j, const int& k) const
 // Cell (i), Band (j) and Parameter (k) indices
 {
+    //Careful if mp_locparams is not intialised!
+
     if (m_nparams < 4) // Local parameters for thin systems
         return mp_locparams[i*m_nbands*2+j*2+k];
     else 
@@ -365,14 +607,15 @@ double SnbDiatomicSystem::emittedPower(int cellID, ThermoData& thermo)
 
 void SnbDiatomicSystem::bandEmission(const int cellID, ThermoData& thermo, double* const p_emis)
 {
+    if (bandEmissionComputed(cellID)==false) {
     double *p_params = new double [m_nparams*m_nbands];
     thermo.setState(cellID);
 
-    double tr  = thermo.Tr();
-    double tv  = thermo.Tv();
-    double pa  = thermo.N(m_species_index) * KB * tr;
+    m_tr  = thermo.Tr();
+    m_tv  = thermo.Tv();
+    m_pa  = thermo.N(m_species_index) * KB * m_tr;
 
-    getParameters(tv, tr, p_params);
+    getParameters(m_tv, m_tr, p_params);
 
     // QSS level correction
     double qss_fac = 1.0;
@@ -384,10 +627,11 @@ void SnbDiatomicSystem::bandEmission(const int cellID, ThermoData& thermo, doubl
 
     double sum = 0;
     for (int b = 0; b < m_nbands; ++b) {
-        p_emis[b] = p_params[b*m_nparams+1] * pa * qss_fac * 1000.0;
+        p_emis[b] = p_params[b*m_nparams+1] * m_pa * qss_fac * 1000.0;
     }
 
     delete[] p_params;
+    }
 }
 
 void SnbDiatomicSystem::determineBandRange()
@@ -411,6 +655,11 @@ void SnbDiatomicSystem::determineBandRange()
     }
     
     m_nbands = m_bandn - m_band1 + 1;
+}
+
+bool SnbDiatomicSystem::waveNumberIsInBandRange(CFuint waveBand)
+{
+    return ((waveBand>=lowBand()) && (waveBand<=highBand()));
 }
 
 void SnbDiatomicSystem::loadTemperatureGrid()
@@ -438,6 +687,8 @@ void SnbDiatomicSystem::loadTemperatureGrid()
     while (ss >> line)
         m_nparams++;
     
+
+
     // Read the rest of the temperatures from the file
     while (std::getline(file, line)) {
         sscanf(line.c_str(), "%f %f", &tv.back(), &tr.back());
@@ -657,6 +908,9 @@ double SnbDiatomicSystem::opticalThickness(const HSNBThickParameterSet &pathPara
 //            CFLog(VERBOSE, "SnbDiatomicSystem::opticalThickness::Thick, CG => kappa=" << pathParams.kappa[i]
 //                  << ", p_kb[1]=" << p_kb[1] << ", p_kb[2]=" << p_kb[2] << " \n");
 
+//            std::cout << this->systemName() << " / " << this->speciesName() << "SnbDiatomicSystem::opticalThickness::Thick, CG => kappa=" << pathParams.kappa[i]
+//                         << ", p_kb[1]=" << p_kb[1] << ", p_kb[2]=" << p_kb[2] << " i=" << i << std::endl;
+
             cf_assert(pathParams.kappa[i] >= 0.0);
             cf_assert(pathParams.betaD[i] >= 0.0);
             cf_assert(pathParams.betaL[i] >= 0.0);
@@ -719,6 +973,8 @@ double SnbDiatomicSystem::opticalThickness(const HSNBThickParameterSet &pathPara
     }
 }
 
+
+
 void SnbDiatomicSystem::addStateParams(ThermoData& thermo, HSNBNonThickParameterSet &nonThickParams, CFreal cellDistance, CFuint localCellID, CFreal sig)
 {
 //    CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams::NONTHICK, " << this->speciesName() << " / " << this->systemName() << "  \n");
@@ -737,8 +993,13 @@ void SnbDiatomicSystem::addStateParams(ThermoData& thermo, HSNBNonThickParameter
     b -= lowBand();
 
     if (nonThickParams.isEmpty()) {
-
-        m_tempKu=mp_locparams[localCellID*2*m_nbands + b*2] * cellDistance;
+        if  (thermo.usePrecomputedDiatomicParameters()) {
+            m_tempKu=mp_locparams[localCellID*2*m_nbands + b*2] * cellDistance;
+        }
+        else {
+            getThinParamsSingleBand(thermo,localCellID,b);
+            m_tempKu*=cellDistance;
+        }
 
 //        CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>NONTHICK: Empty ParamSet. Add Ku=" << m_tempKu << " at localID " << localCellID  << "\n");
 //        CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>NONTHICK: mp_locparams["<< localCellID <<"*2*"<< m_nbands<<" + "<< b << "*2]=" << mp_locparams[localCellID*2*m_nbands + b*2] << "\n");
@@ -748,7 +1009,15 @@ void SnbDiatomicSystem::addStateParams(ThermoData& thermo, HSNBNonThickParameter
     }
     else {
         //ku=sum_i<=j(ku)
-         m_tempKu=nonThickParams.kappa+mp_locparams[localCellID*2*m_nbands + b*2] * cellDistance;
+
+        if  (thermo.usePrecomputedDiatomicParameters()) {
+            m_tempKu=nonThickParams.kappa+mp_locparams[localCellID*2*m_nbands + b*2] * cellDistance;
+        }
+        else {
+            getThinParamsSingleBand(thermo,localCellID,b);
+            m_tempKu*=cellDistance;
+            m_tempKu+=nonThickParams.kappa;
+        }
 
 //        CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>NONTHICK: NonEmpty ParamSet. Add Ku=" << m_tempKu << " at localID " << localCellID  << "\n");
 //        CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>NONTHICK: mp_locparams["<< localCellID <<"*2*"<< m_nbands<<" + "<< b << "*2]=" << mp_locparams[localCellID*2*m_nbands + b*2] << "\n");
@@ -757,12 +1026,11 @@ void SnbDiatomicSystem::addStateParams(ThermoData& thermo, HSNBNonThickParameter
         nonThickParams.addState(m_tempKu);
     }
 
-
-
+//    CFLog(INFO, "SnbDiatomicSystem::addStateParams =>THIN: cellDistance=" << cellDistance << " m_tempKu=" <<m_tempKu << "\n");
 
 }
 
-void SnbDiatomicSystem::addStateParams(HSNBThickParameterSet &thickParams, CFreal cellDistance, CFuint localCellID, CFreal sig)
+void SnbDiatomicSystem::addStateParams(ThermoData &thermo,HSNBThickParameterSet &thickParams, CFreal cellDistance, CFuint localCellID, CFreal sig)
 {
 //    CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams::THICK, " << this->speciesName() << " / " << this->systemName()<< "  \n");
     // Find the band corresponding to this wavelength
@@ -776,9 +1044,20 @@ void SnbDiatomicSystem::addStateParams(HSNBThickParameterSet &thickParams, CFrea
     }
     b -= lowBand();
 
-   m_tempKu=mp_locparams[localCellID*4*m_nbands+b*4+0] * cellDistance;
-   m_tempBetaD=mp_locparams[localCellID*4*m_nbands+b*4+2];
-   m_tempBetaL=mp_locparams[localCellID*4*m_nbands+b*4+3];
+   if (thermo.usePrecomputedDiatomicParameters()) {
+       m_tempKu=mp_locparams[localCellID*4*m_nbands+b*4+0] * cellDistance;
+       m_tempBetaD=mp_locparams[localCellID*4*m_nbands+b*4+2];
+       m_tempBetaL=mp_locparams[localCellID*4*m_nbands+b*4+3];
+   }
+   else {
+       //TODO use proper function header
+       getThickParamsSingleBand(thermo,localCellID,b);
+       m_tempKu*=cellDistance;
+   }
+
+   cf_assert(m_tempKu >= 0.0);
+   cf_assert(m_tempBetaL >= 0.0);
+   cf_assert(m_tempBetaD >= 0.0);
 
    thickParams.addState(m_tempKu,m_tempBetaD, m_tempBetaL);
 
@@ -787,6 +1066,7 @@ void SnbDiatomicSystem::addStateParams(HSNBThickParameterSet &thickParams, CFrea
 //   CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>THICK: mp_locparams[" << localCellID << "*4*" << m_nbands << " + " << b << "*4+3]=" << mp_locparams[localCellID*4*m_nbands+b*4+3] << "\n");
 //   CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>THICK: Add Ku=" << m_tempKu <<", betaD=" << m_tempBetaD << ", betaL=" << m_tempBetaL << " at localID " << localCellID  << "\n");
 //   CFLog(VERBOSE, "SnbDiatomicSystem::addStateParams =>THICK: cellDistance=" << cellDistance << "\n");
+//   CFLog(INFO, "SnbDiatomicSystem::addStateParams =>THICK: cellDistance=" << cellDistance << " m_tempKu=" <<m_tempKu << " m_tempBetaD="<<m_tempBetaD << " m_tempBetaL="<<m_tempBetaL << "\n");
 
 }
 

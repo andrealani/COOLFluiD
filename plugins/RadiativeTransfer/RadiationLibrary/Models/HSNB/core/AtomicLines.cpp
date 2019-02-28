@@ -53,11 +53,18 @@ AtomicLines::AtomicLines(const std::string baseDir,
 
     m_mw = thermo[m_species_index].mw;
 
+    m_hiSigc=thermo.sigMax();
+    m_lowSigc=thermo.sigMin();
+
+    //std::cout << "thermo.sigMax: " << thermo.sigMax();
     // Load line data and Lorentz model
     if (m_atom == "H")
         loadHData();  // special case for H atoms
     else
         loadNistData();
+
+
+    CFLog(INFO, "AtomicLines " << m_atom <<" => Consider range " << m_lowSigc << " - " << m_hiSigc << "[1/cm]," << nLines() << " lines. \n");
 
     // Initialize non-Boltzmann correction factors
     for (int i = 0; i < nLines(); ++i) {
@@ -161,6 +168,12 @@ void AtomicLines::spectrum(ThermoData& thermo, const LblSpectralGrid& grid,
         p_spectrum[ik] = f3*f*(f*p_spectrum[ik]-p_spectrum[ie]/f)/(sig*sig);
         p_spectrum[ie] *= sig;
     }
+}
+
+bool AtomicLines::wavenumberIsValid(double sig)
+{
+    //Wavenumber is either in range or no custom range is specified(for negative values, use full available dataset in that case)
+    return (((sig>=m_lowSigc) && (sig<=m_hiSigc)) || m_lowSigc<0);
 }
 
 //==============================================================================
@@ -302,38 +315,38 @@ void AtomicLines::addStateParams(ThermoData &thermo,HSNBAtomicParameterSet &atom
 {
 
 
-    const double f1 = 0.25e-4*QE*QE/(C0*C0*ME*EPS0*sig*sig);
+//    m_f1 = 0.25e-4*QE*QE/(C0*C0*ME*EPS0*sig*sig);
+    m_f1=F1TIMESSIGSQUARED/(sig*sig);
 
-    double Q, ni, f2;
 
     // Assume thermoState has been set outside of this function
 
     lineData(thermo);
 
-    f2 = HP*C0*100.0/(KB*thermo.Tel()); // [cm]
+    m_f2 = HP*C0*100.0/(KB*thermo.Tel()); // [cm]
 
     double sum1 = 0, sum2 = 0, f;
     for (int j = 0; j < nLines(); ++j) {
         const LineData& line = m_line_data[j];
         f = Voigt::humlicek(line.gaml, line.gamd, sig-line.sigc);
-        f *= line.sigc*line.sigc*std::exp(line.lnglflu-f2*line.Eu);
+        f *= line.sigc*line.sigc*std::exp(line.lnglflu-m_f2*line.Eu);
         sum1 += f*line.nonbolt_l;
         sum2 += f*line.nonbolt_u;
     }
 
     // Split exponential to avoid overflow at high wavenumbers
-    f = exp(0.5*sig*f2);
-    Q  = m_loc_params[localCellID].Q;
-    ni = m_loc_params[localCellID].N;
+    f = exp(0.5*sig*m_f2);
+    m_Q  = m_loc_params[localCellID].Q;
+    m_ni = m_loc_params[localCellID].N;
 
 //    CFLog(VERBOSE, "AtomicLines::addStateParams => Q= " << Q << ", ni="<< ni <<" \n");
 
-    atomParams.optThick+=f1*ni/Q*f*(f*sum1 - sum2/f)*cellDistance;
+    atomParams.optThick+=m_f1*m_ni/m_Q*f*(f*sum1 - sum2/f)*cellDistance;
 
     if (std::isnan(atomParams.optThick)) {
         std::cout << "Computed singular optical thickness, printing telemetry: \n";
-        std::cout << "Enum: f1=" << f1 << ", sig=" << sig << ", ni=m_loc_params[" << localCellID << "].N=" << ni << "\n";
-        std::cout << "Denum: f2=" << f2 << ", thermo.Tel()=" << thermo.Tel() << ", f=" << f << ", sum1=" << sum1
+        std::cout << "Enum: f1=" << m_f1 << ", sig=" << sig << ", ni=m_loc_params[" << localCellID << "].N=" << m_ni << "\n";
+        std::cout << "Denum: f2=" << m_f2 << ", thermo.Tel()=" << thermo.Tel() << ", f=" << f << ", sum1=" << sum1
                   << ", sum2=" << sum2 << " cellDistance=" << cellDistance << "\n";
     }
 
@@ -378,31 +391,104 @@ void AtomicLines::loadNistData()
     int nlines;
     file >> nlines;
 
-    // Allocate storage for line data
-    m_line_data.resize(nlines);
-    std::vector<int> topbase_index(nlines);
+//    // Allocate storage for line data
+//    m_line_data.resize(nlines);
+//    std::vector<int> topbase_index(nlines);
+
+//    // Read in the raw line data
+//    char buff[1024];
+
+
+//    for (size_t i = 0; i < nlines; ++i) {
+//        file >> topbase_index[i]
+//             >> m_line_data[i].sigc    // [A]
+//             >> m_line_data[i].lnglflu
+//             >> m_line_data[i].Eu;      // [cm-1]
+//        file.getline(buff, 1024, '\n');
+//    }
+
+
+    m_line_data.clear();
+    std::vector<int> topbase_index;
 
     // Read in the raw line data
     char buff[1024];
+    //Actual number of lines lying in the range considered (lowSigc-hiSigc)
+    int realNbLines=0;
+
+    //Current center wavenumber converted to [1/cm]
+    double curSigcPerCM;
+
+    int curTopbaseIndex=0;
+    LineData newLine;
+
+    m_loBand=nlines;
+    m_hiBand=0;
 
     for (size_t i = 0; i < nlines; ++i) {
-        file >> topbase_index[i]
-             >> m_line_data[i].sigc    // [A]
-             >> m_line_data[i].lnglflu
-             >> m_line_data[i].Eu;      // [cm-1]
-        file.getline(buff, 1024, '\n');
+
+        file >> curTopbaseIndex
+             >> newLine.sigc;                 // [A]
+
+        curSigcPerCM=1.0e8/newLine.sigc;
+
+        //std::cout << "curTopbaseIndex: " << curTopbaseIndex<<", curSigcPerCM " << curSigcPerCM << "newLine.sigc: " << newLine.sigc << std::endl;
+
+        if (wavenumberIsValid(curSigcPerCM)) {
+            //Current wavenumber is in the spectral range to be considered: add atomic line
+            realNbLines++;
+            file >> newLine.lnglflu
+                 >> newLine.Eu;      // [cm-1]
+            topbase_index.push_back(curTopbaseIndex);
+            m_line_data.push_back(newLine);
+            file.getline(buff, 1024, '\n');
+            m_loBand=i+1;
+        }
+        else if (curSigcPerCM>m_hiSigc) {
+            //Current wavenumber not in range (to high): continue until in range
+            file.getline(buff, 1024, '\n');
+            m_hiBand++;
+        }
+        else {
+            //Exceeded spectral range: abort
+            break;
+        }
     }
+
+
+    if (m_loBand<=m_hiBand) {
+        m_loBand=realNbLines;
+        m_hiBand=0;
+    }
+    else {
+        cf_assert((m_loBand-m_hiBand)==realNbLines);
+    }
+
+    nlines=realNbLines;
+
+
+    //Double check
+    cf_assert(nlines==nLines());
 
     // Close the file
     file.close();
 
+//    DEBUG
+//    std::cout << "FILE CLOSE" << std::endl;
+//    std::cout << "TOPBASE INDEX SIZE " << topbase_index.size() << std::endl;
+//    std::cout << "m_line_data SIZE " << m_line_data.size() << std::endl;
+//    std::cout << "m_lowSigc " << m_lowSigc << ", m_hiSigc " << m_hiSigc<< std::endl;
+//    std::cout << "curSigcPerCM " << curSigcPerCM << std::endl;
+//    std::cout << "nlines " << nlines << std::endl;
+
     // Some double checking
-    for (size_t i = nlines-2; i--; )
-        assert(m_line_data[i].sigc <= m_line_data[i+1].sigc);
+//    for (size_t i = nlines-2; i--; )
+//        assert(m_line_data[i].sigc <= m_line_data[i+1].sigc);
 
     // Convert line parameters to correct units
     const double ln10 = std::log(10.0);
     for (int i = 0; i < nlines; ++i) {
+
         // Shift TOPBASE index
         topbase_index[i] = std::max(0, topbase_index[i] - 1);
 
@@ -413,12 +499,15 @@ void AtomicLines::loadNistData()
         m_line_data[i].lnglflu *= ln10;
     }
 
+
     // Load the Lorentz broadening model
     mp_lorentz = HSNBSharedPtr<LorentzModel>(
         new LorentzTopbase(m_atom, topbase_index));
 
+
     // Load the partition function
     mp_Q = HSNBSharedPtr<PartitionFunction>(new AtomicPartFunc(m_atom));
+
 }
 
 //==============================================================================
@@ -441,20 +530,66 @@ void AtomicLines::loadHData()
     file >> nlines;
 
     // Allocate storage for line data
-    m_line_data.resize(nlines);
-    std::vector< std::pair<int, int> > transitions(nlines);
+//    m_line_data.resize(nlines);
+//    std::vector< std::pair<int, int> > transitions(nlines);
 
+//    // Read in the raw line data
+//    char buff[1024];
+
+//    for (size_t i = 0; i < nlines; ++i) {
+//        file >> m_line_data[i].sigc    // [A]
+//             >> m_line_data[i].lnglflu
+//             >> m_line_data[i].Eu      // [cm-1]
+//             >> transitions[i].first
+//             >> transitions[i].second;
+//        file.getline(buff, 1024, '\n');
+//    }
+
+
+    m_line_data.clear();
+    std::vector< std::pair<int, int> > transitions;
     // Read in the raw line data
     char buff[1024];
+    //Actual number of lines lying in the range considered (lowSigc-hiSigc)
+    int realNbLines=0;
+
+    //Current center wavenumber converted to [1/cm]
+    double curSigcPerCM;
+    std::pair<int, int> curTransitions;
+
+
+    LineData newLine;
+
 
     for (size_t i = 0; i < nlines; ++i) {
-        file >> m_line_data[i].sigc    // [A]
-             >> m_line_data[i].lnglflu
-             >> m_line_data[i].Eu      // [cm-1]
-             >> transitions[i].first
-             >> transitions[i].second;
-        file.getline(buff, 1024, '\n');
+
+        file >> newLine.sigc;                 // [A]
+        curSigcPerCM=1.0e8/newLine.sigc;
+
+        if (wavenumberIsValid(curSigcPerCM)) {
+            //Current wavenumber is in the spectral range to be considered: add atomic line
+            realNbLines++;
+            file >> newLine.lnglflu
+                 >> newLine.Eu      // [cm-1]
+                 >> curTransitions.first
+                 >> curTransitions.second;
+            transitions.push_back(curTransitions);
+            m_line_data.push_back(newLine);
+            file.getline(buff, 1024, '\n');
+        }
+        else if (curSigcPerCM>m_lowSigc) {
+            //Current wavenumber not in range (to high): continue until in range
+            file.getline(buff, 1024, '\n');
+        }
+        else {
+            //Exceeded spectral range: abort
+            break;
+        }
     }
+
+    nlines=realNbLines;
+
+
 
     // Close the file
     file.close();
@@ -470,6 +605,7 @@ void AtomicLines::loadHData()
 
         //std::cout << m_line_data[i].sigc << " " << m_line_data[i].lnglflu << std::endl;
     }
+
 
     // Load the Lorentz broadening model
     mp_lorentz = HSNBSharedPtr<LorentzModel>(

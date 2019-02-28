@@ -1,4 +1,5 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
+#include "Common/BadValueException.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -12,8 +13,8 @@ namespace RadiativeTransfer {
 
 typedef std::numeric_limits< CFreal > realVal;
 
-ThermoData::ThermoData(): m_p(0), m_tr(0), m_tv(0), m_currentStateID(0) {
-
+ThermoData::ThermoData(): m_p(0), m_tr(0), m_tv(0), m_currentStateID(0), m_usePrecomputedParameters(true) {
+m_currentStateIndex=-1;
 }
 
 
@@ -24,6 +25,24 @@ void ThermoData::setup(const CFuint pressureID, const CFuint trID, const CFuint 
     m_tvID=tvID;
     m_convertPartialPressure=convertPartialPressure;
     m_avogadroOvMM=avogadroOvMM;
+}
+
+void ThermoData::setSpectralRange(const CFreal sigMin, const CFreal sigMax)
+{
+    if (sigMin<sigMax) {
+        m_sigMin=sigMin;
+        m_sigMax=sigMax;
+    }
+    else {
+        std::cout << "The band range specified is invalid. \n" << std::endl;
+        m_sigMin=-1.0;
+        m_sigMax=-1.0;
+    }
+
+    if (sigMin<0 || sigMax<0) {
+        m_sigMin=-1.0;
+        m_sigMax=-1.0;
+    }
 }
 
 CFuint ThermoData::getLocalCellID(CFuint cellID)
@@ -70,19 +89,24 @@ CFuint ThermoData::nCells() const
     return m_states.size();
 }
 
-void ThermoData::setState(CFuint stateIndex)
+void ThermoData::setStateSafe(CFuint stateIndex)
 {
+    //Only change state if stateIndex does not refer to the current state
+    if (stateIndex!=m_currentStateIndex) {
+
     m_externalState.active=false;
     stateMapIt=stateIDMap.find(stateIndex);
 
-    //cf_assert(stateMapIt->second==stateIndex);
-    //CFLog(VERBOSE, "ThermoData::setState => stateIndex=" << stateIndex << "\n");
+//    cf_assert(stateMapIt->second==stateIndex);
+//    CFLog(VERBOSE, "ThermoData::setState => stateIndex=" << stateIndex << ", stateMapIt->second=" << stateMapIt->second << "\n");
 
     try {
         if (isValidLocalID(stateMapIt)) {
             m_tr  = m_states[stateMapIt->second].Tr();
             m_tv  = m_states[stateMapIt->second].Tv();
             m_p   = m_states[stateMapIt->second].p();
+
+            m_currentStateIndex=stateIndex;
 
             m_currentStateID=stateMapIt->second;
             //CFLog(VERBOSE, "ThermoData::setState => m_currentStateID=" << m_currentStateID << "\n");
@@ -96,6 +120,21 @@ void ThermoData::setState(CFuint stateIndex)
       throw;
     }
 
+    }
+
+}
+
+void ThermoData::setState(CFuint stateIndex)
+{
+    //Only change state if stateIndex does not refer to the current state
+    if (stateIndex!=m_currentStateIndex) {
+            m_tr  = m_states[stateIndex].Tr();
+            m_tv  = m_states[stateIndex].Tv();
+            m_p   = m_states[stateIndex].p();
+            m_currentStateIndex=stateIndex;
+            m_currentStateID=stateIndex;
+            //CFLog(VERBOSE, "ThermoData::setState => m_currentStateID=" << m_currentStateID << "\n");
+        }
 }
 
 void ThermoData::setExternalState(CFreal newTr, CFreal newTv, CFreal newP, CFreal *newN)
@@ -114,6 +153,9 @@ void ThermoData::deactivateExternalState()
 void ThermoData::addState(RealVector *stateVector, CFuint localStateID)
 {
     stateIDMap.insert(std::make_pair(localStateID, m_states.size()));
+//    std::cout << "ThermoData::addState => " << m_nbSpecies << std::endl;
+
+
     m_states.push_back(RadiationFieldData(m_pressureID,m_trID,m_tvID,emIndex,stateVector,m_nbSpecies, m_avogadroOvMM));
 }
 

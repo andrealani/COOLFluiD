@@ -1,21 +1,12 @@
 #ifndef COOLFluiD_RadiativeTransfer_THERMODATA_H
 #define COOLFluiD_RadiativeTransfer_THERMODATA_H
 
-#include "Common/StringOps.hh"
-#include "Framework/PhysicalChemicalLibrary.hh"
-#include "Common/CFMap.hh"
-#include "Environment/CFEnv.hh"
 #include <vector>
 #include <string>
 #include <iostream>
 #include <map>
-#include "Common/CFLog.hh"
-#include "Environment/ObjectProvider.hh"
-#include "Common/BadValueException.hh"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SpeciesData.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/RadiationFieldData.h"
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -51,13 +42,23 @@ struct ExternalState{
 
 };
 
+
+///
+/// \brief Management class for thermodynamic data of states used by the HSNB model.
+///
+/// Mainly used to conveniently access state variables (pressure, temperature, number densities) for
+/// the computation of emission and absorption. A state can be set using the local state index and setState()
+///
 class ThermoData
 {
 public:
     ThermoData();
 
+
     void setup(const CFuint pressureID, const CFuint trID, const CFuint tvID, RealVector* avogadroOvMM, bool m_convertPartialPressure);
-  
+
+    void setSpectralRange(const CFreal sigMin, const CFreal sigMax);
+
     void reset() {
         m_species.clear();
     }
@@ -77,6 +78,11 @@ public:
         return -1;
     }
 
+    bool speciesExists(const std::string& name) const
+    {
+        return (speciesIndex(name)!=-1);
+    }
+
     CFuint getLocalCellID(CFuint cellID);
 
     const SpeciesData& operator[] (size_t i) const { return m_species[i]; }
@@ -86,7 +92,7 @@ public:
      */
     void addSpecies(const std::string& name)
     {
-        m_nbSpecies++;
+
         // BT: TODO: put species data into file to allow for extension?
         // Hardcoded species for now
         if (name=="e-") {
@@ -176,6 +182,7 @@ public:
           std::cout << "Species '" << name << "' is not supported!" << std::endl;
         }
 
+        m_nbSpecies=m_species.size();
     }
     
     /**
@@ -191,11 +198,22 @@ public:
 
         }
         return NULL; }
-    CFreal X(int i) const {
-        while (true) {
 
+    /// Compute the mole fraction of a species
+    /// \param i species index
+    CFreal X(int i) {
+        //TODO: Use safe Ptr!
+        numberDensities = this->N();
+        totalDensity=0.0;
+
+        for (int i=0; i<m_nbSpecies; i++) {
+//            std::cout << "ThermoData::numberDensities[i]" <<numberDensities[i]  << std::endl;
+            totalDensity+=numberDensities[i];
         }
-        return 1.0; }
+
+//        std::cout << "ThermoData::X(" << i << ")" << N(i) << " " << totalDensity << std::endl;
+        return (totalDensity > 0.0) ? N(i)/totalDensity : 0.0;
+    }
 
     double N(int i) const;
     CFreal *N();
@@ -203,6 +221,10 @@ public:
     double Th() const {
         return m_tr;
     }
+
+    CFreal sigMax() const { return m_sigMax; }
+    CFreal sigMin() const { return m_sigMin; }
+
     double Tr() const { return m_tr; }
     double Tv() const { return m_tv; }
     double Tel() const { return m_tv; }
@@ -211,6 +233,13 @@ public:
 
     CFuint nCells() const;
 
+    /// Safer implementation using a stateMap, slower
+    void setStateSafe(CFuint stateIndex);
+
+    /// \brief Sets the state active to quickly get its temperature, pressure and chemical composition
+    /// Performs no sanity checks, fast but insecure
+    /// 
+    /// 
     void setState(CFuint stateIndex);
 
     void setExternalState(CFreal newTr, CFreal newTv, CFreal newP, CFreal* N);
@@ -226,6 +255,22 @@ public:
         return m_currentStateID;
     }
 
+    bool usePrecomputedDiatomicParameters() const {
+        return m_usePrecomputedParameters;
+    }
+
+    bool usePrecomputedContinuumParameters() const {
+        return m_usePrecomputedContinuumParameters;
+    }
+
+    void precomputeParameters(bool flag){
+        m_usePrecomputedParameters=flag;
+    }
+
+    void precomputeContinuumParameters(bool flag){
+        m_usePrecomputedContinuumParameters=flag;
+    }
+
 private:
     bool isValidLocalID(std::map<CFuint, CFuint>::iterator stateMapIt) const;
 
@@ -238,6 +283,7 @@ private:
     RadiationFieldData externalState;
 
     RealVector* m_avogadroOvMM;
+    CFreal * numberDensities;
 
     CFuint m_currentStateID;
 
@@ -247,12 +293,24 @@ private:
 
     bool m_convertPartialPressure=false;
 
+    bool m_usePrecomputedParameters;
+    bool m_usePrecomputedContinuumParameters;
+
+    //Maximum wavenumber to be considered in [1/cm]
+    CFreal m_sigMax;
+
+    //Minimum wavenumber to be considered in [1/cm]
+    CFreal m_sigMin;
+
     CFuint m_pressureID;
     CFuint m_trID;
     CFuint m_tvID;
     CFuint m_nbSpecies;
 
+    CFreal totalDensity;
+
     CFuint emIndex;
+    CFuint m_currentStateIndex;
 
     //Map the partition state Id as specified in the
     //radiator m_stateIDs to the local position in m_states

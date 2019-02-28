@@ -18,7 +18,9 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 
-
+    ///
+    /// \brief Simple public container to store parameters necessary in order to compute absorption
+    ///
 struct HSNBLocalParameterSet {
 
     virtual std::string name() const {
@@ -212,6 +214,56 @@ struct HSNBThickParameterSet: HSNBLocalParameterSet {
     //NEEDED ONLY FOR OPTICALLY THICK SYSTEMS
     std::vector<CFreal> betaD;
     std::vector<CFreal> betaL;
+};
+
+struct HSNBCO2ParameterSet: HSNBLocalParameterSet {
+
+
+    ~HSNBCO2ParameterSet() {
+
+    }
+
+
+    void reset() {
+        kappa=0.0;
+        nbCells=0;
+    }
+
+
+    HSNBCO2ParameterSet():HSNBLocalParameterSet()
+    {
+        kappa=0.0;
+    }
+
+    virtual void print(bool printAll=false) const {
+        if (printAll) {
+            std::cout <<"HSNBCO2ParameterSet::print=> Parameters: kappa=" << kappa << " \n";
+            std::cout <<"\n";
+        }
+        else {
+            CFLog(INFO, "HSNBCO2ParameterSet::print=> Parameters: kappa=" << kappa << " \n");
+            CFLog(INFO, "\n");
+        }
+    }
+
+    virtual std::string name() const {
+        return "HSNBCO2ParameterSet";
+    }
+
+
+    void addState(CFreal newKappa) {
+        kappa=newKappa;
+        HSNBLocalParameterSet::addState();
+    }
+
+    virtual CFuint getRealCount() const {
+
+        return 1;
+    }
+
+    //Store previous value (sum over the optical depth along previous trajectory)
+    CFreal kappa;
+
 };
 
 

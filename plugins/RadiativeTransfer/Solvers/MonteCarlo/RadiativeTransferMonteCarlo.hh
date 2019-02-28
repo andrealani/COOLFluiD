@@ -16,6 +16,8 @@
 #include "RadiativeTransfer/PostProcess/PostProcess.hh"
 #include "RadiativeTransfer/RadiationLibrary/RadiationPhysicsHandler.hh"
 #include "LagrangianSolver/ParallelVector/ParallelVector.hh"
+#include "RadiativeTransfer/Solvers/MonteCarlo/PhotonData.hh"
+
 
 #include <utility>
 #include <time.h>
@@ -59,11 +61,6 @@ namespace COOLFluiD {
    
 //////////////////////////////////////////////////////////////////////////////
 
-struct PhotonData{
-    CFreal KS;
-    CFreal energyFraction;
-    CFreal wavelength;
-};
 
 typedef LagrangianSolver::Particle<PhotonData> Photon;
 
@@ -263,11 +260,19 @@ private:
 
   void getTotalEnergy();
 
-  void printPhoton(Photon photon);
+  void printPhoton(const Photon &photon);
 
   CFreal m_totalRadPower;
 
-  
+
+
+  bool m_plotTrajectories;
+
+  CFuint m_maxNbTrajectories;
+
+
+  vector< CFuint> plotProcessIds;
+  //TRACKING END
 
   LagrangianSolver::ParallelVector<CFreal> m_stateRadPower;
   LagrangianSolver::ParallelVector<CFreal> m_stateInRadPowers;
@@ -277,11 +282,14 @@ private:
   vector<CFreal> m_ghostStateRadPower;
   vector<CFuint> m_nbPhotonsGhostState;
 
+  vector<CFint> m_randomTrajectories;
+
   //FIXME: persistent memory for cell and face iterators
   CFuint  m_iphoton_cell_fix, m_istate_cell_fix;
   CFuint  m_iphoton_face_fix, m_igState_face_fix;
 
   CFreal m_relaxationFactor;
+
 
   bool getFacePhotonData(Photon &ray);
 }; // end of class RadiativeTransferMonteCarlo
@@ -302,6 +310,10 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::defineConfigOptions
   options.addConfigOption< CFuint >("sendBufferSize","Size of the buffer for communication");
   options.addConfigOption< CFuint >("nbRaysCycle","Number of rays to emit before communication step");
   options.addConfigOption< CFreal >("relaxationFactor","Relaxation Factor");
+  options.addConfigOption< bool >("plotTrajectories","Photon trajectories will be exported to a tecplot geometry plot");
+  options.addConfigOption< CFuint >("MaxNbTrajectories","Maximum number of trajectories to be plotted");
+//  options.addConfigOption< trajectoryExportType >("exportType", "Determines selection criterion for trajectory ids (\"Random\" or \"ConstantSpacing\"");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -348,6 +360,12 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo
   m_maxVisitedCells = 10000;
   setParameter("MaxNbVisitedCells",&m_maxVisitedCells);
 
+  m_maxNbTrajectories=10;
+  setParameter("MaxNbTrajectories",&m_maxNbTrajectories);
+
+  m_plotTrajectories=false;
+  setParameter("plotTrajectories", &m_plotTrajectories);
+
   m_isAxi = false;
   setParameter("Axi",&m_isAxi);
 
@@ -359,6 +377,8 @@ RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::RadiativeTransferMonteCarlo
 
   m_relaxationFactor = 1.;
   setParameter("relaxationFactor", &m_relaxationFactor);
+
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -549,9 +569,9 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::setup()
   MPIStruct Userdatatype;//, particleDatatype;
 
   PhotonData photonData;
-  int counts[3] = {1,1,1};
-  MPIStructDef::buildMPIStruct<CFreal,CFreal,CFreal>
-          (&photonData.KS, &photonData.energyFraction, &photonData.wavelength, counts , Userdatatype);
+  int counts[6] = {1,1,1,1,1,1};
+  MPIStructDef::buildMPIStruct<CFint,CFint,CFint,CFreal,CFreal,CFreal>
+          (&photonData.globalTrajectoryId, &photonData.indexWithinTrajectory,&photonData.fatherProcessId,&photonData.KS, &photonData.energyFraction, &photonData.wavelength, counts , Userdatatype);
 
   m_lagrangianSolver.setupParticleDatatype( Userdatatype.type );
  // particleDatatype.type = m_lagrangianSolver.getParticleDataType();
@@ -642,6 +662,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy()
       //cout<<"state radPower: "<<m_stateRadPower[state]<<endl;
       //cout<<"THE OTER: m_axi Volume: "<<m_axiVolumes[i]<<endl;
       //m_stateRadPower[i] = cellK*sigma*pow(T,4.)*m_axiVolumes[i];
+      CFLog(DEBUG_MED, "RadiativeTransferMonteCarlo::getTotalEnergy =>  m_stateRadPower[" << state << "]= " << m_stateRadPower[state] << ", currentCellVolume=" << m_radiation->getCellDistPtr(state)->getRadiatorPtr()->getCurrentCellVolume() << "\n");
     }
     else{
       //cout<<"is ghost!"<<endl;
@@ -667,7 +688,8 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy()
   //cout<<" walls rad power : "<< gStateRadPower<<endl;
   
   m_totalRadPower = stateRadPower + gStateRadPower;
-  
+  std::cout << "P " << m_myProcessRank << " m_totalRadPower=" << m_totalRadPower << "\n";
+
   //cout<<"statePhotons"<<endl;
   for(CFuint i= 0; i< m_stateRadPower.size(); ++i){
     //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
@@ -676,11 +698,14 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getTotalEnergy()
   }
   
   //cout<<"ghostPhotons"<<endl;
-  for(CFuint i= 0; i< m_ghostStateRadPower.size(); ++i){
+  for(CFuint i= 0; i< m_ghostStateRadPower.size(); ++i) {
     //CFuint test = CFuint(m_stateRadPower[i]/m_totalRadPower*nbPhotons);
     m_nbPhotonsGhostState[i] =( m_ghostStateRadPower[i] > 0.)? m_nbRaysElem : 0 ;
     //cout<<"nbPhotons: "<<m_nbPhotonsGhostState[i]<< ' '<<m_ghostStateRadPower[i] <<endl;
   }
+
+
+
 }
   
 /////////////////////////////////////////////////////////////////////////////
@@ -747,6 +772,9 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getCellPhotonData(Photon &r
       
       ray.userData.energyFraction= m_stateRadPower[ m_istate_cell_fix ]/CFreal(m_nbPhotonsState[ m_istate_cell_fix ]);
       
+
+
+//      cout << ray.userData.indexWithinTrajectory << " INDEX OF NEW RAY" << endl;
       //m_cellBuilder.releaseGE();
       ++m_iphoton_cell_fix;
       return true;
@@ -780,6 +808,8 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
       m_radiation->getWallDistPtr( m_igState_face_fix )->
 	getRadiatorPtr()->getRandomEmission(ray.userData.wavelength, m_direction );
       
+
+
       const CFuint faceGeoID = m_radiation->getCurrentWallGeoID();
       const CFuint cellID = m_lagrangianSolver.getWallStateId( faceGeoID );
       
@@ -856,6 +886,8 @@ bool RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::getFacePhotonData(Photon &r
       ray.userData.energyFraction= m_ghostStateRadPower[m_igState_face_fix]/
 	CFreal(m_nbPhotonsGhostState[m_igState_face_fix]);
       
+
+
       ++m_iphoton_face_fix;
       return true;
     }
@@ -901,6 +933,18 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   Photon photon;
   CFuint totalnbPhotons = toGenerateWallPhotons + toGenerateCellPhotons;
+
+
+  if (m_plotTrajectories) {
+      //get the total number of photons generated by all procs
+      std::vector<int> totalPhotons(m_nbProcesses);
+
+      MPI_Allgather(&totalnbPhotons, 1, Common::MPIStructDef::getMPIType(&totalnbPhotons), &totalPhotons[0], 1,
+              Common::MPIStructDef::getMPIType(&totalPhotons[0]), m_comm);
+
+
+  }
+
   boost::progress_display* progressBar = NULL;
   if (m_myProcessRank == 0) progressBar = new boost::progress_display(totalnbPhotons);
 
@@ -908,6 +952,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   Stopwatch<WallTime> s;
   s.restart();
+
 
   vector< Photon > photonStack;
   photonStack.reserve(m_sendBufferSize);
@@ -928,6 +973,7 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
         //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
         //printPhoton(photon);
         rayTracing(photon);
+
       }
       --toGenerateCellPhotons;
       if (m_myProcessRank == 0)  ++*(progressBar);
@@ -946,9 +992,11 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
     for(CFuint i = 0; i< photonStack.size(); ++i ){
       //photon=photonStack[i];
       //CFLog(INFO,"PHOTON: " << photon.cellID<<' '<<photon.userData.KS<<'\n' );
-      //printPhoton(photonStack[i]);
+//      printPhoton(photonStack[i]);
+
       rayTracing( photonStack[i] );
     }
+    
 
     //sincronize
     //      CFLog(INFO, "sincronizing\n");
@@ -961,12 +1009,15 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
   delete progressBar;
   
   CFLog(INFO,"RadiativeTransferMonteCarlo::computePhotons() => Raytracing took "<<s.readTimeHMS().str()<<'\n');
+
+
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 template<class PARTICLE_TRACKING>
-void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::printPhoton(Photon photon)
+void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::printPhoton(const Photon& photon)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -1040,6 +1091,7 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
   
   CFLog(DEBUG_MED, "RadiativeTransferMonteCarlo::rayTracing() => particle ID: "<<beam.commonData.cellID<< "\n");
   
+  CommonData trackingCommonData;
   PhotonData &beamData = m_lagrangianSolver.getUserDataPtr();
   exitCellID=m_lagrangianSolver.getExitCellID();
   
@@ -1091,6 +1143,7 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
         m_stateInRadPowers[gEndId]+=energyFraction;
         //cout<<"new energy: "<<m_gInRadPowers[gEndId]<<endl;
         //foundEntity = true;
+
         return currentCellID;
       }
 
@@ -1126,6 +1179,8 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 	  CFLog(DEBUG_MIN, "Rad power in ghostStateID[" << ghostStateID << "] = " << 
 		m_ghostStateInRadPowers[ghostStateID] << "\n");
 	  //foundEntity = true;
+
+
           return exitFaceID;
         }
         else {
@@ -1133,10 +1188,13 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
 	    (beamData.wavelength, m_exitDirection, m_entryDirection, m_normal);
           m_lagrangianSolver.newDirection( m_exitDirection );
 	  
+
           CFLog(DEBUG_MED, "Particle reflected with Entry Direction[" << m_entryDirection 
 		<< "], Normal[ " << m_normal << "], Exit direction [" << m_exitDirection << "]\n");
         }
       }
+
+
 
       if (faceType == ParticleTracking::BOUNDARY_FACE ){
         //CFLog(INFO,"HERE BOUNDARY !!\n");
@@ -1156,6 +1214,9 @@ CFuint RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::rayTracing(Photon& beam)
   else{
     CFLog(VERBOSE, "RadiativeTransferMonteCarlo::rayTracing() => enter negligible\n");
     //entity = NEGLIGIBLE;
+
+
+
     return 0;
   }
   }

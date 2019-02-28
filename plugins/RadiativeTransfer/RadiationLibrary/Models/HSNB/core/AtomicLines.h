@@ -59,6 +59,8 @@ public:
     void spectrum(ThermoData &thermo, const LblSpectralGrid& grid,
         double* const p_spectrum);
 
+    bool wavenumberIsValid(double sig);
+
     /// Computes the optically thin emission of each line.
     void thinLineEmission(ThermoData &thermo, double * const p_emis, CFreal &sumEmission, bool printDebug=false);
 
@@ -114,7 +116,20 @@ private:
     int    m_last_loc;
     double m_last_sig;
 
+    // Range of wavenumbers to be considered as centering sigc
+    CFreal m_hiSigc;
+    CFreal m_lowSigc;
+
+    CFuint m_hiBand;
+    CFuint m_loBand;
+
     CFuint m_tempLocalCellID;
+
+    CFreal m_Q;
+    CFreal m_ni;
+    CFreal m_f2;
+
+    double m_f1;
 };
 
 #endif // ATOMIC_LINES_H

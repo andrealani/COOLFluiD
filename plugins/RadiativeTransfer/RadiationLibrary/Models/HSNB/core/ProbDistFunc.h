@@ -26,6 +26,8 @@ public:
         for (int i = 0; i < pdf.size(); ++i)
             assert(pdf[i] >= 0.0);
 
+        assert(pdf.size()>0);
+
 
         // Create a cumulative PDF
         m_cumulative_pdf[0] = pdf[0];

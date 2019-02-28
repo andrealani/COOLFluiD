@@ -4,29 +4,22 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Common/COOLFluiD.hh"
-#include "RadiativeTransfer/Solvers/MonteCarlo/PhotonData.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBPhotonData.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBLocalParameterSet.hh"
-#include "Framework/PhysicalModel.hh"
 #include <vector>
 #include "Common/SafePtr.hh"
 #include <boost/shared_ptr.hpp>
 
-
-//using namespace boost;
-
 namespace COOLFluiD {
-
-    namespace RadiativeTransfer {
-
-
-
+  
+  namespace RadiativeTransfer {
+    
 //////////////////////////////////////////////////////////////////////////////
 
     const CFuint TraceStaticRealCount=4;
     const CFuint TraceDynamicRealCount=0;
     const CFreal diffFactor=0.001;
-
+    
 ///Create a trace of photon absorption parameters for all cells crossed and all mechanisms
 struct HSNBPhotonTrace {
 public:
@@ -38,13 +31,16 @@ public:
     //No need since we got rid of nasty ptrs
     //HSNBPhotonTrace(const HSNBPhotonTrace& obj);
 
-    void setup(CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies);
+    //TODO: co2Exists richtig initialisieren!
+    void setup(CFuint nbContinua, CFuint nbAtoms, CFuint nbSpecies, bool co2Exists);
+
     void addTrackingState();
 
     void addDiatomicThickParams(CFuint mechID, CFreal ku, CFreal betaD, CFreal betaL);
     void addDiatomicNonThickParams(CFuint mechID, CFreal ku);
     void addAtomicParams(CFuint mechID,CFreal optThick);
     void addContinuumParams(CFuint mechID, CFreal ku);
+    void addCO2Params(CFreal ku);
 
     void addThickDiatomicState(bool isEmittingMechanism);
     void addThinDiatomicState(bool isEmittingMechanism);
@@ -86,6 +82,8 @@ public:
     std::vector<HSNBNonThickParameterSet> m_continua;
     std::vector<HSNBAtomicParameterSet> m_atoms;
 
+    HSNBCO2ParameterSet m_co2;
+    bool m_co2Exists;
 
 
 
