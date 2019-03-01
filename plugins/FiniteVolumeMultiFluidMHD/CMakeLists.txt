@@ -90,6 +90,9 @@ PerfectConductingWall3D.cxx
 PerfectConductingWall3D.hh
 BCPeriodicMFMHD.cxx
 BCPeriodicMFMHD.hh
+SingleFluidMHDST.ci
+SingleFluidMHDST.cxx
+SingleFluidMHDST.hh
 SubInletTtPtAlphaEIWRhoiViTi.cxx
 SubInletTtPtAlphaEIWRhoiViTi.hh
 SubInletUVTEIWRhoiViTi.cxx
