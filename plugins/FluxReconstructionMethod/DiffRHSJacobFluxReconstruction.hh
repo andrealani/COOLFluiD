@@ -105,6 +105,12 @@ protected: //functions
   virtual void computePerturbedGradients(const CFuint side);
   
   /**
+   * recompute the cell gradients from the current cell solutions,
+   * after perturbation
+   */
+  virtual void computePerturbedGradientsAnalytical(const CFuint side);
+  
+  /**
    * recompute the cell gradients from the current cell and the neighbouring cells solutions,
    * after perturbation
    * @pre setCellsData()
@@ -321,8 +327,14 @@ protected: //data
   /// transformed states in a right cell for gradient computation
   RealMatrix m_gradTermR;
   
+  /// temp transformed states in a right cell for gradient computation
+  RealMatrix m_gradTermTemp;
+  
   /// transformed states in a cell for gradient computation
   RealMatrix m_gradTerm;
+  
+  /// transformed states in a cell for gradient computation before perturbation
+  RealMatrix m_gradTermBefore;
   
   /// vector to temporarily store a correction projected on a normal
   RealVector m_projectedCorrL;
@@ -341,6 +353,9 @@ protected: //data
   
   /// the corrected gradients in the flux points backup
   std::vector< std::vector< RealVector* > > m_cellGradFlxPntBackup;
+  
+  /// perturbation value
+  RealVector m_eps;
 
   
 }; // class Solve

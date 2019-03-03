@@ -148,8 +148,8 @@ protected: // data
   /// backup of extrapolated states in the flux points of the cell
   std::vector< std::vector< RealVector > > m_cellStatesFlxPntBackup;
   
-  /// booleans telling for each flx pnt whether it is influenced by the perturbation
-  std::vector< bool > m_influencedFlxPnts;
+  /// flux pnt idx influenced by the perturbation
+  CFuint m_influencedFlxPnt;
   
   /// backup of interface fluxes at the flux points of a face
   std::vector< std::vector< RealVector> > m_flxPntRiemannFluxBackup;

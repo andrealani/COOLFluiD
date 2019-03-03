@@ -92,6 +92,12 @@ protected: // functions
   void computePerturbedGradients();
   
   /**
+   * recompute analytically the cell gradients from the current cell and the neighbouring cells,
+   * after perturbation
+   */
+  void computePerturbedGradientsAnalytical();
+  
+  /**
    * compute the terms for the gradient computation for a bnd face
    */
   virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
@@ -218,8 +224,8 @@ protected: // data
   /// backup of extrapolated states in the flux points of the cell
   std::vector< RealVector > m_cellStatesFlxPntBackup;
   
-  /// booleans telling for each flx pnt whether it is influenced by the perturbation
-  std::vector< bool > m_influencedFlxPnts;
+  /// influenced flx pnt idx
+  CFuint m_influencedFlxPnt;
   
   /// backup of interface fluxes at the flux points of a face
   std::vector< RealVector> m_flxPntRiemannFluxBackup;
@@ -235,6 +241,9 @@ protected: // data
   
   /// term for the gradient computation
   RealMatrix m_gradTerm;
+  
+  /// term for the gradient computation before perturbation
+  RealMatrix m_gradTermBefore;
   
   /// dependencies of solution pnts on sol pnts
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_solSolDep;
@@ -257,6 +266,9 @@ protected: // data
   /// term for the ghost gradient computation on a face
   RealMatrix m_ghostGradTerm;
   
+  /// temp term for the gradient computation on a face
+  RealMatrix m_gradTermTemp;
+  
   /// array for jacobian determinants in sol pnts
   std::valarray<CFreal> m_jacobDet;
   
@@ -265,6 +277,9 @@ protected: // data
   
   /// extrapolated states in the flux points of the cell
   std::vector< Framework::State* > m_cellStatesFlxPnt2;
+  
+  /// perturbations
+  RealVector m_eps;
 
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstruction
 

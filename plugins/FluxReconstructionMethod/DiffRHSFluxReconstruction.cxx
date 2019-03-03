@@ -433,11 +433,9 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
   // Loop over solution points to calculate the discontinuous flux.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   { 
-    vector< RealVector > temp = *(m_cellGrads[0][iSolPnt]);
-
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
-      *(m_tempGrad[iVar]) = temp[iVar];
+      *(m_tempGrad[iVar]) = (*(m_cellGrads[0][iSolPnt]))[iVar];
     }
 
     m_avgSol = *((*m_cellStates)[iSolPnt]->getData());
