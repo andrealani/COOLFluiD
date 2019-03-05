@@ -67,12 +67,12 @@ protected: // functions
   void computeJacobConvCorrection();
   
   /**
-   * 
+   * compute the Jacobians of both neighbor cells
    */
   void computeBothJacobs();
   
   /**
-   * 
+   * compute the jacobians of one neighbor cell
    */
   void computeOneJacob(const CFuint side);
   
@@ -105,10 +105,10 @@ protected: // functions
   virtual void computePertInterfaceFlxCorrection();
   
   /// compute the total perturbed correction
-  void computePertCorrection(CFuint sided, std::vector< RealVector >& corrections);
+  void computePertCorrection(CFuint sided, RealVector& corrections);
   
   /// compute the divergence of the perturbed discontinuous flx (-divFD+divhFD)
-  void computePertDivDiscontFlx(std::vector< RealVector >& residuals);
+  void computePertDivDiscontFlx(RealVector& residuals);
 
 protected: // data
 
@@ -135,12 +135,6 @@ protected: // data
   
   /// perturbed corrections
   std::vector< RealVector> m_pertCorrections;
-  
-  /// Divergence of the continuous flux at the solution points of the left neighbour
-  std::vector< RealVector> m_divContFlxL;
-  
-  /// Divergence of the continuous flux at the solution points of the right neighbour
-  std::vector< RealVector> m_divContFlxR;
   
   /// Perturbed divergence of the continuous flux at the solution points of the neighbours
   std::vector< std::vector< RealVector> > m_pertDivContFlx;

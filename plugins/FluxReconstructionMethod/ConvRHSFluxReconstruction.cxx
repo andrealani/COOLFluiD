@@ -96,7 +96,9 @@ ConvRHSFluxReconstruction::ConvRHSFluxReconstruction(const std::string& name) :
   m_faceJacobVecs(),
   m_projectedCorrL(),
   m_projectedCorrR(),
-  m_jacobDet()
+  m_jacobDet(),
+  m_divContFlxL(),
+  m_divContFlxR()
   {
     addConfigOptionsTo(this);
   }
@@ -214,16 +216,13 @@ void ConvRHSFluxReconstruction::execute()
       {
 	
 	// compute the correction for the left neighbour
-	computeCorrection(LEFT, m_divContFlx);
-	
-	// update RHS
-	updateRHS();
+	computeCorrection(LEFT, m_divContFlxL);
 	
 	// compute the correction for the right neighbour
-	computeCorrection(RIGHT, m_divContFlx);
+	computeCorrection(RIGHT, m_divContFlxR);
 	
 	// update RHS
-	updateRHS();
+	updateRHSBothSides();
       }
       
       // if there is a diffusive term, compute the gradients
@@ -515,6 +514,32 @@ void ConvRHSFluxReconstruction::updateRHS()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSFluxReconstruction::updateRHSBothSides()
+{
+  // get the datahandle of the rhs
+  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+  
+  CFuint resIDL;
+  CFuint resIDR;
+
+  // update rhs
+  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+  {
+    resIDL = m_nbrEqs*( (*m_states[LEFT])[iState]->getLocalID() );
+    resIDR = m_nbrEqs*( (*m_states[RIGHT])[iState]->getLocalID() );
+    
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      rhs[resIDL+iVar] += resFactor*m_divContFlxL[iState][iVar];
+      rhs[resIDR+iVar] += resFactor*m_divContFlxR[iState][iVar];
+    }
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -593,9 +618,6 @@ void ConvRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
       }
     }
   }
-
-  // in order to use updateRHS, m_cellStates should have the correct states
-  m_cellStates = m_states[side];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -851,6 +873,8 @@ void ConvRHSFluxReconstruction::setup()
   m_projectedCorrL.resize(m_dim);
   m_projectedCorrR.resize(m_dim);
   m_jacobDet.resize(m_nbrSolPnts);
+  m_divContFlxL.resize(m_nbrSolPnts);
+  m_divContFlxR.resize(m_nbrSolPnts);
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -867,6 +891,8 @@ void ConvRHSFluxReconstruction::setup()
   {
     m_contFlx[iSolPnt].resize(m_dim);
     m_divContFlx[iSolPnt].resize(m_nbrEqs);
+    m_divContFlxL[iSolPnt].resize(m_nbrEqs);
+    m_divContFlxR[iSolPnt].resize(m_nbrEqs);
     m_corrFctDiv[iSolPnt].resize(m_flxPntsLocalCoords->size());
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {

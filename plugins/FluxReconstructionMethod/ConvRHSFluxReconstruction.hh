@@ -79,6 +79,11 @@ protected: //functions
   /// add the residual updates to the RHS
   void updateRHS();
   
+  /**
+   * add the residual updates to the RHS of both neighbor cells
+   */
+  void updateRHSBothSides();
+  
   /// add the updates to the wave speed
   void updateWaveSpeed();
   
@@ -289,6 +294,12 @@ protected: //data
 
   /// Physical data temporary vector
   RealVector m_pData;
+  
+  /// Divergence of the continuous flux at the solution points of the left neighbour
+  std::vector< RealVector> m_divContFlxL;
+  
+  /// Divergence of the continuous flux at the solution points of the right neighbour
+  std::vector< RealVector> m_divContFlxR;
   
 }; // class Solve
 

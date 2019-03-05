@@ -97,6 +97,13 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals();
+  
+  /**
+   * compute the unperturbed cell diffusive residuals
+   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
+   * @pre setCellsData()
+   */
+  virtual void computeUnpertCellDiffResiduals(const CFuint side);
 
   /**
    * recompute the cell gradients from the current cell solutions,
@@ -194,6 +201,14 @@ protected: //functions
    * restore values that were overwritten
    */
   void restoreFromBackups();
+  
+  /**
+   *  add the residual updates to the RHS
+   */
+  void updateRHSUnpertCell(const CFuint side);
+  
+  /// compute the divergence of the discontinuous flux (-divFD+divhFD) of a neighbor cell
+  virtual void computeDivDiscontFlxNeighb(RealVector& residuals, const CFuint side);
   
   
 protected: //data
@@ -356,6 +371,15 @@ protected: //data
   
   /// perturbation value
   RealVector m_eps;
+  
+  /// flags for each cell to tell whether its inner -divFD has been computed 
+  std::vector< bool > m_cellFlags;
+  
+  /// unperturbed diffusive residuals for all cells
+  std::vector< RealVector > m_unpertAllCellDiffRes;
+  
+  /// flux projection vectors in solution points for disc flux for a neighbor cell
+  std::vector< std::vector< std::vector< RealVector > > > m_neighbCellFluxProjVects;
 
   
 }; // class Solve
