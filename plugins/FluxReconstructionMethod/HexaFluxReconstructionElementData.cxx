@@ -1307,6 +1307,54 @@ void HexaFluxReconstructionElementData::createVandermondeMatrix()
 
 //////////////////////////////////////////////////////////////////////
 
+void HexaFluxReconstructionElementData::createFlxSolDependencies()
+{
+  CFAUTOTRACE;
+  
+  const CFuint nbrSolPnts = m_solPntsLocalCoords.size();
+  const CFuint nbrFlxPnts = m_flxPntsLocalCoords.size();
+  // number of solution points in 1D
+  const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
+
+  m_solFlxDep.resize(nbrSolPnts);
+  m_solSolDep.resize(nbrSolPnts);
+  m_flxSolDep.resize(nbrFlxPnts);
+
+  CFuint iSol = 0;
+  
+  for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+    {
+      for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol)
+      {
+        m_solFlxDep[iSol].push_back(iEta + iKsi*nbrSolPnts1D);
+        m_solFlxDep[iSol].push_back(iEta + iKsi*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D);
+        m_solFlxDep[iSol].push_back(iZta + iEta*nbrSolPnts1D + 2*nbrSolPnts1D*nbrSolPnts1D);
+        m_solFlxDep[iSol].push_back(iZta + iEta*nbrSolPnts1D + 3*nbrSolPnts1D*nbrSolPnts1D);
+        m_solFlxDep[iSol].push_back(iKsi + iZta*nbrSolPnts1D + 4*nbrSolPnts1D*nbrSolPnts1D);
+        m_solFlxDep[iSol].push_back(iKsi + iZta*nbrSolPnts1D + 5*nbrSolPnts1D*nbrSolPnts1D);        
+
+        m_flxSolDep[iEta + iKsi*nbrSolPnts1D].push_back(iSol);
+        m_flxSolDep[iEta + iKsi*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D].push_back(iSol);
+        m_flxSolDep[iZta + iEta*nbrSolPnts1D + 2*nbrSolPnts1D*nbrSolPnts1D].push_back(iSol);
+        m_flxSolDep[iZta + iEta*nbrSolPnts1D + 3*nbrSolPnts1D*nbrSolPnts1D].push_back(iSol);
+        m_flxSolDep[iKsi + iZta*nbrSolPnts1D + 4*nbrSolPnts1D*nbrSolPnts1D].push_back(iSol);
+        m_flxSolDep[iKsi + iZta*nbrSolPnts1D + 5*nbrSolPnts1D*nbrSolPnts1D].push_back(iSol);
+
+        for (CFuint jSol = 0; jSol < nbrSolPnts1D; ++jSol)
+        {
+          m_solSolDep[iSol].push_back(iKsi*nbrSolPnts1D*nbrSolPnts1D + iEta*nbrSolPnts1D + jSol);
+          if (iSol != iZta + iKsi*nbrSolPnts1D*nbrSolPnts1D + jSol*nbrSolPnts1D) m_solSolDep[iSol].push_back(iZta + iKsi*nbrSolPnts1D*nbrSolPnts1D + jSol*nbrSolPnts1D);
+          if (iSol != iZta + jSol*nbrSolPnts1D*nbrSolPnts1D + iEta*nbrSolPnts1D) m_solSolDep[iSol].push_back(iZta + jSol*nbrSolPnts1D*nbrSolPnts1D + iEta*nbrSolPnts1D);
+        }
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
   } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD

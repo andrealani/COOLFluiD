@@ -380,6 +380,16 @@ protected: //data
   
   /// flux projection vectors in solution points for disc flux for a neighbor cell
   std::vector< std::vector< std::vector< RealVector > > > m_neighbCellFluxProjVects;
+  
+  /// bools telling whether solution points are affected by perturbation (for both neighbor cells)
+  std::vector< std::vector < bool > > m_affectedSolPnts;
+  
+  /// Continuous flux at the solution points backup for both neighbor cells
+  std::vector< std::vector< std::vector< RealVector > > > m_contFlxBackup;
+  
+  /// Continuous flux at the solution points for both neighbor cells
+  std::vector< std::vector< std::vector< RealVector > > > m_contFlxNeighb;
+
 
   
 }; // class Solve

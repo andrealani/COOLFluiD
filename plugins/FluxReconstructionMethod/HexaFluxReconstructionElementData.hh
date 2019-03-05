@@ -163,6 +163,11 @@ protected: // functions
    * create the vandermonde matrix of the transformation to modal basis
    */
   virtual void createVandermondeMatrix();
+  
+  /**
+   * create the sol/flx and sol/sol dependencies
+   */
+  void createFlxSolDependencies();
 
 }; // end of class HexaFluxReconstructionElementData
 
