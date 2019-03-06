@@ -42,7 +42,8 @@ FinalizeRHS::FinalizeRHS(const std::string& name) :
   m_dState(),
   m_inverter(CFNULL),
   m_numJacob(CFNULL),
-  m_tempRes()
+  m_tempRes(),
+  m_tempRes2()
 {
   CFAUTOTRACE;
 
@@ -118,12 +119,12 @@ void FinalizeRHS::execute()
       }
 
       // compute the transformed residual
-      m_tempRes = matrix*m_tempRes;
+      m_tempRes2 = matrix*m_tempRes;
     
       // store transformed residual in rhs
       for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
       {
-        rhs[startID + iEq] = m_tempRes[iEq];
+        rhs[startID + iEq] = m_tempRes2[iEq];
         //if (abs(rhs[startID + iEq]) > 1.0e-3) CFLog(INFO,"eq: " << iEq << ", rhs: " << rhs[startID + iEq] << "\n");//states[iState]->getLocalID()==704
       }
     }
@@ -194,6 +195,7 @@ void FinalizeRHS::setup()
   m_inverter.reset(MatrixInverter::create(nbEqs, false));
   
   m_tempRes.resize(nbEqs);
+  m_tempRes2.resize(nbEqs);
 }
 
 //////////////////////////////////////////////////////////////////////////////

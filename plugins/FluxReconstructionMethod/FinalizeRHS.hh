@@ -112,6 +112,9 @@ protected: // data
   /// vector to temporarily store residuals
   RealVector m_tempRes;
   
+  /// vector to temporarily store residuals
+  RealVector m_tempRes2;
+  
   /// flag telling if to use analytical transformation matrix
   bool m_useAnalyticalMatrix;
   
