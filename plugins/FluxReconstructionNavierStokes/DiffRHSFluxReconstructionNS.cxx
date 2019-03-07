@@ -115,7 +115,7 @@ void DiffRHSFluxReconstructionNS::computeInterfaceFlxCorrection()
     }
 
     // damping factor
-    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+    const CFreal dampFactor = 0.0*m_faceInvCharLengths[iFlxPnt];
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)

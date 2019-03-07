@@ -204,7 +204,7 @@ void LLAVFluxReconstructionNS::computeInterfaceFlxCorrection()
     }
 
     // damping factor
-    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+    const CFreal dampFactor = 0.0*m_faceInvCharLengths[iFlxPnt];
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -322,6 +322,11 @@ void LLAVFluxReconstructionNS::computeSmoothness()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
+  }
+  
+  if (m_s > m_Smax)
+  {
+      m_Smax = m_s;
   }
 }
 

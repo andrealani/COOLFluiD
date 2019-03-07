@@ -160,6 +160,9 @@ protected: //data
   /// reference smoothness
   CFreal m_s0;
   
+  /// previous ref smoothness
+  CFreal m_s0Prev;
+  
   /// smoothness
   CFreal m_s;
   
@@ -235,6 +238,9 @@ protected: //data
   /// iteration after which the limiter is frozen
   CFuint m_freezeLimiterIter;
   
+  /// iteration after which the reference smoothness is frozen
+  CFuint m_freezeSmoothnessIter;
+  
   /// boolean telling whether to use max artificial viscosity wrt previous iteration
   bool m_useMax;
   
@@ -243,6 +249,12 @@ protected: //data
   
   /// total artificial viscosity added over all CPUs
   CFreal m_totalEpsGlobal;
+  
+  /// maximum smoothness in domain
+  CFreal m_Smax;
+  
+  /// maximum smoothness in domain over all CPUs
+  CFreal m_SmaxGlobal;
   
   /// bool telling whether the Jacobian is being computed
   bool m_jacob;

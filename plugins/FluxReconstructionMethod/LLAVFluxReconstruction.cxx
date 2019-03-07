@@ -49,6 +49,7 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_epsilonLR(),
   m_epsilon0(),
   m_s0(),
+  m_s0Prev(),
   m_s(),
   m_kappa(),
   m_peclet(),
@@ -77,6 +78,8 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_useMax(),
   m_totalEps(),
   m_totalEpsGlobal(),
+  m_Smax(),
+  m_SmaxGlobal(),
   m_jacob(false),
   m_nbPosPrev(),
   m_nbPosPrevGlobal(),
@@ -105,6 +108,9 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   
     m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
     setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
+    
+    m_freezeSmoothnessIter = MathTools::MathConsts::CFuintMax();
+    setParameter( "FreezeSmoothnessIter", &m_freezeSmoothnessIter);
     
     m_addPosPrev = false;
     setParameter( "AddPositivityPreservation", &m_addPosPrev);
@@ -141,9 +147,11 @@ void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
   
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeSmoothnessIter","Iteration after which to freeze the reference smoothness.");
+  
   options.addConfigOption< bool >("AddPositivityPreservation","Bool telling whether extra viscosity needs to be added for positivity preservation.");
   
-  options.addConfigOption< CFreal >("MinValue","Minimum value at which point positivity preservation is added.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("MinValue","Minimum value at which point positivity preservation is added.");
   
   options.addConfigOption< CFreal >("ViscFactor","Maximum factor applied to viscosity for positivity preservation.");
   
@@ -213,6 +221,19 @@ void LLAVFluxReconstruction::execute()
   m_useMax = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
   m_totalEps = 0.0;
   
+//  if (iter < m_freezeSmoothnessIter) 
+//  {
+//    m_s0 = 0.2*(m_Smax - m_kappa) + 0.8*m_s0;
+//    m_s0Prev = m_s0;
+//  }
+//  else
+//  {
+//    m_s0 = m_s0Prev;
+//  }
+  //m_peclet = m_minValue/pow(10,m_s0);
+  CFLog(INFO, "Smax: " << m_Smax << "\n");
+  m_Smax = -100.0;
+  
   m_nodeEpsilons = 0.0;
   
   m_nbPosPrev = 0;
@@ -274,17 +295,18 @@ void LLAVFluxReconstruction::execute()
     PE::GetPE().setBarrier(nsp);
     const CFuint count = 1;
     MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
-    MPI_Allreduce(&m_nbPosPrev, &m_nbPosPrevGlobal, count, MPI_UNSIGNED, MPI_SUM, comm);
+    MPI_Allreduce(&m_Smax, &m_SmaxGlobal, count, MPI_DOUBLE, MPI_MAX, comm);
 #endif
     
   if (PE::GetPE().GetRank(nsp) == 0) 
   {
-    // print total artificial viscosity and number of positivity preservations
-    //CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", number of times positivity preserved: " << m_nbPosPrevGlobal << "\n");
-    CFLog(INFO, "total eps: " << m_totalEpsGlobal << "\n");
+    // print total artificial viscosity
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", S0: " << m_s0 << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);
+  
+  m_Smax = m_SmaxGlobal;
   
   m_flagComputeNbNghb = false;
   
@@ -1042,6 +1064,11 @@ void LLAVFluxReconstruction::computeSmoothness()
   {
     smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
   }
+  
+  if (m_s > m_Smax)
+  {
+      m_Smax = m_s;
+  }
 //   CFuint ID = m_cell->getID();
 //   bool cond = ID == 51 || ID == 233 || ID == 344 || ID == 345 || ID == 389 || ID == 3431 || ID == 3432 || ID == 3544 || ID == 3545;
 //   if (cond)
@@ -1198,6 +1225,10 @@ void LLAVFluxReconstruction::setup()
   m_transformationMatrix = (*vdm)*temp*(*vdmInv);
   
   //m_s0 = -m_s0*log10(static_cast<CFreal>(m_order)) + m_s0;
+  
+  m_Smax = m_s0 + m_kappa;
+  
+  m_SmaxGlobal = m_Smax;
   
   m_nbNodeNeighbors = 0.0;
   
