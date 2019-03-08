@@ -1,7 +1,10 @@
 Species: e- N N+ O O+ NO N2 N2+ O2 O2+ NO+
+CO2 Treatment (if any): LS
 
+Atomic systems: (single row, seperated by whitespace, leave following row empty to ignore atomic species)
 N O N+ O+
 
+Diatomic systems: (single row per species, SpeciesName/ProcessName WHITESPACE TypeDopplerPDF[E] WHITESPACE NonUniformPathTreatment[T/CG/LS])
 N2/N2_1+    E T
 N2/N2_2+    E T
 N2/N2BH1    E CG
@@ -22,6 +25,7 @@ N2+/N2+_1-  E T
 N2+/N2+_2-  E T
 N2+/N2+M    E T
 
+Continuum systems: (single row per species, SpeciesName/ProcessName WHITESPACE ProcessType [BF/FF])
 N/N_bf      BF
 O/O_bf      BF
 N2/N2_bf    BF
