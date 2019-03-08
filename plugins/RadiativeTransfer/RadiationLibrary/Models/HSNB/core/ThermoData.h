@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include "Common/CFLog.hh"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SpeciesData.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/RadiationFieldData.h"
 
@@ -56,9 +57,7 @@ public:
 
 
     void setup(const CFuint pressureID, const CFuint trID, const CFuint tvID, RealVector* avogadroOvMM, bool m_convertPartialPressure);
-
     void setSpectralRange(const CFreal sigMin, const CFreal sigMax);
-
     void reset() {
         m_species.clear();
     }

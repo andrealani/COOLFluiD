@@ -2,18 +2,17 @@
 #define COOLFluiD_RadiativeTransfer_QSS_ATOMS_H
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/AtomicPartFunc.h"
-//#include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/FieldData.h"
 #include <string>
 
 class QssAtoms
 {
 public:
-    QssAtoms(const std::string& name_species);
+    QssAtoms(const std::string& name_species, const std::string datadir);
 
     ~QssAtoms();
 
     // Computes corrections for each group of Johnston's QSS model
-    void computeCorrections(ThermoData &thermo);
+    void computeCorrections(COOLFluiD::RadiativeTransfer::ThermoData &thermo);
 
     // Returns the correction to apply to the population of each 
     // electronic state belonging to the group g
@@ -35,6 +34,7 @@ private:
     double* mp_fac;
 
     std::string m_species;
+    std::string m_datadir;
 };
 
 #endif // QSS_ATOMS_H

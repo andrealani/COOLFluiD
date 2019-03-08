@@ -1,10 +1,6 @@
 #ifndef COOLFluiD_RadiativeTransfer_SNB_DIATOMIC_SYSTEM_H
 #define COOLFluiD_RadiativeTransfer_SNB_DIATOMIC_SYSTEM_H
 
-#include <string>
-#include <cstdio>
-#include <cmath>
-
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/RadiativeSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Operators.h"
@@ -27,7 +23,6 @@ enum NonUniformPath
     LINDQUIST_SIMMONS
 };
 */
-
 class SnbDiatomicSystem : public RadiativeSystem<SnbDiatomicSystem>
 {
 public:
@@ -35,17 +30,17 @@ public:
     /**
      * Constructor takes path to system name in the database.
      */
-  SnbDiatomicSystem(COOLFluiD::RadiativeTransfer::SpeciesLoadData loadData,
-		    const std::string& dpdf, const std::string& nup,
-		    const COOLFluiD::RadiativeTransfer::ThermoData &thermo);
-  
-  /**
-   * Copy constructor.
+    SnbDiatomicSystem(COOLFluiD::RadiativeTransfer::SpeciesLoadData loadData,
+		      const std::string& dpdf,
+		      const std::string& nup, const COOLFluiD::RadiativeTransfer::ThermoData &thermo);
+    
+    /**
+     * Copy constructor.
      */
-  SnbDiatomicSystem(const SnbDiatomicSystem& system);
-  
-  /**
-   * Destructor.
+    SnbDiatomicSystem(const SnbDiatomicSystem& system);
+    
+    /**
+     * Destructor.
      */
     ~SnbDiatomicSystem();
     
@@ -101,13 +96,11 @@ public:
     void wquad(const double ku, const double bd, const double bl, double* const p_kbw);
 
     /// Returns the total emitted power of this mechanism in the cell.
-    double emittedPower(int cellID,
-			COOLFluiD::RadiativeTransfer::ThermoData &thermo);
-    
+    double emittedPower(int cellID, COOLFluiD::RadiativeTransfer::ThermoData &thermo);
+
     /// Computes the emission for each band
-    void bandEmission(const int cellID,
-		      COOLFluiD::RadiativeTransfer::ThermoData &thermo, double* const p_emis);
-    
+    void bandEmission(const int cellID, COOLFluiD::RadiativeTransfer::ThermoData &thermo, double* const p_emis);
+
     /// Computes the transmissivity integral along a photon's path for optically thin systems
     double tau(const COOLFluiD::RadiativeTransfer::HSNBNonThickParameterSet& pathParams);
 
@@ -129,8 +122,9 @@ public:
     /// \brief Computes the optical thickness for a given photon path
     /// 
     /// \param pathParams set of parameters necessary
-    double opticalThickness(const COOLFluiD::RadiativeTransfer::HSNBThickParameterSet &pathParams);
-
+    double opticalThickness
+      (const COOLFluiD::RadiativeTransfer::HSNBThickParameterSet &pathParams);
+    
     ///
     /// \brief Add the parameters necessary for the computation of absorption to a photon path
     ///        If the values for \f$ \kappa and \beta \f$ have been precomputed they are loaded
@@ -147,9 +141,9 @@ public:
     void addStateParams
       (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
        COOLFluiD::RadiativeTransfer::HSNBNonThickParameterSet& nonThickParams,
-       COOLFluiD::CFreal cellDistance,
-       COOLFluiD::CFuint localCellID, COOLFluiD::CFreal sig);
-    
+       COOLFluiD::CFreal cellDistance, COOLFluiD::CFuint localCellID,
+       COOLFluiD::CFreal sig);
+
     ///
     /// \brief Add the parameters necessary for the computation of absorption to a photon path
     ///        If the values for \f$ \kappa and \beta \f$ have been precomputed they are loaded
@@ -167,23 +161,21 @@ public:
     void addStateParams
       (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
        COOLFluiD::RadiativeTransfer::HSNBThickParameterSet& thickParams,
-       COOLFluiD::CFreal cellDistance,
-       COOLFluiD::CFuint localCellID, COOLFluiD::CFreal sig);
+       COOLFluiD::CFreal cellDistance, COOLFluiD::CFuint localCellID,
+       COOLFluiD::CFreal sig);
     
     NonUniformPath getMechanismType() const;
-    
+
     COOLFluiD::CFreal getBand(COOLFluiD::CFreal sig);
-    
-    COOLFluiD::CFreal getKappa
-      (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
-       COOLFluiD::CFuint cellID, double sig);
-    
+
+    COOLFluiD::CFreal getKappa(COOLFluiD::RadiativeTransfer::ThermoData &thermo,
+			       COOLFluiD::CFuint cellID, double sig);
+
     /// Returns the memory cost of storing all precomputed
     /// parameters in mp_locparams in byte (this equals the
     /// memory saving to be expected by setting usePrecomputedParamters
     /// to false)
     double getPrecomputedBufferByteSize() const;
-
 
     friend void swap(SnbDiatomicSystem&, SnbDiatomicSystem&);
     
@@ -251,13 +243,11 @@ private:
         sprintf(filename, "%06zu", band*1000+500);
         return std::string(filename);
     } 
-
-
  
 private:
-    
 
     std::string m_directory;
+    std::string m_datadir;
     std::string m_species;
     std::string m_system;
     

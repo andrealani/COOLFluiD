@@ -22,9 +22,6 @@ namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
-
 /**
  * Represents a collection of atomic lines, and provides functions for computing
  * spectral coefficients.

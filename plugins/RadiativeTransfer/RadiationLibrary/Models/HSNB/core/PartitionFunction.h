@@ -3,8 +3,6 @@
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 /**
  * Abstract base class for all partition function classes.
  */
@@ -22,7 +20,7 @@ public:
      * Returns partition function for the associated species and thermodynamic
      * state.
      */
-    virtual double Q(ThermoData& thermo) = 0;
+    virtual double Q(COOLFluiD::RadiativeTransfer::ThermoData& thermo) = 0;
 };
 
 #endif // PARTITION_FUNCTION_H

@@ -7,14 +7,13 @@
 #include <algorithm>
 
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
-
-
-AtomicPartFunc::AtomicPartFunc(const std::string& name) :
+AtomicPartFunc::AtomicPartFunc(const std::string& name, const std::string datadir) :
     m_name(name)
 {
     // Open the partition function data file
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    // std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
     string database = datadir + "/lbl_data/part/atoms/" + m_name + ".part";
     ifstream file(database.c_str());
 

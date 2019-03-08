@@ -768,7 +768,7 @@ void RadiativeTransferMonteCarloHSNB<PARTICLE_TRACKING>::setup()
 
   std::cout << "RadiativeTransferMonteCarloHSNB::setup => " << " m_nbContinua=" << m_nbContinua
             << " m_nbAtomics=" << m_nbAtomics << " m_nbNonThickDiatomics=" << m_nbNonThickDiatomics <<
-            " m_nbThickDiatomics=" << m_nbThickDiatomics << " m_nbThickDiatomics=" << m_nbThickDiatomics << std::endl;
+            " m_nbThickDiatomics=" << m_nbThickDiatomics << std::endl;
 
                m_paramSynchronizer.setup(m_myProcessRank,m_nbProcesses,m_nbThickDiatomics,m_nbNonThickDiatomics, m_nbContinua,m_nbAtomics,nbSpecies, m_HSNBRadiator->co2Exists());
 

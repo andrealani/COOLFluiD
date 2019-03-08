@@ -33,6 +33,8 @@ public:
 
   CFreal getSpectraLoopPower();
 
+  CFreal getEmissivity();
+
   void computeEmissionCPD(){;}
 
   void getRandomEmission(CFreal &lambda, RealVector &s_o );

@@ -5,8 +5,6 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 #include <vector>
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 /**
  * Abstract base class for all Lorentz broadening models.
  */
@@ -23,7 +21,7 @@ public:
      * Updates the line data vector with the correct Lorentz HWHM.  Default
      * behavior is to set the HWHM values to zero.
      */
-    virtual void update(const ThermoData& thermo) { }
+    virtual void update(const COOLFluiD::RadiativeTransfer::ThermoData& thermo) { }
 
     /**
      * Returns the Lorentz HWHM of line i.

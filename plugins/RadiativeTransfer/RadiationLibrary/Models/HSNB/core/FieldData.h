@@ -1,20 +1,16 @@
 #ifndef COOLFluiD_RadiativeTransfer_FIELD_DATA_H
 #define COOLFluiD_RadiativeTransfer_FIELD_DATA_H
 
-
 #include <vector>
 #include <iostream>
-
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Constants.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 enum Geometry
 {
-    CARTESIAN,
-    SPHERICAL
+  CARTESIAN,
+  SPHERICAL
 };
 
 /**
@@ -29,7 +25,8 @@ public:
      * Creates a new CellData from the pressure, rotational and vibrational
      * temperatures and mixture composition in species mole fractions.
      */
-    CellData(double P, double Tr, double Tv, const double composition [], ThermoData& thermo, int nbSpecies=0)
+    CellData(double P, double Tr, double Tv, const double composition [],
+	     COOLFluiD::RadiativeTransfer::ThermoData& thermo, int nbSpecies=0)
         : m_p(P), m_tr(Tr), m_tv(Tv), 
           m_mf(nbSpecies),
           m_mn(nbSpecies)

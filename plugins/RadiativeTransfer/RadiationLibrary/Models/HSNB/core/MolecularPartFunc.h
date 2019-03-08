@@ -7,21 +7,19 @@
 #include <string>
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 class MolecularPartFunc
 {
 public:
 
     // Constructor
-    MolecularPartFunc(const std::string& name);
+    MolecularPartFunc(const std::string& name, const std::string datadir);
 
     // Destructor
     ~MolecularPartFunc();
 
     double Q(const double& tr, const double& tv);
 
-    double debye(ThermoData& thermo);
+    double debye(COOLFluiD::RadiativeTransfer::ThermoData& thermo);
 
 private:
 
@@ -31,6 +29,8 @@ private:
 private:
 
     std::string m_name;
+    std::string m_datadir;
+
     float*  mp_tv;
     float*  mp_tr;
     double* mp_params;

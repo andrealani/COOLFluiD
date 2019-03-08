@@ -4,10 +4,11 @@
 #include <cstdlib>
 
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
-QssMolecules::QssMolecules(const std::string& name_system, const std::string& name_species)
+QssMolecules::QssMolecules(const std::string& name_system, const std::string& name_species, const string datadir)
         : m_system(name_system), m_species(name_species), mp_johnston_params(NULL),
-          m_upper_energy_index(-1), m_upper_level_char('Z')
+          m_upper_energy_index(-1), m_upper_level_char('Z'), m_datadir(datadir)
 {
 
     // Systems for which Johnston's QSS model is used for computing
@@ -122,8 +123,8 @@ double QssMolecules::levelCorrectionDissEquil(ThermoData& thermo)
     double tv = thermo.Tv();
     const size_t index_at = thermo.speciesIndex("N");
     const size_t index_mol = thermo.speciesIndex("N2");
-    AtomicPartFunc qat("N");
-    MolecularPartFunc qmol("N2");
+    AtomicPartFunc qat("N", m_datadir);
+    MolecularPartFunc qmol("N2", m_datadir);
 
     double q_ratio = qmol.Q(tv,tv) / pow(qat.Q(thermo),2.0);
     double n_ratio = std::pow( thermo.N()[index_at], 2.0)
@@ -145,8 +146,8 @@ double QssMolecules::levelCorrectionJohnston(const ThermoData& thermo)
     double tv = thermo.Tv();
     double ne = thermo.N(ie);
 
-    MolecularPartFunc part(m_species);
-    MolecularElecPartFunc part_elec(m_species);
+    MolecularPartFunc part(m_species,m_datadir);
+    MolecularElecPartFunc part_elec(m_species,m_datadir);
     double n_equil = part_elec.Qel(m_upper_energy_index,tr,tv)
                    * exp(-part_elec.Eel(m_upper_energy_index)*HP*C0*100/KB/tv)
                    / part.Q(tr,tv);
@@ -198,8 +199,8 @@ void QssMolecules::readJohnstonParameters()
 {
 
     // Open the file where parameters are stored
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/qss/molecules/" + m_species + "_" + m_upper_level_char + ".qss";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/qss/molecules/" + m_species + "_" + m_upper_level_char + ".qss";
     std::ifstream file(database.c_str());
 
     // Read the parameters

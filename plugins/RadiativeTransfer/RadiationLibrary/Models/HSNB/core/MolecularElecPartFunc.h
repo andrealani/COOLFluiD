@@ -11,7 +11,7 @@ class MolecularElecPartFunc
 public:
 
     // Constructor
-    MolecularElecPartFunc(const std::string& name);
+    MolecularElecPartFunc(const std::string& name, const std::string& datadir);
 
     // Destructor
     ~MolecularElecPartFunc();
@@ -32,6 +32,8 @@ private:
 private:
 
     std::string m_name;
+    std::string m_datadir;
+
     float*  mp_tv;
     float*  mp_tr;
     double* mp_params;

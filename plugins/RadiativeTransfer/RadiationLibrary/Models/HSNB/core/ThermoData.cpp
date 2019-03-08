@@ -9,8 +9,6 @@ namespace RadiativeTransfer {
 
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 typedef std::numeric_limits< CFreal > realVal;
 
 ThermoData::ThermoData(): m_p(0), m_tr(0), m_tv(0), m_currentStateID(0), m_usePrecomputedParameters(true) {

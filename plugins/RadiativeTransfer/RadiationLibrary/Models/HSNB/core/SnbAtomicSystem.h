@@ -1,11 +1,6 @@
 #ifndef COOLFluiD_RadiativeTransfer_SNB_ATOMIC_SYSTEM_H
 #define COOLFluiD_RadiativeTransfer_SNB_ATOMIC_SYSTEM_H
 
-#include <string>
-#include <cstdio>
-#include <cmath>
-#include <ctime>
-
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/RadiativeSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Operators.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/LblSpectralGrid.h"
@@ -30,6 +25,7 @@ public:
     SnbAtomicSystem(const SnbAtomicSystem& sys)
         : m_systems(sys.m_systems),
           m_specdir(sys.m_specdir),
+          m_datadir(sys.m_datadir),
           mp_grid(
               sys.mp_grid == NULL ? NULL : new LblSpectralGrid(*(sys.mp_grid))),
           mp_bounds(sys.mp_bounds == NULL ? NULL : new int [sys.m_nbands+1]),
@@ -105,6 +101,7 @@ private:
     
     std::vector<LblAtomicSystem> m_systems;
     std::string m_specdir;
+    std::string m_datadir;
 
     LblSpectralGrid* mp_grid;
     int* mp_bounds;

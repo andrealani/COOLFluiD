@@ -9,9 +9,8 @@
 #include <fstream>
 #include <cassert>
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
 void swap(LblAtomicSystem& s1, LblAtomicSystem& s2)
 {
@@ -29,10 +28,9 @@ void swap(LblAtomicSystem& s1, LblAtomicSystem& s2)
 
 //==============================================================================
 
-LblAtomicSystem::LblAtomicSystem(
-        const ThermoData& thermo, const std::string& name, const bool& qss)
+LblAtomicSystem::LblAtomicSystem(const ThermoData& thermo, const std::string& name, const std::string datadir, const bool& qss)
     : m_name(name), m_index(thermo.speciesIndex(name)), m_nlines(0),
-      m_part_func(name), m_test_qss(qss)
+      m_part_func(name,datadir), m_test_qss(qss), m_datadir(datadir)
 {
     cout << "Loading atomic system: " << m_name << endl;
 
@@ -161,7 +159,7 @@ void LblAtomicSystem::spectra(
     fill(p_cl, p_cl+m_nlines, 1.0);
 
     if (m_test_qss) {
-        QssAtoms qss(m_name);
+        QssAtoms qss(m_name, m_datadir);
         qss.computeCorrections(thermo);
         for (int i = 0; i < m_nlines; i++) {
             p_cu[i] = qss.getCorrection(mp_line_data[i].Gqssu);
@@ -416,8 +414,8 @@ void LblAtomicSystem::getLineData(ThermoData& thermo, std::vector<AtomicLineData
 void LblAtomicSystem::loadLineData()
 {
     // First open the NIST database file
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    string database = datadir + "/lbl_data/lines/atoms/" + m_name + ".nist";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    string database = m_datadir + "/lbl_data/lines/atoms/" + m_name + ".nist";
     ifstream file(database.c_str());
     
     if (!file.is_open()) {
@@ -462,8 +460,8 @@ void LblAtomicSystem::loadLorentzData()
     if (m_name == "H") return;
 
     // Open the Lorentz line-width database for this atom
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    string database = datadir + "/lbl_data/widths/atoms/" + m_name + ".lor";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    string database = m_datadir + "/lbl_data/widths/atoms/" + m_name + ".lor";
     ifstream file(database.c_str());
     
     if (!file.is_open()) {
@@ -508,8 +506,8 @@ void LblAtomicSystem::loadQssInterface()
 {
     // Open the index file interfacing NIST transitions with the groups defining
     // by Johnston in his QSS model
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    string database = datadir + "/qss/atoms/" + m_name + ".tr.qss";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    string database = m_datadir + "/qss/atoms/" + m_name + ".tr.qss";
     ifstream file(database.c_str());
     
     if (!file.is_open()) {

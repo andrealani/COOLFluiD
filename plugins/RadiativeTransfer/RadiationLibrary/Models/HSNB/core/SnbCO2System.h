@@ -1,9 +1,6 @@
 #ifndef COOLFluiD_RadiativeTransfer_SNB_CO2_SYSTEM_H
 #define COOLFluiD_RadiativeTransfer_SNB_CO2_SYSTEM_H
 
-#include <string>
-#include <cstdio>
-#include <cmath>
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Constants.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
@@ -30,8 +27,7 @@ public:
     /**
      * Constructor takes path to system name in the database.
      */
-    SnbCO2System(const std::string& system, const std::string& nup,
-		 const COOLFluiD::RadiativeTransfer::ThermoData &thermo);
+    SnbCO2System(const std::string& system, const std::string& nup, const COOLFluiD::RadiativeTransfer::ThermoData &thermo);
     
     bool waveNumberIsInBandRange(COOLFluiD::CFuint waveNumber);
 
@@ -58,27 +54,18 @@ public:
     int spectralGridSize() const { return m_nbands_down; }
     double waveNumber(int i) const { return (m_band1_down+i)*25.0+12.5; }
 
-    void addStateParams
-      (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
-       COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet& co2Params,
-       COOLFluiD::CFreal cellDistance,
-       COOLFluiD::CFuint localCellID, COOLFluiD::CFreal sig);
+    void addStateParams(COOLFluiD::RadiativeTransfer::ThermoData &thermo, COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet& co2Params, COOLFluiD::CFreal cellDistance, COOLFluiD::CFuint localCellID, COOLFluiD::CFreal sig);
     
     /// Computes the absorption coefficient for a single wavenumber by interpolation
-    void getAbsorptionSingleBand
-      (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
-       COOLFluiD::CFuint cellID, double band, double& KD,
-       double& KL, double& betaD, double& betaL);
+    void getAbsorptionSingleBand(COOLFluiD::RadiativeTransfer::ThermoData &thermo, COOLFluiD::CFuint cellID, double band, double& KD,double& KL, double& betaD, double& betaL);
 
     /// Computes the emission coefficient for a single wavenummber by interpolation
     ///
     /// Note that the interpolation is set up on every call, using setupParamInterpolation and
     /// getEmissionSingleBandFixedCell is much more efficient if the state remains unchanged between
     /// function calls.
-    double getEmissionSingleBand
-      (COOLFluiD::RadiativeTransfer::ThermoData& thermo,
-       COOLFluiD::CFuint cellID, double band);
-    
+    double getEmissionSingleBand(COOLFluiD::RadiativeTransfer::ThermoData& thermo,COOLFluiD::CFuint cellID, double band);
+
     /// Access parameter array to compute emission coefficient for a given state
     /// interpolation parameters have to be preset (weights w1, w2 e.g.)
     double getEmissionSingleBandFixedCell(COOLFluiD::CFuint band);
@@ -118,12 +105,10 @@ public:
     void bandEmission(const int cellID, COOLFluiD::RadiativeTransfer::ThermoData &thermo, double* const p_emis);
 
     /// Returns the optical thickness as precomputed in a photon path
-    double opticalThickness
-      (const COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet &pathParams);
-    
-    double tau
-      (const COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet &pathParams);
-    
+    double opticalThickness(const COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet &pathParams);
+
+    double tau(const COOLFluiD::RadiativeTransfer::HSNBCO2ParameterSet &pathParams);
+
     //Todo: Implementiere für eine Wavenumber mit bands_down ( im 25cm spectrum ), schreibe eigene emissionsroutine
 
 

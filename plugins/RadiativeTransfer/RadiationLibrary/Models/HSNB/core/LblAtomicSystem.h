@@ -7,8 +7,6 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/QssAtoms.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
 class LblSpectralGrid;
 
 enum SpectralDataType {
@@ -36,13 +34,14 @@ public:
     /**
      * Constructor taking the name of the atom to load.
      */
-    LblAtomicSystem(const ThermoData& thermo, const std::string& name, const bool& qss = false);
+    LblAtomicSystem(const COOLFluiD::RadiativeTransfer::ThermoData& thermo, const std::string& name, const std::string datadir, const bool& qss = false);
     
     /**
      * Copy constructor.
      */
     LblAtomicSystem(const LblAtomicSystem& sys)
         : m_name(sys.m_name),
+          m_datadir(sys.m_datadir),
           m_index(sys.m_index),
           m_nlines(sys.m_nlines),
           mp_line_data(
@@ -86,22 +85,25 @@ public:
      * Computes emmission and absorption coefficient spectra for the atomic LBL
      * system.
      */
-    void spectra(ThermoData &, const LblSpectralGrid&, double* const p_spectra,
+    void spectra(COOLFluiD::RadiativeTransfer::ThermoData &, const LblSpectralGrid&, double* const p_spectra,
         const SpectralDataType type);
     
     /**
      * Computes emmission and absorption coefficient spectra for the atomic LBL
      * system. This version ensure that equilibrium is retrieved.
      */
-    void spectraEq(
-        ThermoData&, const LblSpectralGrid&, double* const p_spectra);
-
+    void spectraEq
+      (COOLFluiD::RadiativeTransfer::ThermoData&,
+       const LblSpectralGrid&, double* const p_spectra);
+    
     /**
      * Generates a list of atomic line data
      */
-    void getLineData(ThermoData &thermo, std::vector<AtomicLineData>& line_data);
+    void getLineData
+      (COOLFluiD::RadiativeTransfer::ThermoData &thermo,
+       std::vector<AtomicLineData>& line_data);
     
-private:
+ private:
 
     /**
      * Load the line data from the NIST files.
@@ -118,8 +120,8 @@ private:
     /**
      * Computes the Lorentz HWHM values for all lines and stores in the array.
      */
-    void computeLorentzWidths(const ThermoData&, double* const p_gamma);
-
+    void computeLorentzWidths(const COOLFluiD::RadiativeTransfer::ThermoData&, double* const p_gamma);
+    
     friend void swap(LblAtomicSystem& s1, LblAtomicSystem& s2);
 
 private:
@@ -157,6 +159,7 @@ private:
     AtomicPartFunc m_part_func;
 
     bool        m_test_qss;
+    std::string m_datadir;
 };
 
 void swap(LblAtomicSystem& s1, LblAtomicSystem& s2);

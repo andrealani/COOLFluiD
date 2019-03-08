@@ -14,8 +14,8 @@
 
 using namespace std;
 
-MolecularElecPartFunc::MolecularElecPartFunc(const std::string& name)
-    : m_name(name), m_ntr(76), m_ntv(76)
+MolecularElecPartFunc::MolecularElecPartFunc(const std::string& name, const string &datadir)
+    : m_name(name), m_ntr(76), m_ntv(76), m_datadir(datadir)
 {
     loadEnergyLevels();
 
@@ -69,8 +69,8 @@ double MolecularElecPartFunc::Qel(const int i, const double& tr, const double& t
 
 void MolecularElecPartFunc::loadTemperatureGrid()
 {
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/lbl_data/part/molecules/" + m_name + "_elec.part";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/lbl_data/part/molecules/" + m_name + "_elec.part";
     std::ifstream file(database.c_str());
 
     // Read the temperature grid, same for Tr and Tv
@@ -87,8 +87,8 @@ void MolecularElecPartFunc::loadTemperatureGrid()
 void MolecularElecPartFunc::loadParameters()
 {
     // Open the file where parameters are stored
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/lbl_data/part/molecules/" + m_name + "_elec.part";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/lbl_data/part/molecules/" + m_name + "_elec.part";
     std::ifstream file(database.c_str());
     double temp;
     
@@ -106,8 +106,8 @@ void MolecularElecPartFunc::loadParameters()
 void MolecularElecPartFunc::loadEnergyLevels()
 {
     // Open the file where energy levels are stored
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/lbl_data/part/molecules/" + m_name + ".don";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/lbl_data/part/molecules/" + m_name + ".don";
     std::ifstream file(database.c_str());
 
     // Read the energy levels

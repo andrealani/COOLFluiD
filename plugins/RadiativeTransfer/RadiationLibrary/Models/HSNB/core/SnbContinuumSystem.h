@@ -1,16 +1,8 @@
 #ifndef COOLFluiD_RadiativeTransfer_SNB_CONTINUUM_SYSTEM_H
 #define COOLFluiD_RadiativeTransfer_SNB_CONTINUUM_SYSTEM_H
 
-#include <string>
-#include <cstdio>
-#include <cmath>
-#include <iostream>
-#include <fstream>
-
-#include "Environment/FileHandlerOutput.hh"
 #include "Environment/FileHandlerInput.hh"
-
-#include "Environment/SingleBehaviorFactory.hh"
+#include "Environment/FileHandlerOutput.hh"
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/RadiativeSystem.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/AtomicPartFunc.h"
@@ -18,7 +10,6 @@
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Operators.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/SpeciesLoadData.h"
-
 #include "RadiativeTransfer/Solvers/MonteCarlo/HSNBLocalParameterSet.hh"
 
 class PhotonPath;
@@ -36,10 +27,10 @@ public:
     /**
      * Constructor takes path to system name in the database.
      */
-  SnbContinuumSystem(COOLFluiD::RadiativeTransfer::SpeciesLoadData loadData,
-		     const COOLFluiD::RadiativeTransfer::ThermoData &thermo,
-		     ContinuumSort sort = BOUNDFREE);
-  
+    SnbContinuumSystem(COOLFluiD::RadiativeTransfer::SpeciesLoadData loadData,
+		       const COOLFluiD::RadiativeTransfer::ThermoData &thermo,
+		       ContinuumSort sort = BOUNDFREE);
+    
     /**
      * Copy constructor.
      */
@@ -119,16 +110,16 @@ public:
     /// Computes the emission for each band
     void bandEmission(COOLFluiD::RadiativeTransfer::ThermoData &thermo, int i, double* const p_emis);
 
-
-
-
     double opticalThickness(const PhotonPath& path, int ic, double sig);
 
-    double opticalThickness(const HSNBNonThickParameterSet& pathParams);
-
-    void addStateParams(COOLFluiD::RadiativeTransfer::ThermoData& thermo,HSNBNonThickParameterSet &nonThickParams, COOLFluiD::CFreal cellDistance, COOLFluiD::CFuint localCellID, COOLFluiD::CFreal sig);
-
-
+    double opticalThickness
+      (const COOLFluiD::RadiativeTransfer::HSNBNonThickParameterSet& pathParams);
+    
+    void addStateParams
+      (COOLFluiD::RadiativeTransfer::ThermoData& thermo,
+       COOLFluiD::RadiativeTransfer::HSNBNonThickParameterSet &nonThickParams,
+       COOLFluiD::CFreal cellDistance, COOLFluiD::CFuint localCellID,
+       COOLFluiD::CFreal sig);
     
     friend void swap(SnbContinuumSystem&, SnbContinuumSystem&);
     
@@ -229,6 +220,7 @@ private:
     COOLFluiD::Common::SelfRegistPtr<COOLFluiD::Environment::FileHandlerInput> m_inFileHandle;
 
     std::string m_directory;
+    std::string m_datadir;
     std::string m_species;
     std::string m_products;
     std::string m_system;

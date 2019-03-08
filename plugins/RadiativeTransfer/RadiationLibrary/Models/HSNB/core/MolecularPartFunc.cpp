@@ -5,16 +5,16 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include <vector>
 #include <cstdlib>
-#include <cmath>
 
 #include "StringUtils.h"
 
 using namespace std;
+using namespace COOLFluiD;
+using namespace COOLFluiD::RadiativeTransfer;
 
-MolecularPartFunc::MolecularPartFunc(const std::string& name)
-    : m_name(name), m_ntr(76), m_ntv(76)
+MolecularPartFunc::MolecularPartFunc(const std::string& name, const string datadir)
+    : m_name(name), m_ntr(76), m_ntv(76), m_datadir(datadir)
 {
 
     mp_tv = new float [m_ntv];
@@ -89,8 +89,8 @@ double MolecularPartFunc::Q(const double& tr, const double& tv)
 void MolecularPartFunc::loadTemperatureGrid()
 {
 
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/lbl_data/part/molecules/" + m_name + ".part";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/lbl_data/part/molecules/" + m_name + ".part";
     std::ifstream file(database.c_str());
 
     // Read the temperature grid, same for Tr and Tv
@@ -110,8 +110,8 @@ void MolecularPartFunc::loadTemperatureGrid()
 void MolecularPartFunc::loadParameters()
 {
     // Open the file where parameters are stored
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
-    std::string database = datadir + "/lbl_data/part/molecules/" + m_name + ".part";
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+    std::string database = m_datadir + "/lbl_data/part/molecules/" + m_name + ".part";
     std::ifstream file(database.c_str());
     double temp;
     

@@ -5,6 +5,8 @@
 #include "FieldData.h"
 #include "StringUtils.h"
 
+using namespace COOLFluiD::RadiativeTransfer;
+
 FieldData::FieldData(const std::string& file)
 {
     std::ifstream is(file.c_str());

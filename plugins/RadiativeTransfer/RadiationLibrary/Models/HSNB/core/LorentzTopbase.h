@@ -5,11 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
-
-using namespace COOLFluiD::RadiativeTransfer;
 
 /**
  * Implements the Lorentz model using TOPBASE data.
@@ -19,7 +16,7 @@ class LorentzTopbase : public LorentzModel
 public:
     /// Constructor
     LorentzTopbase(
-        const std::string& species, const std::vector<int>& topbase_index) :
+        const std::string& species, const std::vector<int>& topbase_index, const std::string datadir) :
         m_topbase_id(topbase_index)
     {
         // Compute the maximum id
@@ -29,7 +26,8 @@ public:
         m_ntopbase++;
 
         // Open the Lorentz line-width database for this atom
-        std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+//        std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+
         std::string database = datadir + "/lbl_data/widths/atoms/" + species + ".lor";
         std::ifstream file(database.c_str());
 
@@ -72,7 +70,7 @@ public:
     /// Destructor
     virtual ~LorentzTopbase() {}
 
-    void update(const ThermoData& thermo)
+    void update(const COOLFluiD::RadiativeTransfer::ThermoData& thermo)
     {
         // Get the species indices
         static int species_idx [9];

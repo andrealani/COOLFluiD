@@ -7,7 +7,6 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include <vector>
 #include <cstdlib>
 #include <cmath>
 
@@ -17,11 +16,8 @@ using namespace std;
 using namespace COOLFluiD;
 using namespace COOLFluiD::RadiativeTransfer;
 
-SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData,
-				     const std::string& dpdf,
-				     const std::string& nup,
-				     const ThermoData& thermo)
-  : m_directory(loadData.baseDirectory)
+SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData, const std::string& dpdf, const std::string& nup, const ThermoData& thermo)
+    : m_directory(loadData.baseDirectory)
 {
 
     m_usePrecomputedParams=true;
@@ -32,8 +28,9 @@ SnbDiatomicSystem::SnbDiatomicSystem(SpeciesLoadData loadData,
     m_species = loadData.speciesName;
     m_system  = loadData.systemName;
     m_directory += "/data/modele_msbe/";
-
     m_directory += m_species + "/" + m_system;
+
+    m_datadir = loadData.baseDirectory + "/data";
 
 
     m_test_qss = false;
@@ -146,6 +143,7 @@ SnbDiatomicSystem::SnbDiatomicSystem(const SnbDiatomicSystem& system)
       m_nparams(system.m_nparams),
       m_nv(system.m_nv),
       m_npoints(system.m_npoints),
+      m_datadir(system.m_datadir),
       mp_tv(system.mp_tv == NULL ? NULL : new float [m_nv]),
       mp_tr(system.mp_tr == NULL ? NULL : new float [system.mp_iv[1]]),
       mp_iv(system.mp_iv == NULL ? NULL : new size_t [m_nv+1]),
@@ -164,6 +162,7 @@ SnbDiatomicSystem::SnbDiatomicSystem(const SnbDiatomicSystem& system)
 void swap(SnbDiatomicSystem& s1, SnbDiatomicSystem& s2)
 {
     std::swap(s1.m_directory, s2.m_directory);
+    std::swap(s1.m_datadir, s2.m_datadir);
     std::swap(s1.m_species, s2.m_species);
     std::swap(s1.m_system, s2.m_system);
     std::swap(s1.m_species_index, s2.m_species_index);
@@ -485,7 +484,7 @@ void SnbDiatomicSystem::setupLocalParameters(ThermoData& thermo)
         fill(p_fac, p_fac+thermo.nCells(), 1.0);
 
         if (m_test_qss) {
-            QssMolecules qss(m_system, m_species);
+            QssMolecules qss(m_system, m_species,m_datadir);
             for (int i=0; i<thermo.nCells(); i++) {
                 thermo.setState(i);
                 p_fac[i] = qss.levelCorrection(thermo);
@@ -590,7 +589,7 @@ double SnbDiatomicSystem::emittedPower(int cellID, ThermoData& thermo)
     // QSS level correction
     double qss_fac = 1.0;
     if (m_test_qss) {
-        QssMolecules qss(m_system, m_species);
+        QssMolecules qss(m_system, m_species, m_datadir);
         //thermo.setState(cellID);
         qss_fac = qss.levelCorrection(thermo);
     }
@@ -620,7 +619,7 @@ void SnbDiatomicSystem::bandEmission(const int cellID, ThermoData& thermo, doubl
     // QSS level correction
     double qss_fac = 1.0;
     if (m_test_qss) {
-        QssMolecules qss(m_system, m_species);
+        QssMolecules qss(m_system, m_species, m_datadir);
         thermo.setState(cellID);
         qss_fac = qss.levelCorrection(thermo);
     }

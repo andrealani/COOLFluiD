@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
 double Chineq::concNegIon(ThermoData &thermo)
 {
@@ -11,7 +12,7 @@ double Chineq::concNegIon(ThermoData &thermo)
     const size_t index_neutral = thermo.speciesIndex(m_species.substr(0,1));
     const size_t index_elec = thermo.speciesIndex("e-");
 
-    AtomicPartFunc qneg(m_species), qat(m_species.substr(0,1));
+    AtomicPartFunc qneg(m_species, m_datadir), qat(m_species.substr(0,1), m_datadir);
     double q_ratio = qneg.Qneg(thermo.Tel()) / qat.Q(thermo) ;
 
     double xi = std::pow((TWOPI * ME * KB * thermo.Tel() )/ (HP * HP), 1.5);
@@ -49,8 +50,8 @@ double Chineq::atomicPhotoionization(ThermoData& thermo)
     if (m_species == "H")
         q_ratio = 2.0;
     else
-        q_ratio = AtomicPartFunc(m_species).Q(thermo) /
-            AtomicPartFunc(m_species + "+").Q(thermo);
+        q_ratio = AtomicPartFunc(m_species, m_datadir).Q(thermo) /
+            AtomicPartFunc(m_species + "+", m_datadir).Q(thermo);
 
     //AtomicPartFunc qat(m_species), qion(m_species + "+");
     //double q_ratio = qat.Q(thermo)
@@ -69,7 +70,7 @@ double Chineq::atomicPhotoionization(ThermoData& thermo)
     if (m_species == "H")
         api = 0.0;
     else
-        api = (alpha+1.0)*QE*QE/(FOURPI*EPS0*AtomicPartFunc(m_species).debye(thermo));
+        api = (alpha+1.0)*QE*QE/(FOURPI*EPS0*AtomicPartFunc(m_species, m_datadir).debye(thermo));
     //const double rhod  = (qat.debye(thermo);
     //const double api   = (alpha+1.0)*QE*QE/(FOURPI*EPS0*rhod);
 
@@ -88,7 +89,7 @@ double Chineq::molecularPhotoionization(ThermoData& thermo)
     const size_t index_ion = thermo.speciesIndex(m_species + "+");
     const size_t index_elec = thermo.speciesIndex("e-");
 
-    MolecularPartFunc qmol(m_species), qion(m_species + "+");
+    MolecularPartFunc qmol(m_species,m_datadir), qion(m_species + "+",m_datadir);
     double q_ratio = qmol.Q(tv, tv) / qion.Q(tv, tv);
  
     double n_ratio = thermo.N()[index_elec] * thermo.N()[index_ion] 
@@ -117,8 +118,8 @@ double Chineq::oxygenPhotodissociation(ThermoData& thermo)
     const size_t index_at = thermo.speciesIndex("O");
     const size_t index_mol = thermo.speciesIndex("O2");
 
-    double qat  = AtomicPartFunc("O").Q(thermo);
-    double qmol = MolecularPartFunc("O2").Q(tr, tr);
+    double qat  = AtomicPartFunc("O", m_datadir).Q(thermo);
+    double qmol = MolecularPartFunc("O2",m_datadir).Q(tr, tr);
 
     double q_ratio = qmol / (qat * qat);
 

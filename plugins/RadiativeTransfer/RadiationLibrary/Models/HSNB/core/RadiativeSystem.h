@@ -1,8 +1,7 @@
 #ifndef COOLFluiD_RadiativeTransfer_RADIATIVE_SYSTEM_H
 #define COOLFluiD_RadiativeTransfer_RADIATIVE_SYSTEM_H
 
-
-//#include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/FieldData.h"
+#include <string>
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/Operators.h"
 

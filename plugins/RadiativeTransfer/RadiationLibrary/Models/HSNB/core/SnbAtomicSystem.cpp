@@ -1,11 +1,9 @@
-
 #include "SnbAtomicSystem.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include <vector>
 #include <cstdlib>
 #include <cmath>
 
@@ -57,7 +55,7 @@ SnbAtomicSystem::SnbAtomicSystem(const std::string& spectradir,
           test_qss = true;
           system_name.erase(system_name.size()-1);
       }
-      m_systems.push_back(LblAtomicSystem(thermo, system_name, test_qss));
+      m_systems.push_back(LblAtomicSystem(thermo, system_name, m_datadir, test_qss));
       m_species_index.push_back(thermo.speciesIndex(system_name));
       if (m_species_index[i] < 0) {
           cout << "Error loading SNB system '" << m_systems[i].name() << "'! "

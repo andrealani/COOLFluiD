@@ -1,6 +1,5 @@
 #include "QssAtoms.h"
 #include <limits>
-#include <string>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -8,9 +7,10 @@
 #include <cstdlib>
 
 using namespace std;
+using namespace COOLFluiD::RadiativeTransfer;
 
-QssAtoms::QssAtoms(const std::string& name_species)
-        : m_species(name_species)
+QssAtoms::QssAtoms(const std::string& name_species, const string datadir)
+        : m_species(name_species), m_datadir(datadir)
 {
     if (m_species == "N" || m_species == "O") {
         cout << "QSS model for " << m_species << " atomic populations" << endl;
@@ -39,7 +39,7 @@ void QssAtoms::computeCorrections(ThermoData& thermo)
     double N = thermo.N(index);
     double Nion = thermo.N(index_ion);
     double Ne = thermo.N(index_elec);
-    AtomicPartFunc part(m_species), part_ion(m_species + "+");
+    AtomicPartFunc part(m_species, m_datadir), part_ion(m_species + "+", m_datadir);
     double Qat = part.Q(thermo), Qion = part_ion.Q(thermo);
     double xi = std::pow((TWOPI * ME * KB * Tel )/ (HP * HP), 1.5);
     double eion;
@@ -129,7 +129,7 @@ void QssAtoms::readJohnstonParameters()
 {
 
     m_ngroups = 5;
-    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
+//    std::string datadir = std::string(std::getenv("HTGR_DATA_DIRECTORY"));
     std::string database;
     std::ifstream file;
     std::ostringstream ss;
@@ -142,7 +142,7 @@ void QssAtoms::readJohnstonParameters()
         // Open the file where parameters of the group are stored
         ss.str("");
         ss << group+1;
-        std::string database = datadir + "/qss/atoms/" + m_species + "_" + ss.str() + ".qss";
+        database = m_datadir + "/qss/atoms/" + m_species + "_" + ss.str() + ".qss";
         file.open(database.c_str());
 
         // Read r0 and r1 parameters

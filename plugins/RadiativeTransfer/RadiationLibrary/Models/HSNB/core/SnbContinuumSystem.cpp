@@ -1,12 +1,12 @@
 #include "SnbContinuumSystem.h"
 #include "PhotonPath.h"
+#include "Environment/SingleBehaviorFactory.hh"
 
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include <vector>
 #include <cstdlib>
 #include <cmath>
 
@@ -16,19 +16,19 @@ using namespace std;
 using namespace COOLFluiD;
 using namespace COOLFluiD::RadiativeTransfer;
 
-SnbContinuumSystem::SnbContinuumSystem(SpeciesLoadData loadData, const ThermoData& thermo, ContinuumSort sort)
-    : m_directory(loadData.baseDirectory), m_sort(sort)
+SnbContinuumSystem::SnbContinuumSystem
+(SpeciesLoadData loadData, const ThermoData& thermo, ContinuumSort sort)
+  : m_directory(loadData.baseDirectory), m_sort(sort)
 {
-
     m_directory += "/data/modele_msbe/";
-
+    m_datadir = loadData.baseDirectory + "/data";
     m_nbParams = 0;
     m_species = loadData.speciesName;
     m_system  = loadData.systemName;
 
     m_directory+=m_species+"/"+m_system;
 
-    mp_chi = new Chineq(m_system, m_species);
+    mp_chi = new Chineq(m_system, m_species,m_datadir);
 
     m_species_index = thermo.speciesIndex(m_species);
 
@@ -102,12 +102,13 @@ SnbContinuumSystem::SnbContinuumSystem(const SnbContinuumSystem& system)
       m_nbands(system.m_nbands),
       m_nparams(system.m_nparams),
       m_npoints(system.m_npoints),
+      m_datadir(system.m_datadir),
       mp_t(system.mp_t == NULL ? NULL : new float [m_npoints]),
       mp_params(system.mp_params == NULL ? NULL :
           new double [m_npoints*m_nbands*m_nparams]),
       mp_locparams(NULL)
 {
-    mp_chi = new Chineq(m_system, m_species);
+    mp_chi = new Chineq(m_system, m_species,m_datadir);
     copy(system.mp_t, system.mp_t+m_npoints, mp_t);
     copy(
         system.mp_params, system.mp_params+m_npoints*m_nbands*m_nparams,
@@ -117,6 +118,7 @@ SnbContinuumSystem::SnbContinuumSystem(const SnbContinuumSystem& system)
 void swap(SnbContinuumSystem& s1, SnbContinuumSystem& s2)
 {
     std::swap(s1.m_directory, s2.m_directory);
+    std::swap(s1.m_datadir, s2.m_datadir);
     std::swap(s1.m_species, s2.m_species);
     std::swap(s1.m_products, s2.m_products);
     std::swap(s1.m_system, s2.m_system);
@@ -269,7 +271,7 @@ double SnbContinuumSystem::getThinAbsorptionSingleBand(ThermoData& thermo, CFuin
 
                 // BF systems which can take into account chemical disequilibrium
                 if (m_system == "N_bf" || m_system == "O_bf" || m_system == "C_bf"){
-                    AtomicPartFunc qat(m_species);
+                    AtomicPartFunc qat(m_species, m_datadir);
                     double q = qat.Q(thermo);
                     double eion = mp_chi->ionizationEnergy(); // J/mol
                     double lowT_fac = std::exp(eion/(2.0*KB*m_tv));
@@ -361,7 +363,7 @@ double SnbContinuumSystem::getThinEmissionSingleBand(ThermoData& thermo,CFuint c
 
             // BF systems which can take into account chemical disequilibrium
             if (m_system == "N_bf" || m_system == "O_bf" || m_system == "C_bf"){
-                AtomicPartFunc qat(m_species);
+                AtomicPartFunc qat(m_species, m_datadir);
                 double q = qat.Q(thermo);
                 double eion = mp_chi->ionizationEnergy(); // J/mol
                 double lowT_fac = std::exp(eion/(2.0*KB*tv));
@@ -518,7 +520,7 @@ void SnbContinuumSystem::setupEmissionCoefficientsFixedCell(ThermoData &thermo, 
 
             // BF systems which can take into account chemical disequilibrium
             if (m_system == "N_bf" || m_system == "O_bf" || m_system == "C_bf"){
-                AtomicPartFunc qat(m_species);
+                AtomicPartFunc qat(m_species, m_datadir);
                 m_q = qat.Q(thermo);
                 m_eion = mp_chi->ionizationEnergy(); // J/mol
                 m_lowT_fac = std::exp(m_eion/(2.0*KB*tv));
@@ -615,8 +617,7 @@ void SnbContinuumSystem::exportLocalParameters(boost::filesystem::path exportPat
 {
     if (thermo.usePrecomputedContinuumParameters()) {
     const size_t ndata = m_nbands*2;
-
-
+    
     m_outFileHandle  = COOLFluiD::Environment::SingleBehaviorFactory<COOLFluiD::Environment::FileHandlerOutput>::getInstance().create();
 
     //Only for testing, in reality mp_locparams is setup
@@ -758,7 +759,7 @@ void SnbContinuumSystem::setupLocalParameters(ThermoData& thermo)
 
                     // BF systems which can take into account chemical disequilibrium
                     if (m_system == "N_bf" || m_system == "O_bf" || m_system == "C_bf"){
-                        AtomicPartFunc qat(m_species);
+                        AtomicPartFunc qat(m_species, m_datadir);
                         double q = qat.Q(thermo);
                         double eion = mp_chi->ionizationEnergy(); // J/mol
                         double lowT_fac = std::exp(eion/(2.0*KB*tv));

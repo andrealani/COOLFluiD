@@ -7,9 +7,6 @@
 
 #include "RadiativeTransfer/RadiationLibrary/Models/HSNB/core/ThermoData.h"
 
-using namespace COOLFluiD::RadiativeTransfer;
-
-
 /**
  * Implements a simple Lorentz model for Hydrogen.
  */
@@ -36,7 +33,7 @@ public:
     virtual ~LorentzHydrogen() {}
 
     /// Updates thermo dependent data.
-    void update(ThermoData& thermo) {
+    void update(COOLFluiD::RadiativeTransfer::ThermoData& thermo) {
         m_ne23 = std::pow(1.0e-6*thermo.N(thermo.speciesIndex("e-")), 2.0/3.0);
     }
 

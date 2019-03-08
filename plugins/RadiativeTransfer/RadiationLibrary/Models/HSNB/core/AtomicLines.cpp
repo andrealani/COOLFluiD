@@ -63,7 +63,6 @@ AtomicLines::AtomicLines(const std::string baseDir,
     else
         loadNistData();
 
-
     CFLog(INFO, "AtomicLines " << m_atom <<" => Consider range " << m_lowSigc << " - " << m_hiSigc << "[1/cm]," << nLines() << " lines. \n");
 
     // Initialize non-Boltzmann correction factors
@@ -379,8 +378,6 @@ void AtomicLines::loadNistData()
     std::string database = m_datadir + "/lbl_data/lines/atoms/" + m_atom + ".nist";
     std::ifstream file(database.c_str());
 
-//    std::cout << "Loading line data for atom " + m_atom << std::endl;
-
     if (!file.is_open()) {
         std::cout << "Could not open line database file " << database << "!"
                   << std::endl;
@@ -466,7 +463,6 @@ void AtomicLines::loadNistData()
 
     nlines=realNbLines;
 
-
     //Double check
     cf_assert(nlines==nLines());
 
@@ -499,15 +495,12 @@ void AtomicLines::loadNistData()
         m_line_data[i].lnglflu *= ln10;
     }
 
-
     // Load the Lorentz broadening model
     mp_lorentz = HSNBSharedPtr<LorentzModel>(
-        new LorentzTopbase(m_atom, topbase_index));
-
+        new LorentzTopbase(m_atom, topbase_index, m_datadir));
 
     // Load the partition function
-    mp_Q = HSNBSharedPtr<PartitionFunction>(new AtomicPartFunc(m_atom));
-
+    mp_Q = HSNBSharedPtr<PartitionFunction>(new AtomicPartFunc(m_atom, m_datadir));
 }
 
 //==============================================================================

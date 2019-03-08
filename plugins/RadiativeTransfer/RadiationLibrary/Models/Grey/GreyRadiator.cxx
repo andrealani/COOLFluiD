@@ -191,6 +191,11 @@ CFreal GreyRadiator::getSpectraLoopPower()
   return (a2-a1)*a3;
 }
 
+CFreal GreyRadiator::getEmissivity()
+{
+    return m_emsCoeff;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 void GreyRadiator::getRandomEmission(CFreal &lambda, RealVector &s_o)

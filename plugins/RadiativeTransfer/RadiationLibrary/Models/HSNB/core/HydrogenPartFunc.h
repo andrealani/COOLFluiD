@@ -20,7 +20,7 @@ public:
     /**
      * Returns partition function for the Hydrogen atom.
      */
-    double Q(ThermoData& thermo)
+    double Q(COOLFluiD::RadiativeTransfer::ThermoData& thermo)
     {
         const double RY_over_KB = 157887.693241;
         const double Tel = thermo.Tel();
