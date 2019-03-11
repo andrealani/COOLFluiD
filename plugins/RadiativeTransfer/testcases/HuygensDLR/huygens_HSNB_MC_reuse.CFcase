@@ -1,0 +1,179 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Monte Carlo algorithm, PhysicalModelDummy, EmptyIterator, hybrid mesh,
+# only radiation transport (no flow) is computed, Tecplot2CFmesh converter,
+# Huygens (Titan mixture), validation case for ESA ABLARADABLA, input DLR solution
+#
+################################################################################
+
+# COOLFluiD CFcase file
+# Comments begin with "#"
+
+### Residual = 0
+
+#CFEnv.ErrorOnUnusedConfig = true
+#CFEnv.ExceptionLogLevel = 200
+CFEnv.ExceptionDumps   = false
+CFEnv.ExceptionOutputs = false
+#CFEnv.OnlyCPU0Writes = false
+#CFEnv.TraceToStdOut = true
+
+# Simulation Modules
+Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libTecplot2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+# relative path to working directory
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/HuygensDLR
+# relative path to results directory 
+Simulator.Paths.ResultsDir = ./RESULTS_HUYGENS_VISCOUS_HSNB_REUSE
+
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations = \
+	rhoN2 rhoN rhoCH4 rhoCH3 rhoCH2 rhoCH rhoC2 rhoC rhoH2 rhoH rhoNH rhoHCN rhoCN p T Mach
+
+# Mutation++
+Simulator.SubSystem.PhysicalModelDummy.PropertyLibrary = Mutationpp
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = titan19
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.StateModelName = ChemNonEq1T
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = huygens_viscous_DLR.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.Tecplot.FileName    = huygens_viscous_DLR.plt
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = qrad
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 
+#Simulator.SubSystem.Tecplot.Data.WithEquations = false
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -7.0
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = B_3 B_4 B_6
+
+Simulator.SubSystem.MeshCreator                                 = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName              = huygens_viscous_DLR.CFmesh
+Simulator.SubSystem.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = B_3 B_4 B_6
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
+        "N2_partial_density" "N_partial_density" "CH4_partial_density" "CH3_partial_density" "CH2_partial_density" \
+	"CH_partial_density" "C2_partial_density" "C_partial_density" "H2_partial_density" "H_partial_density" \
+	"NH_partial_density" "HCN_partial_density" "CN_partial_density" "pressure" "temperature" "Mach_number"
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 2
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
+Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
+
+###############################################################################
+
+Simulator.SubSystem.DataPostProcessing               = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames          = DataProcessing1
+
+Simulator.SubSystem.DataProcessing1.ProcessRate         = 1
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
+Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarloHSNB3DFVMCC RadiativeTransferOutputFVMCC
+
+Simulator.SubSystem.DataProcessing1.Names               = RT HeatFlux
+Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerFaces
+
+# If true totalNbRays will be distributed over the entire domain with photons in a cell being proportional to its emissive power
+# If false every cell will receive a fixed numberOfRays
+Simulator.SubSystem.DataProcessing1.RT.DynamicRayDistribution = true
+
+# Fixed number of rays per cell, is only used if the DynamicRayDistribution flag is set to false
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 100 #10000
+
+# Maximum number of raytracing steps for a single photon
+Simulator.SubSystem.DataProcessing1.RT.MaxNbVisitedCellsTrace = 10000
+
+# Uses additional MPI communication to synchronize telemetry data (to compute global averages). 
+# Takes extra time and should be turned off unless you are debugging
+Simulator.SubSystem.DataProcessing1.RT.TrackTelemetry	= true
+
+# Criteria to enforce sync between processes
+Simulator.SubSystem.DataProcessing1.RT.MaxNbVisitedCellsCycle = 100000
+Simulator.SubSystem.DataProcessing1.RT.MaxSecondsBetweenSyncs = 30.0
+
+# Total number of rays to be distributed over the entire domain
+Simulator.SubSystem.DataProcessing1.RT.totalNbRays	= 10000000
+
+# Maximum allowable size for the serial traceBuffer per process (in Byte, 1000000000 Byte equals 10 MB)
+Simulator.SubSystem.DataProcessing1.RT.traceBufferMaxByteSize=1000000000
+
+# Maximum allowable TOTAL memory usage of all buffers used for trace parallelization (in Byte, 10000000000 Byte equals 100 MB)
+# Simulator.SubSystem.DataProcessing1.RT.MaxGlobalBufferByteSize=50000000
+
+
+Simulator.SubSystem.DataProcessing1.RT.Axi              = false
+Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 1000000
+# run at setup, no flow iterations
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.NumberLoops = 1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.TempID = 14 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMax = 40000.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.WavelengthMin = 2000.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsNames = aa b1 b2 b3
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells 
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = HSNBRadiator
+# Path to the spectral data files (contained in the hsnbLib folder)
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /data2/underbackup/lani/BENJAMIN
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LocalDirName = HSNBHuygens
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = true
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TvIndex = 14
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TrIndex = 14
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.pIndex = 13
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedProperties = false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedContinuumProperties = true
+# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.WavenumberMin = 2500
+# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.WavenumberMax = 50000
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = B_3
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = B_4
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
+
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS   = B_6
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
+
+# radiative heat flux
+Simulator.SubSystem.DataProcessing1.HeatFlux.applyTRS = B_3
+Simulator.SubSystem.DataProcessing1.HeatFlux.TID = 14
+Simulator.SubSystem.DataProcessing1.HeatFlux.OutputFileWall = heatFlux.plt
+Simulator.SubSystem.DataProcessing1.HeatFlux.AppendTime = false
+Simulator.SubSystem.DataProcessing1.HeatFlux.AppendIter = true
+
+
