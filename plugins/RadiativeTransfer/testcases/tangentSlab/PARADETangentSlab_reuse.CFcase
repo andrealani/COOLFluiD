@@ -26,7 +26,7 @@ Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy l
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/tangentSlab
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_TANGENT_SLAB_HSNB
+Simulator.Paths.ResultsDir = ./RESULTS_TANGENT_SLAB_PARADE
 
 Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
@@ -67,6 +67,7 @@ Simulator.SubSystem.Default.listTRS = firstBoundary secondBoundary reflectingBou
 
 Simulator.SubSystem.MeshCreator                                 = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName              = tangentSlab.CFmesh
+#fire_inviscid_DLR.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
@@ -97,37 +98,14 @@ Simulator.SubSystem.DataPostProcessingNames          = DataProcessing1
 
 Simulator.SubSystem.DataProcessing1.ProcessRate         = 1
 Simulator.SubSystem.DataProcessing1.SkipFirstIteration  = false
-Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarloHSNB3DFVMCC RadiativeTransferOutputFVMCC
+Simulator.SubSystem.DataProcessing1.Comds               = RadiativeTransferMonteCarlo3DFVMCC RadiativeTransferOutputFVMCC
 
 Simulator.SubSystem.DataProcessing1.Names               = RT HeatFlux
 Simulator.SubSystem.DataProcessing1.RT.applyTRS         = InnerFaces
-
-# Fixed number of rays per cell, is only used if the DynamicRayDistribution flag is set to false
-Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 500 #10000
-
-# Maximum number of raytracing steps for a single photon
-Simulator.SubSystem.DataProcessing1.RT.MaxNbVisitedCellsTrace = 10000
-
-# Uses additional MPI communication to synchronize telemetry data (to compute global averages). 
-# Takes extra time and should be turned off unless you are debugging
-Simulator.SubSystem.DataProcessing1.RT.TrackTelemetry	= false
-
-# If true totalNbRays will be distributed over the entire domain with photons in a cell being proportional to its emissive power
-# If false every cell will receive a fixed numberOfRays
-Simulator.SubSystem.DataProcessing1.RT.DynamicRayDistribution = true
-
-# Criteria to enforce sync between processes
-Simulator.SubSystem.DataProcessing1.RT.MaxNbVisitedCellsCycle = 100000
-Simulator.SubSystem.DataProcessing1.RT.MaxSecondsBetweenSyncs = 60.0
-
-# Total number of rays to be distributed over the entire domain
-Simulator.SubSystem.DataProcessing1.RT.totalNbRays	= 50000
-
-# Maximum allowable size for the serial traceBuffer per process (in Byte, 1000000000 Byte equals 10 MB)
-Simulator.SubSystem.DataProcessing1.RT.traceBufferMaxByteSize=1000000000
-
-# Maximum allowable TOTAL memory usage of all buffers used for trace parallelization (in Byte, 10000000000 Byte equals 100 MB)
-# Simulator.SubSystem.DataProcessing1.RT.MaxGlobalBufferByteSize=50000000
+Simulator.SubSystem.DataProcessing1.RT.numberOfRays     = 1000 #10000
+Simulator.SubSystem.DataProcessing1.MaxNbVisitedCellsCycle = 15000
+Simulator.SubSystem.DataProcessing1.MaxNbVisitedCellsTrace = 10000
+Simulator.SubSystem.DataProcessing1.totalNbRays		= 3e6
 
 Simulator.SubSystem.DataProcessing1.RT.Axi              = false
 Simulator.SubSystem.DataProcessing1.RT.sendBufferSize   = 10000
@@ -142,43 +120,35 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.RadiationPhysicsN
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = InnerCells 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = HSNBRadiator
-# Path to the spectral data files (contained in the hsnbLib folder)
-#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /data2/underbackup/lani/BENJAMIN	
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LocalDirName = HSNBTangentSlab
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = false
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TvIndex = 13
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TrIndex = 12
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.pIndex = 11
-
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedProperties = false
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedContinuumProperties = true
-
-# Comment out these lines to use the full available wavenumber range
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.WavenumberMin = 2500
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.WavenumberMax = 50000
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = ParadeRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LibraryPath = \
+	/software/alternate/coolfluid/cf2/2015.11/parade-3.2.1_INTEL
+#	/Users/lani/PARADEv3.2.1/parade-3.2.1
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeTangentSlab
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 0 0 0 0 0 1 1 1 1 1 1
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = reflectingBoundary
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Boundary
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 1.
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.Radiator = GreyWallRadiator
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemAbsCoeff = 0.
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.GreyWallRadiator.ElemEmsCoeff = 0.
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.ApplyTRS   = firstBoundary
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.TypeTRS    = Boundary
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.Radiator = GreyWallRadiator
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.GreyWallRadiator.ElemAbsCoeff = 0.
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b2.GreyWallRadiator.ElemEmsCoeff = 1.
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.ApplyTRS   = secondBoundary
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.TypeTRS    = Boundary
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.Radiator = GreyWallRadiator
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.GreyWallRadiator.ElemAbsCoeff = 0.
-# Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b3.GreyWallRadiator.ElemEmsCoeff = 1.
+
+
+
+
 
 # radiative heat flux
 Simulator.SubSystem.DataProcessing1.HeatFlux.applyTRS = reflectingBoundary
-Simulator.SubSystem.DataProcessing1.HeatFlux.TID = 12
+Simulator.SubSystem.DataProcessing1.HeatFlux.TID = 13
 Simulator.SubSystem.DataProcessing1.HeatFlux.OutputFileWall = SlabHeatFlux.plt
 Simulator.SubSystem.DataProcessing1.HeatFlux.AppendTime = false
 Simulator.SubSystem.DataProcessing1.HeatFlux.AppendIter = true

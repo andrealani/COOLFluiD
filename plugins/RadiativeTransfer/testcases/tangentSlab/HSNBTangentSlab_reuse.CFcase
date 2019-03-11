@@ -144,14 +144,14 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = I
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = HSNBRadiator
 # Path to the spectral data files (contained in the hsnbLib folder)
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /Users/lani/COOLFluiD/plugins/RadiativeTransfer/RadiationLibrary/Models/HSNB
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /data2/underbackup/lani/BENJAMIN	
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LocalDirName = HSNBTangentSlab
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = false
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TvIndex = 13
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TrIndex = 12
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.pIndex = 11
 
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedProperties = false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedProperties = true
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.UsePrecomputedContinuumProperties = true
 
 # Comment out these lines to use the full available wavenumber range
