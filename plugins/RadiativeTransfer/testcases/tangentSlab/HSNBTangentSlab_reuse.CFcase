@@ -146,7 +146,7 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = H
 # Path to the spectral data files (contained in the hsnbLib folder)
 #Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /data2/underbackup/lani/BENJAMIN	
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LocalDirName = HSNBTangentSlab
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = true
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TvIndex = 13
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TrIndex = 12
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.pIndex = 11
