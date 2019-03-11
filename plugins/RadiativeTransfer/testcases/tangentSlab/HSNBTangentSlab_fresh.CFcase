@@ -26,7 +26,7 @@ Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy l
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/tangentSlab
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_TANGENT_SLAB
+Simulator.Paths.ResultsDir = ./RESULTS_TANGENT_SLAB_HSNB
 
 Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
@@ -67,7 +67,6 @@ Simulator.SubSystem.Default.listTRS = firstBoundary secondBoundary reflectingBou
 
 Simulator.SubSystem.MeshCreator                                 = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName              = tangentSlab.CFmesh
-#fire_inviscid_DLR.CFmesh
 Simulator.SubSystem.CFmeshFileReader.convertFrom                = Tecplot2CFmesh
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Discontinuous  = true
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
