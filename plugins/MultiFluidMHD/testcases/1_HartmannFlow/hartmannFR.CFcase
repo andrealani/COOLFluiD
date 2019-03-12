@@ -32,7 +32,7 @@ Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/1_HartmannFlo
 Simulator.Paths.ResultsDir       = plugins/MultiFluidMHD/testcases/1_HartmannFlow
 
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/1_HartmannFlow/hartmannFR.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 2
+Simulator.SubSystem.InteractiveParamReader.readRate = 5
 
 ###############################################################################
 # Physical Model
@@ -78,9 +78,9 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = hartmannFRFullMesh.CFmesh #hartmannMeshFR.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = hartmannFRFullMeshCoarse.CFmesh #hartmannFRFullMesh.CFmesh #hartmannMeshFR.CFmesh #
 #Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
-Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 #Simulator.SubSysMesh.CFmeshFileReader.Data.ScalingFactor = 1000.
 
 Simulator.SubSysMesh.SpaceMethod = Null
@@ -99,15 +99,15 @@ Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 Simulator.SubSystem.OutputFormat        = CFmesh Tecplot  ParaView
 
 Simulator.SubSystem.CFmesh.FileName     = hartmannFRMeshP1.CFmesh
-#Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
-Simulator.SubSystem.CFmesh.SaveRate = 5
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = true
 
 Simulator.SubSystem.Tecplot.FileName = hartmannFR.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 1
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
@@ -116,7 +116,7 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.ParaView.FileName    = hartmannFR.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = RhoiViTi
-Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.SaveRate = 500
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
@@ -172,7 +172,7 @@ Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceHartmannFR.plt
 Simulator.SubSystem.Default.listTRS = x0 x1 y0 y1 #InnerCells
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = hartmannUpgraded.CFmesh #halfTube40X250P1.CFmesh #hartmannFRMeshP1.CFmesh #hartmannMeshFR.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hartmannUpgraded.CFmesh #hartmannFRMeshP1-iter_500.CFmesh #halfTube40X250P1.CFmesh #hartmannFRMeshP1.CFmesh #hartmannMeshFR.CFmesh #
 #Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 #Simulator.SubSystem.FluxReconstruction.Builder = MeshUpgrade
@@ -189,6 +189,8 @@ Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSJacobMFMHD #DiffRHS
 
 Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+
+Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
 
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = RhoiViTi
