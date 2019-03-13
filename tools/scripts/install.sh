@@ -46,6 +46,7 @@ make clean ; make
 
 # install COOLFluiD
 cd $WORKDIR
+rm -fr $WORKDIR/OPENMPI
 ./prepare.pl --build=optim --config-file=coolfluid.conf.radiation
 cd OPENMPI/optim ; make -j4
 # unpack data for HSNB
