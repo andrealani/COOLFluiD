@@ -190,9 +190,9 @@ void BCSubInletUVTEIWRhoiViTi::computeGhostStates(const vector< State* >& intSta
   (ghostState)[0] = (intState)[0] ; //- 2*bn*nx;	//Bx
   (ghostState)[1] = (intState)[1] ; //- 2*bn*ny;	//By
   (ghostState)[2] = (intState)[2] ; //- 2*bn*nz;	//Bz
-  (ghostState)[3] = -(intState)[3] + 2*en*nx;	//Ex
-  (ghostState)[4] = -(intState)[4] + 2*en*ny;	//Ey
-  (ghostState)[5] = -(intState)[5] + 2*en*nz;	//Ez
+  (ghostState)[3] = -(intState)[3]; // + 2*en*nx;	//Ex
+  (ghostState)[4] = -(intState)[4]; // + 2*en*ny;	//Ey
+  (ghostState)[5] = -(intState)[5]; // + 2*en*nz;	//Ez
   (ghostState)[6] = (intState)[6];			//Psi
   (ghostState)[7] = -(intState)[7];			//Phi
 
