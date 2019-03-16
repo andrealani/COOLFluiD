@@ -132,6 +132,12 @@ protected: // data
   
   /// number of solution points
   CFuint m_nbrSolPnts;
+  
+  /// perturbed solution point
+  CFuint m_pertSol;
+  
+  /// bool telling whether the state is perturbed
+  bool m_isPerturbed;
 
 }; // class StdSourceTerm
 

@@ -44,7 +44,9 @@ StdSourceTerm::StdSourceTerm(const std::string& name) :
   m_pertResUpdates(),
   m_resUpdates(),
   m_derivResUpdates(),
-  m_nbrSolPnts()
+  m_nbrSolPnts(),
+  m_pertSol(),
+  m_isPerturbed()
 {
   addConfigOptionsTo(this);
   
@@ -91,7 +93,7 @@ void StdSourceTerm::setup()
   m_nbrSolPnts = maxNbrSolPnts;
   
   if (m_addJacob)
-  {
+  { 
     // get the linear system solver
     m_lss = getMethodData().getLinearSystemSolver()[0];
 
@@ -175,7 +177,11 @@ void StdSourceTerm::execute()
 	
 	if (m_addJacob)
 	{
+          m_isPerturbed = true;
+            
 	  addSrcTermJacob();
+          
+          m_isPerturbed = false;
 	}
       }
 
@@ -205,18 +211,27 @@ void StdSourceTerm::updateRHS()
 
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
-
-  // loop over solution points in this cell to add the source term
-  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
-
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  
+  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
   {
-    // loop over physical variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+    CFuint resID = m_nbrEqs*( (*m_cellStates)[iState]->getLocalID() );
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
-      rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_resUpdates[m_nbrEqs*iSol+iEq];
+      rhs[resID+iVar] += resFactor*m_solPntJacobDets[iState]*m_resUpdates[m_nbrEqs*iState+iVar];  //*m_divContFlx[iState][iVar];
     }
   }
+
+//  // loop over solution points in this cell to add the source term
+//  CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
+//
+//  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//  {
+//    // loop over physical variables
+//    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
+//    {
+//      rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_resUpdates[m_nbrEqs*iSol+iEq];
+//    }
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -236,10 +251,10 @@ void StdSourceTerm::addSrcTermJacob()
   }
 
   // loop over the states/solpnts in this cell to perturb the states
-  for (CFuint iSolPert = 0; iSolPert < m_nbrSolPnts; ++iSolPert)
+  for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
   {
     // dereference state
-    State& pertState = *(*m_cellStates)[iSolPert];
+    State& pertState = *(*m_cellStates)[m_pertSol];
 
     // loop over the variables in the state
     for (CFuint iEqPert = 0; iEqPert < m_nbrEqs; ++iEqPert)
@@ -262,7 +277,12 @@ void StdSourceTerm::addSrcTermJacob()
       CFuint resUpdIdx = 0;
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, resUpdIdx += m_nbrEqs)
       {
-        acc.addValues(iSol,iSolPert,iEqPert,&m_derivResUpdates[resUpdIdx]);
+        for (CFuint iEq=0; iEq < m_nbrEqs; ++iEq)
+        {
+          m_derivResUpdates[resUpdIdx + iEq] *= m_solPntJacobDets[iSol];
+        }
+          
+        acc.addValues(iSol,m_pertSol,iEqPert,&m_derivResUpdates[resUpdIdx]);
       }
 
       // restore physical variable in state
