@@ -938,7 +938,7 @@ void ParadeRadiator::computeEmissionCPD()
     cpdEmsCurr[s*nbCpdPoints] = 0;
     for (CFuint j=1; j < nbCpdPoints; j++ ) {
       //cout<<"spectral point "<<j<<" of "<<nbCpdPoints<<endl;
-      emInt += ( dataMat(s,(j-1)*3+1) + dataMat(s,j*3+1) )/2. * m_dWav*1e-10;
+      emInt += ( dataMat(s,(j-1)*3+1) + dataMat(s,j*3+1) )/2. * m_dWav;
       cpdEmsCurr[s*nbCpdPoints + j] = emInt;
     }
     
