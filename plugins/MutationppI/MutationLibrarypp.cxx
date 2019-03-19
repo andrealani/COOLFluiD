@@ -438,13 +438,11 @@ void MutationLibrarypp::setDensityEnthalpyEnergy(CFdouble& temp,
 // @modif_LkT
 CFdouble MutationLibrarypp::density(CFdouble& temp,CFdouble& pressure,CFreal* tVec)
 {
-  if( (m_smType == LTE) && (!_useLookUpTable) ){
-		m_gasMixture->setState(&pressure, &temp, 1);
-    return m_gasMixture->density();
-	}
-  else {
-		return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("d"));
-	}
+  if (m_smType == LTE && _useLookUpTable) { 
+    return _lookUpTables.get(temp, pressure, _nameToIdxVar.find("d"));
+  }
+  m_gasMixture->setState(&pressure, &temp, 1);
+  return m_gasMixture->density();
 }
 
 //////////////////////////////////////////////////////////////////////////////
