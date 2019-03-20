@@ -231,7 +231,7 @@ void LLAVFluxReconstruction::execute()
 //    m_s0 = m_s0Prev;
 //  }
   //m_peclet = m_minValue/pow(10,m_s0);
-  CFLog(INFO, "Smax: " << m_Smax << "\n");
+  
   m_Smax = -100.0;
   
   m_nodeEpsilons = 0.0;
@@ -301,7 +301,7 @@ void LLAVFluxReconstruction::execute()
   if (PE::GetPE().GetRank(nsp) == 0) 
   {
     // print total artificial viscosity
-    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", S0: " << m_s0 << "\n");
+    CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", Smax: " << m_SmaxGlobal << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);
@@ -429,7 +429,7 @@ void LLAVFluxReconstruction::execute()
       // print out the residual updates for debugging
       if(m_cell->getID() == 1988) //
       {
-	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
+	CFLog(VERBOSE, "ID = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "TotalUpdate = \n");
         // get the datahandle of the rhs
         DataHandle< CFreal > rhs = socket_rhs.getDataHandle();

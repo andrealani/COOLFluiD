@@ -459,15 +459,14 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
     m_artificialVisc->execute();
   }
   
-
   // if there is a diffusive term, compute the diffusive contributions to the residual
   if (m_data->hasDiffTerm())
   {
-    // add the diffusive boundary fluxes
-    applyBCDiffImpl();
-
     cf_assert(m_diffSolve.isNotNull());
     m_diffSolve->execute();
+    
+    // add the diffusive boundary fluxes
+    applyBCDiffImpl();
   }
   
   // add source terms

@@ -269,6 +269,12 @@ protected: //data
   /// total artificial viscosity added over all CPUs
   CFreal m_totalEpsGlobal;
   
+  /// maximum smoothness in domain
+  CFreal m_Smax;
+  
+  /// maximum smoothness in domain over all CPUs
+  CFreal m_SmaxGlobal;
+  
   /// bool telling whether to add viscosity for positivity preservation
   bool m_addPosPrev;
   

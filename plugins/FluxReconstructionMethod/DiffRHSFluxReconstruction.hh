@@ -107,7 +107,7 @@ protected: //functions
   /**
    * Compute the left and right states and gradients in the flx pnts
    */
-  void computeFlxPntStatesAndGrads();
+  virtual void computeFlxPntStatesAndGrads();
   
   virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
   

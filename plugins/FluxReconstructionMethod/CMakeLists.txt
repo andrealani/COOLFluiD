@@ -79,6 +79,10 @@ LLAVFluxReconstruction.cxx
 LLAVFluxReconstruction.hh
 LLAVJacobFluxReconstruction.cxx
 LLAVJacobFluxReconstruction.hh
+LLAVDiffFluxReconstruction.cxx
+LLAVDiffFluxReconstruction.hh
+LLAVDiffJacobFluxReconstruction.cxx
+LLAVDiffJacobFluxReconstruction.hh
 BasePhysicality.cxx
 BasePhysicality.hh
 StdSourceTerm.cxx
