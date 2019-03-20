@@ -18,6 +18,12 @@ cd $CDIR
 
 ####### Radiative properties computed from scratch
 
+echo "Running tangentSlab with HSNB:     HSNBTangentSlab_fresh.CFcase"
+./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/tangentSlab/HSNBTangentSlab_fresh.CFcase >& HSNBTangentSlab_fresh.CFcase.txt
+
+echo "Running tangentSlab with PARADE:   PARADETangentSlab_fresh.CFcase"
+./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/tangentSlab/PARADETangentSlab_fresh.CFcase >& PARADETangentSlab_fresh.CFcase.txt
+
 echo "Running FIREII with HSNB:    fire_viscous_HSNB_MC_fresh_limrange.CFcase"
 mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/FireIIDLR/fire_viscous_HSNB_MC_fresh_limrange.CFcase >& fire_viscous_HSNB_MC_fresh_limrange.CFcase.txt
 
@@ -35,6 +41,12 @@ mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testca
 killall -9 parade
 
 ####### Radiative properties reused
+
+echo "Running tangentSlab with HSNB:     HSNBTangentSlab_reuse.CFcase"
+./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/tangentSlab/HSNBTangentSlab_reuse.CFcase >& HSNBTangentSlab_reuse.CFcase.txt
+
+echo "Running tangentSlab with PARADE:   PARADETangentSlab_reuse.CFcase"
+./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/tangentSlab/PARADETangentSlab_reuse.CFcase >& PARADETangentSlab_reuse.CFcase.txt
 
 echo "Running FIREII with HSNB:    fire_viscous_HSNB_MC_reuse_limrange.CFcase"
 mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/FireIIDLR/fire_viscous_HSNB_MC_reuse_limrange.CFcase >& fire_viscous_HSNB_MC_reuse_limrange.CFcase.txt
