@@ -174,15 +174,15 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
         ghostT = m_wallT;
       }
       
-      CFreal ghostP;
-      if (getMethodData().getUpdateVarStr() == "Cons")
-      {
-	ghostP = m_intSolPhysData[EulerTerm::RHO]*R*ghostT;
-      }
-      else
-      {
-	ghostP = m_intSolPhysData[EulerTerm::P];
-      }
+//      CFreal ghostP;
+//      if (getMethodData().getUpdateVarStr() == "Cons")
+//      {
+//	ghostP = m_intSolPhysData[EulerTerm::RHO]*R*ghostT;
+//      }
+//      else
+//      {
+//	ghostP = m_intSolPhysData[EulerTerm::P];
+//      }
 
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::P]/(R*ghostT); //m_intSolPhysData[EulerTerm::RHO];

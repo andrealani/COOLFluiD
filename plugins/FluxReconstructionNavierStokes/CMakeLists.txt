@@ -38,6 +38,8 @@ LLAVFluxReconstructionNS.cxx
 LLAVFluxReconstructionNS.hh
 LLAVJacobFluxReconstructionNS.cxx
 LLAVJacobFluxReconstructionNS.hh
+LLAVDiffFluxReconstructionNS.cxx
+LLAVDiffFluxReconstructionNS.hh
 PhysicalityEuler2D.cxx
 PhysicalityEuler2D.hh
 PhysicalityEuler3D.cxx
