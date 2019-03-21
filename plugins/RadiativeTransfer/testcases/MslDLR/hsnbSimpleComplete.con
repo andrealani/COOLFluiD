@@ -1,0 +1,27 @@
+Species: CO2 CO O2 C2 N2 NO CN O C N
+CO2 Treatment (if any): LS
+
+Atomic systems: (single row, seperated by whitespace, leave following row empty to ignore atomic species)
+O C
+
+Diatomic systems: (single row per species, SpeciesName/ProcessName WHITESPACE TypeDopplerPDF[E] WHITESPACE NonUniformPathTreatment[T/CG/LS])
+CO/CO_4+    H T
+CN/CNred    H T
+CN/CNvio    H CG
+
+Continuum systems: (single row per species, SpeciesName/ProcessName WHITESPACE ProcessType [BF/FF])
+C/C_bf	    BF
+CN/CN_bf    BF
+C2/C2_bf    BF
+CO/CO_bf    BF
+N/N_bf      BF
+O/O_bf      BF
+N2/N2_bf    BF
+O2/O2_bf    BF
+NO/NO_bf    BF
+O2/O2_bf_SR BF
+N/N_ff      FF
+O/O_ff      FF
+O2/O2_ff    FF
+N2/N2_ff    FF
+C/C_ff      FF
