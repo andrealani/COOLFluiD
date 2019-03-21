@@ -146,8 +146,7 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ApplyTRS   = I
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.TypeTRS    = Medium
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.Radiator   = HSNBRadiator
 # Path to the spectral data files
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = \
-	/data/terschanski
+#Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LibraryPath = /data/terschanski
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.LocalDirName = HSNBmsl
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.ReuseProperties = false
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.HSNBRadiator.TvIndex = 11
