@@ -40,6 +40,14 @@ mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testca
 
 killall -9 parade
 
+"Running MSL with HSNB:  MSL_HSNB_MC_fresh.CFcase"
+mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/MslDLR/MSL_HSNB_MC_fresh.CFcase >& MSL_HSNB_MC_fresh.CFcase.txt
+
+echo "Running MSL with PARADE: MSL_PARADE_MC_fresh.CFcase"
+mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/MslDLR/MSL_PARADE_MC_fresh.CFcase >& MSL_PARADE_MC_fresh.CFcase.txt
+
+killall -9 parade
+
 ####### Radiative properties reused
 
 echo "Running tangentSlab with HSNB:     HSNBTangentSlab_reuse.CFcase"
@@ -64,5 +72,10 @@ mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testca
 
 killall -9 parade
 
+"Running MSL with HSNB:  MSL_HSNB_MC_reuse.CFcase"
+mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/MslDLR/MSL_HSNB_MC_reuse.CFcase >& MSL_HSNB_MC_reuse.CFcase.txt 
 
+echo "Running MSL with PARADE: MSL_PARADE_MC_reuse.CFcase"
+mpirun -np 8 ./coolfluid-solver --scase BASEDIR/plugins/RadiativeTransfer/testcases/MslDLR/MSL_PARADE_MC_reuse.CFcase >& MSL_PARADE_MC_reuse.CFcase.txt
 
+killall -9 parade
