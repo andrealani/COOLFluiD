@@ -26,7 +26,7 @@ Simulator.Modules.Libs = libTecplotWriter libMutationppI libPhysicalModelDummy l
 # relative path to working directory
 Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/MslDLR
 # relative path to results directory 
-Simulator.Paths.ResultsDir = ./RESULTS_MSL_VISCOUS_HSNB
+Simulator.Paths.ResultsDir = ./RESULTS_MSL_HSNB_REUSE
 
 Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
 Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
