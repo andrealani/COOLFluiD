@@ -35,7 +35,7 @@ rhoCO2 rhoCO rhoO2 rhoC2 rhoN2 rhoNO rhoCN rhoO rhoC rhoN p T Mach
 
 # Mutation++
 Simulator.SubSystem.PhysicalModelDummy.PropertyLibrary = Mutationpp
-Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = marslab
+Simulator.SubSystem.PhysicalModelDummy.Mutationpp.mixtureName = marslab_noNCO
 Simulator.SubSystem.PhysicalModelDummy.Mutationpp.StateModelName = ChemNonEq1T
 
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
@@ -82,7 +82,7 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 
 ###############################################################################
 
@@ -123,8 +123,8 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.LocalDirName = ParadeData
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = true
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 1 1 1 1 1 0 0 0
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 1 1 1 1 0 0 0
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = shield
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall

@@ -73,19 +73,16 @@ Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SolutionOrder  = P0
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.HasBlockFormat = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SurfaceTRS = fernfeld symm shield
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.ReadVariables = \
-	"CO2_mass_fraction" "CO_mass_fraction" "O2_mass_fraction" "C2_mass_fraction" "N2_mass_fraction" \
-	"NO_mass_fraction" "CN_mass_fraction" "O_mass_fraction" "C_mass_fraction" \
-	"N_mass_fraction" "pressure" "temperature" "Mach_number"
-#"CO2_mass_fraction" "CO_mass_fraction" "O2_mass_fraction" "C2_mass_fraction" "N2_mass_fraction" \
-#"NO_mass_fraction" "CN_mass_fraction" "NCO_mass_fraction" "O_mass_fraction" "C_mass_fraction" \
-#"N_mass_fraction" "pressure" "temperature" "Mach_number"
+"CO2_mass_fraction" "CO_mass_fraction" "O2_mass_fraction" "C2_mass_fraction" "N2_mass_fraction" \
+"NO_mass_fraction" "CN_mass_fraction" "O_mass_fraction" "C_mass_fraction" \
+"N_mass_fraction" "pressure" "temperature" "Mach_number"
 
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.NbElementTypes = 4
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SkipSolution = false
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.Precision = 12
 Simulator.SubSystem.CFmeshFileReader.Tecplot2CFmesh.SaveNodalStates = true
 Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1.
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 
 ###############################################################################
 
@@ -127,7 +124,7 @@ Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.nbPoints = 10000
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.Tmin = 200
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.ReuseProperties = false
-Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 1 1 1 1 1 0 0 0
+Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.aa.ParadeRadiator.MolecularSpecies = 1 1 1 1 1 1 1 0 0 0
 
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.ApplyTRS   = shield
 Simulator.SubSystem.DataProcessing1.RT.RadiationPhysicsHandler.b1.TypeTRS    = Wall
