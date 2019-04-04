@@ -11,6 +11,7 @@
 #include "Mutation2.0.0I/MutationLibrary2OLD.hh"
 
 #include <mutation++.h>
+#include "Common/LookupTable2D.hh" //@modif_LkT
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -37,7 +38,11 @@ public:
    * @param options a OptionList where to add the Option's
    */
   static void defineConfigOptions(Config::OptionList& options);
-  
+  /**
+   * Creation of an alias for the class that defines a table
+   * @modif_LkT
+   */
+  typedef Common::LookupTable2D<CFdouble, CFdouble, CFdouble> LkpTable; 
   /**
    * Constructor without arguments
    */
@@ -47,11 +52,6 @@ public:
    * Default destructor
    */
   virtual ~MutationLibraryppDebug();
-  
-  /**
-   * Configures this configurable object.
-   */
-  void configure ( Config::ConfigArgs& args );
   
   /**
    * Setups the data of the library
@@ -306,7 +306,12 @@ public:
   CFdouble density(CFdouble& temp,
 		   CFdouble& pressure,
 		   CFreal* tVec);
-  
+//@modif_LkT
+  CFdouble density(CFdouble& temp,
+                   CFdouble& pressure)
+  {
+    return density(temp,pressure, CFNULL);
+  }
   /**
    * Calculates the internal energy at given temperature
    * and pressure.
@@ -554,11 +559,47 @@ private: // helper function
     
   /// enumerator for the state model type 
   enum StateModelType {LTE=0, CNEQ=1, TCNEQ=2};
+
+  /* ========================
+     START section @modif_LkT 
+  */
+protected: // helper function
+  typedef CFdouble (MutationLibraryppDebug::*ComputeQuantity)
+    (CFdouble&, CFdouble&);
+
+
+  /**
+   * Set up all the look up tables 
+   */
+  void setLookUpTables();
+
+	/**
+	 * Set up the library sequentially 
+	 */
+	//void setLibrarySequentially();
+
+  /**
+   * Compute lookup tables using the ponter to member functions
+   * contained in the given vector
+   */
+  void setTables(std::vector<ComputeQuantity>& varComputeVec);
   
-protected:
-    
+protected: //variables
+
+  /// flag telling if to use the look up tables
+  bool _useLookUpTable;
+
+  /// flag telling to ignore the electronic energy
+  bool _noElectEnergy;
+
+  /// mapping name variable - idx
+  Common::CFMap<std::string, size_t> _nameToIdxVar;
+
+  /// table of lookup tables
+  LkpTable _lookUpTables;
+
   /// gas mixture pointer
-  std::auto_ptr<Mutation::Mixture> m_gasMixture; 
+  std::auto_ptr<Mutation::Mixture> m_gasMixture;
   
   /// gas mixture pointer for equilibrium
   Mutation::Mixture* m_gasMixtureEquil; 
@@ -569,6 +610,15 @@ protected:
   /// local number of Tv (to be removed)
   CFuint _nbTvibLocal;
   
+  /// flag telling if to use the look up tables
+  std::vector<std::string> _lkpVarNames;
+
+  /// Vector of the impinging fluxes
+  RealVector m_mcal;
+
+  /// Vector of the molar mass
+  RealVector m_mmi;
+
   /// mass fractions
   RealVector m_y;
   
@@ -608,19 +658,42 @@ protected:
   /// state temperatures
   RealVector m_Tstate;
 
-  // the following is already definied in Mutation2OLD
-  /// mixture name
-  // std::string _mixtureName;
-  
   /// state model name
   std::string _stateModelName;
-  
+
   /// minimum partial density
   CFreal _minRhoi;
   
   /// minimum temperature
   CFreal _minT;
-  
+
+  /// Min temperature in the table
+  CFdouble _Tmin;
+
+  /// Max temperature in the table
+  CFdouble _Tmax;
+
+  /// Minimum threshold temperature for chemistry
+  CFdouble _TminFix;
+
+  /// Delta temperature in the table
+  CFdouble _deltaT;
+
+  ///Logarithmic scale for the pressure
+  bool _pLogScale;
+
+  /// Min pressure in the table
+  CFdouble _pmin;
+
+  /// Max pressure in the table
+  CFdouble _pmax;
+
+  /// Delta pressure in the table
+  CFdouble _deltaP;
+
+  /// Small disturbance
+  CFdouble EPS;
+
 }; // end of class MutationLibraryppDebug
       
 //////////////////////////////////////////////////////////////////////////////

@@ -442,7 +442,7 @@ public:
 			     const RealVector& ys,
 			     bool flagJac,
 			     RealVector& omega,
-           RealMatrix& jacobian);
+                             RealMatrix& jacobian);
   
   /**
    * Returns the source term for the vibrational relaxation with VT transfer
