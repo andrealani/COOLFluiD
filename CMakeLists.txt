@@ -274,7 +274,7 @@ LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
 LOG ( "Boost lib version  [${Boost_LIB_VERSION}]" )
 LOG ( "Boost libraries    [${Boost_LIBRARIES}]" )
 
-IF (${Boost_LIB_VERSION} STREQUAL "1_60" )
+IF ("${Boost_LIB_VERSION}" STREQUAL "1_60" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_60 )
 ELSEIF (${Boost_LIB_VERSION} STREQUAL "1_62" )
 ADD_DEFINITIONS  ( -DCF_HAVE_BOOST_1_62 )
