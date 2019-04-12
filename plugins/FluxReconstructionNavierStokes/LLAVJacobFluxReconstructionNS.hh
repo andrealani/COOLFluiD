@@ -74,18 +74,6 @@ protected: //functions
   virtual void setFaceData(CFuint faceID);
   
   /**
-   * Set the data for the current cell necessary to calculate the residual update
-   */
-  virtual void setCellData();
-  
-  /**
-   * set the face neighbour gradients
-   * @pre setOtherFacesLocalIdxs()
-   * @pre setFaceNeighbourStates()
-   */
-  virtual void setFaceNeighbourGradients();
-  
-  /**
    * Compute the Peclet number based on the user input
    */
   virtual CFreal computePeclet();
