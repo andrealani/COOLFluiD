@@ -77,12 +77,6 @@ protected: //functions
   void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /**
-   * recompute the cell gradients from the current cell solutions,
-   * after perturbation
-   */
-  virtual void computePerturbedGradients(const CFuint side);
-  
-  /**
    * compute the artificial diffusive flux
    */
   virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);

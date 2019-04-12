@@ -63,40 +63,6 @@ protected: //functions
    * @pre m_faces is set
    */
   void setOtherFacesLocalIdxs();
-
-  /**
-   * set the face neighbour states
-   * @pre setOtherFacesLocalIdxs()
-   */
-  void setFaceNeighbourStates();
-
-  /**
-   * set the face neighbour gradients
-   * @pre setOtherFacesLocalIdxs()
-   * @pre setFaceNeighbourStates()
-   */
-  virtual void setFaceNeighbourGradients();
-
-  /**
-   * compute the unperturbed gradients minus the current face term
-   * @pre m_faceTermComputer->reconstructFluxPntsStates
-   * @pre setCellsData()
-   */
-  void computeCellGradsMinusFaceTerm();
-
-  /**
-   * compute the unperturbed gradients minus the other face terms
-   * @pre m_faceTermComputers->reconstructFluxPntsStates
-   * @pre setCellsData()
-   */
-  void computeCellGradsMinusOtherFaceTerms(const CFuint side);
-
-  /**
-   * compute the unperturbed cell diffusive residuals
-   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
-   * @pre setCellsData()
-   */
-  virtual void computeUnpertCellDiffResiduals();
   
   /**
    * compute the unperturbed cell diffusive residuals
@@ -104,40 +70,12 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-
-  /**
-   * recompute the cell gradients from the current cell solutions,
-   * after perturbation
-   */
-  virtual void computePerturbedGradients(const CFuint side);
   
   /**
    * recompute the cell gradients from the current cell solutions,
    * after perturbation
    */
   virtual void computePerturbedGradientsAnalytical(const CFuint side);
-  
-  /**
-   * recompute the cell gradients from the current cell and the neighbouring cells solutions,
-   * after perturbation
-   * @pre setCellsData()
-   * @pre backupAndReconstructOtherFacesAndCellPhysVars()
-   */
-  virtual void computePerturbedGradients();
-
-  /**
-   * recompute the cell gradients from the current cell and the neighbouring cells,
-   * after perturbation
-   * @pre computePerturbedGradients() (for the other cell)
-   * @pre computeCellGradsMinusFaceTerm()
-   */
-  void computePertGradsFromFaceTerm(const CFuint side);
-
-  /**
-   * recompute the cell gradients, from one of the other face terms
-   * @pre computeCellGradsMinusOtherFaceTerm()
-   */
-  void computePertGradsFromOtherFaceTerm(const CFuint side, const CFuint iFace);
 
   /**
    * compute the perturbed cell diffusive residuals for one cell
@@ -156,21 +94,6 @@ protected: //functions
    * compute the contribution of the diffusive face term to one Jacobians
    */
   void computeOneJacobDiffFaceTerm(const CFuint side);
-  
-  /**
-   * compute the contribution of the diffusive volume term to the Jacobian
-   */
-  void computeJacobDiffVolTerm();
-  
-  /**
-   * compute the unperturbed residual contribution of a bnd face
-   */
-  void computeBndRes(CFuint side, CFuint faceIdx, std::vector< RealVector >& corrections);
-  
-  /**
-   * compute the unperturbed residual contribution of a face
-   */
-  void computeFaceRes(CFuint side, CFuint faceIdx, CFuint iFace, std::vector< RealVector >& corrections);
   
   /**
    * compute the terms for the gradient computation for a bnd face

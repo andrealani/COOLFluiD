@@ -80,6 +80,9 @@ protected: //functions
   /// compute the divergence of the discontinuous flux (-divFD+divhFD)
   void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
+  /// compute the divergence of the discontinuous flux (-divFD+divhFD) of a neighbor cell
+  void computeDivDiscontFlxNeighb(RealVector& residuals, const CFuint side);
+  
   /**
    * Set the data for the current face necessary to calculate FI
    */
@@ -88,21 +91,7 @@ protected: //functions
   /**
    * Set the data for the current cell necessary to calculate the residual update
    */
-  void setCellData();
-  
-  /**
-   * recompute the cell gradients from the current cell solutions,
-   * after perturbation
-   */
-  virtual void computePerturbedGradients(const CFuint side);
-  
-  /**
-   * recompute the cell gradients from the current cell and the neighbouring cells solutions,
-   * after perturbation
-   * @pre setCellsData()
-   * @pre backupAndReconstructOtherFacesAndCellPhysVars()
-   */
-  virtual void computePerturbedGradients();
+  void setCellData(const CFuint side);
   
   /**
    * Compute the projected states on order P-1
@@ -150,29 +139,15 @@ protected: //functions
   virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
   
   /**
-   * compute the unperturbed cell diffusive residuals
-   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
-   * @pre setCellsData()
-   */
-  void computeUnpertCellDiffResiduals();
-  
-  /**
-   * compute the perturbed cell diffusive residuals for one cell
-   * @pre m_faceTermComputer->computeDiffFaceTerm
-   * @pre backupAndReconstructOtherFacesAndCellPhysVars(
-   * @pre reconstructOtherFacesAndCellGradients()
-   */
-  void computePertCellDiffResiduals(const CFuint side);
-  
-  /**
-   * Add extra viscosity to regions where positivity is almost violated, using the minValue option comparing to the state of the monitoredVar option
-   */
-  void addPositivityPreservation();
-  
-  /**
    * command to compute the peclet number based on user input
    */
   virtual CFreal computePeclet(); 
+  
+  /**
+   * recompute the cell gradients from the current cell solutions,
+   * after perturbation
+   */
+  virtual void computePerturbedGradientsAnalytical(const CFuint side);
 
 protected: //data
   
@@ -192,7 +167,7 @@ protected: //data
   CFreal m_epsilon;
   
   /// artificial Viscosity in the sol pnts
-  std::vector< CFreal > m_solEpsilons;
+  std::vector< std::vector< CFreal > > m_solEpsilons;
   
   /// artificial Viscosity
   std::vector< std::vector< CFreal > > m_epsilonLR;
@@ -275,9 +250,6 @@ protected: //data
   /// maximum smoothness in domain over all CPUs
   CFreal m_SmaxGlobal;
   
-  /// bool telling whether to add viscosity for positivity preservation
-  bool m_addPosPrev;
-  
   /// boolean telling whether to add the contribution of the artificial flux to the update coefficients
   bool m_addUpdCoeff;
   
@@ -286,12 +258,6 @@ protected: //data
   
   /// index of the monitored variable for positivity preservation
   CFuint m_monitoredVar;
-  
-  /// number of times positivity preservation activated
-  CFuint m_nbPosPrev;
-  
-  /// number of times positivity preservation activated over all CPUs
-  CFuint m_nbPosPrevGlobal;
   
   /// maximum factor applied to viscosity for positivity preservation
   CFreal m_viscFactor;
