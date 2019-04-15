@@ -1535,6 +1535,7 @@ void DiffRHSJacobFluxReconstruction::setup()
     m_contFlxBackup[RIGHT][iSolPnt].resize(m_dim);
     m_contFlxNeighb[LEFT][iSolPnt].resize(m_dim);
     m_contFlxNeighb[RIGHT][iSolPnt].resize(m_dim);
+    
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
       m_contFlxBackup[LEFT][iSolPnt][iDim].resize(m_nbrEqs);
