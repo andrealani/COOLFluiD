@@ -416,11 +416,12 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
         // multiply residual update derivatives with residual factor
         m_derivResUpdates *= resFactor;
-	if (m_cells[m_pertSide]->getID() == 1) 
+	if (m_cells[m_pertSide]->getID() == 94) 
 	{
 	  CFLog(VERBOSE, "pert1: " << m_pertResUpdates[m_pertSide] << "\n");
 	  CFLog(VERBOSE, "unpert1: " << m_resUpdates[m_pertSide] << "\n");
 	  CFLog(VERBOSE, "deriv1: " << m_derivResUpdates << "\n");
+          CFLog(VERBOSE, "otherID: " << m_cells[iOtherSide]->getID() << "\n");
 	}
 
         // add the derivative of the residual updates to the accumulator
@@ -429,7 +430,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         {
           acc.addValues(iSol+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[resUpdIdx]);
         }
-
+//if (m_cells[m_pertSide]->getID() == 1) acc.printToScreen();
         // compute the perturbed diffusive residual in the other cell
         computePertCellDiffResiduals(iOtherSide);
         
@@ -441,7 +442,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
         // multiply residual update derivatives with residual factor
         m_derivCellDiffRes *= resFactor;
-	if (m_cells[m_pertSide]->getID() == 1) CFLog(VERBOSE, "deriv2: " << m_derivCellDiffRes << "\n");
+	if (m_cells[iOtherSide]->getID() == 94) CFLog(VERBOSE, "deriv2: " << m_derivCellDiffRes << "\n");
 
         // add the derivative of the residual updates to the accumulator
         resUpdIdx = 0;
@@ -522,7 +523,7 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
 
   // set block row and column indices
   CFuint solIdx = 0;
-  for (CFuint m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, ++solIdx)
     {

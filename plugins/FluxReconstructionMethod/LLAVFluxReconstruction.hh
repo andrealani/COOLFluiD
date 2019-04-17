@@ -169,6 +169,9 @@ protected: //data
   /// controlling parameter kappa
   CFreal m_kappa;
   
+  /// showrate of the LLAV info
+  CFuint m_showrate;
+  
   /// peclet number
   CFreal m_peclet;
   
@@ -306,6 +309,9 @@ protected: //data
   
   /// vector to store sol pnt values temporarily
   RealVector m_tempSolPntVec;
+  
+  /// vector to store sol pnt values temporarily
+  RealVector m_tempSolPntVec2;
   
   private:
 

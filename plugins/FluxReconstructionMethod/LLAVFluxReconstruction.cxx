@@ -52,6 +52,7 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_s0Prev(),
   m_s(),
   m_kappa(),
+  m_showrate(),
   m_peclet(),
   m_nodeEpsilons(),
   m_nbNodeNeighbors(),
@@ -90,12 +91,16 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
   m_maxLambda(),
   m_unitNormalFlxPnts2(),
   m_faceJacobVecSizeFlxPnts2(),
-  m_tempSolPntVec()
+  m_tempSolPntVec(),
+  m_tempSolPntVec2()
   {
     addConfigOptionsTo(this);
     
     m_kappa = 5.0;
     setParameter( "Kappa", &m_kappa);
+    
+    m_showrate = 1;
+    setParameter( "ShowRate", &m_showrate);
     
     m_peclet = 2.0;
     setParameter( "Peclet", &m_peclet);
@@ -138,6 +143,8 @@ LLAVFluxReconstruction::LLAVFluxReconstruction(const std::string& name) :
 void LLAVFluxReconstruction::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal,Config::DynamicOption<> >("Kappa","Kappa factor of artificial viscosity.");
+  
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("ShowRate","Showrate of the LLAV information.");
   
   options.addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
   
@@ -298,7 +305,7 @@ void LLAVFluxReconstruction::execute()
     MPI_Allreduce(&m_Smax, &m_SmaxGlobal, count, MPI_DOUBLE, MPI_MAX, comm);
 #endif
     
-  if (PE::GetPE().GetRank(nsp) == 0) 
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
   {
     // print total artificial viscosity
     CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", Smax: " << m_SmaxGlobal << "\n");
@@ -878,11 +885,11 @@ void LLAVFluxReconstruction::computeProjStates(std::vector< RealVector >& projSt
         m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[iEq];
       }
 
-      m_tempSolPntVec = m_transformationMatrix*m_tempSolPntVec;
+      m_tempSolPntVec2 = m_transformationMatrix*m_tempSolPntVec;
 
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {
-        projStates[iSol][iEq] = m_tempSolPntVec[iSol];
+        projStates[iSol][iEq] = m_tempSolPntVec2[iSol];
       }
     }
   }
@@ -1191,6 +1198,7 @@ void LLAVFluxReconstruction::setup()
   m_unitNormalFlxPnts2.resize(m_nbrFaceFlxPnts);
   m_faceJacobVecSizeFlxPnts2.resize(m_nbrFaceFlxPnts);
   m_tempSolPntVec.resize(m_nbrSolPnts);
+  m_tempSolPntVec2.resize(m_nbrSolPnts);
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {

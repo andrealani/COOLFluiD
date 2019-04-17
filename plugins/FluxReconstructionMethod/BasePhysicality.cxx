@@ -21,12 +21,6 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BasePhysicality::defineConfigOptions(Config::OptionList& options)
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 BasePhysicality::BasePhysicality(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_posPrev("posPrev"),
@@ -48,6 +42,9 @@ BasePhysicality::BasePhysicality(const std::string& name) :
   m_totalNbAvLimits()
 {
   addConfigOptionsTo(this);
+  
+  m_showrate= 1;
+  setParameter( "ShowRate", &m_showrate );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -85,6 +82,13 @@ BasePhysicality::providesSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BasePhysicality::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFuint >("ShowRate","Showrate of the positivity preservation information.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BasePhysicality::execute()
 {
   CFTRACEBEGIN;
@@ -101,6 +105,8 @@ void BasePhysicality::execute()
   
   // number of element types, should be 1 in non-mixed grids
   const CFuint nbrElemTypes = elemType->size();
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   
   // if there is artificial viscosity, reset the positivity preservation values
   const bool hasArtVisc = getMethodData().hasArtificialViscosity();
@@ -163,7 +169,7 @@ void BasePhysicality::execute()
     MPI_Allreduce(&m_nbAvLimits, &m_totalNbAvLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
 #endif
     
-  if (PE::GetPE().GetRank(nsp) == 0) 
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
   {
     // print number of limits
     CFLog(NOTICE, "Number of times physicality enforced: " << m_totalNbLimits << "\n");

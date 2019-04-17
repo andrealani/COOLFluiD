@@ -140,6 +140,9 @@ protected: // data
   
   /// number of times the cell average was limited
   CFuint m_totalNbAvLimits;
+  
+  /// showrate of PP info
+  CFuint m_showrate;
 
 }; // class BasePhysicality
 
