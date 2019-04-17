@@ -172,6 +172,11 @@ void LLAVJacobFluxReconstructionNS::computeSmoothness()
   {
     smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
   }
+  
+  if (m_s > m_Smax)
+  {
+      m_Smax = m_s;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

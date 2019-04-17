@@ -206,7 +206,7 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
     // set the ghost state from its physical data
     m_eulerVarSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
-    CFLog(VERBOSE, "innerState: " << intState << ", ghostState: " << ghostState << "\n");
+    //CFLog(VERBOSE, "innerState: " << intState << ", ghostState: " << ghostState << "\n");
   }
 }
 

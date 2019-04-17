@@ -152,7 +152,7 @@ bool PhysicalityEuler2D::checkPhysicality()
 	    physical = false;
 	    break;
 	  }	
-	  if (rho < -1e-10 && (i == 2 || i == 4))
+	  if (rho < m_minDensity && (i == 2 || i == 4))
 	  {
 	    //cout<< " rho  "<< rho << endl;
 	    physical = false;
