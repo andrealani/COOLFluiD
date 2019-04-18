@@ -158,6 +158,15 @@ void LLAVDiffFluxReconstructionNS::setCellData()
 
 void LLAVDiffFluxReconstructionNS::computeInterfaceFlxCorrection()
 {   
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_tempStatesL[iFlx] = m_cellStatesFlxPnt[LEFT][iFlx]->getData();
+    m_tempStatesR[iFlx] = m_cellStatesFlxPnt[RIGHT][iFlx]->getData();
+  }
+  
+  m_diffusiveVarSet->setGradientVars(m_tempStatesL,m_tempGradTermL,m_nbrFaceFlxPnts);
+  m_diffusiveVarSet->setGradientVars(m_tempStatesR,m_tempGradTermR,m_nbrFaceFlxPnts);
+  
   // Loop over the flux points to calculate FI
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   { 
@@ -181,8 +190,13 @@ void LLAVDiffFluxReconstructionNS::computeInterfaceFlxCorrection()
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
     {
       // compute damping term
-      const RealVector dGradVarXNormal = ((*m_cellStatesFlxPnt[LEFT][iFlxPnt])[iGrad] - (*m_cellStatesFlxPnt[RIGHT][iFlxPnt])[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      const RealVector dGradVarXNormalAV = ((*m_cellStatesFlxPnt[LEFT][iFlxPnt])[iGrad] - (*m_cellStatesFlxPnt[RIGHT][iFlxPnt])[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      
+      const RealVector dGradVarXNormal = (m_tempGradTermL(iGrad,iFlxPnt) - m_tempGradTermR(iGrad,iFlxPnt))*m_unitNormalFlxPnts[iFlxPnt];
+      
       *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
+      
+      *m_avgGradAV[iGrad] -= dampFactor*dGradVarXNormalAV;
     }
     
     // prepare flux computation
