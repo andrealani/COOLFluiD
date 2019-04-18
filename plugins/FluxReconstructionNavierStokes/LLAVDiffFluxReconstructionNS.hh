@@ -58,6 +58,14 @@ public: // functions
   virtual void configure ( Config::ConfigArgs& args );
   
   /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options)
+  {
+  }
+  
+  /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */

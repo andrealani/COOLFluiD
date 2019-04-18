@@ -162,7 +162,7 @@ void LLAVDiffFluxReconstruction::execute()
     MPI_Allreduce(&m_Smax, &m_SmaxGlobal, count, MPI_DOUBLE, MPI_MAX, comm);
 #endif
     
-  if (PE::GetPE().GetRank(nsp) == 0) 
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
   {
     // print total artificial viscosity
     CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", Smax: " << m_SmaxGlobal << "\n");

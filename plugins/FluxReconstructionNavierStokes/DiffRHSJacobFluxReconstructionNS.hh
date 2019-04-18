@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/DiffRHSJacobFluxReconstruction.hh"
+#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -35,6 +36,12 @@ public: // functions
 
   /// Destructor
   virtual ~DiffRHSJacobFluxReconstructionNS() {}
+  
+  /**
+   * Set up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void setup();
 
 protected: //functions
 
@@ -63,7 +70,25 @@ protected: //functions
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
+  /// compute the interface flux
+  virtual void computeInterfaceFlxCorrection();
+  
 protected: // data
+    
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
+  RealMatrix m_tempGradTermL;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
+  RealMatrix m_tempGradTermR;
+  
+  /// diffusive variable set
+  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
+    
+  /// element states of the left neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesL;
+  
+  /// element states of the right neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesR;
     
 }; // class Solve
 

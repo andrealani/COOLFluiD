@@ -55,7 +55,7 @@ protected: //functions
   void prepareFluxComputation();
   
   /// compute the interface flux
-  void computeInterfaceFlxCorrection();
+  virtual void computeInterfaceFlxCorrection();
   
  protected: //data
     

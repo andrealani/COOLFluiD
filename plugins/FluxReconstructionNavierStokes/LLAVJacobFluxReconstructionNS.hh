@@ -87,7 +87,9 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness(const CFuint side);
-
+  
+  /// compute the interface flux
+  virtual void computeInterfaceFlxCorrection();
 
 
 protected: //data
