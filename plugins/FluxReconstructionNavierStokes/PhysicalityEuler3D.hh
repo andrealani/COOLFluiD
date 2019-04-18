@@ -9,6 +9,8 @@
 
 #include "FluxReconstructionMethod/BasePhysicality.hh"
 
+#include "Framework/MultiScalarTerm.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -92,8 +94,17 @@ protected: // data
   /// boolean telling wether to also check the internal solution for physicality
   bool m_checkInternal;
   
+  /// boolean to tell whether the complete state is limited or a single variable
+  bool m_limCompleteState;
+  
+  /// boolean telling whether to use the experimental limiter
+  bool m_expLim;
+  
   /// physical model (in conservative variables)
   Common::SafePtr<Physics::NavierStokes::Euler3DVarSet> m_eulerVarSet;
+  
+  /// physical model  MS
+  Common::SafePtr< Framework::MultiScalarTerm< Physics::NavierStokes::EulerTerm > > m_eulerVarSetMS;
 
   /// heat capacity ratio minus one
   CFreal m_gammaMinusOne;
@@ -106,6 +117,9 @@ protected: // data
   
   /// coefficients for the computation of the cell averaged solution
   Common::SafePtr< RealVector > m_cellAvgSolCoefs;
+  
+  /// number of species
+  CFuint m_nbSpecies;
 
 }; // class PhysicalityEuler3D
 
