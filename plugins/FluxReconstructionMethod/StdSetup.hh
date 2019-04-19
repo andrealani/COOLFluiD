@@ -73,6 +73,11 @@ private: // private functions
    * Set the boundary condition type of the boundary faces
    */
   void setBndFacesBCType();
+  
+  /**
+   * Set the coordinates of the states
+   */
+  void setStateCoords();
 
   /**
    * Sets the inverse jacobian matrix multiplied with the jacobian determinant at the given mapped coordinates
@@ -126,6 +131,9 @@ protected: // data
   MathTools::MatrixInverterT<2> inverter2;
   /// matrix inverter size 3
   MathTools::MatrixInverterT<3> inverter3;
+  
+  /// nodes to be set as coordinates for the states
+  std::vector< Framework::Node > m_stateNodes;
   
 };  // class StdSetup
 

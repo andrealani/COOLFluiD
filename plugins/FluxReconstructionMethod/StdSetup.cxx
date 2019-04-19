@@ -120,6 +120,8 @@ void StdSetup::execute()
   
   const CFuint nbStates = states.size();
   
+  m_stateNodes.resize(nbStates);
+  
   // set node to state mapping
   // m_nodeIDToStateID.resize(nbStates);
   // for (CFuint stateID=0;stateID<nbStates;++stateID) {
@@ -190,6 +192,9 @@ void StdSetup::execute()
   {
     computeStatesVolumes();
   }
+  
+  // Set the coordinates of the states
+  setStateCoords();
 
   // get the start indexes of the range of faces with a certain orientation
   createFaceOrientationStartIndexes();
@@ -548,6 +553,82 @@ void StdSetup::setBndFacesBCType()
         // release the GeometricEntity
         geoBuilder->releaseGE();
       }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSetup::setStateCoords()
+{
+  CFAUTOTRACE;
+
+  // get InnerCells TopologicalRegionSet
+  Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  // get geometric entity builder
+  Common::SafePtr<GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
+
+  // get the geodata of the geometric entity builder and set the TRS
+  StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  geoData.trs = cells;
+
+  // get the elementTypeData
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+
+  // get SpectralFDElementData
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+
+  // compute total number of states
+  cf_assert(elemType->size() == frLocalData.size());
+  CFuint totNbrStates = 0;
+  const CFuint nbrElemTypes = elemType->size();
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+  {
+    totNbrStates += (*elemType)[iElemType].getNbElems()*frLocalData[iElemType]->getNbrOfSolPnts();
+  }
+
+  // loop over element types
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+  {
+    // get start and end indexes for this type of element
+    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+    const CFuint endIdx   = (*elemType)[iElemType].getEndIdx();
+
+    // number of states in this element type
+    const CFuint nbrStates = frLocalData[iElemType]->getNbrOfSolPnts();
+
+    // solution points mapped coordinates
+    SafePtr< vector< RealVector > > solPntsLocalCoords
+        = frLocalData[iElemType]->getSolPntsLocalCoords();
+
+    // loop over cells
+    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+    {
+      // build the GeometricEntity
+      geoData.idx = elemIdx;
+      GeometricEntity *const cell = geoBuilder->buildGE();
+
+      // get the states in this cell
+      vector< State* >* states = cell->getStates();
+
+      for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
+      {
+        const CFuint solID = (*states)[iSol]->getLocalID();
+
+        RealVector coords = cell->computeCoordFromMappedCoord((*solPntsLocalCoords)[iSol]);
+
+        Node nodeCoords(false);
+
+        nodeCoords.setData(coords);
+
+        m_stateNodes[solID] = nodeCoords;
+        
+        (*states)[iSol]->setSpaceCoordinates(&m_stateNodes[solID]);
+      }
+
+      //release the GeometricEntity
+      geoBuilder->releaseGE();
     }
   }
 }

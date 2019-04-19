@@ -50,6 +50,10 @@ public: // functions
    */
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
     needsSockets();
+protected:
+    
+    /// unsetup nodes in states
+    void unsetStateNodes();
     
 protected: // protected data
   

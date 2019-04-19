@@ -30,10 +30,10 @@ void SetQuadLagrangeP2FluxReconstructionP1StateCoord::operator() (const vector<F
   cf_assert(nodes.size() == 9);
 
   // assign nodes to the states
-  states[0]->setSpaceCoordinates(nodes[0]);
-  states[1]->setSpaceCoordinates(nodes[3]);
-  states[2]->setSpaceCoordinates(nodes[1]);
-  states[3]->setSpaceCoordinates(nodes[2]);
+//  states[0]->setSpaceCoordinates(nodes[0]);
+//  states[1]->setSpaceCoordinates(nodes[3]);
+//  states[2]->setSpaceCoordinates(nodes[1]);
+//  states[3]->setSpaceCoordinates(nodes[2]);
 }
 
 //////////////////////////////////////////////////////////////////////////////
