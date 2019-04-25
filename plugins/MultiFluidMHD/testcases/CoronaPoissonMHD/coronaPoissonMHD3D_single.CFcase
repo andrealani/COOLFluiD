@@ -309,9 +309,7 @@ Simulator.SubSystem.Flow.Data.UpdateVar = RhoiViTi
 Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 #Simulator.SubSystem.Flow.Data.DiffusiveVar = RhoiViTi
 #Simulator.SubSystem.Flow.Data.DerivativeStrategy = Corrected3D
-
 #Simulator.SubSystem.Flow.Data.DiffusiveFlux = NavierStokesMF
-#Simulator.SubSystem.Flow.Data.isAxisymm = true
 
 # in reality we will use another source term
 #Simulator.SubSystem.Flow.Data.SourceTerm = HartmannSourceTerm3D
@@ -498,7 +496,7 @@ Simulator.SubSystem.EM.Data.DistanceBased.TRSName = Inlet
 #Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2012-11-27.dat # it is scaled in meters, don't worry
 Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/dipole.dat
 Simulator.SubSystem.EM.Data.DistanceBased.TemperatureID = 0
-Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
+Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8
 
 Simulator.SubSystem.EM.InitComds = InitState
 Simulator.SubSystem.EM.InitNames = InField
