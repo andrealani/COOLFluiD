@@ -31,6 +31,9 @@ export COOLFLUID_CONF_FILE="${TOP_DIR}/COOLFluid_VSC.conf"
 export COOLFLUID_INSTALL_DIR="${COOLFLUID_BASEBUILD_DIR}/INSTALL"
 export ALL_ACTIVE=1
 
+# clean up old object files and libraries
+rm -fr ${COOLFLUID_BASEBUILD_DIR} 
+
 cd ${COOLFLUID_TOP_DIR}
 ./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
 
