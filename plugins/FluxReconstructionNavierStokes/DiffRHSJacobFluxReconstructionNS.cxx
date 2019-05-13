@@ -46,7 +46,8 @@ DiffRHSJacobFluxReconstructionNS::DiffRHSJacobFluxReconstructionNS(const std::st
   m_tempGradTermR(),
   m_diffusiveVarSet(CFNULL),
   m_tempStatesL(),
-  m_tempStatesR()
+  m_tempStatesR(),
+  m_dampCoeff()
 {
   addConfigOptionsTo(this);
 }
@@ -106,7 +107,7 @@ void DiffRHSJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     }
 
     // damping factor
-    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+    const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -197,6 +198,9 @@ void DiffRHSJacobFluxReconstructionNS::setup()
   
   // setup parent class
   DiffRHSJacobFluxReconstruction::setup();
+  
+  // get damping coeff
+  m_dampCoeff = getMethodData().getDiffDampCoefficient();
   
   // get the diffusive varset
   m_diffusiveVarSet = (getMethodData().getDiffusiveVar()).d_castTo< NavierStokesVarSet >();

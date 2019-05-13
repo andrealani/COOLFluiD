@@ -290,6 +290,12 @@ public: // functions
     return m_addAV;
   }
   
+  /// Returns a boolean telling whether artificial viscosity is added
+  CFreal getDiffDampCoefficient()
+  {
+    return m_diffDampCoeff;
+  }
+  
   /// @return the GeometricEntity cell builder
   Common::SafePtr<
       Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder > >
@@ -388,6 +394,9 @@ private:  // data
   
   /// String for the Riemann flux
   std::string m_riemannFluxStr;
+  
+  //// Damping coefficient of diffusive flux scheme
+  CFreal m_diffDampCoeff;
   
   /// The boundary condition state computer strategies
   std::vector< Common::SelfRegistPtr< BCStateComputer > > m_bcs;

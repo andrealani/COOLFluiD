@@ -73,6 +73,8 @@ protected: //functions
   
   /// element states of the right neighbor in the correct format
   std::vector< RealVector* > m_tempStatesR;
+  
+  CFreal m_dampCoeff;
     
 }; // class Solve
 

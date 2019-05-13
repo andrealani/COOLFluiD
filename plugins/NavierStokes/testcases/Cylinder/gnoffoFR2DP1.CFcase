@@ -11,6 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
+### Residual = -1.65604
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -53,9 +54,9 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffo1e-5Coarse.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffoP1Mesh.CFmesh #gnoffo1e-5Coarse.CFmesh
 #Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
-Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
@@ -75,9 +76,9 @@ Simulator.SubSystem.NavierStokes2D.refLength = 1.0
  
 ###################################
 
-Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
+Simulator.SubSystem.OutputFormat        = CFmesh #ParaView Tecplot 
 Simulator.SubSystem.CFmesh.FileName     = gnoffoP1.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.SaveRate = 10000
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = true
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
@@ -104,14 +105,14 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = Inlet Outlet1 Outlet2 Cylind
 ###################################
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter =  10000000000000000000
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter =  50000 #10000000000000000000
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP1.plt
-Simulator.SubSystem.FwdEuler.ShowRate        = 1
-Simulator.SubSystem.FwdEuler.ConvRate        = 1
+Simulator.SubSystem.FwdEuler.ShowRate        = 500
+Simulator.SubSystem.FwdEuler.ConvRate        = 500
 
 Simulator.SubSystem.FluxReconstruction.Data.ComputeVolumeForEachState = true
 
@@ -135,7 +136,7 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlap
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSNS
 Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSNS
-Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSNS
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = LLAVDiffNS #DiffRHSNS
 
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
@@ -147,13 +148,14 @@ Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #RoeFlu
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 
 Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = true
-Simulator.SubSystem.FluxReconstruction.ArtificialViscosityCom = LLAVNS
-Simulator.SubSystem.FluxReconstruction.LLAVNS.Kappa = 4.0 
-Simulator.SubSystem.FluxReconstruction.LLAVNS.Peclet = 10.0 
-Simulator.SubSystem.FluxReconstruction.LLAVNS.S0 = 0.0
-Simulator.SubSystem.FluxReconstruction.LLAVNS.AddUpdateCoeff = true
-#Simulator.SubSystem.FluxReconstruction.LLAVNS.FreezeLimiterIter = 20000
-Simulator.SubSystem.FluxReconstruction.LLAVNS.MonitoredPhysVar = 1
+#Simulator.SubSystem.FluxReconstruction.ArtificialViscosityCom = LLAVNS
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.Kappa = 0.5
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.Peclet = 5.0 
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.S0 = -0.6
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.AddUpdateCoeff = true
+#Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.FreezeLimiterIter = 20000
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.MonitoredPhysVar = 1
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.ShowRate = 500
 
 Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
@@ -161,6 +163,7 @@ Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = tru
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-5 
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-5
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 500
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre #Equidistant #Lobatto # 
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Equidistant #Lobatto #
@@ -191,7 +194,7 @@ Simulator.SubSystem.FluxReconstruction.Data.BcNames = Inlet      Outlet       Wa
 
 Simulator.SubSystem.FluxReconstruction.Data.Wall.HeatFlux = true
 Simulator.SubSystem.FluxReconstruction.Data.Wall.T = 500.0 
-Simulator.SubSystem.FluxReconstruction.Data.Wall.ChangeToIsoT = 0
+Simulator.SubSystem.FluxReconstruction.Data.Wall.ChangeToIsoT = 2000000
 
 Simulator.SubSystem.FluxReconstruction.Data.Inlet.Vars = x y
 Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = 0.00100335 -5.00776 0.0 12640.969
@@ -202,8 +205,8 @@ Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = 0.00100335 -5.00776 0.0
 #DataProcessing
 
 # Post process the data to compute the skin friction
-Simulator.SubSystem.DataPostProcessing = DataProcessing
-Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
 Simulator.SubSystem.DataProcessing2.ProcessRate = 1000

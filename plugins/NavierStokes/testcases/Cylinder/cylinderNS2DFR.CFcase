@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.42802
+### Residual = -5.58134
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -44,7 +44,6 @@ Simulator.SubSysMesh.Ranks = 0:0
 Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
 Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
 Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2D
-#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = NavierStokes2D
 Simulator.SubSysMesh.MeshMeshData.listTRS = Cylinder FarField
 Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
 
@@ -81,22 +80,22 @@ Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.
 ###################################
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFRExpl.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.SaveRate = 10000
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 
 Simulator.SubSystem.ParaView.FileName    = AcylinderNSFRExpl.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.ParaView.SaveRate = 1000
+Simulator.SubSystem.ParaView.SaveRate = 10000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName    = AcylinderNSFRExpl.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 1000
+Simulator.SubSystem.Tecplot.SaveRate = 10000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
@@ -107,6 +106,8 @@ Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+Simulator.SubSystem.FwdEuler.ShowRate        = 500
+Simulator.SubSystem.FwdEuler.ConvRate        = 500
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -129,6 +130,7 @@ Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
+Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 0.0
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre

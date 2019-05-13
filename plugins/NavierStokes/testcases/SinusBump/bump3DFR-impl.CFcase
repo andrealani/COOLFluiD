@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.07875
+### Residual = -11.5813
 
 CFEnv.OnlyCPU0Writes = false
 
@@ -50,7 +50,7 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -64,13 +64,13 @@ Simulator.SubSystem.Euler3D.ConvTerm.pRef = 1.
 Simulator.SubSystem.Euler3D.ConvTerm.tempRef = 0.003483762
 Simulator.SubSystem.Euler3D.ConvTerm.machInf = 0.5
 
-Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot
+Simulator.SubSystem.OutputFormat        = CFmesh #ParaView Tecplot
 
 Simulator.SubSystem.CFmesh.FileName     = Abump3DFR.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 
 Simulator.SubSystem.Tecplot.FileName = Abump3DFR.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
@@ -88,7 +88,7 @@ Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 80
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
@@ -130,7 +130,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Lobatto #
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =   0.015238095 #0.066666666667 #
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =   9.5e-4
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
 Simulator.SubSystem.FluxReconstruction.InitNames = InField

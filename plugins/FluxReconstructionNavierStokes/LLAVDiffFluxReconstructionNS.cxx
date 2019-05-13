@@ -62,7 +62,8 @@ LLAVDiffFluxReconstructionNS::LLAVDiffFluxReconstructionNS(const std::string& na
   m_tempStatesR(),
   m_cellGradsAV(),
   m_avgGradAV(),
-  m_cellGradFlxPntAV()
+  m_cellGradFlxPntAV(),
+  m_dampCoeff()
   {
   }
 
@@ -184,7 +185,7 @@ void LLAVDiffFluxReconstructionNS::computeInterfaceFlxCorrection()
     }
 
     // damping factor
-    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+    const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -625,6 +626,9 @@ void LLAVDiffFluxReconstructionNS::setup()
   LLAVDiffFluxReconstruction::setup();
   
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  
+  // get damping coeff
+  m_dampCoeff = getMethodData().getDiffDampCoefficient();
   
   if(!RhoivtTv)
   {

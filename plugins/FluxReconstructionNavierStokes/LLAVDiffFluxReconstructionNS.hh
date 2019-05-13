@@ -165,6 +165,9 @@ protected: //data
   /// the corrected gradients in the flux points
   std::vector< std::vector< std::vector< RealVector* > > > m_cellGradFlxPntAV;
   
+  /// damping coeff
+  CFreal m_dampCoeff;
+  
   private:
 
   /// Physical data temporary vector

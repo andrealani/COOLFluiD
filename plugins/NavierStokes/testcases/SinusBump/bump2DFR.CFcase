@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -1.71248
+### Residual = -4.0708
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -58,9 +58,7 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-#Simulator.SubSysMesh.Null.MeshUpgrade.GeoPolynomialOrder = P1
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
-#Simulator.SubSysMesh.Null.MeshUpgrade.DivideElements = 1
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -77,30 +75,32 @@ Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
 Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot 
 
 Simulator.SubSystem.CFmesh.FileName     = AMeshUpTest.CFmesh
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
-Simulator.SubSystem.CFmesh.SaveRate = 500
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+Simulator.SubSystem.CFmesh.SaveRate = 20000
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
 Simulator.SubSystem.Tecplot.FileName = AMeshUpTest.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.SaveRate = 20000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
 Simulator.SubSystem.ParaView.FileName    = AMeshUpTest.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 500
+Simulator.SubSystem.ParaView.SaveRate = 20000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 100000
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 200000
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.05
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.2
+Simulator.SubSystem.FwdEuler.ShowRate        = 1000
+Simulator.SubSystem.FwdEuler.ConvRate        = 1000
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
@@ -124,7 +124,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  9.52e-4 
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.03
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField

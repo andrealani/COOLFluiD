@@ -47,6 +47,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
   options.addConfigOption< bool >("FreezeGradients","Flag telling whether to freeze the gradients for the Jacobian computation.");
+  options.addConfigOption< CFreal >("DiffFluxDamping","Damping coefficient of diffusive flux scheme.");
   options.addConfigOption< bool >("AddArtificialViscosity","Flag telling whether to add artificial viscosity.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
@@ -90,6 +91,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_riemannFluxStr = "RoeFlux";
   setParameter("RiemannFlux", &m_riemannFluxStr);
+  
+  m_diffDampCoeff = 1.0;
+  setParameter("DiffFluxDamping", &m_diffDampCoeff);
   
   m_fluxPntDistributionStr = "Null";
   setParameter( "FluxPointDistribution", &m_fluxPntDistributionStr );

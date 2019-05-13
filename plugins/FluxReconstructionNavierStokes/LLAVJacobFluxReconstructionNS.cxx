@@ -53,7 +53,8 @@ LLAVJacobFluxReconstructionNS::LLAVJacobFluxReconstructionNS(const std::string& 
   m_nbrSpecies(),
   m_pData(),
   m_pData2(),
-  m_eulerVarSet2(CFNULL)
+  m_eulerVarSet2(CFNULL),
+  m_dampCoeff()
   {
   }
 
@@ -102,7 +103,7 @@ void LLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     }
     
     // damping factor
-    const CFreal dampFactor = 1.0*m_faceInvCharLengths[iFlxPnt];
+    const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -132,20 +133,20 @@ void LLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
 
 CFreal LLAVJacobFluxReconstructionNS::computePeclet()
 {
-  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
-  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
-  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
-  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
-  
-//   cf_assert(machInf > 1.0);
-//   cf_assert(velInf > 0.0);
-//   cf_assert(pressInf > 0.0);
-  
-  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
-  
-  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
-  
-  //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
+//  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
+//  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
+//  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
+//  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
+//  
+////   cf_assert(machInf > 1.0);
+////   cf_assert(velInf > 0.0);
+////   cf_assert(pressInf > 0.0);
+//  
+//  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
+//  
+//  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
+//  
+//  //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
   CFreal result = m_peclet;
   
   return result;
@@ -288,6 +289,9 @@ void LLAVJacobFluxReconstructionNS::setup()
   LLAVJacobFluxReconstruction::setup();
   
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  
+  // get damping coeff
+  m_dampCoeff = getMethodData().getDiffDampCoefficient();
   
   if(!RhoivtTv)
   {

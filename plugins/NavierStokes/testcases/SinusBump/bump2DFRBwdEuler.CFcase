@@ -44,7 +44,6 @@ Simulator.SubSysMesh.Ranks = 0:0
 Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
 Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
 Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = Euler2D
-#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = Euler2D
 Simulator.SubSysMesh.MeshMeshData.listTRS = Bump Top Inlet Outlet
 Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
 
@@ -76,7 +75,7 @@ Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
 Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
 
 Simulator.SubSystem.CFmesh.FileName     = bumpFR2D.CFmesh
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
