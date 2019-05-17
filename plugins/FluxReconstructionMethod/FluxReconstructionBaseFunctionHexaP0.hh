@@ -8,6 +8,7 @@
 #include "Common/NotImplementedException.hh"
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
+#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -102,7 +103,82 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
-      shapeFunc[0] = 1.0;
+    FluxReconstructionElementData* frElemData = new HexaFluxReconstructionElementData(getInterpolatorOrder());
+
+    Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
+
+    const CFuint nbrSolPnts = solPnts1D->size();
+    cf_assert(nbrSolPnts == m_solPnts1D.size());
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      m_solPnts1D[iSol] = (*solPnts1D)[iSol];
+    }
+
+    delete frElemData;
+    // coordinates of output points
+    const CFreal ksi = mappedCoord[KSI];
+    const CFreal eta = mappedCoord[ETA];
+    const CFreal zta = mappedCoord[ZTA];
+
+    // ksi factors
+    for (CFuint iSol = 0; iSol < 2; ++iSol)
+    {
+      const CFreal ksiSol = m_solPnts1D[iSol];
+      m_ksiFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < 2; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal ksiFac = m_solPnts1D[iFac];
+          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
+        }
+      }
+    }
+
+    // eta factors
+    for (CFuint iSol = 0; iSol < 2; ++iSol)
+    {
+      const CFreal etaSol = m_solPnts1D[iSol];
+      m_etaFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < 2; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal etaFac = m_solPnts1D[iFac];
+          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
+        }
+      }
+    }
+
+    // zta factors
+    for (CFuint iSol = 0; iSol < 2; ++iSol)
+    {
+      const CFreal ztaSol = m_solPnts1D[iSol];
+      m_ztaFac[iSol] = 1.;
+      for (CFuint iFac = 0; iFac < 2; ++iFac)
+      {
+        if (iFac != iSol)
+        {
+          const CFreal ztaFac = m_solPnts1D[iFac];
+          m_ztaFac[iSol] *= (zta-ztaFac)/(ztaSol-ztaFac);
+        }
+      }
+    }
+
+    // compute shapefunctions
+    CFuint iFunc = 0;
+    for (CFuint iKsi = 0; iKsi < 2; ++iKsi)
+    {
+      const CFreal ksiFac = m_ksiFac[iKsi];
+      for (CFuint iEta = 0; iEta < 2; ++iEta)
+      {
+        const CFreal etaFac = m_etaFac[iEta];
+        for (CFuint iZta = 0; iZta < 2; ++iZta, ++iFunc)
+        {
+          shapeFunc[iFunc] = ksiFac*etaFac*m_ztaFac[iZta];
+        }
+      }
+    }
   }
 
    /**
@@ -317,6 +393,18 @@ private: // data
 
   /// solution integrator ID
   static CFuint _interpolatorID;
+  
+  /// factors for computation of basis functions
+  static RealVector m_ksiFac;
+
+  /// factors for computation of basis functions
+  static RealVector m_etaFac;
+
+  /// factors for computation of basis functions
+  static RealVector m_ztaFac;
+
+  /// vector holding the 1D coordinates of solution points
+  static RealVector m_solPnts1D;
 
 }; // end of class FluxReconstructionBaseFunctionHexaP0
 

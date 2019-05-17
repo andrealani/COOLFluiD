@@ -214,6 +214,10 @@ CFreal VCJH::computeCorrectionFunction1D(CFPolyOrder::Type solOrder, CFreal ksi,
     CFreal corrfct;
     switch(solOrder)
     {
+        case CFPolyOrder::ORDER0:
+        {
+            corrfct = -0.5*ksi+0.5;
+        } break;
         case CFPolyOrder::ORDER1:
         {
             corrfct = -0.5*(ksi-(1.5*cfactor+0.5*(3.*pow(ksi,2.)-1.))/(1.+1.5*cfactor));
@@ -250,6 +254,10 @@ CFreal VCJH::computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, C
     CFreal corrfct;
     switch(solOrder)
     {
+        case CFPolyOrder::ORDER0:
+        {
+            corrfct = -0.5;
+        } break;
         case CFPolyOrder::ORDER1:
         {
             corrfct = -0.5+1.5*ksi/(1.+1.5*cfactor);

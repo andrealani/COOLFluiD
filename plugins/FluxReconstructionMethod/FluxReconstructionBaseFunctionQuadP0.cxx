@@ -9,11 +9,26 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 CFuint FluxReconstructionBaseFunctionQuadP0::_interpolatorID = 0;
+RealVector FluxReconstructionBaseFunctionQuadP0::m_ksiFac = RealVector(1);
+RealVector FluxReconstructionBaseFunctionQuadP0::m_etaFac = RealVector(1);
+RealVector FluxReconstructionBaseFunctionQuadP0::m_solPnts1D = RealVector(1);
 
 //////////////////////////////////////////////////////////////////////////////
 
 FluxReconstructionBaseFunctionQuadP0::FluxReconstructionBaseFunctionQuadP0()
 {
+  FluxReconstructionElementData* frElemData = new QuadFluxReconstructionElementData(getInterpolatorOrder());
+
+  Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
+
+  const CFuint nbrSolPnts = solPnts1D->size();
+  cf_assert(nbrSolPnts == m_solPnts1D.size());
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    m_solPnts1D[iSol] = (*solPnts1D)[iSol];
+  }
+
+  delete frElemData;
 }
 
 //////////////////////////////////////////////////////////////////////////////
