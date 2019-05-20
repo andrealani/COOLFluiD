@@ -647,8 +647,8 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed4()
   
   for (CFuint ie = 0; ie < nbSpecies; ++ie){ 
     
-    CFreal V2L = 0;		//square of velocity
-    CFreal V2R = 0;
+    CFreal V2L = 0.;		//square of velocity
+    CFreal V2R = 0.;
     
     for (CFuint i = 0; i < dim; ++i){      
       V2L = V2L + (*this->m_lData)[firstVelocity + dim*ie + i]*(*this->m_lData)[firstVelocity + dim*ie + i];
@@ -712,7 +712,7 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeSoundSpeed5()
   for (CFuint ie = 0; ie < nbSpecies; ++ie){
     
     const CFreal R_gas = K_gas/_m_i[ie];
-    const CFreal c_v = (1/(gamma-1))*(R_gas);//specific heat for constant volumen
+    const CFreal c_v = (1./(gamma-1.))*(R_gas);//specific heat for constant volumen
 
     const CFreal eL = c_v*lData[firstTemperature + 4*ie];//internal energy (LEFT)
     const CFreal eR = c_v*rData[firstTemperature + 4*ie];//internal energy (RIGHT)
@@ -831,11 +831,13 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const RealVector& normal = getMethodData().getUnitNormal();
-  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
+  const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();  //DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1, factor2, factor3, factor4;
-  
+  CFreal factor1 = 0.;
+  CFreal factor2 = 0.;
+  CFreal factor3 = 0.;
+  CFreal factor4 = 0.;
   
   if(m_useMacCormackScaling){
     factor1 = 1.;
@@ -852,148 +854,148 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAplus()
   
   if(dim == 2){
     _Aplus(0,0) = (normal[1]*normal[1] + gamma*normal[0]*normal[0])*factor1; //flag2
-    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*factor1; //flag2
-    _Aplus(0,2) = 0;
-    _Aplus(0,3) = 0;
-    _Aplus(0,4) = 0;
+    _Aplus(0,1) = (gamma - 1.)*normal[0]*normal[1]*factor1; //flag2
+    _Aplus(0,2) = 0.;
+    _Aplus(0,3) = 0.;
+    _Aplus(0,4) = 0.;
     _Aplus(0,5) = normal[1];
     _Aplus(0,6) = gamma*gamma*normal[0]; 
-    _Aplus(0,7) = 0; 
-
-    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*factor1; //flag2;
+    _Aplus(0,7) = 0.; 
+    
+    _Aplus(1,0) = (gamma - 1.)*normal[0]*normal[1]*factor1; //flag2;
     _Aplus(1,1) = (normal[0]*normal[0] + gamma*normal[1]*normal[1])*factor1; //flag2
-    _Aplus(1,2) = 0;
-    _Aplus(1,3) = 0;
-    _Aplus(1,4) = 0;
+    _Aplus(1,2) = 0.;
+    _Aplus(1,3) = 0.;
+    _Aplus(1,4) = 0.;
     _Aplus(1,5) = -normal[0];
     _Aplus(1,6) = gamma*gamma*normal[1]; 
-    _Aplus(1,7) = 0; 
-
-    _Aplus(2,0) = 0;
-    _Aplus(2,1) = 0;
+    _Aplus(1,7) = 0.; 
+    
+    _Aplus(2,0) = 0.;
+    _Aplus(2,1) = 0.;
     _Aplus(2,2) = factor1; //flag2
     _Aplus(2,3) = -normal[1];
     _Aplus(2,4) = normal[0];
-    _Aplus(2,5) = 0;
-    _Aplus(2,6) = 0; 
-    _Aplus(2,7) = 0; 
+    _Aplus(2,5) = 0.;
+    _Aplus(2,6) = 0.; 
+    _Aplus(2,7) = 0.; 
 
-    _Aplus(3,0) = 0;
-    _Aplus(3,1) = 0;
+    _Aplus(3,0) = 0.;
+    _Aplus(3,1) = 0.;
     _Aplus(3,2) = -normal[1]*c_e*c_e;
     _Aplus(3,3) = (normal[1]*normal[1] + chi*normal[0]*normal[0])*factor2; //flag
-    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*factor2; //flag
-    _Aplus(3,5) = 0;
-    _Aplus(3,6) = 0;  
+    _Aplus(3,4) = (chi - 1.)*normal[0]*normal[1]*factor2; //flag
+    _Aplus(3,5) = 0.;
+    _Aplus(3,6) = 0.;  
     _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;  
     
-    _Aplus(4,0) = 0;
-    _Aplus(4,1) = 0;
+    _Aplus(4,0) = 0.;
+    _Aplus(4,1) = 0.;
     _Aplus(4,2) = normal[0]*c_e*c_e;
-    _Aplus(4,3) = (chi -1)*normal[0]*normal[1]*factor2; //flag
+    _Aplus(4,3) = (chi -1.)*normal[0]*normal[1]*factor2; //flag
     _Aplus(4,4) = (normal[0]*normal[0] + chi*normal[1]*normal[1])*factor2; //flag
-    _Aplus(4,5) = 0;
-    _Aplus(4,6) = 0; 
+    _Aplus(4,5) = 0.;
+    _Aplus(4,6) = 0.; 
     _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e;  
 
     _Aplus(5,0) = normal[1]*c_e*c_e;
     _Aplus(5,1) = -normal[0]*c_e*c_e;
-    _Aplus(5,2) = 0;
-    _Aplus(5,3) = 0;
-    _Aplus(5,4) = 0;
+    _Aplus(5,2) = 0.;
+    _Aplus(5,3) = 0.;
+    _Aplus(5,4) = 0.;
     _Aplus(5,5) = factor2; //flag 
-    _Aplus(5,6) = 0; 
-    _Aplus(5,7) = 0; 
+    _Aplus(5,6) = 0.; 
+    _Aplus(5,7) = 0.; 
     
     _Aplus(6,0) = normal[0]*c_e*c_e;
     _Aplus(6,1) = normal[1]*c_e*c_e;
-    _Aplus(6,2) = 0;
-    _Aplus(6,3) = 0;
-    _Aplus(6,4) = 0;
-    _Aplus(6,5) = 0;  
+    _Aplus(6,2) = 0.;
+    _Aplus(6,3) = 0.;
+    _Aplus(6,4) = 0.;
+    _Aplus(6,5) = 0.;  
     _Aplus(6,6) = gamma*factor3;
-    _Aplus(6,7) = 0;
+    _Aplus(6,7) = 0.;
     
-    _Aplus(7,0) = 0;
-    _Aplus(7,1) = 0;
-    _Aplus(7,2) = 0;
+    _Aplus(7,0) = 0.;
+    _Aplus(7,1) = 0.;
+    _Aplus(7,2) = 0.;
     _Aplus(7,3) = normal[0];
     _Aplus(7,4) = normal[1];
-    _Aplus(7,5) = 0; 
-    _Aplus(7,6) = 0; 
+    _Aplus(7,5) = 0.; 
+    _Aplus(7,6) = 0.; 
     _Aplus(7,7) = chi*factor4; //flag2  
   }
   if(dim == 3){
-    _Aplus(0,0) = (1 + normal[0]*normal[0]*(gamma - 1))*factor1;
-    _Aplus(0,1) = (gamma - 1)*normal[0]*normal[1]*factor1;
-    _Aplus(0,2) = (gamma - 1)*normal[0]*normal[2]*factor1;
-    _Aplus(0,3) = 0;
+    _Aplus(0,0) = (1. + normal[0]*normal[0]*(gamma - 1.))*factor1;
+    _Aplus(0,1) = (gamma - 1.)*normal[0]*normal[1]*factor1;
+    _Aplus(0,2) = (gamma - 1.)*normal[0]*normal[2]*factor1;
+    _Aplus(0,3) = 0.;
     _Aplus(0,4) = -normal[2];
     _Aplus(0,5) = normal[1];
     _Aplus(0,6) = gamma*gamma*normal[0]; 
-    _Aplus(0,7) = 0; 
+    _Aplus(0,7) = 0.; 
 
-    _Aplus(1,0) = (gamma - 1)*normal[0]*normal[1]*factor1;
-    _Aplus(1,1) = (1 + normal[1]*normal[1]*(gamma - 1))*factor1;
-    _Aplus(1,2) = (gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aplus(1,0) = (gamma - 1.)*normal[0]*normal[1]*factor1;
+    _Aplus(1,1) = (1. + normal[1]*normal[1]*(gamma - 1.))*factor1;
+    _Aplus(1,2) = (gamma - 1.)*normal[1]*normal[2]*factor1;
     _Aplus(1,3) = normal[2];
-    _Aplus(1,4) = 0;
+    _Aplus(1,4) = 0.;
     _Aplus(1,5) = -normal[0];
     _Aplus(1,6) = gamma*gamma*normal[1]; 
-    _Aplus(1,7) = 0; 
+    _Aplus(1,7) = 0.; 
 
-    _Aplus(2,0) = (gamma - 1)*normal[0]*normal[2]*factor1;
-    _Aplus(2,1) = (gamma - 1)*normal[1]*normal[2]*factor1;
-    _Aplus(2,2) = (1 + normal[2]*normal[2]*(gamma - 1))*factor1;
+    _Aplus(2,0) = (gamma - 1.)*normal[0]*normal[2]*factor1;
+    _Aplus(2,1) = (gamma - 1.)*normal[1]*normal[2]*factor1;
+    _Aplus(2,2) = (1. + normal[2]*normal[2]*(gamma - 1.))*factor1;
     _Aplus(2,3) = -normal[1];
     _Aplus(2,4) = normal[0];
-    _Aplus(2,5) = 0;
+    _Aplus(2,5) = 0.;
     _Aplus(2,6) = gamma*gamma*normal[2]; 
-    _Aplus(2,7) = 0; 
+    _Aplus(2,7) = 0.; 
 
-    _Aplus(3,0) = 0; 
+    _Aplus(3,0) = 0.; 
     _Aplus(3,1) = normal[2]*c_e*c_e; 
     _Aplus(3,2) = -normal[1]*c_e*c_e;
-    _Aplus(3,3) = (1 + normal[0]*normal[0]*(chi - 1))*factor2;
-    _Aplus(3,4) = (chi - 1)*normal[0]*normal[1]*factor2;
-    _Aplus(3,5) = (chi - 1)*normal[0]*normal[2]*factor2; 
-    _Aplus(3,6) = 0; 
+    _Aplus(3,3) = (1. + normal[0]*normal[0]*(chi - 1.))*factor2;
+    _Aplus(3,4) = (chi - 1.)*normal[0]*normal[1]*factor2;
+    _Aplus(3,5) = (chi - 1.)*normal[0]*normal[2]*factor2; 
+    _Aplus(3,6) = 0.; 
     _Aplus(3,7) = chi*chi*normal[0]*c_e*c_e;
 
     _Aplus(4,0) = -normal[2]*c_e*c_e;
-    _Aplus(4,1) = 0;
+    _Aplus(4,1) = 0.;
     _Aplus(4,2) = normal[0]*c_e*c_e;
-    _Aplus(4,3) = (chi - 1)*normal[0]*normal[1]*factor2;
-    _Aplus(4,4) = (1 + normal[1]*normal[1]*(chi - 1))*factor2;
-    _Aplus(4,5) = (chi - 1)*normal[1]*normal[2]*factor2;
-    _Aplus(4,6) = 0; 
+    _Aplus(4,3) = (chi - 1.)*normal[0]*normal[1]*factor2;
+    _Aplus(4,4) = (1. + normal[1]*normal[1]*(chi - 1.))*factor2;
+    _Aplus(4,5) = (chi - 1.)*normal[1]*normal[2]*factor2;
+    _Aplus(4,6) = 0.; 
     _Aplus(4,7) = chi*chi*normal[1]*c_e*c_e; 
 
     _Aplus(5,0) = normal[1]*c_e*c_e;
     _Aplus(5,1) = -normal[0]*c_e*c_e;
-    _Aplus(5,2) = 0;
-    _Aplus(5,3) = (chi - 1)*normal[0]*normal[2]*factor2;
-    _Aplus(5,4) = (chi - 1)*normal[1]*normal[2]*factor2;
-    _Aplus(5,5) = (1 + normal[2]*normal[2]*(chi - 1))*factor2;
-    _Aplus(5,6) = 0; 
+    _Aplus(5,2) = 0.;
+    _Aplus(5,3) = (chi - 1.)*normal[0]*normal[2]*factor2;
+    _Aplus(5,4) = (chi - 1.)*normal[1]*normal[2]*factor2;
+    _Aplus(5,5) = (1. + normal[2]*normal[2]*(chi - 1.))*factor2;
+    _Aplus(5,6) = 0.; 
     _Aplus(5,7) = chi*chi*normal[2]*c_e*c_e; 
     
     _Aplus(6,0) = normal[0]*c_e*c_e;
     _Aplus(6,1) = normal[1]*c_e*c_e;
     _Aplus(6,2) = normal[2]*c_e*c_e;
-    _Aplus(6,3) = 0;
-    _Aplus(6,4) = 0;
-    _Aplus(6,5) = 0; 
+    _Aplus(6,3) = 0.;
+    _Aplus(6,4) = 0.;
+    _Aplus(6,5) = 0.; 
     _Aplus(6,6) = gamma*factor3; 
-    _Aplus(6,7) = 0;
+    _Aplus(6,7) = 0.;
     
-    _Aplus(7,0) = 0;
-    _Aplus(7,1) = 0;
-    _Aplus(7,2) = 0;
+    _Aplus(7,0) = 0.;
+    _Aplus(7,1) = 0.;
+    _Aplus(7,2) = 0.;
     _Aplus(7,3) = normal[0];
     _Aplus(7,4) = normal[1];
     _Aplus(7,5) = normal[2]; 
-    _Aplus(7,6) = 0; 
+    _Aplus(7,6) = 0.; 
     _Aplus(7,7) = chi*factor4;
   }
 }
@@ -1010,8 +1012,10 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
   const CFreal gamma = m_updateVarSet->getModel()->getDivBCleaningConst();	//DivB cleaning technique constant
   const CFreal chi = m_updateVarSet->getModel()->getDivECleaningConst();
   const CFreal c_e = m_updateVarSet->getModel()->getLightSpeed();//speed of light
-  CFreal factor1, factor2, factor3, factor4;
-  
+  CFreal factor1 = 0.;
+  CFreal factor2 = 0.;
+  CFreal factor3 = 0.;
+  CFreal factor4 = 0.;
   
   if(m_useMacCormackScaling){
     factor1 = 1.;
@@ -1028,148 +1032,148 @@ void AUSMFluxMultiFluid<UPDATEVAR>::computeMatrixAminus()
 
   if(dim == 2){
     _Aminus(0,0) = -(normal[1]*normal[1] + gamma*normal[0]*normal[0])*factor1; //flag2
-    _Aminus(0,1) = (1 - gamma)*normal[0]*normal[1]*factor1; //flag2
-    _Aminus(0,2) = 0;
-    _Aminus(0,3) = 0;
-    _Aminus(0,4) = 0;
+    _Aminus(0,1) = (1. - gamma)*normal[0]*normal[1]*factor1; //flag2
+    _Aminus(0,2) = 0.;
+    _Aminus(0,3) = 0.;
+    _Aminus(0,4) = 0.;
     _Aminus(0,5) = normal[1];
     _Aminus(0,6) = gamma*gamma*normal[0]; 
-    _Aminus(0,7) = 0; 
+    _Aminus(0,7) = 0.; 
 
-    _Aminus(1,0) = (1 - gamma)*normal[0]*normal[1]*factor1; //flag2
+    _Aminus(1,0) = (1. - gamma)*normal[0]*normal[1]*factor1; //flag2
     _Aminus(1,1) = -(normal[0]*normal[0] + gamma*normal[1]*normal[1])*factor1; //flag2
-    _Aminus(1,2) = 0;
-    _Aminus(1,3) = 0;
-    _Aminus(1,4) = 0;
+    _Aminus(1,2) = 0.;
+    _Aminus(1,3) = 0.;
+    _Aminus(1,4) = 0.;
     _Aminus(1,5) = -normal[0];
     _Aminus(1,6) = gamma*gamma*normal[1]; 
-    _Aminus(1,7) = 0; 
+    _Aminus(1,7) = 0.; 
 
-    _Aminus(2,0) = 0;
-    _Aminus(2,1) = 0;
+    _Aminus(2,0) = 0.;
+    _Aminus(2,1) = 0.;
     _Aminus(2,2) = -1*factor1; //flag2
     _Aminus(2,3) = -normal[1];
     _Aminus(2,4) = normal[0];
-    _Aminus(2,5) = 0;
-    _Aminus(2,6) = 0;
-    _Aminus(2,7) = 0; 
+    _Aminus(2,5) = 0.;
+    _Aminus(2,6) = 0.;
+    _Aminus(2,7) = 0.; 
 
-    _Aminus(3,0) = 0;
-    _Aminus(3,1) = 0;
+    _Aminus(3,0) = 0.;
+    _Aminus(3,1) = 0.;
     _Aminus(3,2) = -normal[1]*c_e*c_e;
     _Aminus(3,3) = -(normal[1]*normal[1] + chi*normal[0]*normal[0])*factor2; //flag
-    _Aminus(3,4) = (1 - chi)*normal[0]*normal[1]*factor2; //flag
-    _Aminus(3,5) = 0;
-    _Aminus(3,6) = 0;  
+    _Aminus(3,4) = (1. - chi)*normal[0]*normal[1]*factor2; //flag
+    _Aminus(3,5) = 0.;
+    _Aminus(3,6) = 0.;  
     _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;  
     
-    _Aminus(4,0) = 0;
-    _Aminus(4,1) = 0;
+    _Aminus(4,0) = 0.;
+    _Aminus(4,1) = 0.;
     _Aminus(4,2) = normal[0]*c_e*c_e;
-    _Aminus(4,3) = (1 - chi)*normal[0]*normal[1]*factor2; //flag
+    _Aminus(4,3) = (1. - chi)*normal[0]*normal[1]*factor2; //flag
     _Aminus(4,4) = -(normal[0]*normal[0] + chi*normal[1]*normal[1])*factor2; //flag
-    _Aminus(4,5) = 0;
-    _Aminus(4,6) = 0; 
+    _Aminus(4,5) = 0.;
+    _Aminus(4,6) = 0.; 
     _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e;  
 
     _Aminus(5,0) = normal[1]*c_e*c_e;
     _Aminus(5,1) = -normal[0]*c_e*c_e;
-    _Aminus(5,2) = 0;
-    _Aminus(5,3) = 0;
-    _Aminus(5,4) = 0;
+    _Aminus(5,2) = 0.;
+    _Aminus(5,3) = 0.;
+    _Aminus(5,4) = 0.;
     _Aminus(5,5) = -1*factor2; //flag 
-    _Aminus(5,6) = 0; 
-    _Aminus(5,7) = 0; 
+    _Aminus(5,6) = 0.; 
+    _Aminus(5,7) = 0.; 
     
     _Aminus(6,0) = normal[0]*c_e*c_e;
     _Aminus(6,1) = normal[1]*c_e*c_e;
-    _Aminus(6,2) = 0;
-    _Aminus(6,3) = 0;
-    _Aminus(6,4) = 0;
-    _Aminus(6,5) = 0;
+    _Aminus(6,2) = 0.;
+    _Aminus(6,3) = 0.;
+    _Aminus(6,4) = 0.;
+    _Aminus(6,5) = 0.;
     _Aminus(6,6) = -gamma*factor3;
-    _Aminus(6,7) = 0;
+    _Aminus(6,7) = 0.;
     
-    _Aminus(7,0) = 0;
-    _Aminus(7,1) = 0;
-    _Aminus(7,2) = 0;
+    _Aminus(7,0) = 0.;
+    _Aminus(7,1) = 0.;
+    _Aminus(7,2) = 0.;
     _Aminus(7,3) = normal[0];
     _Aminus(7,4) = normal[1];
-    _Aminus(7,5) = 0; 
-    _Aminus(7,6) = 0; 
+    _Aminus(7,5) = 0.; 
+    _Aminus(7,6) = 0.; 
     _Aminus(7,7) = -chi*factor4; //flag2  
   }
   if(dim == 3){
-    _Aminus(0,0) = -(1 + normal[0]*normal[0]*(gamma - 1))*factor1;
-    _Aminus(0,1) = -(gamma - 1)*normal[0]*normal[1]*factor1;
-    _Aminus(0,2) = -(gamma - 1)*normal[0]*normal[2]*factor1;
-    _Aminus(0,3) = 0;
+    _Aminus(0,0) = -(1. + normal[0]*normal[0]*(gamma - 1.))*factor1;
+    _Aminus(0,1) = -(gamma - 1.)*normal[0]*normal[1]*factor1;
+    _Aminus(0,2) = -(gamma - 1.)*normal[0]*normal[2]*factor1;
+    _Aminus(0,3) = 0.;
     _Aminus(0,4) = -normal[2];
     _Aminus(0,5) = normal[1];
     _Aminus(0,6) = gamma*gamma*normal[0]; 
-    _Aminus(0,7) = 0; 
+    _Aminus(0,7) = 0.; 
 
-    _Aminus(1,0) = -(gamma - 1)*normal[0]*normal[1]*factor1;
-    _Aminus(1,1) = -(1 + normal[1]*normal[1]*(gamma - 1))*factor1;
-    _Aminus(1,2) = -(gamma - 1)*normal[1]*normal[2]*factor1;
+    _Aminus(1,0) = -(gamma - 1.)*normal[0]*normal[1]*factor1;
+    _Aminus(1,1) = -(1. + normal[1]*normal[1]*(gamma - 1.))*factor1;
+    _Aminus(1,2) = -(gamma - 1.)*normal[1]*normal[2]*factor1;
     _Aminus(1,3) = normal[2];
-    _Aminus(1,4) = 0;
+    _Aminus(1,4) = 0.;
     _Aminus(1,5) = -normal[0];
     _Aminus(1,6) = gamma*gamma*normal[1]; 
-    _Aminus(1,7) = 0; 
+    _Aminus(1,7) = 0.; 
 
-    _Aminus(2,0) = -(gamma - 1)*normal[0]*normal[2]*factor1;
-    _Aminus(2,1) = -(gamma - 1)*normal[1]*normal[2]*factor1;
-    _Aminus(2,2) = -(1 + normal[2]*normal[2]*(gamma - 1))*factor1;
+    _Aminus(2,0) = -(gamma - 1.)*normal[0]*normal[2]*factor1;
+    _Aminus(2,1) = -(gamma - 1.)*normal[1]*normal[2]*factor1;
+    _Aminus(2,2) = -(1. + normal[2]*normal[2]*(gamma - 1.))*factor1;
     _Aminus(2,3) = -normal[1];
     _Aminus(2,4) = normal[0];
-    _Aminus(2,5) = 0;
+    _Aminus(2,5) = 0.;
     _Aminus(2,6) = gamma*gamma*normal[2]; 
-    _Aminus(2,7) = 0; 
+    _Aminus(2,7) = 0.; 
 
-    _Aminus(3,0) = 0; 
+    _Aminus(3,0) = 0.; 
     _Aminus(3,1) = normal[2]*c_e*c_e; 
     _Aminus(3,2) = -normal[1]*c_e*c_e;
-    _Aminus(3,3) = -(1 + normal[0]*normal[0]*(chi - 1))*factor2;
-    _Aminus(3,4) = -(chi - 1)*normal[0]*normal[1]*factor2;
-    _Aminus(3,5) = -(chi - 1)*normal[0]*normal[2]*factor2; 
-    _Aminus(3,6) = 0; 
+    _Aminus(3,3) = -(1. + normal[0]*normal[0]*(chi - 1.))*factor2;
+    _Aminus(3,4) = -(chi - 1.)*normal[0]*normal[1]*factor2;
+    _Aminus(3,5) = -(chi - 1.)*normal[0]*normal[2]*factor2; 
+    _Aminus(3,6) = 0.; 
     _Aminus(3,7) = chi*chi*normal[0]*c_e*c_e;
 
     _Aminus(4,0) = -normal[2]*c_e*c_e;
-    _Aminus(4,1) = 0;
+    _Aminus(4,1) = 0.;
     _Aminus(4,2) = normal[0]*c_e*c_e;
-    _Aminus(4,3) = -(chi - 1)*normal[0]*normal[1]*factor2;
-    _Aminus(4,4) = -(1 + normal[1]*normal[1]*(chi - 1))*factor2;
-    _Aminus(4,5) = -(chi - 1)*normal[1]*normal[2]*factor2;
-    _Aminus(4,6) = 0; 
+    _Aminus(4,3) = -(chi - 1.)*normal[0]*normal[1]*factor2;
+    _Aminus(4,4) = -(1. + normal[1]*normal[1]*(chi - 1.))*factor2;
+    _Aminus(4,5) = -(chi - 1.)*normal[1]*normal[2]*factor2;
+    _Aminus(4,6) = 0.; 
     _Aminus(4,7) = chi*chi*normal[1]*c_e*c_e; 
 
     _Aminus(5,0) = normal[1]*c_e*c_e;
     _Aminus(5,1) = -normal[0]*c_e*c_e;
-    _Aminus(5,2) = 0;
-    _Aminus(5,3) = -(chi - 1)*normal[0]*normal[2]*factor2;
-    _Aminus(5,4) = -(chi - 1)*normal[1]*normal[2]*factor2;
-    _Aminus(5,5) = -(1 + normal[2]*normal[2]*(chi - 1))*factor2;
-    _Aminus(5,6) = 0; 
+    _Aminus(5,2) = 0.;
+    _Aminus(5,3) = -(chi - 1.)*normal[0]*normal[2]*factor2;
+    _Aminus(5,4) = -(chi - 1.)*normal[1]*normal[2]*factor2;
+    _Aminus(5,5) = -(1. + normal[2]*normal[2]*(chi - 1.))*factor2;
+    _Aminus(5,6) = 0.; 
     _Aminus(5,7) = chi*chi*normal[2]*c_e*c_e; 
     
     _Aminus(6,0) = normal[0]*c_e*c_e;
     _Aminus(6,1) = normal[1]*c_e*c_e;
     _Aminus(6,2) = normal[2]*c_e*c_e;
-    _Aminus(6,3) = 0;
-    _Aminus(6,4) = 0;
-    _Aminus(6,5) = 0; 
+    _Aminus(6,3) = 0.;
+    _Aminus(6,4) = 0.;
+    _Aminus(6,5) = 0.; 
     _Aminus(6,6) = -gamma*factor3; 
-    _Aminus(6,7) = 0;
+    _Aminus(6,7) = 0.;
     
-    _Aminus(7,0) = 0;
-    _Aminus(7,1) = 0;
-    _Aminus(7,2) = 0;
+    _Aminus(7,0) = 0.;
+    _Aminus(7,1) = 0.;
+    _Aminus(7,2) = 0.;
     _Aminus(7,3) = normal[0];
     _Aminus(7,4) = normal[1];
     _Aminus(7,5) = normal[2]; 
-    _Aminus(7,6) = 0; 
+    _Aminus(7,6) = 0.; 
     _Aminus(7,7) = -chi*factor4;  
   }  
 }

@@ -29,6 +29,7 @@ LIST ( APPEND FiniteVolumeCUDA_libs ${CUDA_LIBRARIES} )
 IF (CF_HAVE_PARALUTION)
 LIST ( APPEND FiniteVolumeCUDA_includedirs ${PARALUTION_INCLUDE_DIR} )
 LIST ( APPEND FiniteVolumeCUDA_libs ${PARALUTION_LIBRARIES} )
+LIST ( APPEND FiniteVolumeCUDA_cflibs ParalutionI )
 ENDIF()
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeCUDA )

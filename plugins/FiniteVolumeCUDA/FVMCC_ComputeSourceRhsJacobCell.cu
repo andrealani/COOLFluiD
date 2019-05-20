@@ -43,11 +43,12 @@
 #include "Maxwell/Maxwell2DProjectionVarSet.hh"
 #include "Maxwell/Maxwell2DProjectionConsT.hh"
 #include "FiniteVolumeMaxwell/StegerWarmingMaxwellProjection2D.hh"
-/*  // IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 1/2
+
+// IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 1/2
 #ifdef CF_HAVE_PARALUTION
 #include "Paralution/ParalutionMatrix.hh"
 #endif
-*/
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace COOLFluiD::Framework;
@@ -1190,7 +1191,7 @@ if(!this->m_useParalutionPtr){
     CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
 
 }else{  /// New code for building the matrix on the GPU
-/*  //  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
+ //  IA:  UNCOMMENT THIS FOR BUILDING THE SYSTEM ON THE GPU USING PARALUTION 2/2
 #ifdef CF_HAVE_PARALUTION
 
  SafePtr<LSSMatrix> matrix = m_lss->getMatrix();
@@ -1256,8 +1257,6 @@ startCellID += m_nbCellsInKernel[s];
     timer.start();  
 
 #endif
-*/
-
 
 }
 
