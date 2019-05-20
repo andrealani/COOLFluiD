@@ -30,8 +30,8 @@ Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/5_GEMchalleng
 Simulator.Paths.ResultsDir       = ./RESULTS_GEM_PARALUTION_GPU
 
 #SubSystem Parameters
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/5_GEMchallenge/TwoFluid_GEM.inter
-Simulator.SubSystem.InteractiveParamReader.readRate = 10
+#Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MultiFluidMHD/testcases/5_GEMchallenge/TwoFluid_GEM.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 ###############################################################################
 # Physical Model
@@ -66,18 +66,23 @@ Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.IsLeake = false # Just when the fir
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh 
 
 Simulator.SubSystem.CFmesh.FileName     = Test-sol.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate     = 4000 #1250
+Simulator.SubSystem.CFmesh.SaveRate     = 2000 #1250
 Simulator.SubSystem.CFmesh.AppendTime   = true 
 Simulator.SubSystem.CFmesh.AppendIter   = false
 
 Simulator.SubSystem.Tecplot.FileName    = multiFluid.plt
 Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi
-Simulator.SubSystem.Tecplot.SaveRate    = 4000 #200 #1250
+Simulator.SubSystem.Tecplot.SaveRate    = 1250
 #Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 #Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 #Simulator.SubSystem.Tecplot.Data.SurfaceTRS = x0 y0
 Simulator.SubSystem.Tecplot.AppendTime = true #false
 Simulator.SubSystem.Tecplot.AppendIter = true
+
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = limiter
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = lBx lBy lBz lEx lEy lEz lPhi lPsi lrho0 lrho1 lU0 lV0 lW0 lU1 lV1 lW1 lT0 lT1
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1
 
 #Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = Qtot GradPyi GradPye
@@ -87,7 +92,7 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 ###############################################################################
 # Time Marching
 
-Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0021749343822575 #0.004349868764515 #0.00869973752903 
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.004349868764515 # 0.0021749343822575 #0.004349868764515 #0.00869973752903 
 #Simulator.SubSystem.SubSystemStatus.InitialTime = 0.052836
 #Simulator.SubSystem.SubSystemStatus.TimeStep = 1.0e-3
 #Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
@@ -99,37 +104,35 @@ Simulator.SubSystem.StopCondition       = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
 #Simulator.SubSystem.StopCondition   = MaxTime
-#Simulator.SubSystem.MaxTime.maxTime = 16
+#Simulator.SubSystem.MaxTime.maxTime = 16 # 40
 
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -20.0
 
-# Original Linear System
-#  Simulator.SubSystem.LinearSystemSolver = PETSC
-#  Simulator.SubSystem.LSSNames = NewtonIteratorLSS
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
-#  Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
-# Same Linear System Solver as the two-fluid shock
-#Simulator.SubSystem.LinearSystemSolver = PETSC
-#Simulator.SubSystem.LSSNames = BwdEulerLSS
-#Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCBJACOBI #PCASM # PCJACOBI #PCASM
-#Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
-#Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
-Simulator.SubSystem.LinearSystemSolver = PARALUTION
-Simulator.SubSystem.LSSNames = PARALUTION #BwdEulerLSS 
+
+# Linear System with CUDA
+Simulator.SubSystem.LinearSystemSolver = PARALUTION #PETSC
+Simulator.SubSystem.LSSNames = PARALUTION
 Simulator.SubSystem.PARALUTION.Data.useGPU = 1
 Simulator.SubSystem.PARALUTION.Data.buildOnGPU = true  # Remember to recompile!! FiniteVolumeCUDA~: grep 'IA' *
-Simulator.SubSystem.PARALUTION.Data.reBuildRatio = 1
+Simulator.SubSystem.PARALUTION.Data.reBuildRatio = 1 # fair comparison with PETSC version
+Simulator.SubSystem.PARALUTION.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.PARALUTION.Data.NbKrylovSpaces = 150
+ 
 
+# Linear System
+#Simulator.SubSystem.LinearSystemSolver = PETSC
+#Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+#Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+#Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
+#Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
 
 
 ####### GPU ########
 Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
-
 
 # Explicit
 #Simulator.SubSystem.ConvergenceMethod = FwdEuler
@@ -166,7 +169,7 @@ Simulator.SubSystem.BDF2.ShowRate = 1
 #Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
 Simulator.SubSystem.BDF2.Data.MaxSteps = 1000
 #Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 17 #10 # 12 = Vneutral ##number of variable starts in 0
-Simulator.SubSystem.BDF2.Data.Norm = -8 ##-2 #in log scale 
+Simulator.SubSystem.BDF2.Data.Norm = -6 ##-2 #in log scale 
 Simulator.SubSystem.BDF2.Data.L2.GlobalRes = true
 Simulator.SubSystem.BDF2.Data.L2.NormalizedRes = true
 Simulator.SubSystem.BDF2.Data.L2.RefVals = 6e-09 6e-09 6e-09 0.000248312564516 0.000248312564516 0.000248312564516 0.000248312564516 6e-09 6.69048711096e-22 1.67262177774e-20 41385.4274193 41385.4274193 41385.4274193 41385.4274193 41385.4274193 41385.4274193 17291.3244165 86456.6220824
@@ -193,13 +196,11 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 ###############################################################################
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobBarthAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid
-#CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.UseParalutionPtr = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16 
 #Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.UseParalutionPtr = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
-
 
 # First Order Time stepping
 #Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
@@ -223,12 +224,18 @@ Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
 #Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
 
 ## second order: uncomment this
-Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -20.0
-Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
-Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2DPeriodic
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.limitRes = -30.0
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.PeriodicBCNames = Jet1 Jet2 
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.isMFMHD = true
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.length = 72008.4712148
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.magnitudeValues = 6e-09 6e-09 6e-09 0.000248312564516 0.000248312564516 0.000248312564516 0.000248312564516 6e-09 1.0578588963316647e-22 8.3631088887E-20 1308.7221258457232 1308.7221258457232 1308.7221258457232 41385.4274193 41385.4274193 41385.4274193 546.79968917022 86456.6220824
 #Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.useFullStencil = false
 # Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBased
 # Simulator.SubSystem.CellCenterFVM.Data.DistanceBased.TrsPriorityList = \
 #y0 PeriodicX y1
@@ -237,7 +244,9 @@ Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScaling = false #true
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1
 Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.machInf = 1. 1. #0.0125 0.0125
-Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Coeff = 1.e4
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Coeff = 1.
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Bdiss = 0.001
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Ediss = 1.
 
 Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
 Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
@@ -259,46 +268,54 @@ Simulator.SubSystem.CellCenterFVM.InitComds = InitState
 Simulator.SubSystem.CellCenterFVM.InitNames = InField 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces 
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
-Simulator.SubSystem.CellCenterFVM.InField.Def = \
-	if(y<0,6e-09*tanh((y+0.5/1.0849417947911578e-06)/36004.2356074)-1.47262155637e-10*cos(3.141592653589793*1.0849417947911578e-06*x)*sin(3.141592653589793*1.0849417947911578e-06*(y+0.5/1.0849417947911578e-06)),-6e-09*tanh((y-0.5/1.0849417947911578e-06)/36004.2356074)+1.47262155637e-10*cos(3.141592653589793*1.0849417947911578e-06*x)*sin(3.141592653589793*1.0849417947911578e-06*(y-0.5/1.0849417947911578e-06))) \
-	if(y<0,1.47262155637e-10*sin(3.141592653589793*1.0849417947911578e-06*x)*cos(3.141592653589793*1.0849417947911578e-06*(y+0.5/1.0849417947911578e-06)),-1.47262155637e-10*sin(3.141592653589793*1.0849417947911578e-06*x)*cos(3.141592653589793*1.0849417947911578e-06*(y-0.5/1.0849417947911578e-06))) \
-						0. \
-						0. \
-						0. \
-						0. \
-                                                0. \
-						0. \
-						if(y<0,6.69048711096e-22*(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),6.69048711096e-22*(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074))) \
-                                                if(y<0,1.67262177774e-20*(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),1.67262177774e-20*(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074))) \
-						0. \
-						0. \
-						if(y<0,13795.1412313*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),-13795.1412313*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074))) \
-						0. \
-                                                0. \
-						if(y<0,-68975.7061567*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),68975.7061567*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074))) \
-                                                17291.3244165 \ 
+Simulator.SubSystem.CellCenterFVM.InField.Def =\
+                                                if(y<0,6e-09*tanh((y+0.5/1.0849417947911578e-06)/36004.2356074)-1.47262155637e-10*cos(3.141592653589793*1.0849417947911578e-06*x)*sin(3.141592653589793*1.0849417947911578e-06*(y+0.5/1.0849417947911578e-06)),-6e-09*tanh((y-0.5/1.0849417947911578e-06)/36004.2356074)+1.47262155637e-10*cos(3.141592653589793*1.0849417947911578e-06*x)*sin(3.141592653589793*1.0849417947911578e-06*(y-0.5/1.0849417947911578e-06)))\
+		                                if(y<0,1.47262155637e-10*sin(3.141592653589793*1.0849417947911578e-06*x)*cos(3.141592653589793*1.0849417947911578e-06*(y+0.5/1.0849417947911578e-06)),-1.47262155637e-10*sin(3.141592653589793*1.0849417947911578e-06*x)*cos(3.141592653589793*1.0849417947911578e-06*(y-0.5/1.0849417947911578e-06)))\
+						0.\
+						0.\
+						0.\
+						0.\
+                                                0.\
+						0.\
+						if(y<0,6.69048711096e-22*(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),6.69048711096e-22*(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)))\
+                                                if(y<0,1.67262177774e-20*(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),1.67262177774e-20*(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)))\
+						0.\
+						0.\
+						if(y<0,13795.1412313*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),-13795.1412313*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)))\
+						0.\
+                                                0.\
+						if(y<0,-68975.7061567*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y+0.5/1.0849417947911578e-06)/36004.2356074)),68975.7061567*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)/(1./5.+1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)*1./cosh((y-0.5/1.0849417947911578e-06)/36004.2356074)))\
+                                                17291.3244165\ 
 						86456.6220824
 
 #                                                6e-09*tanh(y/36004.2356074)+1.47262155637e-10*cos(3.40844517209e-06*x)*sin(3.40844517209e-06*y)\
 #                                                                                                1.47262155637e-10*sin(3.40844517209e-06*x)*cos(3.40844517209e-06*y)\
 ###############################################################################
 # Boundary Conditions
-Simulator.SubSystem.CellCenterFVM.BcComds = PeriodicY2DMPIFVMCC PeriodicX2DMPIFVMCC ##periodic boundary conditions
-Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2  
+Simulator.SubSystem.CellCenterFVM.BcComds = BCPeriodicFVMCC BCPeriodicFVMCC #PerfectConductingWall2DHalfFVMCC #BCPeriodicFVMCC #PeriodicY2DMPIFVMCC PeriodicX2DMPIFVMCC ##periodic boundary conditions
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2
 
 # Left Condition (periodic)
 Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = PeriodicX #x0
-Simulator.SubSystem.CellCenterFVM.Jet1.Threshold = 1e-16
-Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.Jet1.Threshold = 1 #1e-16
+Simulator.SubSystem.CellCenterFVM.Jet1.TranslationVector = 1843416.8631 0
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
 # Left Condition (periodic)
 Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = PeriodicY #x0
-Simulator.SubSystem.CellCenterFVM.Jet2.Threshold = 1e-16
-Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+Simulator.SubSystem.CellCenterFVM.Jet2.Threshold = 1 # 1e-16
+Simulator.SubSystem.CellCenterFVM.Jet2.TranslationVector = 0 1843416.8631
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
 ###############################################################################
 # DataProcessing
 
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
+Simulator.SubSystem.DataProcessing.Comds = EnergyIntegration
+Simulator.SubSystem.DataProcessing.Names = EnergyIntegration
+Simulator.SubSystem.DataProcessing.EnergyIntegration.SaveRate = 1
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
 #Simulator.SubSystem.DataPreProcessing = DataProcessing
 #Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
 #Simulator.SubSystem.DataProcessing.Comds = AtmosphereProps #DivMonitoring
