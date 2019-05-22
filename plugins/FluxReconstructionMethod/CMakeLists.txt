@@ -298,9 +298,14 @@ BCDirichlet.cxx
 BCDirichlet.hh
 BCMirrorVelocity.cxx
 BCMirrorVelocity.hh
+BCPeriodic.cxx
+BCPeriodic.hh
 KernelData.hh
 BDF2TimeRHSJacob.hh
 BDF2TimeRHSJacob.cxx
+CellData.hh
+ComputeStencil.hh
+ComputeStencil.cxx
 )
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )

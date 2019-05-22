@@ -61,7 +61,7 @@ public:
       
 //////////////////////////////////////////////////////////////////////////////
 
-    } // namespace FiniteVolume
+    } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD
 
