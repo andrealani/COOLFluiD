@@ -1,0 +1,387 @@
+#include "Framework/CellConn.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/MathTypes.hh"
+
+#ifdef CF_HAVE_CUDA
+#include "Framework/CudaDeviceManager.hh"
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace FluxReconstructionMethod {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxReconstructionCUDA(const std::string& name) :
+  ConvRHSFluxReconstruction(name), 
+  socket_stencil("stencil"),
+  socket_states("states"),
+  m_cellFaces(CFNULL),
+  m_cellInfo(),
+  m_cellStencil(),
+  m_neighborTypes(),
+  m_cellConn(),
+  m_nbBlocksPerGridX(),
+  m_nbBlocksPerGridY()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_nbCellsPerBlock = 1;
+  setParameter("NbCellsPerBlock",&m_nbCellsPerBlock);
+
+  m_nbThreadsOMP = 12;
+  setParameter("NbThreadsOMP",&m_nbThreadsOMP);
+  
+  m_onGPU = true;
+  setParameter("OnGPU",&m_onGPU);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::~ConvRHSFluxReconstructionCUDA()
+{  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::unsetup()
+{  
+  ConvRHSFluxReconstruction::unsetup();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
+{
+  options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
+  options.template addConfigOption< CFuint > ("NbThreadsOMP", "Number of OMP threads");
+  options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::configure ( Config::ConfigArgs& args )
+{
+  ConvRHSFluxReconstruction::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::initializeComputationRHS()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::initializeComputationRHS() START\n");
+  
+  // copy locally the ghost states, gstates should be treated as states, with pointers to a 1D storage
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::initializeComputationRHS() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::needsSockets()
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  std::vector<SafePtr<BaseDataSocketSink> > result = FVMCC_ComputeRHS::needsSockets();
+  result.push_back(&socket_stencil);
+  result.push_back(&socket_states);
+  return result;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::storeStencilData()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() START\n");
+  
+  // prepare the building of the faces
+  SafePtr<GeometricEntityPool<FaceTrsGeoBuilder> > geoBuilder = getMethodData().getFaceTrsGeoBuilder();
+  geoBuilder->getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  FaceTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  SafePtr<TopologicalRegionSet> currTrs = MeshDataStack::getActive()->getTrs("PartitionFaces");
+  const CFuint nbTrsFaces = currTrs->getLocalNbGeoEnts();
+  geoData.trs = currTrs;
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => Nb of PartitionFaces = " << nbTrsFaces << "\n");
+  
+  for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) {
+    geoData.idx = iFace;
+    GeometricEntity*const face = geoBuilder->buildGE();
+    const CFuint ghostID = face->getState(1)->getLocalID();
+    cf_assert(ghostID < isPartitionState.size());
+    isPartitionState[ghostID] = true;
+    geoBuilder->releaseGE(); 
+  }
+  
+  // reorder the stencil storage to place face neighbors at first   
+  DataHandle<vector<State*> > stencil = socket_stencil.getDataHandle();
+  const CFuint nbCells = stencil.size();
+  cf_assert(nbCells > 0);
+  m_cellInfo.resize(5*nbCells);
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => nbCells = " << nbCells << "\n");
+  
+  CFuint countStencil = 0;
+  CFuint maxNbNeighbors = 0;
+  for (CFuint i = 0; i < nbCells; ++i) {
+    cf_assert(i < stencil.size());
+    maxNbNeighbors = std::max((CFuint)maxNbNeighbors, (CFuint)stencil[i].size());
+    countStencil += stencil[i].size();
+  }
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => maxNbNeighbors = " << maxNbNeighbors << "\n");
+  
+  // not all faces belong to the stencil: partition faces are discarded!
+  // stencil must be bigger than the local (in this processor) number of cells  
+  cf_assert(countStencil > nbCells);
+  cf_assert(maxNbNeighbors > 0);
+  
+  m_cellStencil.resize(countStencil);
+  m_neighborTypes.resize(countStencil);
+  
+  // preallocated array to use for reordering, cell by cell
+  vector<State*> tmp; tmp.reserve(maxNbNeighbors);
+  
+  // create and setup the cell builder
+  SafePtr<GeometricEntityPool<CellTrsGeoBuilder> > cellBuilder = getMethodData().getCellTrsGeoBuilder();
+  SafePtr<CellTrsGeoBuilder> cellBuilderPtr = cellBuilder->getGeoBuilder();
+  CellTrsGeoBuilder::GeoData& cellData = cellBuilder->getDataGE();
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  cellData.trs = cells;
+  cf_assert(nbCells == cellData.trs->getLocalNbGeoEnts());
+  
+  CFuint countN = 0;
+  for (CFuint iCell = 0; iCell < nbCells; ++iCell) {
+    // build the cell
+    cellData.idx = iCell;
+    GeometricEntity *const cell = cellBuilder->buildGE();
+    const CFuint cellID = cell->getState(0)->getLocalID();
+    cf_assert(cellID == iCell);
+    cf_assert(iCell < stencil.size());
+    vector<State*>& currStencil = stencil[iCell];
+    const CFuint stencilSize = currStencil.size();
+    cf_assert(stencilSize > 0);
+    
+    const vector<GeometricEntity*>& faces = *cell->getNeighborGeos();
+    const CFuint nbFaces = faces.size();
+    cf_assert(nbFaces > 2);
+    
+    // set the cell info array 
+    const CFuint cstart = iCell*5;
+    cf_assert(cstart   < m_cellInfo.size());
+    cf_assert(cstart+1 < m_cellInfo.size());
+    cf_assert(cstart+2 < m_cellInfo.size());
+    
+    m_cellInfo[cstart]   = countN;      // stencil info start for cell iCell
+    m_cellInfo[cstart+1] = stencilSize; // stencil size for cell iCell
+    m_cellInfo[cstart+2] = nbFaces;     // number of faces (including partition) for cell iCell
+    
+    // insert face neighbors first
+    CFuint nbActiveFaces = 0;
+    for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+      GeometricEntity *const face = faces[iFace];
+      State *const st = (face->getState(0)->getLocalID() == cellID) ? face->getState(1) : face->getState(0);
+      
+      // WATCH OUT: partition faces must be discarded in the stencil for consistency
+      //            with the algorithm computing the stencil
+      if (!st->isGhost() || (st->isGhost() && !isPartitionState[st->getLocalID()])) {
+        // here you are either internal (updatable or not) or not-partition-boundary ghost state
+	// hence you have a VALID local ID
+	CFLog(DEBUG_MIN, "st->isGhost() = " << st->isGhost() << ", st->getLocalID() = " << st->getLocalID() << "\n");
+	cf_assert(countN < m_cellStencil.size());
+	// cf_assert(st->getLocalID() < nbCells) fails on very small meshes for which nb of ghosts >= nbCells 
+        cf_assert(countN < m_cellStencil.size());
+	m_cellStencil[countN] = st->getLocalID();
+	
+        // neighbor cell types: internal (1), partition (0), physical boundary (-1)  
+        cf_assert(countN < m_neighborTypes.size());
+        m_neighborTypes[countN] = (!st->isGhost()) ? 1 : -1;
+	
+        ++countN;
+        ++nbActiveFaces;
+      }
+    }
+    
+    cf_assert(cstart+4 < m_cellInfo.size());
+    m_cellInfo[cstart+4] = nbActiveFaces; // number of active faces in cell iCell
+    
+    // CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => (iCell,countN) = " << iCell << "," << countN << "\n");
+    
+    for (CFuint n = 0; n < stencilSize; ++n) {
+      cf_assert(n < currStencil.size());
+      State *const neighbor = currStencil[n];
+      bool found = false;
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace) {
+	cf_assert(iFace < faces.size());
+	GeometricEntity *const face = faces[iFace];
+	State *const st = (face->getState(0)->getLocalID() == cellID) ? face->getState(1) : face->getState(0);
+	if (neighbor == st) {
+	  found = true;
+	  break;
+	}
+      }
+      
+      // insert remaining vertex neighbors 
+      if(!found) {
+	if (!neighbor->isGhost() || (neighbor->isGhost() && !isPartitionState[neighbor->getLocalID()])) {
+	  cf_assert(countN < m_cellStencil.size());
+	  cf_assert(countN < m_neighborTypes.size());
+	  m_cellStencil[countN]   = neighbor->getLocalID();
+	  m_neighborTypes[countN] = (!neighbor->isGhost()) ? 1 : -1;
+	  ++countN;
+	}
+      }
+      
+      // CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => found after = " << found << "\n");
+    } 
+    
+    //   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => (iCell,countN+1) = " << iCell << "," << countN << "\n");
+    
+    cellBuilder->releaseGE();
+  }
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() => hello 3\n");
+  
+  
+  cf_assert(countN == m_cellStencil.size());
+ 
+  // set the cell shapes
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbElemTypes = elemType->size();
+  CFuint counter = 0;
+  for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
+    const CFuint nbCellsInType = (*elemType)[iType].getNbElems();
+    for (CFuint i = 0; i < nbCellsInType; ++i, ++counter) {
+      cf_assert(counter*5+3 < m_cellInfo.size());
+      m_cellInfo[counter*5+3] = (*elemType)[iType].getGeoShape();
+    }
+  }
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::storeStencilData() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() START\n");
+  
+  ConvRHSFluxReconstruction::setup();
+  
+  // store locally the cell centers
+  // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  const CFuint nbCells = states.size(); 
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  storeStencilData();
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() after storeStencilData\n");
+  
+  m_cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
+  
+  // copy of data that will not change during the computation, unless mesh changes
+  m_cellInfo.put();
+  m_cellStencil.put();
+  m_cellFaces->getPtr()->put(); 
+  m_neighborTypes.put();
+  
+  copyLocalCellConnectivity();	
+  
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() after copyLocalCellConnectivity\n");
+  
+  // what about packing m_cellInfo, m_cellStencil and m_neighborTypes in one object? inefficient?
+  
+  // set the sizes of the grid to launch on the Framework::DEVICE
+  const CFuint nbActualBlocks = nbCells/m_nbCellsPerBlock;
+
+#ifdef CF_HAVE_CUDA
+  m_nbBlocksPerGridX = std::min(nbActualBlocks, (CFuint)CudaEnv::CudaDeviceManager::getInstance().getNBlocks());
+  m_nbBlocksPerGridY = static_cast<CFuint>(std::max((CFreal)1., std::ceil((CFreal)nbActualBlocks/
+									  (CFreal)m_nbBlocksPerGridX)));
+  CFLog(INFO, "ConvRHSFluxReconstructionCUDA::setup() => Kernel grid sizes: <<< [" << 
+	m_nbBlocksPerGridX << " - " << m_nbBlocksPerGridY << "], " << 
+	CudaEnv::CudaDeviceManager::getInstance().getNThreads() << ">>>\n");
+  CFLog(INFO, m_nbBlocksPerGridX*m_nbBlocksPerGridY  << " >= " << nbCells/m_nbCellsPerBlock << "\n");
+  cf_assert(m_nbBlocksPerGridX*m_nbBlocksPerGridY >= nbCells/m_nbCellsPerBlock);
+#endif
+
+  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() END\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::copyLocalCellConnectivity()
+{
+  CFAUTOTRACE;
+  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  // set the cell local connectivity data
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbElemTypes = elemType->size();
+  
+  m_cellConn.resize(8); // maximum number of types is 8 (@see src/Framework/CFGeoShape.hh)
+  for (CFuint iType = 0; iType < nbElemTypes; ++iType) {
+    const CFGeoShape::Type shapeIdx = (*elemType)[iType].getGeoShape();
+    const Table<CFuint>& conn = *LocalConnectionData::getInstance().getFaceDofLocal
+      (shapeIdx, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE);
+    const CFuint nbCellFaces = conn.nbRows();
+    cf_assert(shapeIdx < m_cellConn.size()); 
+    cf_assert(nbCellFaces <= 6); // hexa have 6 faces
+    
+    CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::copyLocalCellConnectivity() => shapeIdx    = " << shapeIdx << "\n");
+    CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::copyLocalCellConnectivity() => nbCellFaces = " << nbCellFaces << "\n");
+    
+    m_cellConn[shapeIdx].setNbFaces(nbCellFaces);
+    for (CFuint f = 0; f < nbCellFaces; ++f) {
+      const CFuint nbFaceNodes = conn.nbCols(f);
+      CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::copyLocalCellConnectivity() => face [" << f << "] has "<< nbFaceNodes << " nodes\n");
+      cf_assert(nbFaceNodes <= 4); // quad faces have 4 nodes
+      m_cellConn[shapeIdx].setNbFaceNodes(f,nbFaceNodes);
+      for (CFuint n = 0; n < nbFaceNodes; ++n) {
+	cf_assert(f < 6);
+	cf_assert(n < 4);
+	const CFuint nodeID = conn(f,n);
+	cf_assert(nodeID < 8); // hexa have 8 nodes
+	m_cellConn[shapeIdx].setNodeID(f,n,nodeID);
+      }
+    }
+  }
+  m_cellConn.put();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+    } // namespace FluxReconstructionMethod
+  
+} // namespace COOLFluiD
