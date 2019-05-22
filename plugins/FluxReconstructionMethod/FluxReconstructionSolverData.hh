@@ -186,12 +186,20 @@ public: // functions
     return m_statesReconstructor.getPtr();
   }
   
-    /// @return the GeometricEntity face builder
+  /// @return the GeometricEntity face builder
   Common::SafePtr<
     Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder > >
     getFaceBuilder()
   {
     return &m_faceBuilder;
+  }
+  
+  /// @return the second GeometricEntity face builder
+  Common::SafePtr<
+    Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder > >
+    getSecondFaceBuilder()
+  {
+    return &m_faceBuilder2nd;
   }
   
   /// @return SafePtr to the Riemann flux strategy
@@ -355,6 +363,9 @@ private:  // data
   
   /// Builder for faces (containing the neighbouring cells)
   Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder >  m_faceBuilder;
+  
+  /// Second builder for faces (containing the neighbouring cells)
+  Framework::GeometricEntityPool< Framework::FaceToCellGEBuilder >  m_faceBuilder2nd;
   
   /// Builder for cells (containing the neighbouring faces)
   Framework::GeometricEntityPool< FluxReconstructionMethod::CellToFaceGEBuilder >  m_cellBuilder;

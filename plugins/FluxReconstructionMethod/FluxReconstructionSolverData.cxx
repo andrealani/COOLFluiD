@@ -65,6 +65,7 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_convergenceMtd(),
   m_stdTrsGeoBuilder(),
   m_faceBuilder(),
+  m_faceBuilder2nd(),
   m_cellBuilder(),
   m_cellBuilder2nd(),
   m_frLocalData(),
@@ -140,6 +141,7 @@ void FluxReconstructionSolverData::setup()
   
   // setup face builder
   m_faceBuilder.setup();
+  m_faceBuilder2nd.setup();
   
   // setup cell to face builder
   m_cellBuilder.setup();
