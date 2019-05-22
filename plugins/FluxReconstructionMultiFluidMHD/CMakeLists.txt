@@ -35,6 +35,9 @@ DiffRHSJacobFluxReconstructionMFMHD.cxx
 DiffRHSJacobFluxReconstructionMFMHD.hh
 DiffBndCorrectionsRHSJacobFluxReconstructionMFMHD.cxx
 DiffBndCorrectionsRHSJacobFluxReconstructionMFMHD.hh
+DriftWaves2DHalfTwoFluid.cxx
+DriftWaves2DHalfTwoFluid.hh
+DriftWaves2DHalfTwoFluid.ci
 HartmannSourceTerm.hh
 HartmannSourceTerm.ci
 HartmannSourceTerm.cxx
