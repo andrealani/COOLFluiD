@@ -65,11 +65,6 @@ public:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-
-  /**
-   * Execute Processing actions
-   */
-  virtual void execute();
       
   /**
    * Returns the DataSocket's that this command needs as sinks

@@ -1,4 +1,4 @@
-#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRhsJacobCell.hh"
+#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRhsJacobCellExec.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/BlockAccumulatorBaseCUDA.hh"
 #include "Framework/CellConn.hh"
@@ -65,7 +65,7 @@ namespace COOLFluiD {
 
 //Provider for AUSMPlusUpFlux with Source
 #define FVMCC_MULTIFLUIDMHD_RHS_JACOB_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__limiter__,__nbBThreads__,__providerName__) \
-MethodCommandProvider<FVMCC_ComputeSourceRhsJacobCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
+MethodCommandProvider<FVMCC_ComputeSourceRhsJacobCellExec<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
 				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 				      LeastSquareP1PolyRec##__dim__ , __limiter__ , __nbBThreads__>, \
@@ -544,7 +544,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   }
   
   // printGradients<PHYS::NBEQS>(uX, uY, uZ, nbCells);
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::computeFluxJacobianCPU() => computing gradients took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the cell based limiter
@@ -574,7 +574,7 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
   
   // printLimiter<PHYS::NBEQS>(limiter, nbCells);
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::computeFluxJacobianCPU() => computing limiter took " << timer.elapsed() << " s\n");
   timer.start();
   
   // compute the fluxes and the jacobian
@@ -722,13 +722,13 @@ void computeFluxSourceJacobianCPU(typename SCHEME::BASE::template DeviceConfigOp
 
   } 
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::computeFluxJacobianCPU()  took " << timer.elapsed() << " s\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename SCHEME, typename PHYSICS, typename SOURCE, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
-void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_THREADS>::execute()
+void FVMCC_ComputeSourceRhsJacobCellExec<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_THREADS>::execute()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -736,10 +736,10 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
   
   CFTRACEBEGIN;
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() START\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() START\n");
   
-  initializeComputationRHS();
-
+  this->initializeComputationRHS();
+  
   CFLog(VERBOSE, "After initializeComputationRHS\n");
   
   const CFuint nbCells = this->socket_states.getDataHandle().size();
@@ -780,7 +780,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     this->m_ghostStates.put();
     this->socket_volumes.getDataHandle().getLocalArray()->put(); 
 
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
     timer.start();
     
     ConfigOptionPtr<POLYREC, NOTYPE, GPU> dcor(pr);
@@ -792,7 +792,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
     const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
     const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() <blocksPerGrid, nThreads> = <" 
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() <blocksPerGrid, nThreads> = <" 
 	  <<  blocksPerGrid << "," << nThreads << ">\n");
     
     //dim3 blocks(this->m_nbBlocksPerGridX, this->m_nbBlocksPerGridY);
@@ -823,7 +823,7 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
        this->m_neighborTypes.ptrDev(),
        this->m_cellConn.ptrDev());
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -852,11 +852,11 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
        this->m_neighborTypes.ptrDev(),
        this->m_cellConn.ptrDev());
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     // compute the flux jacobian in each cell
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => Configuring method \n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => Configuring method \n");
     ConfigOptionPtr<NumericalJacobian, PHYSICS, GPU> dcon
       (&this->getMethodData().getNumericalJacobian());
     CFuint startCellID = 0;
@@ -867,13 +867,13 @@ void FVMCC_ComputeSourceRhsJacobCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BL
  CFLog(VERBOSE,"useParalutionPtr "<< this->m_useParalutionPtr << "\n");
 
 if(!this->m_useParalutionPtr){
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => End of Configuring method \n");
-    for (CFuint s = 0; s < m_nbCellsInKernel.size(); ++s) {
-      CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => loop " << s << " of " << m_nbCellsInKernel.size() << "\n");
-
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => End of Configuring method \n");
+    for (CFuint s = 0; s < this->m_nbCellsInKernel.size(); ++s) {
+      CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => loop " << s << " of " << this->m_nbCellsInKernel.size() << "\n");
+      
       CFreal ResFactor = this->getMethodData().getResFactor(); //Default = 1
       bool IsAxisymmetric = this->getMethodData().isAxisymmetric(); //Default = false
-      computeFluxSourceJacobianKernel<FluxScheme, PolyRec, Limiter, SourceTerm> <<<m_nbKernelBlocks,nThreads>>> 
+      computeFluxSourceJacobianKernel<FluxScheme, PolyRec, Limiter, SourceTerm> <<<this->m_nbKernelBlocks,nThreads>>> 
 	(dcof.getPtr(),
 	 dcor.getPtr(),
 	 dcol.getPtr(),
@@ -888,8 +888,8 @@ if(!this->m_useParalutionPtr){
 	 this->m_centerNodes.ptrDev(), 
 	 this->m_ghostStates.ptrDev(),
 	 this->m_ghostNodes.ptrDev(),
-	 m_blockJacobians.ptrDev(), 
-	 m_blockStart.ptrDev(),
+	 this->m_blockJacobians.ptrDev(), 
+	 this->m_blockStart.ptrDev(),
 	 this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
 	 this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
 	 this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
@@ -910,20 +910,20 @@ if(!this->m_useParalutionPtr){
       FluxTime += timer.elapsed();
   
       timer.start();
-      m_blockJacobians.get();
+      this->m_blockJacobians.get();
       // update the portion of system matrix computed by this kernel
-      updateSystemMatrix(s);
-      startCellID += m_nbCellsInKernel[s];
+      this->updateSystemMatrix(s);
+      startCellID += this->m_nbCellsInKernel[s];
       UpdateSystemTime += timer.elapsed();
       timer.start();
     }
 
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => computeFluxSourceJacobianKernel took " << FluxTime << "\n");
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => computeFluxSourceJacobianKernel took " << FluxTime << "\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => updateSystemMatrix took " << UpdateSystemTime << "\n");
 
  }
  else {  /// New code for building the matrix on the GPU
-   CFLog(INFO, "ERROR: FVMCC_ComputeSourceRhsJacobCell::execute() => choose FVMCC_ComputeSourceRhsJacobCellParalution() instead\n");
+   CFLog(INFO, "ERROR: FVMCC_ComputeSourceRhsJacobCellExec::execute() => choose FVMCC_ComputeSourceRhsJacobCellExecParalution() instead\n");
    exit(1);
  }
  
@@ -931,7 +931,7 @@ if(!this->m_useParalutionPtr){
  
  rhs.getLocalArray()->get();
  updateCoeff.getLocalArray()->get();
- CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+ CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
   }
   else {
     ConfigOptionPtr<SCHEME>  dcof(lf);
@@ -958,8 +958,8 @@ if(!this->m_useParalutionPtr){
        this->m_centerNodes.ptr(), 
        this->m_ghostStates.ptr(),
        this->m_ghostNodes.ptr(),
-       m_blockJacobians.ptr(), 
-       m_blockStart.ptr(),
+       this->m_blockJacobians.ptr(), 
+       this->m_blockStart.ptr(),
        this->socket_uX.getDataHandle().getLocalArray()->ptr(),
        this->socket_uY.getDataHandle().getLocalArray()->ptr(),
        this->socket_uZ.getDataHandle().getLocalArray()->ptr(),
@@ -977,32 +977,31 @@ if(!this->m_useParalutionPtr){
        ResFactor, IsAxisymmetric);
     timer.start();
     // update the system matrix
-    updateSystemMatrix(0);
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
+    this->updateSystemMatrix(0);
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => updateSystemMatrix took " << timer.elapsed() << "\n");
   }
-
-
+  
   timer.start();
   // compute flux jacobians on boundaries
-  executeBC();
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() => executeBC() took " << timer.elapsed() << " s\n");
-
-  finalizeComputationRHS();
+  this->executeBC();
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() => executeBC() took " << timer.elapsed() << " s\n");
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCell::execute() END\n");
-
- /* // DEBUG
-  for (int i = 0; i < rhs.size(); ++i) {
+  this->finalizeComputationRHS();
+  
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRhsJacobCellExec::execute() END\n");
+  
+  /* // DEBUG
+     for (int i = 0; i < rhs.size(); ++i) {
     std::cout << "updateCoeff[" << i << "] = " << updateCoeff[i]  << std::endl;
     std::cout << "rhs[" << i << "] = ";
     for (int j = 0; j < 18; ++j) {
-     cout.precision(14); cout.setf(ios::scientific,ios::floatfield);  std::cout << rhs[i*18+j] << " ";
+    cout.precision(14); cout.setf(ios::scientific,ios::floatfield);  std::cout << rhs[i*18+j] << " ";
     }
     std::cout << std::endl;
-  }
-  
-   abort();
- */ 
+    }
+    
+    abort();
+  */ 
   CFTRACEEND;
 }
 

@@ -8,11 +8,13 @@ LIST ( APPEND FiniteVolumeCUDA_files
      FVMCC_ComputeRhsJacobCell.cu
      FVMCC_ComputeRhsJacobCell.hh
      FVMCC_ComputeSourceRHSCell.ci
-     FVMCC_ComputeSourceRHSCell.cu
-     FVMCC_ComputeSourceRHSCell.hh     
+     FVMCC_ComputeSourceRHSCell.hh
+     FVMCC_ComputeSourceRHSCellExec.cu
+     FVMCC_ComputeSourceRHSCellExec.hh
      FVMCC_ComputeSourceRhsJacobCell.ci
-     FVMCC_ComputeSourceRhsJacobCell.cu
      FVMCC_ComputeSourceRhsJacobCell.hh
+     FVMCC_ComputeSourceRhsJacobCellExec.cu
+     FVMCC_ComputeSourceRhsJacobCellExec.hh
      FVMCC_ComputeRHSCellMHD.cu
      StencilCUDASetup.cxx	
      StencilCUDASetup.hh
@@ -34,7 +36,6 @@ LIST ( APPEND FiniteVolumeCUDAParalution_files
      DummyCom.cxx
      DummyCom.hh
      FiniteVolumeCUDAParalution.hh
-     FVMCC_ComputeSourceRhsJacobCellParalution.ci
      FVMCC_ComputeSourceRhsJacobCellParalution.cu
      FVMCC_ComputeSourceRhsJacobCellParalution.hh
 )

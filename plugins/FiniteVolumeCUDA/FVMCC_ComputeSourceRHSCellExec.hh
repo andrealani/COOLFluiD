@@ -1,9 +1,9 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRhsJacobCellParalution_hh
-#define COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRhsJacobCellParalution_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRHSCellExec_hh
+#define COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRHSCellExec_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRhsJacobCell.hh"
+#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRHSCell.hh"
 #include "FiniteVolume/KernelData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -30,26 +30,26 @@ namespace COOLFluiD {
 
 //This template include one more parameter, the source term
 template <typename SCHEME, typename PHYSICS, typename SOURCE, typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
-class FVMCC_ComputeSourceRhsJacobCellParalution: public FVMCC_ComputeSourceRhsJacobCell<SCHEME, PHYSICS, SOURCE, POLYREC, LIMITER, NB_BLOCK_THREADS> {
+class FVMCC_ComputeSourceRHSCellExec: public FVMCC_ComputeSourceRHSCell<SCHEME, PHYSICS, SOURCE, POLYREC, LIMITER, NB_BLOCK_THREADS> {
 public:
 
   /**
    * Constructor.
    */
-  explicit FVMCC_ComputeSourceRhsJacobCellParalution(const std::string& name) :
-    FVMCC_ComputeSourceRhsJacobCell<SCHEME, PHYSICS, SOURCE, POLYREC, LIMITER, NB_BLOCK_THREADS>(name) {}
+  explicit FVMCC_ComputeSourceRHSCellExec(const std::string& name) :
+    FVMCC_ComputeSourceRHSCell<SCHEME, PHYSICS, SOURCE, POLYREC, LIMITER, NB_BLOCK_THREADS>(name) {}
   
   /**
    * Destructor.
    */
-  virtual ~FVMCC_ComputeSourceRhsJacobCellParalution() {} 
- 
+  virtual ~FVMCC_ComputeSourceRHSCellExec() {}
+  
   /**
    * Execute Processing actions
    */
   virtual void execute();
-  
-}; // class FVMCC_ComputeSourceRhsJacobCellParalution
+    
+}; // class FVMCC_ComputeSourceRHSCellExec
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -61,4 +61,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRhsJacobCellParalution_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_FVMCC_ComputeSourceRHSCellExec_hh

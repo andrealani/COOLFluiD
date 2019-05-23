@@ -1,4 +1,4 @@
-#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRHSCell.hh"
+#include "FiniteVolumeCUDA/FVMCC_ComputeSourceRHSCellExec.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/CellConn.hh"
 #include "Config/ConfigOptionPtr.hh"
@@ -67,7 +67,7 @@ namespace COOLFluiD {
 
 //Provider for AUSMPlusUpFlux with Source
 #define FVMCC_MULTIFLUIDMHD_RHS_PROV_AUSMPLUSUP_SOURCE(__dim__,__half__,__svars__,__uvars__,__sourceterm__,__limiter__,__nbBThreads__,__providerName__) \
-MethodCommandProvider<FVMCC_ComputeSourceRHSCell<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
+MethodCommandProvider<FVMCC_ComputeSourceRHSCellExec<AUSMPlusUpFluxMultiFluid<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 			              VarSetListT<EulerMFMHD##__dim__##__half__##__svars__##T, EulerMFMHD##__dim__##__half__##__uvars__##T>, \
 				      __sourceterm__<MultiFluidMHDVarSet<Maxwell##__dim__##ProjectionVarSet> >, \
 				      LeastSquareP1PolyRec##__dim__ , __limiter__, __nbBThreads__>, \
@@ -573,31 +573,29 @@ void computeFluxSourceCPU(typename SCHEME::BASE::template DeviceConfigOptions<NO
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename SCHEME, typename PHYSICS, typename SOURCE,typename POLYREC, typename LIMITER, CFuint NB_BLOCK_THREADS>
-void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_THREADS>::execute()
+void FVMCC_ComputeSourceRHSCellExec<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_THREADS>::execute()
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
   CFTRACEBEGIN;
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() START\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() START\n");
   
-  initializeComputationRHS();
-
-
-
-  const CFuint nbCells = socket_states.getDataHandle().size();
+  this->initializeComputationRHS();
+  
+  const CFuint nbCells = this->socket_states.getDataHandle().size();
   cf_assert(nbCells > 0);
-  DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-  DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
-  DataHandle<CFreal> normals = socket_normals.getDataHandle();
-  DataHandle<CFint> isOutward = socket_isOutward.getDataHandle();  
+  DataHandle<CFreal> updateCoeff = this->socket_updateCoeff.getDataHandle();
+  DataHandle<CFreal> rhs = this->socket_rhs.getDataHandle();
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  DataHandle<CFint> isOutward = this->socket_isOutward.getDataHandle();  
   
-  SafePtr<SCHEME> lf  = getMethodData().getFluxSplitter().d_castTo<SCHEME>();
-  SafePtr<POLYREC> pr = getMethodData().getPolyReconstructor().d_castTo<POLYREC>();
-  SafePtr<LIMITER> lm = getMethodData().getLimiter().d_castTo<LIMITER>();
+  SafePtr<SCHEME> lf  = this->getMethodData().getFluxSplitter().template d_castTo<SCHEME>();
+  SafePtr<POLYREC> pr = this->getMethodData().getPolyReconstructor().template d_castTo<POLYREC>();
+  SafePtr<LIMITER> lm = this->getMethodData().getLimiter().template d_castTo<LIMITER>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICS::PTERM>();
   
   typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS> FluxScheme;  
   typedef typename POLYREC::template DeviceFunc<PHYSICS> PolyRec;  
@@ -607,19 +605,18 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
   SelfRegistPtr<SOURCE> ls1  = (*this->getMethodData().getSourceTermComputer())[0].template d_castTo<SOURCE>();  //Only valid if there is only one source term!!
   SafePtr<SOURCE> ls = ls1.getPtr();
   typedef typename SOURCE::template DeviceFunc<GPU, PHYSICS> SourceTerm; 
-
-
-  if (m_onGPU) {
-
+  
+  if (this->m_onGPU) {
+    
     CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
     timer.start();
     
     // copy of data that change at every iteration
-    socket_states.getDataHandle().getGlobalArray()->put();
-    socket_volumes.getDataHandle().getLocalArray()->put(); 
-    m_ghostStates.put();
-     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    this->socket_states.getDataHandle().getGlobalArray()->put();
+    this->socket_volumes.getDataHandle().getLocalArray()->put(); 
+    this->m_ghostStates.put();
+    
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
     timer.start();
     
     ConfigOptionPtr<POLYREC, NOTYPE, GPU> dcor(pr);
@@ -629,9 +626,7 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
     
     //Added for Source    
     ConfigOptionPtr<SOURCE, NOTYPE, GPU> dcos(ls);
-
-
-
+    
     const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
     const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
     
@@ -639,32 +634,31 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
     
     //cudaFuncSetCacheConfig("computeGradientsKernel", cudaFuncCachePreferL1);
     
-        
     // compute the cell-based gradients
     computeGradientsKernel<PHYSICS, PolyRec> <<<blocksPerGrid,nThreads>>> 
       (dcor.getPtr(),
        nbCells,
-       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-       socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
-       m_centerNodes.ptrDev(), 
-       m_ghostStates.ptrDev(),
-       m_ghostNodes.ptrDev(),
-       socket_uX.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uY.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
-       socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       this->socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
+       this->m_centerNodes.ptrDev(), 
+       this->m_ghostStates.ptrDev(),
+       this->m_ghostNodes.ptrDev(),
+       this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
        updateCoeff.getLocalArray()->ptrDev(), 
        rhs.getLocalArray()->ptrDev(),
        normals.getLocalArray()->ptrDev(),
        isOutward.getLocalArray()->ptrDev(),
-       m_cellInfo.ptrDev(),
-       m_cellStencil.ptrDev(),
-       m_cellFaces->getPtr()->ptrDev(),
-       m_cellNodes->getPtr()->ptrDev(),
-       m_neighborTypes.ptrDev(),
-       m_cellConn.ptrDev());
+       this->m_cellInfo.ptrDev(),
+       this->m_cellStencil.ptrDev(),
+       this->m_cellFaces->getPtr()->ptrDev(),
+       this->m_cellNodes->getPtr()->ptrDev(),
+       this->m_neighborTypes.ptrDev(),
+       this->m_cellConn.ptrDev());
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() => computeGradientsKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -675,27 +669,27 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
       (dcol.getPtr(),
        dcor.getPtr(),
        nbCells,
-       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-       socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
-       m_centerNodes.ptrDev(), 
-       m_ghostStates.ptrDev(),
-       m_ghostNodes.ptrDev(),
-       socket_uX.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uY.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
-       socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       this->socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
+       this->m_centerNodes.ptrDev(), 
+       this->m_ghostStates.ptrDev(),
+       this->m_ghostNodes.ptrDev(),
+       this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
        updateCoeff.getLocalArray()->ptrDev(), 
        rhs.getLocalArray()->ptrDev(),
        normals.getLocalArray()->ptrDev(),
        isOutward.getLocalArray()->ptrDev(),
-       m_cellInfo.ptrDev(),
-       m_cellStencil.ptrDev(),
-       m_cellFaces->getPtr()->ptrDev(),
-       m_cellNodes->getPtr()->ptrDev(),
-       m_neighborTypes.ptrDev(),
-       m_cellConn.ptrDev());
+       this->m_cellInfo.ptrDev(),
+       this->m_cellStencil.ptrDev(),
+       this->m_cellFaces->getPtr()->ptrDev(),
+       this->m_cellNodes->getPtr()->ptrDev(),
+       this->m_neighborTypes.ptrDev(),
+       this->m_cellConn.ptrDev());
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() => computeLimiterKernel took " << timer.elapsed() << " s\n");
     
     timer.start();
     
@@ -707,27 +701,27 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
        dcor.getPtr(),
        dcop.getPtr(),
        nbCells,
-       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-       socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
-       m_centerNodes.ptrDev(), 
-       m_ghostStates.ptrDev(),
-       m_ghostNodes.ptrDev(),
-       socket_uX.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uY.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
-       socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       this->socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
+       this->m_centerNodes.ptrDev(), 
+       this->m_ghostStates.ptrDev(),
+       this->m_ghostNodes.ptrDev(),
+       this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
        updateCoeff.getLocalArray()->ptrDev(), 
        rhs.getLocalArray()->ptrDev(),
        normals.getLocalArray()->ptrDev(),
        isOutward.getLocalArray()->ptrDev(),
-       m_cellInfo.ptrDev(),
-       m_cellStencil.ptrDev(),
-       m_cellFaces->getPtr()->ptrDev(),
-       m_cellNodes->getPtr()->ptrDev(),
-       m_neighborTypes.ptrDev(),
-       m_cellConn.ptrDev());
+       this->m_cellInfo.ptrDev(),
+       this->m_cellStencil.ptrDev(),
+       this->m_cellFaces->getPtr()->ptrDev(),
+       this->m_cellNodes->getPtr()->ptrDev(),
+       this->m_neighborTypes.ptrDev(),
+       this->m_cellConn.ptrDev());
     
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
 
     timer.start();
     CFLog(VERBOSE, "FVMCC_ComputeRHS::execute() => before computeSourceTerm()\n");
@@ -739,34 +733,34 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
       (dcos.getPtr(),
        dcop.getPtr(),
        nbCells,
-       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-       socket_volumes.getDataHandle().getLocalArray()->ptrDev(),
-       socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
-       m_centerNodes.ptrDev(), 
-       m_ghostStates.ptrDev(),
-       m_ghostNodes.ptrDev(),
-       socket_uX.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uY.getDataHandle().getLocalArray()->ptrDev(),
-       socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
-       socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       this->socket_volumes.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_nodes.getDataHandle().getGlobalArray()->ptrDev(),
+       this->m_centerNodes.ptrDev(), 
+       this->m_ghostStates.ptrDev(),
+       this->m_ghostNodes.ptrDev(),
+       this->socket_uX.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uY.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_uZ.getDataHandle().getLocalArray()->ptrDev(),
+       this->socket_limiter.getDataHandle().getLocalArray()->ptrDev(),
        updateCoeff.getLocalArray()->ptrDev(), 
        rhs.getLocalArray()->ptrDev(),
        normals.getLocalArray()->ptrDev(),
        isOutward.getLocalArray()->ptrDev(),
-       m_cellInfo.ptrDev(),
-       m_cellStencil.ptrDev(),
-       m_cellFaces->getPtr()->ptrDev(),
-       m_cellNodes->getPtr()->ptrDev(),
-       m_neighborTypes.ptrDev(),
-       m_cellConn.ptrDev(),
+       this->m_cellInfo.ptrDev(),
+       this->m_cellStencil.ptrDev(),
+       this->m_cellFaces->getPtr()->ptrDev(),
+       this->m_cellNodes->getPtr()->ptrDev(),
+       this->m_neighborTypes.ptrDev(),
+       this->m_cellConn.ptrDev(),
        ResFactor, IsAxisymmetric);
 
     CFLog(VERBOSE, "FVMCC_ComputeRHS::execute() => computeSourceTerm took " << timer.elapsed() << "\n");
-
+    
     timer.start();
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
-    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+    CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
   }
   else {
     // AL: useful fo debugging
@@ -797,26 +791,26 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
        dcop.getPtr(),
        dcos.getPtr(),
        nbCells,
-       socket_states.getDataHandle().getGlobalArray()->ptr(), 
-       socket_volumes.getDataHandle().getLocalArray()->ptr(),
-       socket_nodes.getDataHandle().getGlobalArray()->ptr(),
-       m_centerNodes.ptr(), 
-       m_ghostStates.ptr(),
-       m_ghostNodes.ptr(),
-       socket_uX.getDataHandle().getLocalArray()->ptr(),
-       socket_uY.getDataHandle().getLocalArray()->ptr(),
-       socket_uZ.getDataHandle().getLocalArray()->ptr(),
-       socket_limiter.getDataHandle().getLocalArray()->ptr(),
+       this->socket_states.getDataHandle().getGlobalArray()->ptr(), 
+       this->socket_volumes.getDataHandle().getLocalArray()->ptr(),
+       this->socket_nodes.getDataHandle().getGlobalArray()->ptr(),
+       this->m_centerNodes.ptr(), 
+       this->m_ghostStates.ptr(),
+       this->m_ghostNodes.ptr(),
+       this->socket_uX.getDataHandle().getLocalArray()->ptr(),
+       this->socket_uY.getDataHandle().getLocalArray()->ptr(),
+       this->socket_uZ.getDataHandle().getLocalArray()->ptr(),
+       this->socket_limiter.getDataHandle().getLocalArray()->ptr(),
        updateCoeff.getLocalArray()->ptr(), 
        rhs.getLocalArray()->ptr(),
        normals.getLocalArray()->ptr(),
        isOutward.getLocalArray()->ptr(),
-       m_cellInfo.ptr(),
-       m_cellStencil.ptr(),
-       m_cellFaces->getPtr()->ptr(),
-       m_cellNodes->getPtr()->ptr(),
-       m_neighborTypes.ptr(),
-       m_cellConn.ptr(),
+       this->m_cellInfo.ptr(),
+       this->m_cellStencil.ptr(),
+       this->m_cellFaces->getPtr()->ptr(),
+       this->m_cellNodes->getPtr()->ptr(),
+       this->m_neighborTypes.ptr(),
+       this->m_cellConn.ptr(),
        ResFactor, IsAxisymmetric);
   }
   
@@ -830,9 +824,9 @@ void FVMCC_ComputeSourceRHSCell<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,NB_BLOCK_T
 // } 
 //   abort();
   
-  finalizeComputationRHS();
+  this->finalizeComputationRHS();
   
-  CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCell::execute() END\n");
+  CFLog(VERBOSE, "FVMCC_ComputeSourceRHSCellExec::execute() END\n");
   
   CFTRACEEND;
 }

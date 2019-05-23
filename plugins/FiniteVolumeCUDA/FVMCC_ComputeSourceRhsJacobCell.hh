@@ -55,11 +55,6 @@ public:
    */
   virtual void unsetup();
   
-  /**
-   * Execute Processing actions
-   */
-  virtual void execute();
-      
 protected:
 
   /// Initialize the computation of RHS
