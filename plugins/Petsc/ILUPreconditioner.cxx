@@ -128,7 +128,7 @@ PetscErrorCode ILUPcApply(PC pc, Vec X, Vec Y)
   CFreal* xArray;
   Vec xLocal;
   CF_CHKERRCONTINUE(VecGetArray(X, &xArray));
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11
   CFuint blockSize = 1;
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, blockSize, localSize, xArray, &xLocal));
 #else
@@ -138,7 +138,7 @@ PetscErrorCode ILUPcApply(PC pc, Vec X, Vec Y)
   CFreal* yArray;
   Vec yLocal;
   CF_CHKERRCONTINUE(VecGetArray(Y, &yArray));
-#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9
+#if PETSC_VERSION_MINOR==4 || PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, blockSize, localSize, yArray, &yLocal));
 #else
   CF_CHKERRCONTINUE(VecCreateSeqWithArray(PETSC_COMM_SELF, localSize, yArray, &yLocal));

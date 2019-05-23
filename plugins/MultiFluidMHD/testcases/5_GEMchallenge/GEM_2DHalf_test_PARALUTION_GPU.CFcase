@@ -23,7 +23,7 @@
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libParalutionI libFiniteVolumeCUDA 
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libParalutionI libFiniteVolumeCUDAParalution 
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/5_GEMchallenge
@@ -196,10 +196,10 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 ###############################################################################
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid #NumJacob
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.UseParalutionPtr = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16 
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP #NumJacob
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.OnGPU = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.UseParalutionPtr = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.NbCellsPerBlock = 16 
 #Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
 
 # First Order Time stepping

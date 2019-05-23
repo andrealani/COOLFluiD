@@ -21,19 +21,17 @@ StdSolveSys.cxx
 StdSolveSys.hh
 )
 
-
-
-LIST ( APPEND ParalutionI_includedirs ${MPI_INCLUDE_DIR} ${PARALUTION_INCLUDE_DIR} )
-
-LIST ( APPEND ParalutionI_cflibs Common Framework ${PARALUTION_LIBRARIES} )
-
+LIST ( APPEND ParalutionI_includedirs ${PARALUTION_INCLUDE_DIR} )
+LIST ( APPEND ParalutionI_libs ${PARALUTION_LIBRARIES} )
+LIST ( APPEND ParalutionI_cflibs Common Framework )
 
 IF(CF_HAVE_CUDA)
 LIST ( APPEND ParalutionI_files
     ParalutionMatrix.cu
 )
+
 LIST ( APPEND ParalutionI_includedirs ${CUDA_INCLUDE_DIR} )
-LIST ( APPEND ParalutionI_cflibs ${CUDA_LIBRARIES} )
+LIST ( APPEND ParalutionI_libs ${CUDA_LIBRARIES} )
 ENDIF(CF_HAVE_CUDA)
 
 CF_ADD_PLUGIN_LIBRARY ( ParalutionI )

@@ -23,15 +23,27 @@ LIST ( APPEND FiniteVolumeCUDA_files
 
 LIST ( APPEND FiniteVolumeCUDA_requires_mods MHD FiniteVolume FiniteVolumeMHD FiniteVolumeMaxwell Maxwell FiniteVolumeMultiFluidMHD MultiFluidMHD)
 LIST ( APPEND FiniteVolumeCUDA_cflibs MHD FiniteVolume FiniteVolumeMHD FiniteVolumeMaxwell Maxwell FiniteVolumeMultiFluidMHD MultiFluidMHD)
-LIST ( APPEND FiniteVolumeCUDA_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
-LIST ( APPEND FiniteVolumeCUDA_libs ${CUDA_LIBRARIES} ) 
-
-IF (CF_HAVE_PARALUTION)
-LIST ( APPEND FiniteVolumeCUDA_includedirs ${PARALUTION_INCLUDE_DIR} )
-LIST ( APPEND FiniteVolumeCUDA_libs ${PARALUTION_LIBRARIES} )
-LIST ( APPEND FiniteVolumeCUDA_cflibs ParalutionI )
-ENDIF()
+#LIST ( APPEND FiniteVolumeCUDA_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
+#LIST ( APPEND FiniteVolumeCUDA_libs ${MPI_LIBRARIES} ${CUDA_LIBRARIES} ) 
 
 CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeCUDA )
-
 ENDIF()
+
+IF (CF_HAVE_CUDA AND CF_HAVE_PARALUTION)
+LIST ( APPEND FiniteVolumeCUDAParalution_files
+     DummyCom.cxx
+     DummyCom.hh
+     FiniteVolumeCUDAParalution.hh
+     FVMCC_ComputeSourceRhsJacobCellParalution.ci
+     FVMCC_ComputeSourceRhsJacobCellParalution.cu
+     FVMCC_ComputeSourceRhsJacobCellParalution.hh
+)
+
+LIST ( APPEND FiniteVolumeCUDAParalution_requires_mods ParalutionI MHD FiniteVolume FiniteVolumeMHD FiniteVolumeMaxwell Maxwell FiniteVolumeMultiFluidMHD MultiFluidMHD FiniteVolumeCUDA )
+LIST ( APPEND FiniteVolumeCUDAParalution_cflibs ParalutionI MHD FiniteVolume FiniteVolumeMHD FiniteVolumeMaxwell Maxwell FiniteVolumeMultiFluidMHD MultiFluidMHD FiniteVolumeCUDA )
+LIST ( APPEND FiniteVolumeCUDAParalution_includedirs ${PARALUTION_INCLUDE_DIR} )
+LIST ( APPEND FiniteVolumeCUDAParalution_libs ${PARALUTION_LIBRARIES} )
+
+CF_ADD_PLUGIN_LIBRARY ( FiniteVolumeCUDAParalution )
+ENDIF()
+

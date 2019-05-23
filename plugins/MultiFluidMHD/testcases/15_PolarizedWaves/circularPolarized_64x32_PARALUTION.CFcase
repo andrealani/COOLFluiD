@@ -25,7 +25,7 @@
 ################################################################################ 
 #
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libParalutionI libFiniteVolumeCUDA
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libParalutionI libFiniteVolumeCUDAParalution 
 CudaDeviceManager.NbThreadsPerBlock = 256
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/15_PolarizedWaves
@@ -166,10 +166,10 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
 #Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
-Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.OnGPU = true
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.NbCellsPerBlock = 16
-Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluid.UseParalutionPtr = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.OnGPU = true
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.NbCellsPerBlock = 16
+Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.UseParalutionPtr = true
 #Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 #Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = false
 

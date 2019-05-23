@@ -61,7 +61,7 @@ public:
   virtual void execute();
       
 protected:
-  
+
   /// Initialize the computation of RHS
   virtual void initializeComputationRHS();
   
