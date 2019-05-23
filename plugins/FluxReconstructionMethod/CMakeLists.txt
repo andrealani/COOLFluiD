@@ -294,6 +294,8 @@ VCJH.hh
 VCJH.cxx
 BCSuperOutlet.cxx
 BCSuperOutlet.hh
+BCPeriodic.cxx
+BCPeriodic.hh
 BCDirichlet.cxx
 BCDirichlet.hh
 BCMirrorVelocity.cxx
