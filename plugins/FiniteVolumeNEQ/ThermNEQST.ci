@@ -338,7 +338,7 @@ void ThermNEQST<UPDATEVAR>::computeSource
 						  pdime, rhodime, this->_ys,
 						  false, this->_omegaPert, jacobian);
 	    
-	    numJacob.computeDerivative(this->_omega, _omegaPert, _omegaDiff);
+	    numJacob.computeDerivative<RealVector>(this->_omega, _omegaPert, _omegaDiff);
 	    
 	    for (CFuint isp = 0; isp < nbSpecies; ++isp) {
 	      jacobian(speciesVarIDs[isp], 0) = _omegaDiff[isp]*coeffc;
@@ -350,13 +350,13 @@ void ThermNEQST<UPDATEVAR>::computeSource
 	  computeSourceEE(omegaTePert);
 	  
 	  // compute the finite difference derivative of the flux
-	  numJacob.computeDerivative(omegaTe, omegaTePert, omegaDiffE);
+	  numJacob.computeDerivative<CFreal>(omegaTe, omegaTePert, omegaDiffE);
 	  jacobian(TeID, iVar) = omegaDiffE*coeffv;
 	  
 	  if ((iVar == 0) || (iVar == TeID)) {
 	    const CFreal pePert = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
 	    CFreal peDiff = 0.0;
-	    numJacob.computeDerivative(_pe, pePert, peDiff);
+	    numJacob.computeDerivative<CFreal>(_pe, pePert, peDiff);
 	    jacobian(TeID, iVar) -= r*peDiff*_divV;
 	  }
 	  
