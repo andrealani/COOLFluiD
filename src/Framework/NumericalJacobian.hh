@@ -163,7 +163,30 @@ public:
     const CFreal invEps = 1./_eps;
     diff = (pertRes - res)*invEps;
   }
-
+  
+  /// Compute the derivative
+  template <class ARRAY>
+  void computeDerivativePrint(const ARRAY& res,
+			      const ARRAY& pertRes,
+			      ARRAY& diff) const
+  {
+    cf_assert(MathTools::MathChecks::isNotZero(_eps));
+    const CFreal invEps = 1./_eps;
+    diff = (pertRes - res)*invEps;
+    
+    /* if (res.size() == 13) {
+       CFLog(INFO, "pertRes = " << pertRes << "\n");
+      CFLog(INFO, "res     = " << res << "\n");
+      CFLog(INFO, "diff    = " << diff << "\n");
+      CFLog(INFO, "_eps    = " << _eps << ", invEps = " << invEps << " \n");
+      
+      diff = pertRes - res;
+      CFLog(INFO, "diff 2  = " << diff << "\n");
+      diff *= invEps;
+      CFLog(INFO, "diff 3  = " << diff << "\n");
+      }*/
+  }
+  
   /// Compute the derivative for a slice
   void computeDerivative(RealSliceVector res,
 			 RealSliceVector pertRes,
@@ -172,6 +195,7 @@ public:
     cf_assert(MathTools::MathChecks::isNotZero(_eps));
     const CFreal invEps = 1./_eps;
     diff = (pertRes - res)*invEps;
+
   }
   
   /// Get epsilon
