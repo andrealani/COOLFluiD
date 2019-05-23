@@ -117,6 +117,8 @@ void SuperOutletBr::setGhostState(GeometricEntity *const face)
 
   (*ghostState)[6] = 2.*_refPsi - (*innerState)[6];  //Psi
   (*ghostState)[7] = 2.*_refPhi - (*innerState)[7];  //Phi
+
+  CFLog(DEBUG_MIN, "SuperOutletBr::setGhostState() => " << (*ghostState) <<"\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////

@@ -33,16 +33,16 @@ ConvMaxwellTerm::ConvMaxwellTerm(const std::string& name)
   : BaseTerm(name)
 {
   addConfigOptionsTo(this);
-  _divBCleaningConst = 1;
+  _divBCleaningConst = 1.;
   setParameter("divBCleaningConst",&_divBCleaningConst);    
   
-  _divECleaningConst = 0;
+  _divECleaningConst = 0.;
   setParameter("divECleaningConst",&_divECleaningConst); 
   
-  _divBAdimCleaningConst = 1;
+  _divBAdimCleaningConst = 1.;
   setParameter("divBAdimCleaningConst",&_divBAdimCleaningConst);
   
-  _LightSpeed = 299792458;		//light Speed m/s
+  _LightSpeed = 299792458.;		//light Speed m/s
   setParameter("lightSpeedMax",&_LightSpeed);
   
 //   _correctionType = "Hyperbolic";
