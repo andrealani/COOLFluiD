@@ -35,4 +35,4 @@ LIST ( APPEND RotationAdv_cflibs Framework )
 
 CF_ADD_PLUGIN_LIBRARY ( RotationAdv )
 CF_WARN_ORPHAN_FILES()
-#ADD_SUBDIRECTORY ( testcases )
+ADD_SUBDIRECTORY ( testcases )
