@@ -169,9 +169,39 @@ void DiffMFMHDVarSet::computeSolarProperties1F(const RealVector& state,
   // Peter: here is your part to compute and store the thermal conductivities to be used later
   //        inside DiffMFMHD3DVarSet::computeHeatFluxSolar1F()
   
-  // diffMFMHDData[0] = ...; 
-  // diffMFMHDData[1] = ...; 
+  
+  const CFreal R_Sun = 6.955e8;   // m
+  const CFreal mu0 = PhysicalConsts::VacuumPermeability();
+  
+  CFreal Bx = state[0];   // T
+  std::cout << "Bx = " << Bx << endl;
+  CFreal By = state[1];
+  CFreal Bz = state[2];
+  CFreal Bnorm = std::sqrt(Bx*Bx + By*By + Bz*Bz);
+  std::cout << "B = " << Bnorm << endl;
+  CFreal rho = state[8];   // kg m^-3
+  std::cout << "rho = " << rho << endl;
+  CFreal T = state[12];   // K
+  std::cout << "T = " << T << endl;
+  CFreal spitzer_k_par = 9.0e-12*std::pow(T,2.5);   // J s/m
+  const CFreal comm_fact = spitzer_k_par/(Bnorm*Bnorm);
+  
+  
+  //diffMFMHDData[0] = 3.359e12;   // m^2/s   uniform viscosity model
+  diffMFMHDData[0]  = 1.0e-2*R_Sun*Bnorm/std::sqrt(mu0*rho);
+  diffMFMHDData[1]  = comm_fact*Bx*Bx;
+  diffMFMHDData[2]  = comm_fact*Bx*By;
+  diffMFMHDData[3]  = comm_fact*Bx*Bz;
+  diffMFMHDData[4]  = comm_fact*By*Bx;
+  diffMFMHDData[5]  = comm_fact*By*By;
+  diffMFMHDData[6]  = comm_fact*By*Bz;
+  diffMFMHDData[7]  = comm_fact*Bz*Bx;
+  diffMFMHDData[8]  = comm_fact*Bz*By;
+  diffMFMHDData[9]  = comm_fact*Bz*Bz;
 }
+
+  
+
       
 //////////////////////////////////////////////////////////////////////////////
 

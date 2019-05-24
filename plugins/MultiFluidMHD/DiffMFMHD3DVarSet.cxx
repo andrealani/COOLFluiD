@@ -186,9 +186,19 @@ void DiffMFMHD3DVarSet::computeHeatFluxSolar1F(const vector<RealVector*>& gradie
   
   // Peter: here is your part to fill in !!!!
   // AL: the following needs to be extended properly to 3D, is even the 2D correct?
-  _qFluxVect[0][XX] = -((diffMFMHDData[endVisc + 0] + diffMFMHDData[endVisc + 3])*Tx + (diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Ty);
-  _qFluxVect[0][YY] = -((diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Tx + (diffMFMHDData[endVisc + 2] + diffMFMHDData[endVisc + 5])*Ty);
-  _qFluxVect[0][ZZ] = 0.; // missing implementation
+
+  //_qFluxVect[0][XX] = - comm_fact*(Bx*Bx*Tx + Bx*By*Ty + Bx*Bz*Tz);
+  _qFluxVect[0][XX] = -(diffMFMHDData[endVisc+0]*Tx + diffMFMHDData[endVisc+1]*Ty + diffMFMHDData[endVisc+2]*Tz);
+  //_qFluxVect[0][YY] = - comm_fact*(By*Bx*Tx + By*By*Ty + By*Bz*Tz);
+  _qFluxVect[0][YY] = -(diffMFMHDData[endVisc+3]*Tx + diffMFMHDData[endVisc+4]*Ty + diffMFMHDData[endVisc+5]*Tz);
+  //_qFluxVect[0][ZZ] = - comm_fact*(Bz*Bx*Tx + Bz*By*Ty + Bz*Bz*Tz);
+  _qFluxVect[0][ZZ] = -(diffMFMHDData[endVisc+6]*Tx + diffMFMHDData[endVisc+7]*Ty + diffMFMHDData[endVisc+8]*Tz);
+
+
+  // AL: the following needs to be extended properly to 3D, is even the 2D correct?
+  //_qFluxVect[0][XX] = -((diffMFMHDData[endVisc + 0] + diffMFMHDData[endVisc + 3])*Tx + (diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Ty);
+  //_qFluxVect[0][YY] = -((diffMFMHDData[endVisc + 1] + diffMFMHDData[endVisc + 4])*Tx + (diffMFMHDData[endVisc + 2] + diffMFMHDData[endVisc + 5])*Ty);
+  //_qFluxVect[0][ZZ] = 0.; // missing implementation
 }
 
 //////////////////////////////////////////////////////////////////////////////
