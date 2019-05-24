@@ -1,7 +1,17 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
-# It stops at 188 *save the 187
-###############################################################################
+
+##############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume,MultiFluidMHD2D (ion-electron), BDF2, mesh with quads, 
+# converter from Gambit to CFmesh, second-order reconstruction with Venktn 
+# limiter, periodic BCs upersonic, CUDA implementation for GPUs, PETSC GMRES with 
+# CUDA bindings (PCJACOBI as preconditioner)
+#
+##############################################################################
+
 # Assertion For Debugging
 
 #CFEnv.ExceptionLogLevel    = 1000
@@ -22,14 +32,13 @@
 
 
 #This case tests the GPU-enabled RHS computation with a source term
-### Residual = -1.02245
+### Residual = -1.01338
 
 ###############################################################################
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libFiniteVolumeCUDA libPetscI
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libMaxwell libMultiFluidMHD libFiniteVolume libNewtonMethod libFiniteVolumeMaxwell libFiniteVolumeMultiFluidMHD libGambit2CFmesh libForwardEuler libFiniteVolumeCUDA libPetscI
 
 CudaDeviceManager.NbThreadsPerBlock = 32
-
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir       = plugins/MultiFluidMHD/testcases/13_TwoFluidShockTube
@@ -114,18 +123,13 @@ Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
 #Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 1
 #Simulator.SubSystem.BwdEulerLSS.Data.Output = true
-
-
-#Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
+Simulator.SubSystem.BwdEulerLSS.Data.UseAIJ = true
 #Simulator.SubSystem.BwdEulerLSS.Data.SaveSystemToFile = true
 #Simulator.SubSystem.BwdEulerLSS.Data.SaveRate = 1
 
-
 ####### GPU ########
-Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = false
+Simulator.SubSystem.BwdEulerLSS.Data.UseGPU = true
 Simulator.SubSystem.CellCenterFVM.JacobianSparsity = FVMCellCenteredNoBlock
-
-
 
 # Explicit
 #Simulator.SubSystem.ConvergenceMethod = FwdEuler

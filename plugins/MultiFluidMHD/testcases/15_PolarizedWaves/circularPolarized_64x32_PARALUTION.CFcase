@@ -1,8 +1,18 @@
 # COOLFluiD Startfile
 # Comments begin with '#' 
 # Test file created by: N. Ozak, on: 2018-08-01
-# Info: Electron + ion fluid model of the circular polarized wave
-################################################################################ 
+
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume,MultiFluidMHD2D (ion-electron), BDF2, mesh with quads, 
+# converter from Gambit to CFmesh, second-order reconstruction with Venktn 
+# limiter, periodic BCs upersonic, CUDA implementation for GPUs, PARALUTION with 
+# CUDA bindings
+#
+################################################################################
+
 # Assertion For Debugging
 #
 #CFEnv.ExceptionLogLevel    = 1000
@@ -21,7 +31,8 @@
 # this will always fail with GAMBIT
 #CFEnv.ErrorOnUnusedConfig = true
 #
-### Residual = -6.47214
+### Residual = -6.06514
+
 ################################################################################ 
 #
 # SubSystem Modules
@@ -91,7 +102,7 @@ Simulator.SubSystem.Tecplot.AppendIter     = true
 
 # Stop Condition
 Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 500 #2500
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100 #2500
 
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 16
@@ -146,7 +157,7 @@ Simulator.SubSystem.BDF2.Data.MaxSteps = 1000
 Simulator.SubSystem.BDF2.Data.L2.GlobalRes = true
 Simulator.SubSystem.BDF2.Data.L2.NormalizedRes = true
 Simulator.SubSystem.BDF2.Data.L2.RefVals = 6e-09 6e-10 6e-10 6.03187489185e-05 6.03187489185e-05 6.03187489185e-05 0.000248312564516 6e-09 6.5336788193e-23 1.67262177774e-20 10271.0531054 10271.0531054 10271.0531054 1563.05016333 1563.05016333 1563.05016333 5187.39732495 5187.39732495 # Characteristic value of the solution for the computation of the numerical Jacobian of the convective Flux
-Simulator.SubSystem.BDF2.Data.Norm = -6
+Simulator.SubSystem.BDF2.Data.Norm = -6.
 
 ################################################################################ 
 # Mesh Reader
@@ -165,7 +176,6 @@ Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.
 ################################################################################ 
 # Space Method
 Simulator.SubSystem.SpaceMethod = CellCenterFVM
-#Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
 Simulator.SubSystem.CellCenterFVM.ComputeRHS = CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP
 Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.OnGPU = true
 Simulator.SubSystem.CellCenterFVM.CellNumJacobVenktnAUSMPlusUpEulerMFMHD2DHalfRhoiViTiDriftWavesTwoFluidP.NbCellsPerBlock = 16

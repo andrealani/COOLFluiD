@@ -2,6 +2,16 @@
 # Comments begin with "#"
 
 ###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume,MultiFluidMHD2D (ion-electron), BDF2, mesh with quads, 
+# converter from Gambit to CFmesh, second-order reconstruction with Venktn 
+# limiter, periodic BCs upersonic, CUDA implementation for GPUs, PETSC GMRES with 
+# CUDA bindings (PCJACOBI as preconditioner)
+#
+###############################################################################
+
 # Assertion For Debugging
 
 #CFEnv.ExceptionLogLevel    = 1000
@@ -19,6 +29,8 @@
 #
 # this will always fail with GAMBIT
 #CFEnv.ErrorOnUnusedConfig = true
+
+### Residual =-6.52828 
 
 ###############################################################################
 # SubSystem Modules
