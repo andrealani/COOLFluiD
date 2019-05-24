@@ -103,18 +103,6 @@ protected: // data
   /// handle to nodal states
   Framework::DataHandle<RealVector> _nstates;
   
-  /// handle to outward normal
-  //Framework::DataHandle<CFint> _isOutward;  
-  
-  /// socket for storing the Ionization Rate
-  Framework::DataSocketSource<CFreal> socket_GammaIon;
-  
-  /// socket for storing the Ionization Rate
-  Framework::DataSocketSource<CFreal> socket_GammaRec;  
-    
-  /// pointer to the physical-chemical library
-  //Common::SafePtr<Framework::PhysicalChemicalLibrary> _library;
-    
   /// array to store the mass fractions
   RealVector _ys;
   
@@ -141,33 +129,17 @@ protected: // data
   
   ///Vector storing the mass Source term
   RealVector _massSource;
-  
-  ///Vector storing the Collisional Momentum Source term
-  RealVector _collMomentumSource;  
-  
-  ///Vector storing the Collisional Energy Source term
-  RealVector _collEnergySource;  
-  
-  ///Vector storing the Collisional Energy Source term
-  RealVector _ReactEnergySource;
-  
+    
   ///Vector storing the total magnetic Field
   RealVector _Btotal;
   
   ///Vector storing the total electric Field
   RealVector _Etotal;
-  
-  ///rate of particles of neutrals created in ionization per unit vol
-  CFreal _GammaIon_n;   
-  
-  ///rate of particles of ions created in recombination per unit vol
-  CFreal _GammaRec_i;     
-  
+    
 private:
 
   /// Electrical conductivity
   CFreal _electricalResistivity;
-  
   
 }; // end of class SingleFluidMHDST
 
