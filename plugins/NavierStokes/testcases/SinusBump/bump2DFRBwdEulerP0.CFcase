@@ -1,0 +1,167 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, Euler2D, Backward Euler, mesh with curved quads, 
+# second-order Roe scheme, subsonic inlet 
+# and outlet, mirror BCs 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -8.15853
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = false #true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+CFEnv.TraceToStdOut = false
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libBackwardEuler libPetscI libNewtonMethod libAnalyticalModel
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/SinusBump
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/SinusBump
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = Euler2D
+Simulator.SubSysMesh.MeshMeshData.listTRS = Bump Top Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = sineBumpQuadUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = sineBumpQuadCurved_32_128.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P0
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+Simulator.SubSystem.Default.PhysicalModelType = Euler2D
+Simulator.SubSystem.Euler2D.refValues = 1.0 0.591607978 0.591607978 2.675
+Simulator.SubSystem.Euler2D. = 1.0
+Simulator.SubSystem.Euler2D.ConvTerm.pRef = 1.
+Simulator.SubSystem.Euler2D.ConvTerm.tempRef = 0.003483762
+Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
+
+Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
+
+Simulator.SubSystem.CFmesh.FileName     = bumpFR2D.CFmesh
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName = bumpFR2D.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Bump
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName    = AbumpFR2D.vtu
+Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.Data.updateVar = Cons
+Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
+
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 50
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+
+Simulator.SubSystem.ConvergenceMethod = BwdEuler 
+Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(10000,0.5*2.0^max(i-5,0)) #min(1e4,0.1*1.5^max(i-20,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceTest.plt
+Simulator.SubSystem.BwdEuler.ShowRate        = 1
+Simulator.SubSystem.BwdEuler.ConvRate        = 1
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.MaxIter = 5000
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+#Simulator.SubSystem.BwdEulerLSS.Data.Output = true
+
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+
+Simulator.SubSystem.Default.listTRS = InnerCells Bump Top Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = sineBumpQuadUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+
+# choose which builder we use
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux #LaxFriedrichsFlux # 
+
+#Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
+
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre # Equidistant #Lobatto #
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Equidistant #Lobatto #
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.015238095 #0.0 #
+
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0 0.591607978 0.0 2.675 
+
+Simulator.SubSystem.FluxReconstruction.BcNames = WallTop Wall Inlet Outlet
+Simulator.SubSystem.FluxReconstruction.WallTop.applyTRS = Top
+Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = Bump
+Simulator.SubSystem.FluxReconstruction.Inlet.applyTRS = Inlet
+Simulator.SubSystem.FluxReconstruction.Outlet.applyTRS = Outlet
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = MirrorEuler2D MirrorEuler2D SubInletEulerTtPtAlpha2D SubOutletEuler2D
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = WallTop       Wall          Inlet                    Outlet
+
+#Simulator.SubSystem.FluxReconstruction.Data.Wall.UseDomainModel = true
+
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Ttot = 0.00365795
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Ptot = 1.186212306
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.alpha = 0.0
+
+Simulator.SubSystem.FluxReconstruction.Data.Outlet.P = 1.0
