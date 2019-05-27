@@ -66,28 +66,34 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
 
-  CFreal xG = 0.;   // Coordinates of the Ghost cell
-  CFreal yG = 0.;
-  CFreal zG = 0.;
-  CFreal rG = 0.;
-  CFreal thetaG = 0.;
-  CFreal phiG = 0.;
   CFreal latG = 0.;
-  CFreal xI = 0.;  // Coordinates of the inner cell
-  CFreal yI = 0.;
-  CFreal zI = 0.;
-  CFreal rI = 0.;
-  CFreal thetaI = 0.;
-  CFreal phiI = 0.;
   //CFreal latI = 0.;   // will probably be needed when implementing differential rotation
   const CFreal PI = 3.14159265358979;
 
-  xG = ghostState->getCoordinates()[XX];
-  yG = ghostState->getCoordinates()[YY];
-  zG = ghostState->getCoordinates()[ZZ];
-  xI = innerState->getCoordinates()[XX];
-  yI = innerState->getCoordinates()[YY];
-  zI = innerState->getCoordinates()[ZZ];
+  CFreal xG = ghostState->getCoordinates()[XX];
+  CFreal yG = ghostState->getCoordinates()[YY];
+  CFreal zG = ghostState->getCoordinates()[ZZ];
+  CFreal xI = innerState->getCoordinates()[XX];
+  CFreal yI = innerState->getCoordinates()[YY];
+  CFreal zI = innerState->getCoordinates()[ZZ];
+  CFreal xBoundary = (xG + xI)/2.0;
+  CFreal yBoundary = (yG + yI)/2.0;
+  CFreal zBoundary = (zG + zI)/2.0;
+  CFreal rBoundary = std::sqrt(xBoundary*xBoundary + yBoundary*yBoundary + zBoundary*zBoundary);
+  CFreal thetaBoundary = std::atan2(std::sqrt(xBoundary*xBoundary + yBoundary*yBoundary),zBoundary);
+  CFreal phiBoundary = std::atan2(yBoundary,xBoundary);
+
+
+  // Convert boundary values provided in the CFcase file into cartesian coordinates
+  CFreal Vx_user = (*_dimState)[9];
+  CFreal Vy_user = (*_dimState)[10];
+  CFreal Vz_user = (*_dimState)[11];
+  CFreal Vr_user = std::sin(thetaBoundary)*std::cos(phiBoundary)*(*_dimState)[9] + std::sin(thetaBoundary)*std::sin(phiBoundary)*(*_dimState)[10] + std::cos(thetaBoundary)*(*_dimState)[11];
+  CFreal Vtheta_user = std::cos(thetaBoundary)*std::cos(phiBoundary)*(*_dimState)[9] + std::cos(thetaBoundary)*std::sin(phiBoundary)*(*_dimState)[10] - std::sin(thetaBoundary)*(*_dimState)[11];
+  CFreal Vphi_user = -std::sin(phiBoundary)*(*_dimState)[9] + std::cos(phiBoundary)*(*_dimState)[10];
+
+
+
 
 
   DataHandle<CFreal> normals = socket_normals.getDataHandle();
@@ -113,22 +119,22 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //std::cout << "xG = " << xG << endl;
   //std::cout << "yG = " << yG << endl;
   //std::cout << "zG = " << zG << endl;
-  rG = std::sqrt(xG*xG + yG*yG + zG*zG);
+  CFreal rG = std::sqrt(xG*xG + yG*yG + zG*zG);
   //std::cout << "rG = " << rG << endl;
-  thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
+  CFreal thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
   //std::cout << "thetaG = " << thetaG << endl;
-  phiG = std::atan2(yG,xG);
+  CFreal phiG = std::atan2(yG,xG);
 
 
 
   //std::cout << "xI = " << xI << endl;
   //std::cout << "yI = " << yI << endl;
   //std::cout << "zI = " << zI << endl;
-  rI = std::sqrt(xI*xI + yI*yI + zI*zI);
+  CFreal rI = std::sqrt(xI*xI + yI*yI + zI*zI);
   //std::cout << "rI = " << rI << endl;
-  thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
+  CFreal thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
   //std::cout << "thetaI = " << thetaI << endl;
-  phiI = std::atan2(yI,xI);
+  CFreal phiI = std::atan2(yI,xI);
   if (thetaG > -PI && thetaG < -PI*0.5) {
      latG = std::abs(thetaG) - PI*0.5;
   } else if (thetaG > -PI*0.5 && thetaG < 0) {
@@ -175,16 +181,20 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //(*ghostState)[4] = 2.*((*_dimState)[9]*(*_dimState)[2] - (*_dimState)[11]*(*_dimState)[0]) - ((*innerState)[9]*(*innerState)[2] - (*innerState)[11]*(*innerState)[0]); //Ex
   //(*ghostState)[5] = 2.*((*_dimState)[10]*(*_dimState)[0] - (*_dimState)[9]*(*_dimState)[1]) - ((*innerState)[10]*(*innerState)[0] - (*innerState)[9]*(*innerState)[1]); //Ex
   // ... the last 3 lines lead immediately to a PETSC error
-  (*ghostState)[3] = 2.*((*_dimState)[11]*(*_dimState)[1] - (*_dimState)[2]*(*_dimState)[10]) - (*innerState)[3]; //Ex
-  (*ghostState)[4] = 2.*((*_dimState)[9]*(*_dimState)[2] - (*_dimState)[11]*(*_dimState)[0]) - (*innerState)[4]; //Ey
-  (*ghostState)[5] = 2.*((*_dimState)[10]*(*_dimState)[0] - (*_dimState)[9]*(*_dimState)[1]) - (*innerState)[5]; //Ex
+  
+  // - VxB BC but V and B are from case file so give zero anyway
+  //(*ghostState)[3] = 2.*((*_dimState)[11]*(*_dimState)[1] - (*_dimState)[2]*(*_dimState)[10]) - (*innerState)[3]; //Ex
+  //(*ghostState)[4] = 2.*((*_dimState)[9]*(*_dimState)[2] - (*_dimState)[11]*(*_dimState)[0]) - (*innerState)[4]; //Ey
+  //(*ghostState)[5] = 2.*((*_dimState)[10]*(*_dimState)[0] - (*_dimState)[9]*(*_dimState)[1]) - (*innerState)[5]; //Ex
+  
+
 // Perfectly conducting wall BC
   //(*ghostState)[3] = - (*innerState)[3] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::sin(thetaI)*std::cos(phiI);
   //(*ghostState)[4] = - (*innerState)[4] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::sin(thetaI)*std::sin(phiI);
   //(*ghostState)[5] = - (*innerState)[5] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::cos(thetaI);
-  //(*ghostState)[3] = 0.;
-  //(*ghostState)[4] = 0.;
-  //(*ghostState)[5] = 0.;
+  (*ghostState)[3] = - (*innerState)[3];
+  (*ghostState)[4] = - (*innerState)[4];
+  (*ghostState)[5] = - (*innerState)[5];
 
   // Continuous condition for Phi, Psi
   //(*ghostState)[6] = (*innerState)[6];
@@ -198,58 +208,51 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //std::cout << "ghoststate rho = " << (*ghostState)[8] << endl;
   
   // VELOCITY: This includes differential rotation but the first version should not
-  //CFreal OmegaG = 0.;
-  //CFreal OmegaI = 0.;
-  //CFreal A = 14.713;   // values from Wikipedia; find a better and more accurate source...
-  //CFreal B = -2.396;
-  //CFreal C = -1.787;
+  CFreal A = 14.713;   // values from Wikipedia; find a better and more accurate source...
+  CFreal B = -2.396;
+  CFreal C = -1.787;
   
-  //OmegaG = A + B*std::sin(latG)*std::sin(latG) + C*std::sin(latG)*std::sin(latG)*std::sin(latG)*std::sin(latG);
-  //OmegaI = A + B*std::sin(latI)*std::sin(latI) + C*std::sin(latI)*std::sin(latI)*std::sin(latI)*std::sin(latI);
-  // Convert OmegaG and OmegaI from deg/day to rad/s
+  CFreal Omega_deg_day = A + B*std::sin(latG)*std::sin(latG) + C*std::sin(latG)*std::sin(latG)*std::sin(latG)*std::sin(latG);
+  // Convert OmegaG from deg/day to rad/s
   // deg/day = (PI/180.*rad)/(24*60*60*sec)
   //OmegaG = OmegaG*(PI/180)/(24*60*60);
   //OmegaI = OmegaI*(PI/180)/(24*60*60);
+  CFreal Omega = Omega_deg_day*PI/(180*24*60*60);   // Now in rad/sec
 
 
   CFreal VrG = 0.;
   CFreal VrI = 0.;
   CFreal VthetaG = 0.;
   CFreal VthetaI = 0.;
-  CFreal VphiG = 0.;
-  CFreal VphiI = 0.;
   CFreal VxG = 0.;
   CFreal VyG = 0.;
   CFreal VzG = 0.;
-  CFreal VxI = 0.;
-  CFreal VyI = 0.;
-  CFreal VzI = 0.;
-    
+
   CFreal BxG = (*ghostState)[0];
   //cout << "Bxfield = " << BxG << endl;
   CFreal ByG = (*ghostState)[1];
   //cout << "Byfield = " << BxG << endl;
-  CFreal  BzG = (*ghostState)[2];
+  CFreal BzG = (*ghostState)[2];
   //cout << "Bzfield = " << BxG << endl;
-  
+
   // Convert the B-field at the ghost state into cartesian vector components:
   CFreal BrG = std::sin(thetaG)*std::cos(phiG)*BxG + std::sin(thetaG)*std::sin(phiG)*ByG + std::cos(thetaG)*BzG;
   CFreal BthetaG = std::cos(thetaG)*std::cos(phiG)*BxG + std::cos(thetaG)*std::sin(phiG)*ByG - std::sin(thetaG)*BzG;
-  //CFreal BphiG = -std::sin(phiG)*BxG + std::cos(phiG)*ByG;
-  
+  //BphiG = -std::sin(phiG)*BxG + std::cos(phiG)*ByG;
+
   // VphiG = 2*VphiB - VphiI = -VphiI; // only preliminary before taking differential rotation into account; this value is independent of the zone
-  VxI = (*innerState)[9];
-  VyI = (*innerState)[10];
-  VzI = (*innerState)[11];
-  VphiI = -std::sin(phiI)*VxI + std::cos(phiI)*VyI;
-  VphiG = -VphiI;
+  CFreal VxI = (*innerState)[9];
+  CFreal VyI = (*innerState)[10];
+  CFreal VzI = (*innerState)[11];
+  CFreal VphiI = -std::sin(phiI)*VxI + std::cos(phiI)*VyI;
+  CFreal VphiG = 2*Omega*rBoundary*std::sin(thetaBoundary) - VphiI;
 
   if (latG  > 0.3927) {  // this value corresponds to 45/2 deg in rad
     //cout << "in the pole region" << endl;
     VrI = std::sin(thetaI)*std::cos(phiI)*(*innerState)[9] + std::sin(thetaI)*std::sin(phiI)*(*innerState)[10] + std::cos(thetaI)*(*innerState)[11];
     VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
-    
-    
+
+
     //VthetaG = VrG*BthetaG/BrG; // Make the two vectors parallel to each other 
     // May 22: just a test:
     VthetaI = std::cos(thetaI)*std::cos(phiI)*VxI + std::cos(thetaI)*std::sin(phiI)*VyI - std::sin(thetaI)*VzI;
@@ -274,16 +277,16 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
       // Vr and Vtheta are both zero at the boundary
       // VrG = 2*VrB - VrI = -VrI
       // Compute first VrI from VxI, VyI, VzI
-      VxI = (*innerState)[9];
-      VyI = (*innerState)[10];
-      VzI = (*innerState)[11];
+      ////////VxI = (*innerState)[9];
+      /////////VyI = (*innerState)[10];
+      ///////VzI = (*innerState)[11];
       VrI = std::sin(thetaI)*std::cos(phiI)*VxI + std::sin(thetaI)*std::sin(phiI)*VyI + std::cos(thetaI)*VzI;
       
 
 
-      //VrG = - VrI;
+      VrG = - VrI;
       // May 22: just a test:
-      VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
+      //////VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
 
 
       VthetaI = std::cos(thetaI)*std::cos(phiI)*VxI + std::cos(thetaI)*std::sin(phiI)*VyI - std::sin(thetaI)*VzI;
@@ -295,15 +298,15 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
 
       //(*ghostState)[8] = 2.*(*_dimState)[8] - (*innerState)[8];
 
-      VrI = 0.0;
-      VthetaI = 0.0;
-      VxI = std::sin(thetaI)*std::cos(phiI)*VrI + std::cos(thetaI)*std::cos(phiI)*VthetaI - std::sin(phiI)*VphiI;
-      VyI = std::sin(thetaI)*std::sin(phiI)*VrI + std::cos(thetaI)*std::sin(phiI)*VthetaI + std::cos(phiI)*VphiI;
-      VzI = std::cos(thetaI)*VrI - std::sin(thetaI)*VthetaI;
-      (*ghostState)[9]  = 2.*(*_dimState)[9] - VxI;   // dimState[9] set in CFcase
+      /////////VrI = 0.0;
+      /////////VthetaI = 0.0;
+      ////VxI = std::sin(thetaI)*std::cos(phiI)*VrI + std::cos(thetaI)*std::cos(phiI)*VthetaI - std::sin(phiI)*VphiI;
+      /////VyI = std::sin(thetaI)*std::sin(phiI)*VrI + std::cos(thetaI)*std::sin(phiI)*VthetaI + std::cos(phiI)*VphiI;
+      //////VzI = std::cos(thetaI)*VrI - std::sin(thetaI)*VthetaI;
+      (*ghostState)[9]  = VxG; //2.*(*_dimState)[9] - VxI;   // dimState[9] set in CFcase
       //std::cout << "ghoststate Vx = " << (*ghostState)[9] << endl;
-      (*ghostState)[10] = 2.*(*_dimState)[10] - VyI;   // dimState[9] set in CFcase
-      (*ghostState)[11] = 2.*(*_dimState)[9] - VzI;   // dimState[9] set in CFcase
+      (*ghostState)[10] = VyG; //2.*(*_dimState)[10] - VyI;   // dimState[9] set in CFcase
+      (*ghostState)[11] = VzG; //2.*(*_dimState)[9] - VzI;   // dimState[9] set in CFcase
   }
 
   // Temperature kept constant at 1.5e6 K (set in CFcase)
