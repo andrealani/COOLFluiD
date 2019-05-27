@@ -1026,7 +1026,7 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
       // in cell center FVM only the first state per TRS face must be considered
       // the second one is a ghost one that doesn't have to be written !!
       nbNodesStatesInTRGeoTmp(iTR,0) = maxNbNodesInTRGeo;
-      nbNodesStatesInTRGeoTmp(iTR,1) = (isFVMCC) ? 1 : maxNbStatesInTRGeo;
+      nbNodesStatesInTRGeoTmp(iTR,1) = (isFVMCC && maxNbStatesInTRGeo>0) ? 1 : maxNbStatesInTRGeo;
     }
   }
 

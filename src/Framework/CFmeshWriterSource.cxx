@@ -299,16 +299,15 @@ void CFmeshWriterSource::copyTrsData()
         for (CFuint iGeo = 0; iGeo < nbGeos; ++iGeo, ++geoID) {
           const CFuint nbGeoNodes = trs->getNbNodesInGeo(geoID);
           CFuint nbGeoStates = trs->getNbStatesInGeo(geoID);
-
+	  
           /// @todo gory fix (to see if this is cell centered FVM check if the   solution polyorder is 0)
           // if we are dealing with FVM cell centered meshes, boundary faces
           // have only one VALID state (the second one is a ghost-state)
           // and cannot be taken into account while outputting the mesh
-          if (_solutionPolyOrder == 0)
-          {
-            nbGeoStates = 1;
-          }
-
+          if (_solutionPolyOrder == 0 && nbGeoStates > 0) {
+	    nbGeoStates = 1;
+	  }
+	  
           _geoConn[iTRS][iTR][iGeo].first.resize(nbGeoNodes);
           _geoConn[iTRS][iTR][iGeo].second.resize(nbGeoStates);
 
