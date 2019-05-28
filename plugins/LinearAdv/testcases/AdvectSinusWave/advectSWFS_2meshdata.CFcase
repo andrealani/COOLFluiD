@@ -1,4 +1,10 @@
-# COOLFluiD CFcase file
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Two namespaces running sequentially, one with RDS (N scheme) and one with 
+# Finite Volume (Roe scheme), LinearAdv2D, Forward Euler, mesh with triangles, 
+# converter from THOR to CFmesh, supersonic inlet and outlet BC
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
@@ -201,8 +207,6 @@ Simulator.SubSystem.CellCenterFVM1.Namespace = Test1
 Simulator.SubSystem.CellCenterFVM1.Data.CollaboratorNames = FwdEuler2
 Simulator.SubSystem.CellCenterFVM1.Data.FluxSplitter = Roe
 Simulator.SubSystem.CellCenterFVM1.Data.UpdateVar  = Prim
-Simulator.SubSystem.CellCenterFVM1.Data.IntegratorQuadrature = GaussLegendre
-Simulator.SubSystem.CellCenterFVM1.Data.IntegratorOrder = P1
 Simulator.SubSystem.CellCenterFVM1.Data.PolyRec = Constant
 
 Simulator.SubSystem.CellCenterFVM1.InitComds = InitState \

@@ -1,15 +1,19 @@
-// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
-//
-// This software is distributed under the terms of the
-// GNU Lesser General Public License version 3 (LGPLv3).
-// See doc/lgpl.txt and doc/gpl.txt for the license text.
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes, LinearAdv3D, Forward Euler, hybrid mesh with 
+# tetra/pyramids/prisms/hexa, converter from THOR to CFmesh,first-order scalar N 
+# scheme, supersonic inlet and outlet BC
+#
+################################################################################
 
 # COOLFluiD CFcase file
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = 1.6516499
+### Residual = -12.258892
 
 #
 
@@ -20,21 +24,17 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/Advect3D/
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType       = LinearAdv3D
 Simulator.SubSystem.LinearAdv3D.VX = 0.0
 Simulator.SubSystem.LinearAdv3D.VY = 0.0
 Simulator.SubSystem.LinearAdv3D.VZ =-1.0
 
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName  = cube2-coarse-hybrid.CFmesh
 Simulator.SubSystem.Tecplot.FileName = cube2-coarse-hybrid.plt
-Simulator.SubSystem.Tecplot.Data.updateVar = Prim
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
@@ -42,26 +42,20 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 10
-#Simulator.SubSystem.onlyMesh            = true
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 5
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -12.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = cube2-coarse-fullhybrid.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.7
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
 
 Simulator.SubSystem.SpaceMethod = FluctuationSplit
 Simulator.SubSystem.FluctuationSplit.Data.SysSplitter = ScalarN

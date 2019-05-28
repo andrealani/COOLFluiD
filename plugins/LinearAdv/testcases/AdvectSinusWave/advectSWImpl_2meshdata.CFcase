@@ -1,10 +1,20 @@
-# COOLFluiD CFcase file
+###############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Two Namespaces both solving LinearAdv2D, one with RDS (first-order N scheme) 
+# and one with Finite Volume (first order Roe scheme), Backward Euler and Newton 
+# Iterator, mesh with triangles, converter from THOR to CFmesh, supersonic inlet 
+# and outlet BC
+#
+###############################################################################
+#
+## COOLFluiD CFcase file
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.78201
-
+### Residual = -18.9124
 #
 
 Simulator.Maestro = SimpleMaestro
@@ -53,12 +63,6 @@ Simulator.SubSystem.NullErrorEstimator1.Namespace = Test
 Simulator.SubSystem.NullErrorEstimator2.Data.CollaboratorNames = CellCenterFVM1
 Simulator.SubSystem.NullErrorEstimator2.Namespace = Test1
 
-
-
-
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh Tecplot CFmesh
 Simulator.SubSystem.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2 CFmesh2
 
@@ -89,14 +93,11 @@ Simulator.SubSystem.CFmesh2.AppendTime = false
 Simulator.SubSystem.Tecplot2.AppendIter = false
 Simulator.SubSystem.CFmesh2.AppendIter = false
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 1
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
 Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader1 CFmeshFileReader2
@@ -142,13 +143,13 @@ Simulator.SubSystem.LSSNames = BwdEuler1LSS NewtonIterator1LSS
 
 Simulator.SubSystem.BwdEuler1LSS.Data.CollaboratorNames = FluctuationSplit1
 Simulator.SubSystem.BwdEuler1LSS.Namespace = Test
-Simulator.SubSystem.BwdEuler1LSS.Data.PCType = PCILU
+Simulator.SubSystem.BwdEuler1LSS.Data.PCType = PCASM
 Simulator.SubSystem.BwdEuler1LSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.BwdEuler1LSS.Data.MatOrderingType = MATORDERING_RCM
 
 Simulator.SubSystem.NewtonIterator1LSS.Data.CollaboratorNames = CellCenterFVM1
 Simulator.SubSystem.NewtonIterator1LSS.Namespace = Test1
-Simulator.SubSystem.NewtonIterator1LSS.Data.PCType = PCILU
+Simulator.SubSystem.NewtonIterator1LSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIterator1LSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIterator1LSS.Data.MatOrderingType = MATORDERING_RCM
 
