@@ -156,32 +156,32 @@ CF_ADD_PLUGIN_LIBRARY ( FluctSplitNavierStokes )
 
 #############################################################################
 
-# LIST ( APPEND FluctSplitAdvectionDiffusion_files
-# FluctSplitAdvectionDiffusion.hh
-# ScalarDiffusionTerm.hh
-# ScalarDiffusionTerm.cxx
-# ScalarDiffusionTermHO.hh
-# ScalarDiffusionTermHO.cxx
-# ScalarLinearadv2DSourceTerm.hh
-# ScalarLinearadv2DSourceTerm.cxx
-# ScalarLinearadv2DSourceTermHO.hh
-# ScalarLinearadv2DSourceTermHO.cxx
-# ScalarUnsteady2DSourceTerm.cxx
-# ScalarUnsteady2DSourceTerm.hh
-# ScalarUnsteady2DSourceTerm2.cxx
-# ScalarUnsteady2DSourceTerm2.hh
-# ScalarUnsteady2DSourceTermHO.cxx
-# ScalarUnsteady2DSourceTermHO.hh
-# UnsteadScalarDiffusionTerm.cxx
-# UnsteadScalarDiffusionTerm.hh
-# LinearAdvDiffHO3D.hh
-# LinearAdvDiffHO3D.cxx
-# )
-# 
-# LIST ( APPEND FluctSplitAdvectionDiffusion_requires_mods LinearAdv )
-# LIST ( APPEND FluctSplitAdvectionDiffusion_cflibs LinearAdv FluctSplit )
-# 
-# CF_ADD_PLUGIN_LIBRARY ( FluctSplitAdvectionDiffusion )
+LIST ( APPEND FluctSplitAdvectionDiffusion_files
+FluctSplitAdvectionDiffusion.hh
+ScalarDiffusionTerm.hh
+ScalarDiffusionTerm.cxx
+ScalarDiffusionTermHO.hh
+ScalarDiffusionTermHO.cxx
+ScalarLinearadv2DSourceTerm.hh
+ScalarLinearadv2DSourceTerm.cxx
+ScalarLinearadv2DSourceTermHO.hh
+ScalarLinearadv2DSourceTermHO.cxx
+ScalarUnsteady2DSourceTerm.cxx
+ScalarUnsteady2DSourceTerm.hh
+ScalarUnsteady2DSourceTerm2.cxx
+ScalarUnsteady2DSourceTerm2.hh
+ScalarUnsteady2DSourceTermHO.cxx
+ScalarUnsteady2DSourceTermHO.hh
+UnsteadScalarDiffusionTerm.cxx
+UnsteadScalarDiffusionTerm.hh
+LinearAdvDiffHO3D.hh
+LinearAdvDiffHO3D.cxx
+)
+ 
+LIST ( APPEND FluctSplitAdvectionDiffusion_requires_mods LinearAdv )
+LIST ( APPEND FluctSplitAdvectionDiffusion_cflibs LinearAdv FluctSplit )
+ 
+CF_ADD_PLUGIN_LIBRARY ( FluctSplitAdvectionDiffusion )
 
 #############################################################################
 
