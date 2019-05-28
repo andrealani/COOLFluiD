@@ -1,27 +1,34 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Residual Distribution Schemes,AdvectionDiffusion2D, Forward Euler, mesh with 
+# triangles, converter from THOR to CFmesh, second-order scalar LDAC scheme, 
+# supersonic inlet BC
+#
+################################################################################
+
 # COOLFluiD CFcase file
 #
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -1.12242
-# CFEnv.TraceToStdOut = true
+### Residual = -10.034587
 
+#CFEnv.TraceToStdOut = true
 
 # SubSystem Modules
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libForwardEuler libTHOR2CFmesh libFluctSplit libFluctSplitScalar libLinearAdv libFluctSplitAdvectionDiffusion
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/AdvecDiff
-Simulator.Paths.ResultsDir       = ./
+Simulator.Paths.ResultsDir = ./
 
 Simulator.SubSystem.Default.PhysicalModelType  = AdvectionDiffusion2D
 Simulator.SubSystem.AdvectionDiffusion2D.VX = 0.0
 Simulator.SubSystem.AdvectionDiffusion2D.VY = 1.0
 Simulator.SubSystem.AdvectionDiffusion2D.DiffTerm.DiffCoef = 0.01
  
-
-Simulator.SubSystem.ConvergenceFile     = convergence.plt
-
 Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
 Simulator.SubSystem.CFmesh.FileName = advectdiffSW_01.CFmesh
 Simulator.SubSystem.Tecplot.FileName = advectdiffSW_01.plt
@@ -35,25 +42,20 @@ Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionBlock
 Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
 
-Simulator.SubSystem.ConvRate            = 1
-Simulator.SubSystem.ShowRate            = 10
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
-Simulator.SubSystem.StopCondition       = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
-
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -10.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells FaceBottom FaceRight FaceTop FaceLeft
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = square_400n.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.builderName = RDS
-Simulator.SubSystem.CFmeshFileReader.Data.polyTypeName = Lagrange
 Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
 #Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
 #Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = min(0.5+(i*0.01),1.0)
 

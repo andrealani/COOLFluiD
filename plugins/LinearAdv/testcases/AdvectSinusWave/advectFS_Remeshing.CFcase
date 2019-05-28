@@ -15,7 +15,7 @@ Simulator.LoopMaestro.GlobalMaxNumberSteps.nbSteps = 3
 Simulator.LoopMaestro.AppendIter = true
 
 # SubSystem Modules
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libBackwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libLinearAdv libTHOR2CFmesh libPetscI libNewtonMethod libSimpleGlobalMeshAdapter libLoopMaestro libGambit2CFmesh
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter  libBackwardEuler libFluctSplit libFluctSplitScalar libFluctSplitSpaceTime libLinearAdv libTHOR2CFmesh libPetscI libNewtonMethod libSimpleGlobalMeshAdapter libGambit2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/AdvectSinusWave/
