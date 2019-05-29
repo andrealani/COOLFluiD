@@ -1,0 +1,129 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, AdvectionDiffusion2D, BDF2, PETSC GMRES, mesh with 
+# triangles, converter from THOR to CFmesh, second-order, Roe scheme, supersonic 
+# inlet BC
+################################################################################
+#
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -10.043593
+#
+
+# SubSystem Modules
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNewtonMethod libTHOR2CFmesh  libFiniteVolume libLinearAdv libFiniteVolumeAdvectionDiffusion libTHOR2CFmesh
+
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/AdvecDiff
+Simulator.Paths.ResultsDir = ./
+
+Simulator.SubSystem.Default.PhysicalModelType  = AdvectionDiffusion2D
+Simulator.SubSystem.AdvectionDiffusion2D.VX = 0.0
+Simulator.SubSystem.AdvectionDiffusion2D.VY = 1.0
+Simulator.SubSystem.AdvectionDiffusion2D.DiffTerm.DiffCoef = 0.01
+
+Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+
+Simulator.SubSystem.CFmesh.FileName = advectdiffSWFVM.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+
+Simulator.SubSystem.Tecplot.FileName = advectdiffSW.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate = 100
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = false
+
+#Simulator.SubSystem.InitialTime = 110.925
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 5.0e-3
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = 5.0e-3
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<90,3.0e-2,0.5e-2)
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i=0,3e-2,if(i<90,3.0e-2,0.5e-2))
+
+#Simulator.SubSystem.StopCondition       = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
+
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.Default.listTRS = InnerFaces FaceBottom FaceRight FaceTop FaceLeft
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = square_400n.CFmesh
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = THOR2CFmesh
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = BwdEulerLSS
+Simulator.SubSystem.BwdEulerLSS.Data.PCType = PCASM
+Simulator.SubSystem.BwdEulerLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.BwdEulerLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.BwdEulerLSS.Data.RelativeTolerance = 1e-4
+
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+Simulator.SubSystem.BDF2.Data.CFL.Value = 1000.0
+#Simulator.SubSystem.BDF2.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.BDF2.ConvergenceFile = convergence_UnsteadyMagnetosphereACAImplPrim0_85READFROMFILE.plt 
+Simulator.SubSystem.BDF2.Data.MaxSteps = 1
+# Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 11 #12 
+Simulator.SubSystem.BDF2.Data.Norm = -8.
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+#BDF2TimeRhsLimited
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+#Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.zeroDiagValue = 0
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = Roe
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar  = Prim
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Prim
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = LinearAdvDiff
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 0.0
+
+Simulator.SubSystem.CellCenterFVM.BcComds = SuperInletFVMCC SuperInletFVMCC SuperInletFVMCC SuperInletFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Bottom Right Left Top
+
+Simulator.SubSystem.CellCenterFVM.Bottom.applyTRS = FaceBottom
+Simulator.SubSystem.CellCenterFVM.Bottom.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Bottom.Def = -cos(2.0*3.14*x)
+
+Simulator.SubSystem.CellCenterFVM.Right.applyTRS = FaceRight
+Simulator.SubSystem.CellCenterFVM.Right.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Right.Def =-exp(y*(1.0-sqrt(1.0+16.0*3.14*3.14*0.01*0.01))/(2.0*0.01))
+
+Simulator.SubSystem.CellCenterFVM.Left.applyTRS = FaceLeft
+Simulator.SubSystem.CellCenterFVM.Left.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Left.Def = -exp(y*(1.0-sqrt(1.0+16.0*3.14*3.14*0.01*0.01))/(2.0*0.01))
+
+Simulator.SubSystem.CellCenterFVM.Top.applyTRS = FaceTop
+Simulator.SubSystem.CellCenterFVM.Top.Vars = x y
+Simulator.SubSystem.CellCenterFVM.Top.Def =  -cos(2.0*3.14*x)*exp((1-sqrt(1+16*3.14*3.14*0.01*0.01))/(2.0*0.01))
+
+
+
