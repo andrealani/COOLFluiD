@@ -54,10 +54,6 @@ ScalarDiffusionTermHO::ScalarDiffusionTermHO(const std::string& name) :
 
 ScalarDiffusionTermHO::~ScalarDiffusionTermHO()
 {
-  for (CFuint i = 0; i< _values.size(); ++i) {
-    deletePtr(_values[i]);
-  }
-
   for (CFuint i = 0; i< _gradients.size(); ++i) {
     deletePtr(_gradients[i]);
   }
@@ -564,23 +560,19 @@ void ScalarDiffusionTermHO::fluctuation_diff_bubble(CFuint& i1, CFuint& i2, CFui
 
 void ScalarDiffusionTermHO::setup()
 {
-
-  _values.resize(PhysicalModelStack::getActive()->getNbEq());
-  _gradients.resize(PhysicalModelStack::getActive()->getNbEq());
-  _avValues.resize(PhysicalModelStack::getActive()->getNbEq());
-  _normal.resize(PhysicalModelStack::getActive()->getDim());
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbStatesInControlVolume =
     MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
   const CFuint nbNodesInControlVolume =
     MeshDataStack::getActive()->Statistics().getMaxNbNodesInCell();
-
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  _values.resize(nbEqs, nbStatesInControlVolume);
+  _gradients.resize(nbEqs);
+  _avValues.resize(nbEqs);
+  _normal.resize(PhysicalModelStack::getActive()->getDim());
+  
   _states.resize(nbStatesInControlVolume);
-
-  for (CFuint i = 0; i< nbEqs; ++i) {
-    _values[i] = new RealVector(nbStatesInControlVolume);
-  }
-
+  
   for (CFuint i = 0; i< nbEqs; ++i) {
     _gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
   }

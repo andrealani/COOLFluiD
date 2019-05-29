@@ -46,10 +46,9 @@ public: // classes
   /// Set the quantities needed to compute gradients (pressure,
   /// velocity, etc.) starting from the states
   void setGradientVars(const std::vector<RealVector*>& states,
-  	       const std::vector<RealVector*>& values,
-  	       const CFuint stateSize);
-
-
+		       RealMatrix& values,
+		       const CFuint stateSize);
+  
 protected:
 
   /// Set the gradient variables starting from state variables

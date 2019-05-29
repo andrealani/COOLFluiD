@@ -10,13 +10,13 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/DiffusiveVarSet.hh"
-#include "ADTerm.hh"
+#include "LinearAdv/ADTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
   namespace Physics {
-namespace LinearAdv {
+    namespace LinearAdv {
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -47,6 +47,23 @@ public: // classes
     m_gradState.resize(Framework::PhysicalModelStack::getActive()->getNbEq());
   }
 
+  
+  /// Get the current adimensional dynamic viscosity
+  virtual CFreal getCurrDynViscosity()
+  {
+    return (getModel().getPhysicalData())[ADTerm::NU];
+  }
+
+  /**
+   * Get the adimensional density
+   */
+  virtual CFreal getDensity(const RealVector& state) {return 1.;}
+  
+  /**
+   * Set the wall distance
+   */
+  void setWallDistance(CFreal dist) {}
+  
   /// Set the composition
   /// @pre this function has to be called before any other function
   ///      computing other physical quantities
@@ -57,11 +74,11 @@ public: // classes
   /// Set the quantities needed to compute gradients (pressure,
   /// velocity, etc.) starting from the states
   virtual void setGradientVars(const std::vector<RealVector*>& states,
-                               const std::vector<RealVector*>& values,
+                               RealMatrix& values,
                                const CFuint stateSize) = 0;
-
+  
   /// Get the current diffusion coefficient
-  virtual CFreal getCurrDiffuionCoeff()
+  virtual CFreal getCurrDiffusionCoeff()
   {
     return (getModel().getPhysicalData())[ADTerm::NU];
   }

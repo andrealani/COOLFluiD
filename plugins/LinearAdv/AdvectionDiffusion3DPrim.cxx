@@ -45,15 +45,14 @@ AdvectionDiffusion3DPrim::~AdvectionDiffusion3DPrim()
 //////////////////////////////////////////////////////////////////////////////
 
 void AdvectionDiffusion3DPrim::setGradientVars(const vector<RealVector*>& states,
-					 const vector<RealVector*>& values,
-					 const CFuint stateSize)
+					       RealMatrix& values,
+					       const CFuint stateSize)
 {
-  const CFuint nbStates = stateSize;
-
-   RealVector& u = *values[0];
-  for (CFuint i = 0; i < nbStates; ++i) {
-    const RealVector& state = *states[i];
-    u[i] = state[0];
+  const CFuint nbValues = values.nbRows();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+    }
   }
 }
 

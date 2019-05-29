@@ -16,11 +16,9 @@ namespace COOLFluiD {
       class LinearAdvVarSet;
     }
   }
-
-
-
-    namespace FluctSplit {
-
+  
+  namespace FluctSplit {
+    
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -83,7 +81,7 @@ protected: // data
   std::vector<RealVector*> _states;
 
   // array of values (rho, u, v, T)
-  std::vector<RealVector*> _values;
+  RealMatrix _values;
 
   // array of gradients
   std::vector<RealVector*> _gradients;

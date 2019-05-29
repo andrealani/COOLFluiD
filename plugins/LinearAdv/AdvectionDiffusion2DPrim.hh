@@ -38,23 +38,23 @@ public: // classes
   /// @pre this function has to be called before any other function
   ///      computing other physical quantities
   void setComposition(const RealVector& state,
-  	      const bool isPerturb,
-  	      const CFuint iVar)
+		      const bool isPerturb,
+		      const CFuint iVar)
   {
   }
-
+  
   /// Set the quantities needed to compute gradients (pressure,
   /// velocity, etc.) starting from the states
   void setGradientVars(const std::vector<RealVector*>& states,
-  	       const std::vector<RealVector*>& values,
-  	       const CFuint stateSize);
-
-
-protected:
-
+		       RealMatrix& values,
+		       const CFuint stateSize);
+  
+  
+ protected:
+  
   /// Set the gradient variables starting from state variables
   virtual void setGradientState(const RealVector& state);
-
+  
 private:
 
   /// convective model

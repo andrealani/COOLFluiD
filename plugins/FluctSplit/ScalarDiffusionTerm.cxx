@@ -51,10 +51,6 @@ ScalarDiffusionTerm::ScalarDiffusionTerm(const std::string& name) :
 
 ScalarDiffusionTerm::~ScalarDiffusionTerm()
 {
-  for (CFuint i = 0; i< _values.size(); ++i) {
-    deletePtr(_values[i]);
-  }
-
   for (CFuint i = 0; i< _gradients.size(); ++i) {
     deletePtr(_gradients[i]);
   }
@@ -116,20 +112,16 @@ void ScalarDiffusionTerm::computeDiffusiveTerm
 
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     RealVector& grad = *_gradients[iEq];
-    const RealVector& values = *_values[iEq];
-
     grad = 0.0;
-
+    
     for (CFuint is = 0; is < nbCellStates; ++is) {
       for (CFuint iDim = 0; iDim < dim; ++iDim) {
-  grad[iDim] += values[is]*normals[cellID]->getNodalNormComp(is,iDim);
+	grad[iDim] += _values(iEq,is)*normals[cellID]->getNodalNormComp(is,iDim);
       }
     }
     grad *= coeffGrad;
-
- }
-
-
+  }
+  
   ADTerm& model = _diffVar->getModel();
   const CFreal ovDimCoeff2 = (1./dimCoeff*dimCoeff);
 
@@ -161,22 +153,18 @@ void ScalarDiffusionTerm::setup()
   const CFuint nbNodesInControlVolume =
     MeshDataStack::getActive()->Statistics().getMaxNbStatesInCell();
   _states.resize(nbNodesInControlVolume);
-  _values.resize(nbEqs);
-CF_DEBUG_POINT;
-  for (CFuint i = 0; i< nbEqs; ++i) {
-    _values[i] = new RealVector(nbNodesInControlVolume);
-  }
-CF_DEBUG_POINT;
+  _values.resize(nbEqs, nbNodesInControlVolume);
+
   _gradients.resize(nbEqs);
   for (CFuint i = 0; i< nbEqs; ++i) {
     _gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
   }
-
+  
   _normal.resize(PhysicalModelStack::getActive()->getDim());
-CF_DEBUG_POINT;
+ CF_DEBUG_POINT;
   _avValues = new State();
   normaljState.resize(PhysicalModelStack::getActive()->getDim());
-CF_DEBUG_POINT;
+ CF_DEBUG_POINT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -188,7 +176,9 @@ void ScalarDiffusionTerm::configure ( Config::ConfigArgs& args )
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScalarDiffusionTerm::computePicardDiffJacob(GeometricEntity *const geo, std::vector<RealMatrix*>& jacob){
+void ScalarDiffusionTerm::computePicardDiffJacob(GeometricEntity *const geo,
+						 std::vector<RealMatrix*>& jacob)
+{
   // carefull with the signs !!!
  DataHandle< InwardNormalsData*> normals = socket_normals.getDataHandle();
  vector<State*> *const cellStates = geo->getStates();

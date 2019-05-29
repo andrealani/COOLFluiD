@@ -6,6 +6,7 @@ cf_add_case( MPI 8       CASEDIR Advect3D PCASE cube2-coarse-hybridFVMImpl.CFcas
 cf_add_case( MPI 8       CASEDIR AdvectSinusWave PCASE advectSWFVM.CFcase CASEFILES advectSW.SP advectSW.thor ) 
 cf_add_case( MPI 8       CASEDIR AdvectSinusWave PCASE advectSWImpl_2meshdata.CFcase CASEFILES advectSW.SP advectSW.thor )
 cf_add_case( MPI 8       CASEDIR AdvecDiff PCASE advectdiffSWFSCRD.CFcase CASEFILES square_400n.SP square_400n.thor )
+cf_add_case( MPI 8       CASEDIR AdvecDiff PCASE advectdiffSWFVM.CFcase CASEFILES square_400n.SP square_400n.thor )
 
 #cf_add_case( MPI default PCASE AdvecDiff/advectdiffSWFSCRD.CFcase )
 #cf_add_case( MPI default PCASE AdvecDiff/advectdiffSWFSHOCRD.CFcase )
