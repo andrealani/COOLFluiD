@@ -246,11 +246,13 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   CFreal VzI = (*innerState)[11];
   CFreal VphiI = -std::sin(phiI)*VxI + std::cos(phiI)*VyI;
   CFreal VphiG = 2*Omega*rBoundary*std::sin(thetaBoundary) - VphiI;
+  //std::cout << "Vphi = " << VphiG << endl;
 
   if (latG  > 0.3927) {  // this value corresponds to 45/2 deg in rad
     //cout << "in the pole region" << endl;
     VrI = std::sin(thetaI)*std::cos(phiI)*(*innerState)[9] + std::sin(thetaI)*std::sin(phiI)*(*innerState)[10] + std::cos(thetaI)*(*innerState)[11];
     VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
+        //std::cout << "Vr = " << VrG << endl;
 
 
     //VthetaG = VrG*BthetaG/BrG; // Make the two vectors parallel to each other 
@@ -284,9 +286,10 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
       
 
 
-      VrG = - VrI;
+      VrG = 2*Vr_user- VrI;
+      //std::cout << "Vr = " << VrG << endl;
       // May 22: just a test:
-      //////VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
+      //VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
 
 
       VthetaI = std::cos(thetaI)*std::cos(phiI)*VxI + std::cos(thetaI)*std::sin(phiI)*VyI - std::sin(thetaI)*VzI;
@@ -303,10 +306,10 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
       ////VxI = std::sin(thetaI)*std::cos(phiI)*VrI + std::cos(thetaI)*std::cos(phiI)*VthetaI - std::sin(phiI)*VphiI;
       /////VyI = std::sin(thetaI)*std::sin(phiI)*VrI + std::cos(thetaI)*std::sin(phiI)*VthetaI + std::cos(phiI)*VphiI;
       //////VzI = std::cos(thetaI)*VrI - std::sin(thetaI)*VthetaI;
-      (*ghostState)[9]  = VxG; //2.*(*_dimState)[9] - VxI;   // dimState[9] set in CFcase
+      (*ghostState)[9]  = VxG;
       //std::cout << "ghoststate Vx = " << (*ghostState)[9] << endl;
-      (*ghostState)[10] = VyG; //2.*(*_dimState)[10] - VyI;   // dimState[9] set in CFcase
-      (*ghostState)[11] = VzG; //2.*(*_dimState)[9] - VzI;   // dimState[9] set in CFcase
+      (*ghostState)[10] = VyG;
+      (*ghostState)[11] = VzG;
   }
 
   // Temperature kept constant at 1.5e6 K (set in CFcase)

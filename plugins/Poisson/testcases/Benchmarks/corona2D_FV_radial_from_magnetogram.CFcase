@@ -23,7 +23,7 @@ CFEnv.ExceptionOutputs     = false
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = ./results
 
 Simulator.SubSystem.Default.PhysicalModelType   = Poisson2D
 Simulator.SubSystem.Poisson2D.refValues    = 1.0

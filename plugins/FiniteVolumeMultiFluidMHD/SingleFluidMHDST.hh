@@ -73,7 +73,7 @@ public:
   virtual void computeSource(Framework::GeometricEntity *const element,
 			     RealVector& source,
 			     RealMatrix& jacobian);
-  
+
   /**
    * Returns the DataSocket's that this command provides as sinks
    * @return a vector of SafePtr with the DataSockets
@@ -83,7 +83,7 @@ public:
   /**
    * Compute the mass and reaction energy source terms
    */
-  void computeMassReactionsEnergySourceTerm();  
+  //void computeMassReactionsEnergySourceTerm();  
   
   /**
   * Compute the electric Current
@@ -93,7 +93,7 @@ public:
   /**
   * Compute the Collisional momentum and energy source terms
   */
-  void computeCollisionalMomentumEnergy();
+  //void computeCollisionalMomentumEnergy();
   
 protected: // data
   
@@ -129,13 +129,13 @@ protected: // data
   
   ///Vector storing the mass Source term
   RealVector _massSource;
-    
+  
   ///Vector storing the total magnetic Field
   RealVector _Btotal;
   
   ///Vector storing the total electric Field
   RealVector _Etotal;
-    
+
 private:
 
   /// Electrical conductivity

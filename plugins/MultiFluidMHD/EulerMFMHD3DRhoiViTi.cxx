@@ -134,11 +134,13 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
 {
   
   const CFuint nbSpecies    = getModel()->getNbScalarVars(0);
+  //cout << "Euler: nbSpecies = " << nbSpecies << endl;
   const CFuint nbMomentum   = getModel()->getNbScalarVars(1);
   const CFuint nbEnergyEqs  = getModel()->getNbScalarVars(2);
   const CFuint endEM = 8;
   const CFuint firstSpecies = getModel()->getFirstScalarVar(0);  
   const CFuint firstVelocity = getModel()->getFirstScalarVar(1);   
+  //cout << "Euler: firstVelocity = " << firstVelocity << endl;
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2); 
   
   const CFreal m_e = getModel()->getMolecularMass1();
@@ -170,6 +172,7 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
     
     rho = (1 + m_e/m_p)*rho_i + rho_n;  // rho_Total = rho_i + rho_e + rho_n = (1 + m_e/m_i)rho_i + rho_n
     data[PTERM::RHO] = rho;
+    //cout << "Euler: total rho = " << rho << endl;
     const CFreal ovRho = 1./rho;
     
     cf_assert(data[PTERM::RHO] > 0.);
@@ -180,6 +183,8 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
     
     //Velocities
     const CFreal u_i = state[endEM + nbSpecies];	//Ions x-velocity
+    //cout << "Euler: Index of u_i = " << endEM + nbSpecies << endl;
+    //cout << "Euler: u_i = " << u_i << endl;
     const CFreal v_i = state[endEM + nbSpecies + 1];	//Ions y-velocity
     const CFreal w_i = state[endEM + nbSpecies + 2];	//Ions z-velocity
     data[firstVelocity]     = u_i;
@@ -187,6 +192,8 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
     data[firstVelocity + 2] = w_i;
     
     const CFreal u_n = state[endEM + nbSpecies + 3];	//Neutrals x-velocity
+    //cout << "Euler: Index of u_n = " << endEM + nbSpecies + 3 << endl;
+    //cout << "Euler: u_n = " << u_n << endl;
     const CFreal v_n = state[endEM + nbSpecies + 4];	//Neutrals y-velocity
     const CFreal w_n = state[endEM + nbSpecies + 5];	//Neutrals z-velocity
     data[firstVelocity + 3] = u_n;
@@ -285,6 +292,7 @@ void EulerMFMHD3DRhoiViTi::computePhysicalData(const State& state, RealVector& d
     
     //set the energy parameters
     const CFreal gamma = getModel()->getGamma();
+    //cout << "Euler: gamma = " << gamma << endl;
     const CFreal K_gas = PhysicalConsts::Boltzmann();
     const CFreal m_e = getModel()->getMolecularMass1();
     const CFreal m_n = getModel()->getMolecularMass2();

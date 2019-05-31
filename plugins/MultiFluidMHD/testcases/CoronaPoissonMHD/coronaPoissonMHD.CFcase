@@ -30,7 +30,7 @@ Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWrit
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD
-Simulator.Paths.ResultsDir = ./RESULTS_CoronaPoissonMHD
+Simulator.Paths.ResultsDir = ./results
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem

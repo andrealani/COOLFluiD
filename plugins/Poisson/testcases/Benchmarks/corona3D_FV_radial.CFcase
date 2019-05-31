@@ -23,7 +23,7 @@ CFEnv.ExceptionOutputs     = false
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = ./results_corona3D_FV_radial_2xNeumannBC
 
 Simulator.SubSystem.Default.PhysicalModelType   = Poisson3D
 Simulator.SubSystem.Poisson3D.refValues    = 1.0
@@ -41,6 +41,11 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Cons
 Simulator.SubSystem.Tecplot.SaveRate = 10
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
+#Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = uR uTheta uX uY
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = Br Btheta Bx By
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
 
 Simulator.SubSystem.ParaView.FileName    = corona3D_FV.vtu
 #Simulator.SubSystem.ParaView.WriteSol    = WriteSolution
@@ -125,7 +130,8 @@ Simulator.SubSystem.CellCenterFVM.BcNames = Inlet Outlet
 
 Simulator.SubSystem.CellCenterFVM.Inlet.applyTRS = Inlet
 Simulator.SubSystem.CellCenterFVM.Inlet.Vars = x y z
-Simulator.SubSystem.CellCenterFVM.Inlet.Def = 0.01*x/(x^2+y^2+z^2)^4 
+#Simulator.SubSystem.CellCenterFVM.Inlet.Def = 0.01*x/(x^2+y^2+z^2)^4
+Simulator.SubSystem.CellCenterFVM.Inlet.Def = -1.256e-6/(2*pi)*1e-3*z/(x^2+y^2+z^2)^2
 #if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
 #if(x>0,cos(atan(y/x)),if(x<0,-cos(atan(abs(y/x))),if(x=0&y>0,1.,-1.)))
 
@@ -133,7 +139,7 @@ Simulator.SubSystem.CellCenterFVM.Outlet.applyTRS = Outlet
 #Simulator.SubSystem.CellCenterFVM.Outlet.OnlyRadialGradient = true
 
 Simulator.SubSystem.CellCenterFVM.Outlet.Vars = x y z
-Simulator.SubSystem.CellCenterFVM.Outlet.Def = 0.
+Simulator.SubSystem.CellCenterFVM.Outlet.Def = -1.256e-6/(2*pi)*1e-3*z/(x^2+y^2+z^2)^2
 Simulator.SubSystem.CellCenterFVM.Outlet.ZeroGradientFlags = 1
 
 # Compute the Wall distance

@@ -23,7 +23,7 @@ CFEnv.ExceptionOutputs     = false
 
 # Simulation Parameters
 Simulator.Paths.WorkingDir = plugins/Poisson/testcases/Benchmarks
-Simulator.Paths.ResultsDir = ./
+Simulator.Paths.ResultsDir = ./results
 
 Simulator.SubSystem.Default.PhysicalModelType   = Poisson2D
 Simulator.SubSystem.Poisson2D.refValues    = 1.0
@@ -62,8 +62,6 @@ Simulator.SubSystem.Default.listTRS = Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = corona_360_triag.CFmesh 
-#corona_360_quad.CFmesh
-#corona_360_triag.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh

@@ -35,8 +35,8 @@ SingleFluidMHDST<UPDATEVAR>::SingleFluidMHDST(const std::string& name) :
 {
   addConfigOptionsTo(this);
   
-  //_electricalResistivity = 1e6; // 0.150886049694899;
-  _electricalResistivity = 1e-5; // 8.0e-15; // Ohm x meters
+  _electricalResistivity = 1.408e4;  // [Linker et al. 1999] // 0.150886049694899;
+  //_electricalResistivity = 1e-5; // 8.0e-15; // Ohm x meters
   setParameter("electricalResistivity",&_electricalResistivity);
 }
       
@@ -137,12 +137,10 @@ void SingleFluidMHDST<UPDATEVAR>::computeSource
   SafePtr<typename UPDATEVAR::PTERM> term = _varSet->getModel();
   const vector<State*>* const states = element->getStates();
   const CFuint elemID = element->getID();
-
   cf_assert(states->size() == 1);
   
   const CFuint firstVelocity = term->getFirstScalarVar(1); 
   //cout << endl << "firstVelocity index = " << firstVelocity << endl;
-  
   State *const currState = (*states)[0];   
   _varSet->computePhysicalData(*(*states)[0], _physicalData);
 
@@ -248,9 +246,9 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
     source[0] = 0;			//x-Faraday's Law
     source[1] = 0;			//y-Faraday's Law
     source[2] = 0;			//z-Faraday's Law
-    source[3] = 0;// -_J[XX]*ovEpsilon;	//x-Ampere's Law
-    source[4] = 0;//-_J[YY]*ovEpsilon;	//y-Ampere's Law
-    source[5] = 0;//-_J[ZZ]*ovEpsilon;  	//z-Ampere's Law
+    source[3] = -_J[XX]*ovEpsilon;	//x-Ampere's Law
+    source[4] = -_J[YY]*ovEpsilon;	//y-Ampere's Law
+    source[5] = -_J[ZZ]*ovEpsilon;  	//z-Ampere's Law
     source[6] = 0;			// i.e. no charges?
     source[7] = 0;  			//
    //std::cout << "-j/eps = " << -_J[XX]*ovEpsilon << endl;
@@ -299,14 +297,13 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
       CFreal kB = 1.38064852e-23; // use the definition from the module later
       CFreal mumH = 2.125091e-27; // mu x m_H
       
-
       //CFreal gradPx = 2*kB*(*currState)[12]/mumH*drhodx + 2*rho/mumH*kB*dTdx;
       //CFreal gradPy = 2*kB*(*currState)[12]/mumH*drhody + 2*rho/mumH*kB*dTdy;
       //CFreal gradPz = 2*kB*(*currState)[12]/mumH*drhodz + 2*rho/mumH*kB*dTdz;
 
-      source[9]  = 0.;//emMomentumX; // + fx;
-      source[10] = 0.;//emMomentumY; // + fy;
-      source[11] = 0.;emMomentumZ; // + fz;
+      source[9]  = emMomentumX; // + fx;
+      source[10] = emMomentumY; // + fy;
+      source[11] = emMomentumZ; // + fz;
       //std::cout << "emMomentumx = " << emMomentumX << endl;
 
       //CFreal gradP = std::sqrt(gradPx*gradPx + gradPy*gradPy + gradPz*gradPz);
@@ -348,7 +345,7 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
 
   
 
-      source[12] = Qh2; //gravEnergy + emEnergy;
+      source[12] = 0.;// Qh1; //gravEnergy + ;
      /* 
       cout << endl << "physicalData[0] = " << _physicalData[0] << endl;
       cout << endl << "physicalData[1] = " << _physicalData[1] << endl;
@@ -469,6 +466,7 @@ void SingleFluidMHDST<UPDATEVAR>::computeElectricCurrent()
   
   const CFreal eta = _electricalResistivity;
   const CFreal sigma = 1/eta;
+  //std::cout << "sigma = " << sigma << "\n";
   
   const CFreal Jx = sigma*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);
   const CFreal Jy = sigma*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]);  

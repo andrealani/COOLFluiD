@@ -1,5 +1,6 @@
 # COOLFluiD Startfile
 # Comments begin with "#"
+# Meta Comments begin with triple "#"
 #
 ### Residual = -1.13829
 ##-1.14417
@@ -125,9 +126,9 @@ Simulator.SubSystem.Tecplot2.AppendTime = false
 Simulator.SubSystem.Tecplot2.AppendIter = false
 Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
 Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
-Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi
-Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi   
-Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
 Simulator.SubSystem.Tecplot2.WriteSol = ParWriteSolutionBlock
 
 Simulator.SubSystem.ParaView2.FileName    = corona_poisson.vtu
@@ -136,9 +137,9 @@ Simulator.SubSystem.ParaView2.Data.updateVar = Cons
 Simulator.SubSystem.ParaView2.SaveRate = 10
 Simulator.SubSystem.ParaView2.AppendTime = false
 Simulator.SubSystem.ParaView2.AppendIter = false
-Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi
-Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi
-Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
 Simulator.SubSystem.ParaView2.Namespace = EMNamespace
 Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
 
@@ -240,7 +241,7 @@ Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
 
 Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
 Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = CB.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = corona-a30.CFmesh
 Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 0.000000001437794 # 1.
 # comment this out to Restart
 Simulator.SubSystem.CFmeshFileReader0.convertFrom = Gmsh2CFmesh
@@ -251,7 +252,7 @@ Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis
 Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
 Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona3D_60_tet_full.CFmesh
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = CS.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona-a30.CFmesh
 Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 0.000000001437794 #1.
 # comment this out to Restart
 Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gmsh2CFmesh
@@ -295,7 +296,7 @@ Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
 Simulator.SubSystem.Flow.PreProcessNames = PreProcess1
 Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 0 1 2
 Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace 
-Simulator.SubSystem.Flow.PreProcess1.InterRadius = 1738774817.53 #2.5
+Simulator.SubSystem.Flow.PreProcess1.InterRadius = -1 #1738774817.53 #2.5
 Simulator.SubSystem.Flow.PreProcess1.DeltaSelection = 1000. #1e-4
 
 ## second order: uncomment this
@@ -336,22 +337,6 @@ Simulator.SubSystem.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
 #Simulator.SubSystem.Flow.InField.InitVars = xx yy zz
 #Simulator.SubSystem.Flow.InField.Vars = xx yy zz r x y z   
 #Simulator.SubSystem.Flow.InField.InitDef = sqrt(xx^2+yy^2+zz^2)/695509927.012 xx/695509927.012 yy/695509927.012 zz/695509927.012 
-Simulator.SubSystem.Flow.InField.Def = \
-        0. \
-        0. \
-        0. \
-        0. \
-        0. \
-        0. \
-        0. \
-        0. \
-	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
-	sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	1.5e6*sqrt(6.9551e8/r)
-
-
 #Simulator.SubSystem.Flow.InField.Def = \
 #        0. \
 #        0. \
@@ -361,11 +346,30 @@ Simulator.SubSystem.Flow.InField.Def = \
 #        0. \
 #        0. \
 #        0. \
-#        2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(1/r)-sqrt(1/1.035))) \
-#        sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-#        sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-#        cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-#        1.5e6*sqrt(1/r)
+#	    3.557142857e-14*(6.955e8)^2/r^2 \
+#        sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*10000 \
+#	    sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*10000 \
+#	    cos(atan2(sqrt(x^2+y^2),z))*10000 \
+#	    1.5e6*(6.955e8/r)^(2*(1.05-1))
+
+# 5th order polytropic polynomial for Vr not shifted up:
+# (9165.372593288523-1.8204851612575266e-05*r+1.0434707449784796e-14*r^2-1.4186777294157635e-24*r^3+8.374676041709383e-35*r^4-1.8430711555714095e-45*r^5)
+
+
+Simulator.SubSystem.Flow.InField.Def = \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        0. \
+        2.89e-13*sqrt(r)*exp(2*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(1/r)-sqrt(1/1.035))) \
+        sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+        sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+        cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
+        1.5e6*sqrt(1/r)
 
 
 # Parkers solution for r in units of solar radii
@@ -408,9 +412,7 @@ Simulator.SubSystem.Flow.BcNames = Jet1 Jet2
 Simulator.SubSystem.Flow.Jet1.applyTRS = Inlet
 #Simulator.SubSystem.Flow.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
 Simulator.SubSystem.Flow.Jet1.Vars = x y z 
-Simulator.SubSystem.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 5.63428813037151e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*248.93426424 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*248.93426424 cos(atan2(sqrt(x^2+y^2),z))*248.93426424 1.5e6
-                                   
-#Simulator.SubSystem.Flow.Jet1.Def =  0. 0. 0. 0. 0. 0. 0. 0. 5.63428813037151e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*0.024457 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*0.024457 cos(atan2(sqrt(x^2+y^2),z))*0.024457 1.5e6
+Simulator.SubSystem.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 3.557142857142857e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*0.024457 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*0.024457 cos(atan2(sqrt(x^2+y^2),z))*0.024457 1.5e6
 
 # rho(1.0 R_Sun) = 5.63428813037151e-13 # kg/m**3 (pressure-gravity-balance)
 # vr(1.0 R_Sun) = 0.024457 # m/s (Parker's hydrodynamical model)
@@ -484,7 +486,10 @@ Simulator.SubSystem.EM.Data.PolyRec = LinearLS3D
 
 Simulator.SubSystem.EM.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.EM.Data.DistanceBased.TRSName = Inlet
-Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/coords_magnetogram_2D.dat
+#Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2018-04-27-scaled-meters.dat
+#Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2012-11-27.dat
+#Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/smoothed-magnetogram-m2012-07-12.dat
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MultiFluidMHD/testcases/CoronaPoissonMHD/m2012-11-27.dat
 Simulator.SubSystem.EM.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
 
