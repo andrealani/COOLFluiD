@@ -103,7 +103,9 @@ void WriteSolution::writeToBinaryFile()
 void WriteSolution::writeToFileStream(std::ofstream& fout)
 {
   CFAUTOTRACE;
-
+  
+  CFLog(VERBOSE, "WriteSolution::writeToFileStream() => START\n");
+  
   if (!getMethodData().onlySurface())
   {
 
@@ -140,7 +142,7 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFreal refL = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-
+  
   // variable that holds the indices of the variables that are vector components
   vector<CFuint> vectorComponentIdxs;
   /// @note this is a rather ugly piece of code, a check is made on the number of equations
@@ -154,6 +156,9 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   // variable tht holds the indices of the scalar variables
   const CFuint nbVecComponents = vectorComponentIdxs.size();
   const CFuint nbScalars = nbEqs-nbVecComponents;
+
+  CFLog(VERBOSE, "WriteSolution::writeToFileStream() => nbVecComponents = "
+	<< nbVecComponents << ",  nbScalars = " << nbScalars << "\n");
   
   vector<CFuint> scalarVarIdxs(nbScalars);
   CFuint iScalar = 0;
@@ -563,6 +568,8 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
 
   // write boundary surface data
   writeBoundarySurface();
+
+  CFLog(VERBOSE, "WriteSolution::writeToFileStream() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

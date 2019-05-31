@@ -3,7 +3,6 @@
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
-
 #ifndef COOLFluiD_Physics_LinearAdv_LinearAdvVarSet_hh
 #define COOLFluiD_Physics_LinearAdv_LinearAdvVarSet_hh
 

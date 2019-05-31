@@ -225,7 +225,7 @@ public:
   virtual bool isValid (const RealVector& state)  {return true;}
   
   /// Set the IDs corresponding to the velocity components in a State
-  virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs) = 0;
+  virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs) {}
   
   /// This nested class is a composition-based adapter functor which provides
   /// an interface to compute the convective physical flux. The actual job is

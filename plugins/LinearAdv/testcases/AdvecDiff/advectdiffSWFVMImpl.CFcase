@@ -15,7 +15,7 @@
 #
 
 # SubSystem Modules
-Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNewtonMethod libTHOR2CFmesh  libFiniteVolume libLinearAdv libFiniteVolumeAdvectionDiffusion libTHOR2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libParaViewWriter libNewtonMethod libTHOR2CFmesh  libFiniteVolume libLinearAdv libFiniteVolumeAdvectionDiffusion libTHOR2CFmesh
 
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/LinearAdv/testcases/AdvecDiff
@@ -26,7 +26,7 @@ Simulator.SubSystem.AdvectionDiffusion2D.VX = 0.0
 Simulator.SubSystem.AdvectionDiffusion2D.VY = 1.0
 Simulator.SubSystem.AdvectionDiffusion2D.DiffTerm.DiffCoef = 0.01
 
-Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+Simulator.SubSystem.OutputFormat     = Tecplot CFmesh ParaView
 
 Simulator.SubSystem.CFmesh.FileName = advectdiffSWFVM.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 100
@@ -38,6 +38,12 @@ Simulator.SubSystem.Tecplot.Data.outputVar = Prim
 Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
+
+Simulator.SubSystem.ParaView.FileName    = advectdiffSW.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Prim
+Simulator.SubSystem.ParaView.SaveRate = 300
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false
 
 #Simulator.SubSystem.StopCondition       = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 30
