@@ -14,6 +14,8 @@ AUSMFluxMultiFluidALE.ci
 AUSMFluxMultiFluidALE.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
+CoronalOutlet.cxx
+CoronalOutlet.hh
 DriftWaveInlet.cxx
 DriftWaveInlet.hh
 DriftWaveUnsteadyInlet.cxx

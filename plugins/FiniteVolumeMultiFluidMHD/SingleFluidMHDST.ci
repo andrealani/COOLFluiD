@@ -35,9 +35,18 @@ SingleFluidMHDST<UPDATEVAR>::SingleFluidMHDST(const std::string& name) :
 {
   addConfigOptionsTo(this);
   
-  _electricalResistivity = 1.408e4;  // [Linker et al. 1999] // 0.150886049694899;
+  //_electricalResistivity = 1.408e4;  // [Linker et al. 1999] // 0.150886049694899;
   //_electricalResistivity = 1e-5; // 8.0e-15; // Ohm x meters
   setParameter("electricalResistivity",&_electricalResistivity);
+  setParameter("Lorentzforce",&_Lorentzforce);
+  setParameter("SourceAmpere",&_SourceAmpere);
+  setParameter("Gravitation",&_Gravitation);
+  setParameter("JdotE",&_JdotE);
+  setParameter("Viscosity",&_Viscosity);
+  setParameter("rhogV",&_rhogV);
+  setParameter("ManchesterHeatingTerm",&_ManchesterHeatingTerm);
+  setParameter("PetsovHeatingTerm",&_PetsovHeatingTerm);
+
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -68,7 +77,25 @@ void SingleFluidMHDST<UPDATEVAR>::defineConfigOptions(Config::OptionList& option
 {
   options.template addConfigOption< CFreal,Config::DynamicOption<> >
      ("electricalResistivity", "electrical Resistivity used in Ohm's law");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("Lorentzforce", "Lorentzforce used in momentum equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("SourceAmpere", "SourceAmpere used in Ampere's law");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("Gravitation", "Gravitation used in momentum equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("JdotE", "JdotE used in energy equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("Viscosity", "Viscosity used in energy equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("rhogV", "Gravitational potential used in energy equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("PetsovHeatingTerm", "Petsov heating term used in energy equation");
+  options.template addConfigOption< CFint,Config::DynamicOption<> >
+     ("ManchesterHeatingTerm", "Manchester heating used in energy equation");
 }
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -228,8 +255,7 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
   // this is needed by both source terms
   computeElectricCurrent();  
   
-  //CFreal eta = 8.0e-15; // USE RATHER ETA DEFINED ABOVE! HOW TO ACCESS IT?
-  //eta = _electricalResistivity;
+  const CFreal eta = _electricalResistivity;
   CFreal nu = 3.359e12; // BOTH VALUES FROM LINKER ET AL
   CFreal Jtot = std::sqrt(_J[XX]*_J[XX] + _J[YY]*_J[YY] + _J[ZZ]*_J[ZZ]);
   
@@ -243,14 +269,25 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
     
 
 
-    source[0] = 0;			//x-Faraday's Law
-    source[1] = 0;			//y-Faraday's Law
-    source[2] = 0;			//z-Faraday's Law
-    source[3] = -_J[XX]*ovEpsilon;	//x-Ampere's Law
-    source[4] = -_J[YY]*ovEpsilon;	//y-Ampere's Law
-    source[5] = -_J[ZZ]*ovEpsilon;  	//z-Ampere's Law
-    source[6] = 0;			// i.e. no charges?
-    source[7] = 0;  			//
+    source[0] = 0;   //x-Faraday's Law
+    source[1] = 0;   //y-Faraday's Law
+    source[2] = 0;   //z-Faraday's Law
+
+
+  if (_SourceAmpere) {
+
+    source[3] = -_J[XX]*ovEpsilon;   //x-Ampere's Law
+    source[4] = -_J[YY]*ovEpsilon;   //y-Ampere's Law
+    source[5] = -_J[ZZ]*ovEpsilon;   //z-Ampere's Law
+  }
+  else {
+    source[3] = 0;   //x-Ampere's Law
+    source[4] = 0;   //y-Ampere's Law
+    source[5] = 0;   //z-Ampere's Law
+  }
+
+    source[6] = 0;   // i.e. no charges
+    source[7] = 0;
    //std::cout << "-j/eps = " << -_J[XX]*ovEpsilon << endl;
     //   std::cout<<"SingleFluidMHDST::computeSource -> permittivity = "<< term->getPermittivity() <<"\n";
   }
@@ -287,9 +324,9 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
 
 
       //MOMENTUM
-      const CFreal emMomentumX =  _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X + grav. source term + rho_charge*_Etotal[XX] // determine rho_charge first
-      const CFreal emMomentumY =  _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y + ditto + rho_charge*_Etotal[YY]
-      const CFreal emMomentumZ =  _J[XX]*_Btotal[YY] - _J[YY]*_Btotal[XX];		//Electromagnetic momentum Z + ditto rho_charge*_Etotal[ZZ]
+      const CFreal LorentzforceX =  _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X + grav. source term + rho_charge*_Etotal[XX] // determine rho_charge first
+      const CFreal LorentzforceY =  _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y + ditto + rho_charge*_Etotal[YY]
+      const CFreal LorentzforceZ =  _J[XX]*_Btotal[YY] - _J[YY]*_Btotal[XX];		//Electromagnetic momentum Z + ditto rho_charge*_Etotal[ZZ]
 
       const CFreal gamma = _varSet->getModel()->getGamma();
       const CFreal K_B = PhysicalConsts::Boltzmann();
@@ -301,14 +338,26 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
       //CFreal gradPy = 2*kB*(*currState)[12]/mumH*drhody + 2*rho/mumH*kB*dTdy;
       //CFreal gradPz = 2*kB*(*currState)[12]/mumH*drhodz + 2*rho/mumH*kB*dTdz;
 
-      source[9]  = emMomentumX; // + fx;
-      source[10] = emMomentumY; // + fy;
-      source[11] = emMomentumZ; // + fz;
-      //std::cout << "emMomentumx = " << emMomentumX << endl;
+     CFreal momX = 0.;
+     CFreal momY = 0.;
+     CFreal momZ = 0.;
 
-      //CFreal gradP = std::sqrt(gradPx*gradPx + gradPy*gradPy + gradPz*gradPz);
-      //cout << "nabla P = " << gradP << endl;
 
+  if (_Lorentzforce) {
+      momX += LorentzforceX;
+      momY += LorentzforceY;
+      momZ += LorentzforceZ;
+  }
+
+  if (_Gravitation) {
+     momX += fx;
+     momY += fy;
+     momZ += fz;
+  }
+
+      source[9]  = momX;
+      source[10] = momY;
+      source[11] = momZ;
 
       CFreal Vx = (*currState)[9];
       //cout << "Vx in m per sec = " << Vx << endl;
@@ -343,31 +392,31 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
       //std::cout << "J.E = " << resistiveDiss << endl;
       //std::cout << "nu*rho*nablaV" << viscDiss << endl;
 
-  
+      CFreal EnergySource = 0.;
+      if (_JdotE) {
+          //std::cout << "JdotE activated!" << endl;
+          EnergySource += resistiveDiss;
+      }
+      if (_Viscosity) {
+          //std::cout << "Viscosity activated!" << endl;
+          EnergySource += viscDiss;
+      }
+      if (_rhogV) {
+          //std::cout << "rho g V activated!" << endl;
+          EnergySource += gravEnergy;
+      }
+      if (_PetsovHeatingTerm) {
+        //std::cout << "Petsov heating term activated!" << endl;
+        EnergySource += Qh2;
+      }
+      if (_ManchesterHeatingTerm) {
+        //std::cout << "Manchester heating term activated!" << endl;
+        EnergySource += Qh1;
+      }
 
-      source[12] = 0.;// Qh1; //gravEnergy + ;
-     /* 
-      cout << endl << "physicalData[0] = " << _physicalData[0] << endl;
-      cout << endl << "physicalData[1] = " << _physicalData[1] << endl;
-      cout << endl << "physicalData[2] = " << _physicalData[2] << endl;
-      cout << endl << "physicalData[3] = " << _physicalData[3] << endl;
-      cout << endl << "physicalData[4] = " << _physicalData[4] << endl;
-      cout << endl << "physicalData[5] = " << _physicalData[5] << endl;
-      cout << endl << "physicalData[6] = " << _physicalData[6] << endl;
-      cout << endl << "physicalData[7] = " << _physicalData[7] << endl;
-      cout << endl << "physicalData[8] = " << _physicalData[8] << endl;
-      cout << endl << "physicalData[9] = " << _physicalData[9] << endl;
-      cout << endl << "physicalData[10] = " << _physicalData[10] << endl;
-      cout << endl << "physicalData[11] = " << _physicalData[11] << endl;
-      cout << endl << "physicalData[12] = " << _physicalData[12] << endl;
-      cout << endl << "physicalData[13] = " << _physicalData[13] << endl;
-      cout << endl << "physicalData[14] = " << _physicalData[14] << endl;
-      cout << endl << "physicalData[15] = " << _physicalData[15] << endl;
-      cout << endl << "physicalData[16] = " << _physicalData[16] << endl;
-      cout << endl << "physicalData[17] = " << _physicalData[17] << endl;
-      cout << endl << "physicalData[18] = " << _physicalData[18] << endl;
-      cout << endl << "physicalData[19] = " << _physicalData[19] << endl;
-     */
+
+      source[12] = EnergySource;//resistiveDiss;// Qh1; //gravEnergy + ;
+
       source *= volumes[elemID]; 
       
       // Write the sockets
@@ -476,20 +525,6 @@ void SingleFluidMHDST<UPDATEVAR>::computeElectricCurrent()
   _J[YY] = Jy;
   _J[ZZ] = Jz;
 
-//   if(std::abs(vi) > 100){
-//     std::cout <<"SingleFluidMHDST::computeElectricCurrent --> vi                = " << vi <<"\n";
-//     if(std::abs(vi) > 1000){
-//       std::cout <<"--------------- BAD ---------------\n";
-//       if(std::abs(vi) > 10000){
-// 	std::cout <<"--------------- VERYBAD ---------------\n";
-//       }
-//     }
-//     std::cout <<"SingleFluidMHDST::computeElectricCurrent --> Bx                = " << _Btotal[XX] <<"\n";
-//     std::cout <<"SingleFluidMHDST::computeElectricCurrent --> -Bx*vi            = " << vi*_Btotal[XX] <<"  Ez =" << _Etotal[ZZ] <<"\n";
-//     std::cout <<"SingleFluidMHDST::computeElectricCurrent --> electricalResistivity = " << eta <<"\n";	
-//     std::cout <<"SingleFluidMHDST::computeElectricCurrent --> ElectricCurrent   = " << _J <<"\n";
-//   }
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////

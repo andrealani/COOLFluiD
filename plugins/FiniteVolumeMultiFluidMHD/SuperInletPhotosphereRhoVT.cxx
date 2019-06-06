@@ -70,12 +70,12 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //CFreal latI = 0.;   // will probably be needed when implementing differential rotation
   const CFreal PI = 3.14159265358979;
 
-  CFreal xG = ghostState->getCoordinates()[XX];
-  CFreal yG = ghostState->getCoordinates()[YY];
-  CFreal zG = ghostState->getCoordinates()[ZZ];
-  CFreal xI = innerState->getCoordinates()[XX];
-  CFreal yI = innerState->getCoordinates()[YY];
-  CFreal zI = innerState->getCoordinates()[ZZ];
+  const CFreal xG = ghostState->getCoordinates()[XX];
+  const CFreal yG = ghostState->getCoordinates()[YY];
+  const CFreal zG = ghostState->getCoordinates()[ZZ];
+  const CFreal xI = innerState->getCoordinates()[XX];
+  const CFreal yI = innerState->getCoordinates()[YY];
+  const CFreal zI = innerState->getCoordinates()[ZZ];
   CFreal xBoundary = (xG + xI)/2.0;
   CFreal yBoundary = (yG + yI)/2.0;
   CFreal zBoundary = (zG + zI)/2.0;
@@ -84,13 +84,13 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   CFreal phiBoundary = std::atan2(yBoundary,xBoundary);
 
 
-  // Convert boundary values provided in the CFcase file into cartesian coordinates
+  // Convert boundary values provided in the CFcase file into spherical coordinates
   CFreal Vx_user = (*_dimState)[9];
   CFreal Vy_user = (*_dimState)[10];
   CFreal Vz_user = (*_dimState)[11];
-  CFreal Vr_user = std::sin(thetaBoundary)*std::cos(phiBoundary)*(*_dimState)[9] + std::sin(thetaBoundary)*std::sin(phiBoundary)*(*_dimState)[10] + std::cos(thetaBoundary)*(*_dimState)[11];
-  CFreal Vtheta_user = std::cos(thetaBoundary)*std::cos(phiBoundary)*(*_dimState)[9] + std::cos(thetaBoundary)*std::sin(phiBoundary)*(*_dimState)[10] - std::sin(thetaBoundary)*(*_dimState)[11];
-  CFreal Vphi_user = -std::sin(phiBoundary)*(*_dimState)[9] + std::cos(phiBoundary)*(*_dimState)[10];
+  CFreal Vr_user = std::sin(thetaBoundary)*std::cos(phiBoundary)*Vx_user + std::sin(thetaBoundary)*std::sin(phiBoundary)*Vy_user + std::cos(thetaBoundary)*Vz_user;
+  CFreal Vtheta_user = std::cos(thetaBoundary)*std::cos(phiBoundary)*Vx_user + std::cos(thetaBoundary)*std::sin(phiBoundary)*Vy_user - std::sin(thetaBoundary)*Vz_user;
+  CFreal Vphi_user = -std::sin(phiBoundary)*Vx_user + std::cos(phiBoundary)*Vy_user;
 
 
 
@@ -119,22 +119,22 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //std::cout << "xG = " << xG << endl;
   //std::cout << "yG = " << yG << endl;
   //std::cout << "zG = " << zG << endl;
-  CFreal rG = std::sqrt(xG*xG + yG*yG + zG*zG);
+  const CFreal rG = std::sqrt(xG*xG + yG*yG + zG*zG);
   //std::cout << "rG = " << rG << endl;
-  CFreal thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
+  const CFreal thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
   //std::cout << "thetaG = " << thetaG << endl;
-  CFreal phiG = std::atan2(yG,xG);
+  const CFreal phiG = std::atan2(yG,xG);
 
 
 
   //std::cout << "xI = " << xI << endl;
   //std::cout << "yI = " << yI << endl;
   //std::cout << "zI = " << zI << endl;
-  CFreal rI = std::sqrt(xI*xI + yI*yI + zI*zI);
+  const CFreal rI = std::sqrt(xI*xI + yI*yI + zI*zI);
   //std::cout << "rI = " << rI << endl;
-  CFreal thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
+  const CFreal thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
   //std::cout << "thetaI = " << thetaI << endl;
-  CFreal phiI = std::atan2(yI,xI);
+  const CFreal phiI = std::atan2(yI,xI);
   if (thetaG > -PI && thetaG < -PI*0.5) {
      latG = std::abs(thetaG) - PI*0.5;
   } else if (thetaG > -PI*0.5 && thetaG < 0) {
@@ -177,10 +177,10 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   
   // More consistently: Zero electric field E = - V x B at the boundary:
   // Vx = 9 Vy = 10 Vz = 11 Bx = 0 By = 1 Bz = 2
- //(*ghostState)[3] = 2.*((*_dimState)[11]*(*_dimState)[1] - (*_dimState)[2]*(*_dimState)[10]) - ((*innerState)[11]*(*innerState)[1] - (*innerState)[2]*(*innerState)[10]); //Ex
-  //(*ghostState)[4] = 2.*((*_dimState)[9]*(*_dimState)[2] - (*_dimState)[11]*(*_dimState)[0]) - ((*innerState)[9]*(*innerState)[2] - (*innerState)[11]*(*innerState)[0]); //Ex
-  //(*ghostState)[5] = 2.*((*_dimState)[10]*(*_dimState)[0] - (*_dimState)[9]*(*_dimState)[1]) - ((*innerState)[10]*(*innerState)[0] - (*innerState)[9]*(*innerState)[1]); //Ex
-  // ... the last 3 lines lead immediately to a PETSC error
+  (*ghostState)[3] = 2.*((*_dimState)[11]*(*_dimState)[1] - (*_dimState)[2]*(*_dimState)[10]) - (*innerState)[3];
+  (*ghostState)[4] = 2.*((*_dimState)[9]*(*_dimState)[2] - (*_dimState)[11]*(*_dimState)[0]) - (*innerState)[4];
+  (*ghostState)[5] = 2.*((*_dimState)[10]*(*_dimState)[0] - (*_dimState)[9]*(*_dimState)[1]) - (*innerState)[5];
+
   
   // - VxB BC but V and B are from case file so give zero anyway
   //(*ghostState)[3] = 2.*((*_dimState)[11]*(*_dimState)[1] - (*_dimState)[2]*(*_dimState)[10]) - (*innerState)[3]; //Ex
@@ -192,16 +192,16 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //(*ghostState)[3] = - (*innerState)[3] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::sin(thetaI)*std::cos(phiI);
   //(*ghostState)[4] = - (*innerState)[4] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::sin(thetaI)*std::sin(phiI);
   //(*ghostState)[5] = - (*innerState)[5] + 2.0*((*innerState)[3]*std::sin(thetaI)*std::cos(phiI) + (*innerState)[4]*std::sin(thetaI)*std::sin(phiI) + (*innerState)[5]*std::cos(thetaI))*std::cos(thetaI);
-  (*ghostState)[3] = - (*innerState)[3];
-  (*ghostState)[4] = - (*innerState)[4];
-  (*ghostState)[5] = - (*innerState)[5];
+  //(*ghostState)[3] = - (*innerState)[3];
+  //(*ghostState)[4] = - (*innerState)[4];
+  //(*ghostState)[5] = - (*innerState)[5];
 
   // Continuous condition for Phi, Psi
   //(*ghostState)[6] = (*innerState)[6];
   //(*ghostState)[7] = (*innerState)[7];
 
-  (*ghostState)[6] = (*innerState)[6];
-  (*ghostState)[7] = - (*innerState)[7];
+  (*ghostState)[6] = -(*innerState)[6]; // a + in Alejandro's case
+  (*ghostState)[7] = -(*innerState)[7]; // - in Alejandro's case
 
 
   (*ghostState)[8] = 2.*(*_dimState)[8] - (*innerState)[8];
@@ -234,24 +234,26 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
   //cout << "Byfield = " << BxG << endl;
   CFreal BzG = (*ghostState)[2];
   //cout << "Bzfield = " << BxG << endl;
+  CFreal rhoG = (*ghostState)[8];
 
-  // Convert the B-field at the ghost state into cartesian vector components:
+  // Convert the B-field at the ghost state into spherical vector components:
   CFreal BrG = std::sin(thetaG)*std::cos(phiG)*BxG + std::sin(thetaG)*std::sin(phiG)*ByG + std::cos(thetaG)*BzG;
   CFreal BthetaG = std::cos(thetaG)*std::cos(phiG)*BxG + std::cos(thetaG)*std::sin(phiG)*ByG - std::sin(thetaG)*BzG;
   //BphiG = -std::sin(phiG)*BxG + std::cos(phiG)*ByG;
 
   // VphiG = 2*VphiB - VphiI = -VphiI; // only preliminary before taking differential rotation into account; this value is independent of the zone
+  CFreal rhoI = (*innerState)[8];
   CFreal VxI = (*innerState)[9];
   CFreal VyI = (*innerState)[10];
   CFreal VzI = (*innerState)[11];
   CFreal VphiI = -std::sin(phiI)*VxI + std::cos(phiI)*VyI;
-  CFreal VphiG = 2*Omega*rBoundary*std::sin(thetaBoundary) - VphiI;
+  CFreal VphiG = - VphiI; //2*Omega*rBoundary*std::sin(thetaBoundary) - VphiI;
   //std::cout << "Vphi = " << VphiG << endl;
 
   if (latG  > 0.3927) {  // this value corresponds to 45/2 deg in rad
     //cout << "in the pole region" << endl;
-    VrI = std::sin(thetaI)*std::cos(phiI)*(*innerState)[9] + std::sin(thetaI)*std::sin(phiI)*(*innerState)[10] + std::cos(thetaI)*(*innerState)[11];
-    VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
+    VrI = std::sin(thetaI)*std::cos(phiI)*VxI + std::sin(thetaI)*std::sin(phiI)*VzI + std::cos(thetaI)*VzI;
+    VrG = rhoI*VrI*rI*rI/(rhoG*rG*rG);
         //std::cout << "Vr = " << VrG << endl;
 
 
@@ -286,10 +288,10 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
       
 
 
-      VrG = 2*Vr_user- VrI;
+      //VrG = 2*Vr_user- VrI;
       //std::cout << "Vr = " << VrG << endl;
       // May 22: just a test:
-      //VrG = (*innerState)[8]*VrI*rI*rI/((*ghostState)[8]*rG*rG);
+      VrG = rhoI*VrI*rI*rI/(rhoG*rG*rG);
 
 
       VthetaI = std::cos(thetaI)*std::cos(phiI)*VxI + std::cos(thetaI)*std::sin(phiI)*VyI - std::sin(thetaI)*VzI;

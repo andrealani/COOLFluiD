@@ -140,6 +140,16 @@ private:
 
   /// Electrical conductivity
   CFreal _electricalResistivity;
+  CFint _Lorentzforce;
+  CFint _SourceAmpere;
+  CFint _Gravitation;
+  CFint _JdotE;
+  CFint _Viscosity;
+  CFint _rhogV;
+  CFint _ManchesterHeatingTerm;
+  CFint _PetsovHeatingTerm;
+
+
   
 }; // end of class SingleFluidMHDST
 
