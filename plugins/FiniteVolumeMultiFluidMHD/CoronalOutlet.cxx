@@ -95,9 +95,9 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   // Continuous BC for r^2*rho:
   CFreal rhoG = rI*rI/(rG*rG)*rhoI;
 
-  // Continuous BCs for r^2*Vr, Vtheta, r*Vphi:
-  CFreal VrG = rI*rI*VrI/(rG*rG);
-  CFreal VthetaG = VthetaI;
+  // Continuous BCs for r^2*rho*Vr, rho*Vtheta, r*Vphi:
+  CFreal VrG = rI*rI*VrI*rhoI/(rG*rG*rhoG);
+  CFreal VthetaG = rhoI*VthetaI/rhoG;
   CFreal VphiG = (rI/rG)*VphiI;
 
 
@@ -129,7 +129,7 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
 
   // According to Alejandro's setups:
   (*ghostState)[6] = -(*innerState)[6];
-  (*ghostState)[7] = -(*innerState)[7]; // - in Alejandro"s setup
+  (*ghostState)[7] = (*innerState)[7]; // - in Alejandro"s setup
 
 
   (*ghostState)[8] = rhoG;
