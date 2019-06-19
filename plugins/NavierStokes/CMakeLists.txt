@@ -148,6 +148,10 @@ Euler3DPvtToConsInPvt.cxx
 Euler3DPvtToConsInPvt.hh
 Euler3DPvtToRoe.cxx
 Euler3DPvtToRoe.hh
+Euler3DRhovt.cxx
+Euler3DRhovt.hh
+Euler3DRhovtToCons.cxx
+Euler3DRhovtToCons.hh
 Euler3DRoe.cxx
 Euler3DRoe.hh
 Euler3DRoeToConsInRef.cxx
