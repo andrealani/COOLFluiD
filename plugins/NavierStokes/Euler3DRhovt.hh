@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Euler2DVarSet.hh"
+#include "NavierStokes/Euler3DVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,17 +16,17 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a Euler physical model 2D for primitive
+   * This class represents a Euler physical model 3D for primitive
    * variables
    *
    * @author Andrea Lani
    */
-class Euler3DRhovt : public Euler2DVarSet {
+class Euler3DRhovt : public Euler3DVarSet {
 public: // classes
 
   /**
    * Constructor
-   * @see Euler2D
+   * @see Euler3D
    */
   Euler3DRhovt(Common::SafePtr<Framework::BaseTerm> term);
 

@@ -26,7 +26,7 @@ euler3DRhovtProvider("Euler3DRhovt");
 //////////////////////////////////////////////////////////////////////////////
 
 Euler3DRhovt::Euler3DRhovt(Common::SafePtr<BaseTerm> term) :
-  Euler2DVarSet(term)
+  Euler3DVarSet(term)
 {
   vector<std::string> names(5);
   names[0] = "rho";

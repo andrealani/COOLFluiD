@@ -76,7 +76,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   *ghostState *= 2.;
   *ghostState -= *innerState;
   
-  cf_assert(_projectionIDs.size() > 0);
+  //  cf_assert(_projectionIDs.size() > 0);
   for (CFuint i = 0; i < _projectionIDs.size(); ++i) {
     const CFuint varID = _projectionIDs[i];
     (*ghostState)[varID] = (*innerState)[varID];
