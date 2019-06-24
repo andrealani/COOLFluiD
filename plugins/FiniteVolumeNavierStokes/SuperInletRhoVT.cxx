@@ -249,6 +249,14 @@ void SuperInletRhoVT::setGhostState(GeometricEntity *const face)
   
   // Temperature kept constant at 1.5e6 K (set in CFcase)
   (*ghostState)[4] = 2.*(*_dimState)[4] - (*innerState)[4];
+
+
+  /// re-initialization
+  (*ghostState) = 0.;
+  for (CFuint i = 0; i < 5; ++i) {
+    (*ghostState)[i] = 2.*(*_dimState)[i] - (*innerState)[i];
+  }
+  (*ghostState)[0] = (*innerState)[0]; // rho extrapolated from inside
 }
       
 //////////////////////////////////////////////////////////////////////////////

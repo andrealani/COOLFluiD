@@ -161,6 +161,55 @@ void Euler3DRhovt::setAdimensionalValues(const State& state,
 
 //////////////////////////////////////////////////////////////////////////////
 
+void Euler3DRhovt::setDimensionalValuesPlusExtraValues
+(const State& state, RealVector& result,
+ RealVector& extra)
+{
+  // first set the state variables
+  Euler3DRhovt::setDimensionalValues(state,result);
+
+  const CFreal rho = result[0];
+  const CFreal T   = result[4];
+  const CFreal R = getModel()->getR();
+  const CFreal p = rho*R*T;
+  const CFreal u = result[1];
+  const CFreal v = result[2];
+  const CFreal w = result[3];
+  const CFreal V2 = u*u + v*v + w*w;
+  const CFreal gamma = getModel()->getGamma();
+  const CFreal gammaMinus1 = gamma - 1.;
+  const CFreal gammaDivGammaMinus1 = gamma/gammaMinus1;
+  const CFreal pOvRho = p/rho;
+  const CFreal M = sqrt(V2/(gamma*pOvRho));
+  
+  extra.resize(4);
+  extra[0] = rho;
+  extra[1] = gammaDivGammaMinus1*pOvRho + 0.5*V2;
+  extra[2] = M;
+  extra[3] = p;
+  
+  /*
+    static CFreal minM = 1e10; if (M<minM) minM = M; 
+    static CFreal maxM = 0.;   if (M>maxM) maxM = M;
+    CFLog(INFO, "Mach [min, max] = [" << minM << ", " << maxM << "]\n");
+  */
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+vector<std::string> Euler3DRhovt::getExtraVarNames() const
+{  
+  vector<std::string> names(4);
+  names[0] = "rho";
+  names[1] = "H";
+  names[2] = "M";
+  names[3] = "p";
+  
+  return names;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace NavierStokes
 
   } // namespace Physics

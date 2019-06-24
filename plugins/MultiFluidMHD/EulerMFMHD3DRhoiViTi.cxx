@@ -393,18 +393,12 @@ void EulerMFMHD3DRhoiViTi::computeStateFromPhysicalData(const RealVector& data,
     state[endEM + nbSpecies + dim*ie] = data[firstVelocity + dim*ie];
     state[endEM + nbSpecies + dim*ie + 1] = data[firstVelocity + dim*ie + 1];
     state[endEM + nbSpecies + dim*ie + 2] = data[firstVelocity + dim*ie + 2];
-    
-
-///OLD IMPLEMENTATION
-//     state[nbSpecies + 2*ie] = data[firstVelocity + 2*ie]*data[PTERM::RHO]*data[firstSpecies + ie];
-//     state[nbSpecies + 2*ie + 1] = data[firstVelocity + 2*ie + 1]*data[PTERM::RHO]*data[firstSpecies + ie];
   }
 
  
  //set the temperatures
   const CFuint firstTemperature = getModel()->getFirstScalarVar(2);
-  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
-    
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {   
     state[endEM + nbSpecies + dim*nbSpecies + ie] = data[firstTemperature + 4*ie];
   }  
 //   CFLog(VERBOSE,"EulerMFMHD3DRhoiViTi::computeStateFromPhysicalData" << "\n");

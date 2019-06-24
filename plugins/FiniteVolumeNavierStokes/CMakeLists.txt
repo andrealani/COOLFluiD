@@ -27,6 +27,8 @@ AUSMPlusFluxPrec.ci
 AUSMLiouSteffenFlux.hh
 AUSMLiouSteffenFlux.ci
 AUSMStegerWarmingFlux.cxx
+CoronalOutletEuler.cxx
+CoronalOutletEuler.hh
 CoupledNoSlipWallIsothermalNSvt_Nodes.hh
 CoupledNoSlipWallIsothermalNSvt_Nodes.ci
 CoupledNoSlipWallIsothermalNSvt_Nodes.cxx

@@ -68,8 +68,7 @@ void SuperInletPhotosphereRhoVT::setGhostState(GeometricEntity *const face)
 
   CFreal latG = 0.;
   //CFreal latI = 0.;   // will probably be needed when implementing differential rotation
-  const CFreal PI = 3.14159265358979;
-
+  const CFreal PI = MathTools::MathConsts::CFrealPi();
   const CFreal xG = ghostState->getCoordinates()[XX];
   const CFreal yG = ghostState->getCoordinates()[YY];
   const CFreal zG = ghostState->getCoordinates()[ZZ];

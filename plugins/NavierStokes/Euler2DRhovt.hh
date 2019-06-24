@@ -103,6 +103,18 @@ public: // classes
   {
     velIDs.resize(2); velIDs[XX] = 1; velIDs[YY] = 2; 
   }
+
+  /**
+   * Get extra variable names
+   */
+  virtual std::vector<std::string> getExtraVarNames() const;
+
+  /**
+   * Set other adimensional values for useful physical quantities
+   */
+  virtual void setDimensionalValuesPlusExtraValues
+  (const Framework::State& state, RealVector& result,
+   RealVector& extra);
   
 }; // end of class Euler2DRhovt
 
