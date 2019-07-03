@@ -16,7 +16,7 @@ namespace COOLFluiD {
   
   namespace Physics {
     namespace NavierStokes {
-      class Euler2DVarSet;
+      class Euler3DVarSet;
     }
   }
 
@@ -63,7 +63,7 @@ public:
     
 private: // data
   /// corresponding variable set
-  Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> _varSet;
+  Common::SafePtr<Physics::NavierStokes::Euler3DVarSet> _varSet;
 
   /// vector to store temporary result
   RealVector _temp;

@@ -31,7 +31,10 @@ SingleFluidMHDST<UPDATEVAR>::SingleFluidMHDST(const std::string& name) :
   _dummyGradients(),
   _massSource(),
   _Btotal(),
-  _Etotal()
+  _Etotal(),
+  _gradBx(),
+  _gradBy(),
+  _gradBz()
 {
   addConfigOptionsTo(this);
   
@@ -148,6 +151,12 @@ void SingleFluidMHDST<UPDATEVAR>::setup()
   _massSource.resize(2);
   _Btotal.resize(3);  
   _Etotal.resize(3);
+
+  _gradBx.resize(3,0.);
+  _gradBy.resize(3,0.);
+  _gradBz.resize(3,0.);
+
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -186,7 +195,7 @@ void SingleFluidMHDST<UPDATEVAR>::computeSource
 
 
 // This part for computing temperature and density gradients:
-//const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
 //cout << "Nbeqns = " << totalNbEqs << endl;
 
 //const CFuint elemID = element->getID();
@@ -216,6 +225,10 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
       const CFuint vxID = 9;
       const CFuint vyID = 10;
       const CFuint vzID = 11;
+      const CFuint BxID = 0;
+      const CFuint ByID = 1;
+      const CFuint BzID = 2;
+
       dTdx = this->m_ux[start+TID];
       //cout << "dTdx = " << dTdx << endl;
       dTdy = this->m_uy[start+TID];
@@ -248,12 +261,46 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   
   const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
-  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
+  //const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();	// Maxwell's Eqs.+ Multifluid NavierStokes Eqs.
   const CFuint nbEqs = eqSS.getNbEqsSS();  				
   const CFuint iEqSS = eqSS.getEqSS();
+
+
+
+
+
   
   // this is needed by both source terms
-  computeElectricCurrent();  
+  //computeElectricCurrent();
+  const CFuint BxID = 0;
+  const CFuint ByID = 1;
+  const CFuint BzID = 2;
+  const CFuint gradBxID = elemID*totalNbEqs + BxID;
+  const CFuint gradByID = elemID*totalNbEqs + ByID;
+  const CFuint gradBzID = elemID*totalNbEqs + BzID;
+  _gradBx[XX] = this->m_ux[gradBxID];
+  _gradBx[YY] = this->m_uy[gradBxID];
+  _gradBy[XX] = this->m_ux[gradByID];
+  _gradBy[YY] = this->m_uy[gradByID];
+  _gradBx[ZZ] = this->m_uz[gradBxID];
+  _gradBy[ZZ] = this->m_uz[gradByID];
+  _gradBz[XX] = this->m_ux[gradBzID];
+  _gradBz[YY] = this->m_uy[gradBzID];
+  _gradBz[ZZ] = this->m_uz[gradBzID];
+  const CFreal mu0 = 1.25663706212e-6; // N/A^2
+  const CFreal Jx = (_gradBz[YY] - _gradBy[ZZ])/mu0;
+  const CFreal Jy = (_gradBx[ZZ] - _gradBz[XX])/mu0;
+  const CFreal Jz = (_gradBy[XX] - _gradBx[YY])/mu0;
+  _J[XX] = Jx;
+  _J[YY] = Jy;
+  _J[ZZ] = Jz;
+
+
+
+
+
+
+  
   
   const CFreal eta = _electricalResistivity;
   CFreal nu = 3.359e12; // BOTH VALUES FROM LINKER ET AL
@@ -327,6 +374,27 @@ if (this->m_useGradientLS && this->m_gradientsExist) {
       const CFreal LorentzforceX =  _J[YY]*_Btotal[ZZ] - _J[ZZ]*_Btotal[YY];		//Electromagnetic momentum X + grav. source term + rho_charge*_Etotal[XX] // determine rho_charge first
       const CFreal LorentzforceY =  _J[ZZ]*_Btotal[XX] - _J[XX]*_Btotal[ZZ];		//Electromagnetic momentum Y + ditto + rho_charge*_Etotal[YY]
       const CFreal LorentzforceZ =  _J[XX]*_Btotal[YY] - _J[YY]*_Btotal[XX];		//Electromagnetic momentum Z + ditto rho_charge*_Etotal[ZZ]
+
+
+/*
+
+      Jx = (_gradBz[YY] - _gradBy[ZZ])/mu0;
+      Jy = (_gradBx[ZZ] - _gradBz[XX])/mu0;
+      Jz = (_gradBy[XX] - _gradBx[YY])/mu0;
+
+      CFreal Ex = -(v*BzTotal - w*ByTotal);
+      CFreal Ey = -(w*BxTotal - u*BzTotal);
+      CFreal Ez = -(u*ByTotal - v*BxTotal);
+
+
+      source[8]  = 0.;                                      //Continuity equation
+      source[9]  = Jy*BzTotal - Jz*ByTotal;                //x-momentum equation
+      source[10] = Jz*BxTotal - Jx*BzTotal;          	  //y-momentum equation
+      source[11] = Jx*ByTotal - Jy*BxTotal;          	  //z-momentum equation
+      source[12] = Jx*Ex + Jy*Ey + Jz*Ez;  //Total Energy
+
+
+*/
 
       const CFreal gamma = _varSet->getModel()->getGamma();
       const CFreal K_B = PhysicalConsts::Boltzmann();
@@ -520,7 +588,40 @@ void SingleFluidMHDST<UPDATEVAR>::computeElectricCurrent()
   const CFreal Jx = sigma*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);
   const CFreal Jy = sigma*(_Etotal[YY] + wi*_Btotal[XX] - ui*_Btotal[ZZ]);  
   const CFreal Jz = sigma*(_Etotal[ZZ] + ui*_Btotal[YY] - vi*_Btotal[XX]);  
-  
+  //const CFuint elemID = element->getID();
+
+/*  const CFuint BxID = 0;*/
+/*  const CFuint ByID = 1;*/
+/*  const CFuint BzID = 2;*/
+/*  const CFuint gradBxID = elemID*totalNbEqs + BxID;*/
+/*  const CFuint gradByID = elemID*totalNbEqs + ByID;*/
+/*  const CFuint gradBzID = elemID*totalNbEqs + BzID;*/
+/*  _gradBx[XX] = this->m_ux[gradBxID];*/
+/*  _gradBx[YY] = this->m_uy[gradBxID];*/
+
+/*  _gradBy[XX] = this->m_ux[gradByID];*/
+/*  _gradBy[YY] = this->m_uy[gradByID];*/
+
+/*  _gradBx[ZZ] = this->m_uz[gradBxID];*/
+/*  _gradBy[ZZ] = this->m_uz[gradByID];*/
+
+/*  _gradBz[XX] = this->m_ux[gradBzID];*/
+/*  _gradBz[YY] = this->m_uy[gradBzID];*/
+/*  _gradBz[ZZ] = this->m_uz[gradBzID];*/
+
+
+
+
+
+  //const CFreal mu0 = 1.25663706212e-6; // N/A^2
+
+  //const CFreal Jx = (_gradBz[YY] - _gradBy[ZZ])/mu0;
+  //const CFreal Jy = (_gradBx[ZZ] - _gradBz[XX])/mu0;
+  //const CFreal Jz = (_gradBy[XX] - _gradBx[YY])/mu0;
+
+
+
+
   _J[XX] = Jx;
   _J[YY] = Jy;
   _J[ZZ] = Jz;

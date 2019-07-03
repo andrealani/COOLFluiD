@@ -202,7 +202,6 @@ void SuperInlet::setGhostState(GeometricEntity *const face)
     
     // CFout << "ADimState: " << *ghostState <<"\n";
   }
-  
   *ghostState *= 2.;
   *ghostState -= *innerState;
   

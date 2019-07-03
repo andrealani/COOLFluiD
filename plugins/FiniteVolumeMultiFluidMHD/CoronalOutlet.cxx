@@ -58,6 +58,7 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   const CFreal rI = innerState->getCoordinates().norm2();
   const CFreal thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
   const CFreal phiI = std::atan2(yI,xI);
+  const CFreal rhoI = std::sqrt(xI*xI + yI*yI);
 
   const CFreal xG = ghostState->getCoordinates()[XX];
   const CFreal yG = ghostState->getCoordinates()[YY];
@@ -66,6 +67,7 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   const CFreal rG = ghostState->getCoordinates().norm2();
   const CFreal thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
   const CFreal phiG = std::atan2(yG,xG);
+  const CFreal rhoG = std::sqrt(xG*xG + yG*yG);
 
   CFreal BxI = (*innerState)[0];
   CFreal ByI = (*innerState)[1];
@@ -73,7 +75,7 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   CFreal VxI = (*innerState)[9];
   CFreal VyI = (*innerState)[10];
   CFreal VzI = (*innerState)[11];
-  CFreal rhoI = (*innerState)[8];
+  CFreal densityI = (*innerState)[8];
   CFreal TI = (*innerState)[12];
 
 
@@ -92,22 +94,23 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   CFreal BthetaG = BthetaI;
   CFreal BphiG = (rI/rG)*BphiI;
 
-  // Continuous BC for r^2*rho:
-  CFreal rhoG = rI*rI/(rG*rG)*rhoI;
+  CFreal densityG = rI*densityI/rG;
+  (*ghostState)[8] = densityG;
 
-  // Continuous BCs for r^2*rho*Vr, rho*Vtheta, r*Vphi:
-  CFreal VrG = rI*rI*VrI*rhoI/(rG*rG*rhoG);
-  CFreal VthetaG = rhoI*VthetaI/rhoG;
+  // Continuous BCs for r^2*density*Vr, density*Vtheta, r*Vphi:
+  CFreal VrG = rI*rI*VrI*densityI/(rG*rG*densityG);
+  CFreal VthetaG = densityI*VthetaI/densityG;
   CFreal VphiG = (rI/rG)*VphiI;
 
 
   // Convert all spherical vector components back to cartesian ones:
-  CFreal BxG = std::sin(thetaG)*std::cos(phiG)*BrG + std::cos(thetaG)*std::cos(phiG)*BthetaG - std::sin(phiG)*BphiG;
-  CFreal ByG = std::sin(thetaG)*std::sin(phiG)*BrG + std::cos(thetaG)*std::sin(phiG)*BthetaG + std::cos(phiG)*BphiG;
-  CFreal BzG = std::cos(thetaG)*BrG - std::sin(thetaG)*BthetaG;
-  CFreal VxG = std::sin(thetaG)*std::cos(phiG)*VrG + std::cos(thetaG)*std::cos(phiG)*VthetaG - std::sin(phiG)*VphiG;
-  CFreal VyG = std::sin(thetaG)*std::sin(phiG)*VrG + std::cos(thetaG)*std::sin(phiG)*VthetaG + std::cos(phiG)*VphiG;
-  CFreal VzG = std::cos(thetaG)*VrG - std::sin(thetaG)*VthetaG;
+  CFreal BxG = xG/rG*BrG + xG*zG/(rhoG*rG)*BthetaG - yG/rhoG*BphiG;
+  CFreal ByG = yG/rG*BrG + yG*zG/(rhoG*rG)*BthetaG + xG/rhoG*BphiG;
+  CFreal BzG = zG/rG*BrG - rhoG/rG*BthetaG;
+  CFreal VxG = xG/rG*VrG + xG*zG/(rhoG*rG)*VthetaG - yG/rhoG*VphiG;
+  CFreal VyG = yG/rG*VrG + yG*zG/(rhoG*rG)*VthetaG + xG/rhoG*VphiG;
+  CFreal VzG = zG/rG*VrG - rhoG/rG*VthetaG;
+
 
 
   CFreal Bxbound = (BxI + BxG)/2.0;
@@ -117,22 +120,29 @@ void CoronalOutlet::setGhostState(GeometricEntity *const face)
   CFreal Vybound = (VyI + VyG)/2.0;
   CFreal Vzbound = (VzI + VzG)/2.0;
 
+  // Boundary values for the E-field:
+  CFreal ExB = Bybound*Vzbound - Bzbound*Vybound;
+  CFreal EyB = Bzbound*Vxbound - Bxbound*Vzbound;
+  CFreal EzB = Bxbound*Vybound - Bybound*Vxbound;
+
 
   (*ghostState)[0] = BxG;
   (*ghostState)[1] = ByG;
   (*ghostState)[2] = BzG;
 
   // Electric field = B x V
-  (*ghostState)[3] = 2.*(Bybound*Vzbound - Bzbound*Vybound) - (*innerState)[3];
-  (*ghostState)[4] = 2.*(Bzbound*Vxbound - Bxbound*Vzbound) - (*innerState)[4];
-  (*ghostState)[5] = 2.*(Bxbound*Vybound - Bybound*Vxbound) - (*innerState)[5];
+  (*ghostState)[3] = 2.*ExB - (*innerState)[3];
+  (*ghostState)[4] = 2.*EyB - (*innerState)[4];
+  (*ghostState)[5] = 2.*EzB - (*innerState)[5];
 
   // According to Alejandro's setups:
-  (*ghostState)[6] = -(*innerState)[6];
-  (*ghostState)[7] = (*innerState)[7]; // - in Alejandro"s setup
+  (*ghostState)[6] = (*innerState)[6]; // continous at the outlet?
+  (*ghostState)[7] = (*innerState)[7]; // continous at the outlet?
 
+  // density*r = continuous => densityG = densityI*rI/rG
+  // Continuous BC for r^2*rho: TYPO IN SKRALAN's PAPER
+  //CFreal densityG = rI*rI/(rG*rG)*densityI;
 
-  (*ghostState)[8] = rhoG;
 
   (*ghostState)[9] = VxG;
   (*ghostState)[10] = VyG;

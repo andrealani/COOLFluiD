@@ -138,6 +138,16 @@ protected: // data
 
 private:
 
+  /// gradient of Bx
+  RealVector _gradBx;
+
+  /// gradient of By
+  RealVector _gradBy;
+
+ /// gradient of Bz
+ RealVector _gradBz;
+
+
   /// Electrical conductivity
   CFreal _electricalResistivity;
   CFint _Lorentzforce;

@@ -53,47 +53,48 @@ void CoronalOutletEuler::setGhostState(GeometricEntity *const face)
 
   const CFreal xI = innerState->getCoordinates()[XX];
   const CFreal yI = innerState->getCoordinates()[YY];
-  //const CFreal zI = (dim == DIM_3D) ? innerState->getCoordinates()[ZZ] : 0.;  // we won't need the 2-D case at least for now
   const CFreal zI = innerState->getCoordinates()[ZZ];
   const CFreal rI = innerState->getCoordinates().norm2();
+  const CFreal rhoI = std::sqrt(xI*xI + yI*yI);
   const CFreal thetaI = std::atan2(std::sqrt(xI*xI + yI*yI),zI);
   const CFreal phiI = std::atan2(yI,xI);
 
   const CFreal xG = ghostState->getCoordinates()[XX];
   const CFreal yG = ghostState->getCoordinates()[YY];
-  //const CFreal zG = (dim == DIM_3D) ? ghostState->getCoordinates()[ZZ] : 0.;
   const CFreal zG = ghostState->getCoordinates()[ZZ];
   const CFreal rG = ghostState->getCoordinates().norm2();
   const CFreal thetaG = std::atan2(std::sqrt(xG*xG + yG*yG),zG);
   const CFreal phiG = std::atan2(yG,xG);
+  const CFreal rhoG = std::sqrt(xG*xG + yG*yG);
 
   CFreal VxI = (*innerState)[1];
   CFreal VyI = (*innerState)[2];
   CFreal VzI = (*innerState)[3];
-  CFreal rhoI = (*innerState)[0];
+  CFreal densityI = (*innerState)[0];
   CFreal TI = (*innerState)[4];
-  CFreal VrI = std::sin(thetaI)*std::cos(phiI)*VxI + std::sin(thetaI)*std::sin(phiI)*VyI + std::cos(thetaI)*VzI;
-  CFreal VthetaI = std::cos(thetaI)*std::cos(phiI)*VxI + std::cos(thetaI)*std::sin(phiI)*VyI - std::sin(thetaI)*VzI;
-  CFreal VphiI = -std::sin(phiI)*VxI + std::cos(phiI)*VyI;
+  CFreal VrI = xI/rI*VxI + yI/rI*VyI + zI/rI*VzI;
+  CFreal VthetaI = xI*zI/(rhoI*rI)*VxI + yI*zI/(rhoI*rI)*VyI - rhoI/rI*VzI;
+  CFreal VphiI = -yI/rhoI*VxI + xI/rhoI*VyI;
   
   // Continuous BC for r^2*rho:
-  CFreal rhoG = rI*rI/(rG*rG)*rhoI;
+  CFreal densityG = rI*rI/(rG*rG)*densityI;
 
   // Continuous BCs for r^2*rho*Vr, rho*Vtheta, r*Vphi:
-  CFreal VrG = rI*rI*VrI*rhoI/(rG*rG*rhoG);
-  CFreal VthetaG = rhoI*VthetaI/rhoG;
+  CFreal VrG = rI*rI*VrI*densityI/(rG*rG*densityG);
+  //CFreal VrG = rI*rI*VrI/(rG*rG);
+  CFreal VthetaG = VthetaI; //rhoI*VthetaI/densityG;
   CFreal VphiG = (rI/rG)*VphiI;
   
-  CFreal VxG = std::sin(thetaG)*std::cos(phiG)*VrG + std::cos(thetaG)*std::cos(phiG)*VthetaG - std::sin(phiG)*VphiG;
-  CFreal VyG = std::sin(thetaG)*std::sin(phiG)*VrG + std::cos(thetaG)*std::sin(phiG)*VthetaG + std::cos(phiG)*VphiG;
-  CFreal VzG = std::cos(thetaG)*VrG - std::sin(thetaG)*VthetaG;
+ CFreal VxG = xG/rG*VrG - yG/rhoG*VphiG + xG*zG/(rhoG*rG)*VthetaG;
+ CFreal VyG = yG/rG*VrG + xG/rhoG*VphiG + yG*zG/(rhoG*rG)*VthetaG;
+ CFreal VzG = zG/rG*VrG - rhoG/rG*VthetaG;
 
   
   CFreal Vxbound = (VxI + VxG)/2.0;
   CFreal Vybound = (VyI + VyG)/2.0;
   CFreal Vzbound = (VzI + VzG)/2.0;
 
-  (*ghostState)[0] = rhoG;
+  (*ghostState)[0] = densityG;
 
   (*ghostState)[1] = VxG;
   (*ghostState)[2] = VyG;

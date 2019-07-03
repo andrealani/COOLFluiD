@@ -16,8 +16,8 @@
 #CFEnv.AssertThrows         = true
 #CFEnv.AssertDumps          = true
 ##CFEnv.ExceptionAborts     = true
-#CFEnv.ExceptionDumps       = false
-#CFEnv.ExceptionOutputs     = false
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 #CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut        = true
 #CFEnv.TraceActive          = true
@@ -73,7 +73,6 @@ Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.molecularMass1 = 1.67262177774e-24
 #Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.molecularMass3 = 1.6735327160314e-27
 Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.IsLeake = false
 Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.gamma = 1.05
-#Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.gamma = 1.6666666666667 #Default 5/3
 Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.nonInducedElectromagnetic = 0. 0. 0. 0. 0. 0.
 Simulator.SubSystemB.MultiFluidMHD3D.ConvTerm.divBCleaningConst = 1. #10.
 #Simulator.SubSystemB.MultiFluidMHD3D.DiffTerm.nbSpecies = 1
@@ -95,7 +94,7 @@ Simulator.SubSystemB.CFmesh1.Data.CollaboratorNames = Flow
 
 Simulator.SubSystemB.Tecplot1.FileName    = corona_restart.plt
 Simulator.SubSystemB.Tecplot1.Data.outputVar = RhoiViTi
-Simulator.SubSystemB.Tecplot1.SaveRate    = 1
+Simulator.SubSystemB.Tecplot1.SaveRate    = 1000000
 #Simulator.SubSystemB.Tecplot1.Data.printExtraValues = true
 Simulator.SubSystemB.Tecplot1.Data.SurfaceTRS = Inlet Outlet
 Simulator.SubSystemB.Tecplot1.AppendTime = false
@@ -122,12 +121,12 @@ Simulator.SubSystemB.ParaView1.Data.CollaboratorNames = Flow
 # Time Marching
 
 # Stop Condition
-Simulator.SubSystemB.StopCondition          = MaxNumberSteps
-Simulator.SubSystemB.MaxNumberSteps.nbSteps = 1
+#Simulator.SubSystemB.StopCondition          = MaxNumberSteps
+#Simulator.SubSystemB.MaxNumberSteps.nbSteps = 1
 #Simulator.SubSystemB.StopCondition   = MaxTime
 #Simulator.SubSystemB.MaxTime.maxTime = 0.295
-#Simulator.SubSystemB.StopCondition       = Norm
-#Simulator.SubSystemB.Norm.valueNorm      = -30.0
+Simulator.SubSystemB.StopCondition       = Norm
+Simulator.SubSystemB.Norm.valueNorm      = -30.0
 
 ###############################################################################
 
@@ -181,7 +180,7 @@ Simulator.SubSystemB.CFmeshFileReader0.Gmsh2CFmesh.Discontinuous = true
 Simulator.SubSystemB.CFmeshFileReader0.Gmsh2CFmesh.SolutionOrder = P0
 Simulator.SubSystemB.CFmeshFileReader0.Namespace = FlowNamespace
 Simulator.SubSystemB.CFmeshFileReader0.Data.CollaboratorNames = Flow
-Simulator.SubSystemB.CFmeshFileReader0.Data.FileName = CB.CFmesh
+Simulator.SubSystemB.CFmeshFileReader0.Data.FileName = corona-a90.CFmesh
 Simulator.SubSystemB.CFmeshFileReader0.Data.ScalingFactor = 0.000000001437794 # 1.
 Simulator.SubSystemB.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 
@@ -224,7 +223,7 @@ Simulator.SubSystemB.Flow.Data.Venktn3D.coeffEps = 1
 
 Simulator.SubSystemB.Flow.Data.FluxSplitter = AUSMPlusUpMultiFluid3D
 Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.choiceA12 = 1
-Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.machInf = 1. #0.0125
+Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.machInf = 0.0125
 Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.useMacCormackScaling = true
 Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.Coeff = 1e6
 #Simulator.SubSystemB.Flow.Data.AUSMPlusUpMultiFluid3D.sigma = 0.25
@@ -235,42 +234,52 @@ Simulator.SubSystemB.Flow.Data.SolutionVar = Cons
 #Simulator.SubSystemB.Flow.Data.DerivativeStrategy = Corrected3D
 #Simulator.SubSystemB.Flow.Data.DiffusiveFlux = NavierStokesMF
 
+
 # in reality we will use another source term
-#Simulator.SubSystemB.Flow.Data.SourceTerm = HartmannSourceTerm3D
+Simulator.SubSystemB.Flow.Data.SourceTerm = SingleFluidMHDST3D # HartmannSourceTerm3D #
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.electricalResistivity = 1.0e8
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.Lorentzforce = 1
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.SourceAmpere = 1
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.Gravitation = 0
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.JdotE = 1
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.Viscosity = 0
+Simulator.SubSystemB.Flow.Data.SingleFluidMHDST3D.rhogV = 0
 #Simulator.SubSystemB.Flow.Data.HartmannSourceTerm3D.electricalConductivity = 7.95774715482e7 #7.95774715482e14 #5e6 #1256.6370614359
 
 ###############################################################################
 # Initial Conditions
 #Simulator.SubSystemB.Flow.Restart = true
-Simulator.SubSystem.Flow.InitComds = InitStateAddVar 
-Simulator.SubSystem.Flow.InitNames = InField 
-Simulator.SubSystem.Flow.InField.applyTRS = InnerFaces
-Simulator.SubSystem.Flow.InField.InitVars = x y z
-Simulator.SubSystem.Flow.InField.Vars = x y z r   
-Simulator.SubSystem.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
-#Simulator.SubSystem.Flow.InField.InitVars = xx yy zz
-#Simulator.SubSystem.Flow.InField.Vars = xx yy zz r x y z   
-#Simulator.SubSystem.Flow.InField.InitDef = sqrt(xx^2+yy^2+zz^2)/695509927.012 xx/695509927.012 yy/695509927.012 zz/695509927.012 
+Simulator.SubSystemB.Flow.InitComds = InitStateAddVar 
+Simulator.SubSystemB.Flow.InitNames = InField 
+Simulator.SubSystemB.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystemB.Flow.InField.InitVars = x y z
+Simulator.SubSystemB.Flow.InField.Vars = x y z r
+Simulator.SubSystemB.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
 
 # here set the initial B field
-Simulator.SubSystem.Flow.InField.Def = \
+Simulator.SubSystemB.Flow.InField.Def = \
+        x/sqrt(x^2+y^2+z^2)*2.*0.00022*(6.9551e8)^3*cos(atan2((x^2+y^2),z))/sqrt(x^2+y^2+z^2)^3+x*z/(sqrt(x^2+y^2)*sqrt(x^2+y^2+z^2))*0.00022*(6.9551e8)^3*sin(atan2((x^2+y^2),z))/sqrt(x^2+y^2+z^2)^3-y/sqrt(x^2+y^2)*0.0 \
+        y/sqrt(x^2+y^2+z^2)*2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y),z))/(sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2))+y*z/(sqrt(x*x+y*y)*sqrt(x^2+y^2+z^2))*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y),z))/(sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2))+x/sqrt(x*x+y*y)*0.0 \
+        z/sqrt(x^2+y^2+z^2)*2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y),z))/(sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2))-sqrt(x*x+y*y)/sqrt(x^2+y^2+z^2)*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y),z))/(sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2)*sqrt(x^2+y^2+z^2)) \
+        y/sqrt(x*x+y*y)*(9165.372593288523-1.8204851612575266e-05*sqrt(x^2+y^2+z^2)+1.0434707449784796e-14*sqrt(x^2+y^2+z^2)^2-1.4186777294157635e-24*sqrt(x^2+y^2+z^2)^3+8.374676041709383e-35*sqrt(x^2+y^2+z^2)^4-1.8430711555714095e-45*sqrt(x^2+y^2+z^2)^5)*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y),z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)) \
+        -x/sqrt(x*x+y*y)*(9165.372593288523-1.8204851612575266e-05*sqrt(x^2+y^2+z^2)+1.0434707449784796e-14*sqrt(x^2+y^2+z^2)^2-1.4186777294157635e-24*sqrt(x^2+y^2+z^2)^3+8.374676041709383e-35*sqrt(x^2+y^2+z^2)^4-1.8430711555714095e-45*sqrt(x^2+y^2+z^2)^5)*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y),z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)) \
         0. \
         0. \
         0. \
-        0. \
-        0. \
-        0. \
-        0. \
-        0. \
-	2.89e-13*sqrt(r/6.9551e8)*exp(2.*6.67408e-11*1.989e30*1.27*1.6733e-27/(1.38064852e-23*1.5e6*6.9551e8)*(sqrt(6.9551e8/r)-sqrt(1./1.035))) \
-	sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	cos(atan2(sqrt(x^2+y^2),z))*(-2.587504747757601e-45*r^5+1.1451049356390155e-34*r^4-1.8693243447343906e-24*r^3+1.2981990127497804e-14*r^2-1.85472443659805e-5*r+6026.2007084021225+1445.2) \
-	1.5e6*sqrt(6.9551e8/r)
+        1.67e-13*6.9551e8*6.9551e8/(x*x+y*y+z*z) \
+        x/sqrt(x*x+y*y+z*z)*(9165.372593288523-1.8204851612575266e-05*r+1.0434707449784796e-14*r^2-1.4186777294157635e-24*r^3+8.374676041709383e-35*r^4-1.8430711555714095e-45*r^5) \
+        y/sqrt(x*x+y*y+z*z)*(9165.372593288523-1.8204851612575266e-05*r+1.0434707449784796e-14*r^2-1.4186777294157635e-24*r^3+8.374676041709383e-35*r^4-1.8430711555714095e-45*r^5) \
+        z/sqrt(x*x+y*y+z*z)*(9165.372593288523-1.8204851612575266e-05*r+1.0434707449784796e-14*r^2-1.4186777294157635e-24*r^3+8.374676041709383e-35*r^4-1.8430711555714095e-45*r^5) \
+        1.5e6*(6.955e8/r)^(2*(1.05-1.0))
+
+
+
+# E-field from E = -VxB = -Vr Btheta ephi <- only phi component
+# Ex = -y/rhoc Ephi, Ey = x/rhoc Ephi, Ez = 0.
 
 ###############################################################################
 # Boundary Conditions
-Simulator.SubSystemB.Flow.BcComds = SuperInletProjectionFVMCC SuperOutletBrFVMCC
+Simulator.SubSystemB.Flow.BcComds = SuperInletPhotosphereRhoVTFVMCC CoronalOutletFVMCC
 #SuperOutletFVMCC
 Simulator.SubSystemB.Flow.BcNames = Jet1 Jet2   
 
@@ -278,7 +287,23 @@ Simulator.SubSystemB.Flow.Jet1.applyTRS = Inlet
 #Simulator.SubSystemB.Flow.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
 Simulator.SubSystemB.Flow.Jet1.Vars = x y z 
 # here make sure that the B components are consistent with the initial field
-Simulator.SubSystemB.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 5.63428813037151e-13 sin(atan2(sqrt(x^2+y^2),z))*cos(atan2(y,x))*248.93426424 sin(atan2(sqrt(x^2+y^2),z))*sin(atan2(y,x))*248.93426424 cos(atan2(sqrt(x^2+y^2),z))*248.93426424 1.5e6
+Simulator.SubSystemB.Flow.Jet1.Def = 0. 0. 0. 0. 0. 0. 0. 0. 1.67e-13 x/sqrt(x*x+y*y+z*z)*1000.933346759675317 y/sqrt(x*x+y*y+z*z)*1000.933346759675317 z/sqrt(x*x+y*y+z*z)*1000.933346759675317 1.5e6
+
+# Bfield x/sqrt(x*x+y*y+z*z)*2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))+x*z/(sqrt(x*x+y*y)*sqrt(x*x+y*y+z*z))*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))-y/sqrt(x*x+y*y)*0.0 y/sqrt(x*x+y*y+z*z)*2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))+y*z/(sqrt(x*x+y*y)*sqrt(x*x+y*y+z*z))*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))+x/sqrt(x*x+y*y)*0.0 z/sqrt(x*x+y*y+z*z)*2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))-sqrt(x*x+y*y)/sqrt(x*x+y*y+z*z)*0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))
+
+
+#Br on the boundary
+#2.*0.00022*6.9551e8*6.9551e8*6.9551e8*cos(atan2((x*x+y*y)/z))/#(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))
+
+
+#Btheta on the boundary
+#0.00022*6.9551e8*6.9551e8*6.9551e8*sin(atan2((x*x+y*y)/z))/(sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z)*sqrt(x*x+y*y+z*z))
+
+
+#Bphi am Rand
+#0
+
+#B0dip=2.2G=0.00022Tesla
 
 # rho(1.0 R_Sun) = 5.63428813037151e-13 # kg/m**3 (pressure-gravity-balance)
 # vr(1.0 R_Sun) = 0.024457 # m/s (Parker's hydrodynamical model)

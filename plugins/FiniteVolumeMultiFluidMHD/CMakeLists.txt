@@ -113,6 +113,8 @@ SuperInletPhi3D.cxx
 SuperInletPhi3D.hh
 SuperInletPhotosphereRhoVT.cxx
 SuperInletPhotosphereRhoVT.hh
+SuperInletPhotosphereHydrodynamic.cxx
+SuperInletPhotosphereHydrodynamic.hh
 SuperOutletBr.cxx
 SuperOutletBr.hh
 SuperOutletPhi.cxx
