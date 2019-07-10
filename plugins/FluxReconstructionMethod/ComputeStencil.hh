@@ -67,12 +67,11 @@ public:
    * Sets the Data Socket Sinks needed
    */
   virtual void setDataSocketSinks(Framework::DataSocketSink< Framework::State*, Framework::GLOBAL> statesSocket,
-                                  Framework::DataSocketSink< Framework::Node*, Framework::GLOBAL> nodesSocket,
-                                  Framework::DataSocketSink< std::vector<Framework::State*> > stencilSocket)
+                                  Framework::DataSocketSink< Framework::Node*, Framework::GLOBAL> nodesSocket)
   {
     socket_states = statesSocket;
     socket_nodes = nodesSocket;
-    socket_stencil = stencilSocket;
+    //socket_stencil = stencilSocket;
   }
 
   /// Configure the data from the supplied arguments.
@@ -85,10 +84,6 @@ protected: //data
 
   /// socket for nodes
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
-
-  /// storage for the stencil via pointers to neighbors
-  Framework::DataSocketSink<
-                            std::vector<Framework::State*> > socket_stencil;
 
   /// list of TRS names
   std::vector<std::string> _trsNames; 

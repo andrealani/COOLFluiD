@@ -25,6 +25,8 @@ Lobatto.hh
 CMakeLists.txt
 StdSetup.cxx
 StdSetup.hh
+SetupCUDA.cxx
+SetupCUDA.hh
 PseudoSteadyStdTimeRHSJacob.cxx
 PseudoSteadyStdTimeRHSJacob.hh
 ConvRHSFluxReconstruction.cxx
@@ -55,8 +57,8 @@ RoeFlux.cxx
 RoeFlux.hh
 CentredFlux.cxx
 CentredFlux.hh
-LaxFriedrichsFlux.cxx
-LaxFriedrichsFlux.hh
+#LaxFriedrichsFlux.cxx
+#LaxFriedrichsFlux.hh
 FluxReconstructionElementData.cxx
 FluxReconstructionElementData.hh
 QuadFluxReconstructionElementData.cxx
@@ -308,7 +310,25 @@ BDF2TimeRHSJacob.cxx
 CellData.hh
 ComputeStencil.hh
 ComputeStencil.cxx
+FluxData.hh
 )
+
+IF (NOT CF_HAVE_CUDA)
+LIST ( APPEND FluxReconstructionMethod_files
+     LaxFriedrichsFlux.cxx
+     LaxFriedrichsFlux.hh     
+) 
+ELSE()
+EXECUTE_PROCESS(COMMAND cp LaxFriedrichsFlux.cxx LaxFriedrichsFlux.cu
+WORKING_DIRECTORY ${COOLFluiD_SOURCE_DIR}/plugins/FluxReconstructionMethod
+)
+LIST ( APPEND FluxReconstructionMethod_files
+     LaxFriedrichsFlux.cu
+     LaxFriedrichsFlux.hh
+) 
+LIST ( APPEND ${MYLIBNAME}_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
+LIST ( APPEND ${MYLIBNAME}_libs ${CUDA_LIBRARIES} )
+ENDIF ()
 
 LIST ( APPEND FluxReconstructionMethod_cflibs Framework ShapeFunctions )
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionMethod )

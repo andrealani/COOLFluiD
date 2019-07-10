@@ -28,21 +28,20 @@ public:
 			 T* statesIn, 
 			 T* updateCoeffIn, 
 			 T* rhsIn,
-			 T* normalsIn,
-			 T* uxIn,
-			 T* uyIn,
-			 T* uzIn,
-			 CFint* isOutwardIn)
+                         T* solPntNormalsIn,
+                         CFuint nbSolPntsIn)
   {
     nbCells = nbCellsIn; 
     states = statesIn; 
     updateCoeff = updateCoeffIn; 
     rhs = rhsIn;
-    normals = normalsIn;
-    uX = uxIn;
-    uY = uyIn;
-    uZ = uzIn;
-    isOutward = isOutwardIn;
+    solPntNormals = solPntNormalsIn;
+    nbSolPnts = nbSolPntsIn;
+//    normals = normalsIn;
+//    uX = uxIn;
+//    uY = uyIn;
+//    uZ = uzIn;
+//    isOutward = isOutwardIn;
   }
   
   /// Destructor
@@ -52,11 +51,13 @@ public:
   T* states; 
   T* updateCoeff; 
   T* rhs;
-  T* normals;
-  T* uX;
-  T* uY;
-  T* uZ;
-  CFint* isOutward;
+  T* solPntNormals;
+  CFuint nbSolPnts;
+//  T* normals;
+//  T* uX;
+//  T* uY;
+//  T* uZ;
+//  CFint* isOutward;
 };
       
 //////////////////////////////////////////////////////////////////////////////

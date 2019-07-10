@@ -27,8 +27,7 @@ ComputeStencil::ComputeStencil(const std::string& name) :
   ConfigObject(name),
   Common::NonCopyable<ComputeStencil>(),
   socket_states("Null"),
-  socket_nodes("Null"),
-  socket_stencil("Null")
+  socket_nodes("Null")
 {
   addConfigOptionsTo(this);
   

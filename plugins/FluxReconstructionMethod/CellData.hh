@@ -25,18 +25,15 @@ public:
   /// Constructor
   HOST_DEVICE CellData(const CFuint    nbCellsIn, 
 		       const CFuint*   cellInfoIn,
-		       const CFuint*   cellStencilIn,
-		       const CFuint*   cellFacesIn,
-		       const CFuint*   cellNodesIn,
-		       const CFint*    neighborTypesIn,
-		       const Framework::CellConn* cellConnIn) :
+                       const CFuint*   cellStateIDsIn) :
     nbCells(nbCellsIn), 
     cellInfo(cellInfoIn),
-    cellStencil(cellStencilIn),
-    cellFaces(cellFacesIn),
-    cellNodes(cellNodesIn),
-    neighborTypes(neighborTypesIn),
-    cellConn(cellConnIn)
+    cellStateIDs(cellStateIDsIn)
+//    cellStencil(cellStencilIn),
+//    cellFaces(cellFacesIn),
+//    cellNodes(cellNodesIn),
+//    neighborTypes(neighborTypesIn),
+//    cellConn(cellConnIn)
   {
   }
   
@@ -88,6 +85,9 @@ public:
     /// Get the cell ID
     HOST_DEVICE CFuint getCellID() const {return m_cellID;}
     
+    /// Get the state ID
+    HOST_DEVICE CFuint getStateID(CFuint localID) const {return m_cd->cellStateIDs[localID];}
+    
     /// Get the shape index
     HOST_DEVICE CFuint getShapeIdx() const {return m_cd->cellInfo[m_startc+3];}
     
@@ -133,6 +133,7 @@ public:
   
   const CFuint    nbCells;
   const CFuint*   cellInfo;
+  const CFuint*   cellStateIDs;
   const CFuint*   cellStencil;
   const CFuint*   cellFaces;
   const CFuint*   cellNodes;

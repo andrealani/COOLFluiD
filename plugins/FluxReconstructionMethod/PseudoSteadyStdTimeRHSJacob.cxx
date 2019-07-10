@@ -246,6 +246,13 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
   // add time residual contribution (Backward Euler)
   const CFuint nbrSolPnts = m_cellStates->size();
+  
+  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  {
+    // now the contribution to the jacobian matrix is calculated
+    m_acc->setRowColIndex(iSol, (*m_cellStates)[iSol]->getLocalID());
+  }
+    
   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
   {
     // get state
@@ -264,9 +271,6 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
     const State *const tPastState = m_updateToSolutionVecTrans->transform(pastStates[stateID]);
 
-    // now the contribution to the jacobian matrix is calculated
-    m_acc->setRowColIndex(iSol, currState->getLocalID());
-
     // add contribution to rhs and jacobian
     CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++globalID)
@@ -274,7 +278,7 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
       rhs(stateID, iEq, m_nbrEqs) -= (m_tempState[iEq] - (*tPastState)[iEq])*m_diagValues[iSol];
 //       CF_DEBUG_OBJ(rhs(stateID, iEq, m_nbrEqs));
 
-      if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian() && false)
+      if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
       {
         // perturb the given component of the state vector
         m_numericalJacob->perturb(iEq, (*currState)[iEq]);
@@ -284,27 +288,28 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
         // compute the finite difference derivative of the flux
         m_numericalJacob->computeDerivative(m_tempState,tempPertState,m_fluxDiff);
 
-//      // _fluxDiff corresponds to a column vector of the dU/dP matrix
-//      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-//	_fluxDiff[iEq] *= (!_zeroDiagValue[iEq]) ? _diagValue*resFactor : 0.0;
-//      }
+        // _fluxDiff corresponds to a column vector of the dU/dP matrix
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+        {
+	  m_fluxDiff[iEq] *= m_diagValues[iSol];
+        }
 
         m_acc->addValues(iSol, iSol, iEq, &m_fluxDiff[0]);
 
         // restore the unperturbed value
         m_numericalJacob->restore((*currState)[iEq]);
 
-      }  
-if (false){
-      // add the values in the jacobian matrix
-      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
-      m_lss->getMatrix()->addValues(*m_acc);}
-
-      // reset to zero the entries in the block accumulator
-      m_acc->reset();
-
-      m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);
+      }
     }
+
+    // add the values in the jacobian matrix
+    //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
+    m_lss->getMatrix()->addValues(*m_acc);
+
+    // reset to zero the entries in the block accumulator
+    m_acc->reset();
+
+    //m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);
   }
 //   CF_DEBUG_POINT;
 }
