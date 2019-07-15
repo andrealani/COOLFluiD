@@ -12,6 +12,7 @@ namespace COOLFluiD {
   namespace Physics {
     namespace NavierStokes {
       class Euler2DVarSet;
+      class NavierStokes2DVarSet;
     }
   }
 
@@ -95,7 +96,7 @@ protected: // data
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
   
   /// corresponding diffusive variable set
-  Common::SafePtr<Framework::DiffusiveVarSet> m_diffVarSet;
+  Common::SafePtr<Physics::NavierStokes::NavierStokes2DVarSet> m_diffVarSet;
   
   /// variable for physical data of sol
   RealVector m_solPhysData;
@@ -104,7 +105,13 @@ protected: // data
   std::vector<RealVector*> m_dummyGradients;
   
   /// the gradients in the neighbouring cell
-  std::vector< std::vector< RealVector >* > m_cellGrads;
+  std::vector< std::vector< RealVector* >* > m_cellGrads;
+  
+  /// cutoff of R
+  CFreal m_cutoffR;
+  
+  /// nbr of sol pnts per element
+  CFuint m_nbrSolPnts;
   
 }; // class NS2DAxiSourceTerm
 

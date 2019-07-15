@@ -50,7 +50,7 @@ StdSourceTerm::StdSourceTerm(const std::string& name) :
 {
   addConfigOptionsTo(this);
   
-  m_addJacob = 0.0;
+  m_addJacob = false;
   setParameter("AddJacob",&m_addJacob);
 }
 

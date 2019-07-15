@@ -52,19 +52,18 @@ NSJacobGradientComputer::NSJacobGradientComputer(const std::string& name) :
 
 void NSJacobGradientComputer::computeGradients()
 {
-  // get the diffusive varset
-  m_diffusiveVarSet = getMethodData().getDiffusiveVar();
-  
-  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
-  
-  RealMatrix tempGradTerm(m_nbrEqs,m_nbrSolPnts);
-  vector< RealVector* > tempStates;
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    tempStates.push_back((*m_cellStates)[iSol]->getData());
+    m_tempStates[iSol] = (*m_cellStates)[iSol]->getData();
+    
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      //set the grad updates to 0 
+      m_gradUpdates[0][iSol][iEq] = 0.0;
+    }
   }
   
-  navierStokesVarSet->setGradientVars(tempStates,tempGradTerm,m_nbrSolPnts);
+  m_diffusiveVarSet->setGradientVars(m_tempStates,m_tempGradTerm,m_nbrSolPnts);
   
   // Loop over solution pnts to calculate the grad updates
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
@@ -72,19 +71,17 @@ void NSJacobGradientComputer::computeGradients()
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      //set the grad updates to 0 
-      m_gradUpdates[0][iSolPnt][iEq] = 0.0;
-
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
+	m_projectedCorrL = m_tempGradTerm(iEq,iSolPnt) * m_cellFluxProjVects[iDir][iSolPnt];
+	
         // Loop over solution pnts to count factor of all sol pnt polys
-        for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
-        {
-	  const RealVector projectedState = tempGradTerm(iEq,jSolPnt) * m_cellFluxProjVects[iDir][jSolPnt];
-	  
+        for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
+        { 
+          const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
           // compute the grad updates
-          m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
+          m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*m_projectedCorrL;
 	}
       }
     }
@@ -92,10 +89,9 @@ void NSJacobGradientComputer::computeGradients()
   
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
-
-  // get jacobian determinants at solution points
-  const std::valarray<CFreal> jacobDet =
-      m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+  
+  // get the volumes
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -103,7 +99,7 @@ void NSJacobGradientComputer::computeGradients()
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
     // inverse Jacobian determinant
-    const CFreal invJacobDet = 1.0/jacobDet[iSol];
+    const CFreal invJacobDet = 1.0/volumes[solID];
 
     // update gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -116,25 +112,33 @@ void NSJacobGradientComputer::computeGradients()
   // if needed, compute the gradients for the artificial viscosity
   if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasArtificialViscosity())
   {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        //set the grad updates to 0 
+        m_gradUpdates[0][iSol][iEq] = 0.0;
+      }
+    }
+
     // Loop over solution pnts to calculate the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
     {
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
-        //set the grad updates to 0 
-        m_gradUpdates[0][iSolPnt][iEq] = 0.0;
-
         // Loop over gradient directions
         for (CFuint iDir = 0; iDir < m_dim; ++iDir)
         {
+          m_projectedCorrL = (*((*m_cellStates)[iSolPnt]))[iEq] * m_cellFluxProjVects[iDir][iSolPnt];
+
           // Loop over solution pnts to count factor of all sol pnt polys
-          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
+          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
           {
-	    const RealVector projectedState = (*((*m_cellStates)[jSolPnt]))[iEq] * m_cellFluxProjVects[iDir][jSolPnt];
+            const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
 	  
             // compute the grad updates
-            m_gradUpdates[0][iSolPnt][iEq] += (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolPnt]*projectedState;
+            m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*m_projectedCorrL;
 	  }
         }
       }
@@ -149,7 +153,7 @@ void NSJacobGradientComputer::computeGradients()
       const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
       // inverse Jacobian determinant
-      const CFreal invJacobDet = 1.0/jacobDet[iSol];
+      const CFreal invJacobDet = 1.0/volumes[solID];
 
       // update gradientsAV
       for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -165,25 +169,16 @@ void NSJacobGradientComputer::computeGradients()
 
 void NSJacobGradientComputer::computeGradientFaceCorrections()
 {
-  // get the diffusive varset
-  m_diffusiveVarSet = getMethodData().getDiffusiveVar();
-  
-  SafePtr< NavierStokesVarSet > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
-
-  RealMatrix tempGradTermL(m_nbrEqs,m_nbrFaceFlxPnts);
-  RealMatrix tempGradTermR(m_nbrEqs,m_nbrFaceFlxPnts);
-  vector< vector< RealVector* > > tempStates;
-  tempStates.resize(2);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    tempStates[LEFT].push_back(m_cellStatesFlxPnt[LEFT][iFlx]->getData());
-    tempStates[RIGHT].push_back(m_cellStatesFlxPnt[RIGHT][iFlx]->getData());
+    m_tempStatesL[iFlx] = m_cellStatesFlxPnt[LEFT][iFlx]->getData();
+    m_tempStatesR[iFlx] = m_cellStatesFlxPnt[RIGHT][iFlx]->getData();
   }
   
-  navierStokesVarSet->setGradientVars(tempStates[LEFT],tempGradTermL,m_nbrFaceFlxPnts);
-  navierStokesVarSet->setGradientVars(tempStates[RIGHT],tempGradTermR,m_nbrFaceFlxPnts);
+  m_diffusiveVarSet->setGradientVars(m_tempStatesL,m_tempGradTermL,m_nbrFaceFlxPnts);
+  m_diffusiveVarSet->setGradientVars(m_tempStatesR,m_tempGradTermR,m_nbrFaceFlxPnts);
   
-  // Loop over solution pnts to calculate the grad updates
+  // Loop over solution pnts to reset the grad updates
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     // Loop over  variables
@@ -192,16 +187,31 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
       //set the grad updates to 0 
       m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
       m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
-      
-      // compute the face corrections to the gradients
-      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    }
+  }
+  
+  // compute the face corrections to the gradients
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
+    const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+
+    // Loop over  variables
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      const CFreal avgSol = (m_tempGradTermL(iEq,iFlx)+m_tempGradTermR(iEq,iFlx))/2.0;
+      m_projectedCorrL = (avgSol-m_tempGradTermL(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+      m_projectedCorrR = (avgSol-m_tempGradTermR(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+
+      // Loop over solution pnts to calculate the grad updates
+      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
       {
-        const CFreal avgSol = (tempGradTermL(iEq,iFlx)+tempGradTermR(iEq,iFlx))/2.0;
-	const RealVector projectedCorrL = (avgSol-tempGradTermL(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-	const RealVector projectedCorrR = (avgSol-tempGradTermR(iEq,iFlx))*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+        const CFuint iSolIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
+        const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
+
 	/// @todo Check if this is also OK for triangles!!
-	m_gradUpdates[LEFT][iSolPnt][iEq] += projectedCorrL*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx]];
-	m_gradUpdates[RIGHT][iSolPnt][iEq] += projectedCorrR*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx]];
+	m_gradUpdates[LEFT][iSolIdxL][iEq] += m_projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
+	m_gradUpdates[RIGHT][iSolIdxR][iEq] += m_projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
       }
     }
   }
@@ -227,7 +237,7 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
   // if needed, compute the gradients for the artificial viscosity
   if (getMethodData().getUpdateVarStr() == "Cons" && getMethodData().hasArtificialViscosity())
   {
-    // Loop over solution pnts to calculate the grad updates
+    // Loop over solution pnts to reset the grad updates
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
     {
       // Loop over  variables
@@ -236,16 +246,31 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
         //set the grad updates to 0 
         m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
         m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
-      
-        // compute the face corrections to the gradients
-        for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+      }
+    }
+
+    // Loop over  variables
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    {
+      const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
+      const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+
+      // compute the face corrections to the gradients
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        const CFreal avgSol = ((*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq]+(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])/2.0;
+	m_projectedCorrL = (avgSol-(*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+	m_projectedCorrR = (avgSol-(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+
+        // Loop over solution pnts to calculate the grad updates
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
-          const CFreal avgSol = ((*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq]+(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])/2.0;
-	  const RealVector projectedCorrL = (avgSol-(*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-	  const RealVector projectedCorrR = (avgSol-(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+          const CFuint iSolIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
+          const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
+
 	  /// @todo Check if this is also OK for triangles!!
-	  m_gradUpdates[LEFT][iSolPnt][iEq] += projectedCorrL*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx]];
-	  m_gradUpdates[RIGHT][iSolPnt][iEq] += projectedCorrR*m_corrFctDiv[iSolPnt][(*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx]];
+	  m_gradUpdates[LEFT][iSolIdxL][iEq] += m_projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
+	  m_gradUpdates[RIGHT][iSolIdxR][iEq] += m_projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
         }
       }
     }
@@ -268,6 +293,31 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
       }
     }
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NSJacobGradientComputer::setup()
+{
+  CFAUTOTRACE;
+  
+  // setup parent class
+  ConvRHSJacobFluxReconstruction::setup();
+  
+  // get the diffusive varset
+  m_diffusiveVarSet = (getMethodData().getDiffusiveVar()).d_castTo< NavierStokesVarSet >();
+  
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  
+  m_updateToSolutionVecTrans->setup(2);
+  
+  m_tempGradTerm.resize(m_nbrEqs,m_nbrSolPnts);
+  m_tempGradTermL.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  m_tempGradTermR.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  
+  m_tempStates.resize(m_nbrSolPnts);
+  m_tempStatesL.resize(m_nbrFaceFlxPnts);
+  m_tempStatesR.resize(m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

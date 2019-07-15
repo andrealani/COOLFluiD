@@ -133,6 +133,9 @@ protected: //data
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
   
+  /// storage of the volumes
+  Framework::DataSocketSink<CFreal> socket_volumes;
+  
   /// update variable set
   Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
   

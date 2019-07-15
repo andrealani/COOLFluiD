@@ -44,6 +44,7 @@ ConvRHSFluxReconstruction::ConvRHSFluxReconstruction(const std::string& name) :
   socket_rhs("rhs"),
   socket_updateCoeff("updateCoeff"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
+  socket_volumes("volumes"),
   m_updateVarSet(CFNULL),
   m_cellBuilder(CFNULL),
   m_faceBuilder(CFNULL),
@@ -128,6 +129,7 @@ ConvRHSFluxReconstruction::needsSockets()
   result.push_back(&socket_rhs);
   result.push_back(&socket_updateCoeff);
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
+  result.push_back(&socket_volumes);
   return result;
 }
 
@@ -719,9 +721,12 @@ void ConvRHSFluxReconstruction::computeGradients()
   
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  
+  // get the volumes
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
-  // get jacobian determinants at solution points
-  m_jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+//  // get jacobian determinants at solution points
+//  m_jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -729,7 +734,7 @@ void ConvRHSFluxReconstruction::computeGradients()
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
     // inverse Jacobian determinant
-    const CFreal invJacobDet = 1.0/m_jacobDet[iSol];
+    const CFreal invJacobDet = 1.0/volumes[solID];
 
     // update gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)

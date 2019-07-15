@@ -357,6 +357,7 @@ void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
   }
   
   // compute Jacobian determinants
+  // Find a way to avoid havin to compute this!
   m_jacobDets[LEFT] = m_cells[LEFT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][LEFT]);
   m_jacobDets[RIGHT] = m_cells[RIGHT]->computeGeometricShapeFunctionJacobianDeterminant((*m_faceFlxPntCellMappedCoords)[m_orient][RIGHT]);
 

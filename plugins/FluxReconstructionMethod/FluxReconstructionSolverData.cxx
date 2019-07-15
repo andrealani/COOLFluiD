@@ -111,7 +111,7 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_addAV = false;
   setParameter( "AddArtificialViscosity", &m_addAV );
 
-  m_createVolumesSocketBool = false;
+  m_createVolumesSocketBool = true;
   setParameter("ComputeVolumeForEachState", &m_createVolumesSocketBool);
   
   // options for bc commands

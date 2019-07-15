@@ -300,6 +300,8 @@ BCPeriodic.cxx
 BCPeriodic.hh
 BCDirichlet.cxx
 BCDirichlet.hh
+BCDirichletFromFile.cxx
+BCDirichletFromFile.hh
 BCMirrorVelocity.cxx
 BCMirrorVelocity.hh
 BCPeriodic.cxx

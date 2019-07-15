@@ -66,6 +66,7 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
   result.push_back(&socket_states);
   result.push_back(&socket_nodes);
+  CFLog(INFO, "StdSetup NeedsSockets\n");
   
   return result;
 }

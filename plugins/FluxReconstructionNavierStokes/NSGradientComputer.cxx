@@ -94,9 +94,9 @@ void NSGradientComputer::computeGradients()
   
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
-
-  // get jacobian determinants at solution points
-  m_jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+  
+  // get the volumes
+  DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -104,7 +104,7 @@ void NSGradientComputer::computeGradients()
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
     // inverse Jacobian determinant
-    const CFreal invJacobDet = 1.0/m_jacobDet[iSol];
+    const CFreal invJacobDet = 1.0/volumes[solID];
 
     // update gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -158,7 +158,7 @@ void NSGradientComputer::computeGradients()
       const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
       // inverse Jacobian determinant
-      const CFreal invJacobDet = 1.0/m_jacobDet[iSol];
+      const CFreal invJacobDet = 1.0/volumes[solID];
 
       // update gradientsAV
       for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -215,7 +215,7 @@ void NSGradientComputer::computeGradients()
       const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
 
       // inverse Jacobian determinant
-      const CFreal invJacobDet = 1.0/m_jacobDet[iSol];
+      const CFreal invJacobDet = 1.0/volumes[solID];
 
       // update gradientsAV
       for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
