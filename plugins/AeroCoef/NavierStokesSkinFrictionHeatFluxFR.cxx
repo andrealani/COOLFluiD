@@ -581,7 +581,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     updateValuesMatAndResidual(4, index, heatFlux);    
     updateValuesMatAndResidual(5, index, stantonNumber);
     updateValuesMatAndResidual(6, index, this->m_yPlus);
-    updateValuesMatAndResidual(7, index, -(this->m_Cf));
+    updateValuesMatAndResidual(7, index, this->m_Cf);
     updateValuesMatAndResidual(8, index, m_muWall);
     updateValuesMatAndResidual(9, index, m_heatFluxRad);
   }
