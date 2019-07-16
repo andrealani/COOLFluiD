@@ -7,6 +7,8 @@ BCSubInletEulerTtPtAlpha2D.cxx
 BCSubInletEulerTtPtAlpha2D.hh
 BCSubInletEulerTtPtAlpha3D.cxx
 BCSubInletEulerTtPtAlpha3D.hh
+BCSubInletEulerVT2D.cxx
+BCSubInletEulerVT2D.hh
 BCSubOutletEuler2D.cxx
 BCSubOutletEuler2D.hh
 BCSubOutletEuler3D.cxx
