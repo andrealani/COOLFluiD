@@ -72,6 +72,10 @@ public:
     AddConstant("pi", 3.14159265358979323846);
     AddConstant("e", 2.71828182845904523536);
     AddConstant("Rair", 287.046);
+    // magnetic permittivity in vacuum
+    AddConstant("mu0", 4.*MathTools::MathConsts::CFrealPi()*1e-7);
+    // Boltzmann constant
+    AddConstant("kB", 1.38065042e-23);
     AddFunction("R2", Radius2D, 2);
     AddFunction("R3", Radius3D, 3);
     AddFunction("rand", Rand, 0);
