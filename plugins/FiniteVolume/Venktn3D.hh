@@ -61,6 +61,20 @@ public:
   {
     Venktn2D::setup();
   }
+
+protected:
+  
+  /**
+   * Compute the denominator of the limiter argument
+   */
+  void computeDeltaMin(const Framework::Node& coord, const Framework::State& state, CFuint iVar)
+  {
+    const CFuint stateID = state.getLocalID();
+    const RealVector& stateCoord = state.getCoordinates();
+    _deltaMin = (socket_uX.getDataHandle())(stateID,iVar,state.size())*(coord[XX] - stateCoord[XX]) + 
+      (socket_uY.getDataHandle())(stateID,iVar,state.size())*(coord[YY] - stateCoord[YY]) +
+      (socket_uZ.getDataHandle())(stateID,iVar,state.size())*(coord[ZZ] - stateCoord[ZZ]);
+  }
   
 private:
 
