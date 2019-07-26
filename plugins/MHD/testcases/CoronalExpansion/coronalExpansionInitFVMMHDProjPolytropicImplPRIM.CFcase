@@ -4,7 +4,7 @@
 #CFEnv.ErrorOnUnusedConfig = true
 
 # Simulator Modules
-Simulator.Modules.Libs = libPetsc libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh
+Simulator.Modules.Libs = libPetscI libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libMHD libFiniteVolume libFiniteVolumeMHD libNewtonMethod libNewtonMethodMHD libGambit2CFmesh
 
 # Simulator Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/CoronalExpansion/
@@ -21,8 +21,10 @@ Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.n = 1.05
 #Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.mZ = -10.0
 
 Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.potentialBType = PFSS 
-Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.BeginPFSSCoeffFileName = /data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_000400
-Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.EndPFSSCoeffFileName = /data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_060400
+Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.BeginPFSSCoeffFileName = /Users/lani/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_000400
+#/data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_000400
+Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.EndPFSSCoeffFileName = /Users/lani/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_060400
+# /data/leuven/302/vsc30237/workspace_06032013/COOLFluiD/plugins/MHD/testcases/CoronalExpansion/PFSSCoeffFile_20120717_060400
 Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.nbLModes = 20 
 #Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.mass = 5.97219e24
 #Simulator.SubSystem.MHD3DProjectionPolytropic.ConvTerm.lRef =
@@ -62,7 +64,8 @@ Simulator.SubSystem.Default.listTRS = InnerCells Photosphere SuperOutlet
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 #Simulator.SubSystem.CFmeshFileReader.Data.FileName = CORONALEXPANSION_Hexa250k.CFmesh
 #Simulator.SubSystem.CFmeshFileReader.Data.FileName = coronalExpansionInitFVMMHDProjPolytropicImpl-P3.CFmesh
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = CORONALEXPANSION_Tetra323k.CFmesh #CoronalExpansion33k.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = CoronalExpansion33k.CFmesh
+#CORONALEXPANSION_Tetra323k.CFmesh #CoronalExpansion33k.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
 Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
@@ -71,6 +74,7 @@ Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
 #Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarTags = limiter
 #Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 8
 #Simulator.SubSystem.CellCenterFVM.Setup1.InitLimiterSocket = InitLimiter
+Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5

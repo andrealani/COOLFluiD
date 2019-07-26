@@ -233,7 +233,7 @@ Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader1.convertFrom = Gmsh2CFmesh
 Simulator.SubSystem.CFmeshFileReader1.Gmsh2CFmesh.Discontinuous = true
 Simulator.SubSystem.CFmeshFileReader1.Gmsh2CFmesh.SolutionOrder = P0
-Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 3
+Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 4
 
 ###############################################################################
 
@@ -341,7 +341,7 @@ Simulator.SubSystem.Flow.Jet1.Def = \
 # T(1.0 R_Sun)  = 1.5e6
 
 Simulator.SubSystem.Flow.Jet1.ProjectionIDs = 7 8
-Simulator.SubSystem.Flow.Jet1.InitialSolutionIDs = 4 5 6
+#Simulator.SubSystem.Flow.Jet1.InitialSolutionIDs = 4 5 6
 Simulator.SubSystem.Flow.Jet1.ZeroGradientFlags = 1 1 1 1 1 1 1 1 1 1 1 1 1
 
 Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
@@ -388,7 +388,7 @@ Simulator.SubSystem.EM.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.EM.Data.DistanceBased.TRSName = Inlet
 #Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ../boundary-conditions/m2018-04-27-scaled-meters.dat
 #Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ../boundary-conditions/m2012-07-12-smoothed-scaled-by-2.dat
-Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ../boundary-conditions/dipole.dat
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ../boundary-conditions/m2012-07-12-distances-normalized-to-RSun.dat
 Simulator.SubSystem.EM.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
 
@@ -495,7 +495,7 @@ Simulator.SubSystemB.ParaView1.Data.CollaboratorNames = Flow
 #Simulator.SubSystemB.StopCondition   = MaxTime
 #Simulator.SubSystemB.MaxTime.maxTime = 0.295
 Simulator.SubSystemB.StopCondition       = Norm
-Simulator.SubSystemB.Norm.valueNorm      = -8.0
+Simulator.SubSystemB.Norm.valueNorm      = -10.0
 
 ###############################################################################
 
@@ -587,8 +587,9 @@ Simulator.SubSystemB.Flow.Data.PolyRec = LinearLS3D
 Simulator.SubSystemB.Flow.Data.LinearLS3D.limitRes = -4.0
 Simulator.SubSystemB.Flow.Data.LinearLS3D.limitIter = 10000
 Simulator.SubSystemB.Flow.Data.LinearLS3D.gradientFactor = 1.
-#Simulator.SubSystemB.Flow.Data.Limiter = Venktn3D
+Simulator.SubSystemB.Flow.Data.Limiter = Venktn3D
 Simulator.SubSystemB.Flow.Data.Venktn3D.coeffEps = 1.
+Simulator.SubSystemB.Flow.Data.Venktn3D.isMFMHD = true
 
 Simulator.SubSystemB.Flow.Data.FluxSplitter = LaxFried
 #Simulator.SubSystemB.Flow.Data.LaxFried.DiffCoeffDef = if(i<1500,1.,0.3) 
