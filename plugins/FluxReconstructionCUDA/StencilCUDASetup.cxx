@@ -460,7 +460,7 @@ void StencilCUDASetup::computeStencil()
  					       getProvider(_stencilType)->create(_stencilType));
    configureNested ( computeStencil.getPtr(), m_stored_args );
    
-   computeStencil->setDataSocketSinks(socket_states, socket_nodes, socket_stencil);
+   computeStencil->setDataSocketSinks(socket_states, socket_nodes);// , socket_stencil);
    (*computeStencil)();
 }
 
