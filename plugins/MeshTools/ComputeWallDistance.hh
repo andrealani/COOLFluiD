@@ -94,6 +94,8 @@ protected: //data
   // False if the node is outside the region
   Framework::DataSocketSource<bool> socket_nodeisAD;
 
+  Framework::DataSocketSource<CFreal> socket_nodeDistance;
+
 
   /// storage of face normals 
   Framework::DataSocketSink<CFreal> socket_normals; 
