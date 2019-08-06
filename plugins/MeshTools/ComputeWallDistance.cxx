@@ -51,7 +51,7 @@ ComputeWallDistance::ComputeWallDistance(const std::string& name) :
   socket_nodes("nodes"),
   socket_states("states"),
   socket_nodeisAD("nodeisAD"),
- 
+  socket_nodeDistance("nodeDistance"), 
   _tmpVector()
 {
   addConfigOptionsTo(this);
@@ -78,7 +78,8 @@ ComputeWallDistance::providesSockets()
 
   result.push_back(&socket_wallDistance);
   result.push_back(&socket_nodeisAD);
-  
+  result.push_back(&socket_nodeDistance);
+ 
   return result;
 }
 
