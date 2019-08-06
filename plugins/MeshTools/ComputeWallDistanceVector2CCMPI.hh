@@ -95,8 +95,8 @@ public:
    * Compute the wall distance (2D and 3D)
    */
   void computeWallDistance(TRSFaceDistributeData& data);
- 
-     
+   
+  void computeWallDistanceExtrapolate(TRSFaceDistributeData& data);   
 private:
   
   /// temporary coefficient

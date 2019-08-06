@@ -17,8 +17,8 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalModel.hh"
-
 #include "Framework/TRSDistributeData.hh"
+
 
 #include <vector>
 #include <cmath>
@@ -104,6 +104,10 @@ void ComputeWallDistanceVector2CCMPI::setup()
   DataHandle<bool> nodeisAD = socket_nodeisAD.getDataHandle();
   nodeisAD.resize(socket_nodes.getDataHandle().size());
   nodeisAD=false;
+
+  DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle();
+  nodeDistance.resize(socket_nodes.getDataHandle().size());
+  nodeDistance=MathTools::MathConsts::CFrealMax();
 
 }
 
@@ -274,6 +278,7 @@ void ComputeWallDistanceVector2CCMPI::execute()
 #endif
 	// compute the distance to the wall starting from broadcast data 
 	computeWallDistance(trsData);
+        //computeWallDistanceExtrapolate(trsData);
       }
     }
   }
@@ -426,8 +431,11 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
   DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
   DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
+  DataHandle <CFreal> nodeDistance = socket_nodeDistance.getDataHandle();
+
  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
+  	//cout<<"yes2"<<endl;
+
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
     getTrs("InnerCells");
   
@@ -483,16 +491,60 @@ void ComputeWallDistanceVector2CCMPI::computeWallDistance3D(std::vector<CFreal>&
 	// local ID of the cell node
 	const CFuint cellNodeID = cells->getNodeID(iState, in);
 	cf_assert(cellNodeID < nodeisAD.size());
-        nodeisAD[cellNodeID] = (minimumDistance < m_acceptableDistance  ? true : false); 
-      }
-      
+        nodeisAD[cellNodeID] = (minimumDistance < m_acceptableDistance  ? true : false);
+        nodeDistance[cellNodeID] = minimumDistance ;  
+      }   
     } 
     CFLog(DEBUG_MAX, "ComputeWallDistanceVector2CCMPI::computeWallDistance2D() => " <<
 	  "miwallDistance[ " <<  iState << " ] = " << wallDistance[iState] << "\n");}
-    
-    
-}
+} 
+    ///////////////////////////:
+void  ComputeWallDistanceVector2CCMPI::computeWallDistanceExtrapolate(TRSFaceDistributeData& data){
+	      //cout<<"yes"<<endl;
 
+  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
+  Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();  
+    DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    getTrs("InnerCells");
+
+  const CFuint nbCells = states.size();
+
+  RealVector Extrapolated(nodes.size()); Extrapolated = 0.;
+  for (CFuint iCell=0; iCell<nbCells; ++iCell){
+    CFuint nbNodesInSideRegion = 0;
+    bool foundCell = false;
+    const CFuint nbNodesInCell = cells->getNbNodesInGeo(iCell);
+    for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+      CFuint nodeIDinC=cells->getNodeID(iCell, iNodeC);
+      if ( (nodeisAD[nodeIDinC] == true)  && Extrapolated[nodeIDinC] == 0.){
+	for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+	  CFuint nodeIDinC=cells->getNodeID(iCell, iNodeC);
+	  foundCell = true;
+	}
+	if(foundCell){
+	  for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+	    CFuint nodeIDinC2=cells->getNodeID(iCell, iNodeC);
+	    if(nodeisAD[nodeIDinC2]){
+	      nbNodesInSideRegion= nbNodesInSideRegion+1;
+	    }
+	  }
+	  if(nbNodesInSideRegion>= 2){
+	    for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+	      CFuint nodeIDinC3=cells->getNodeID(iCell, iNodeC);
+	      if(nodeIDinC3 != nodeIDinC){
+		nodeisAD[nodeIDinC3] = true;
+		Extrapolated[nodeIDinC3] = 1.; 
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+    
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace MeshTools
