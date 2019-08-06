@@ -141,6 +141,10 @@ private:
    */
   CFreal computeSpringConstant(const Framework::Node* const firstNode, 
                                const Framework::Node* const secondNode) ;
+
+
+  CFreal computeSecondSpringConstant(const Framework::Node* const firstNode, 
+			             const Framework::Node* const secondNode);
   
   /**
    * Compute the spring constant between two nodes using
@@ -238,7 +242,8 @@ private:
    * Queries if the node is inside the region 
    */
   bool insideRegion(Framework::Node* node);
-  
+  RealVector  insideRegionExtrapolate(Framework::Node* node);
+ 
   /**
    * Compute the area of a quadrilateral element 
    */
@@ -265,6 +270,8 @@ private:
    */
   void assembleinRegionNode2DQuads(const  Framework::Node* node);
   
+  void assembleinRegionNode2DQuadsGeoBased(const  Framework::Node* node);
+
   /**
  * assemble system lines for 3D tetrahedral elemnt 
  */
@@ -286,11 +293,26 @@ private:
    */
   void updateNodePositions();
   
+  void smooth(const  Framework::Node* node);
+
+  void computeWallDistanceExtrapolate();
+
   /**
    * Send message to trigger re-computation of mesh information
    */
   void triggerRecomputeMeshData();
   
+
+  void stateInterpolator();
+
+  void interpolateNewMeshProperties();
+
+  void saveOldMeshProperties();
+
+
+//// Multiple springs
+ void assembleInnerNodeSecond(const Framework::Node* node);
+
 private: //data
   /// the socket of the nodes connectivity for 2D quadrilatral mesh
   Common::CFMultiMap <CFuint , CFuint>  m_mapNodeNode1;
@@ -328,6 +350,10 @@ private: //data
   /// the socket to the data handle of the state's
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
+  Framework::DataSocketSink<std::vector< Framework::State*> > socket_stencil;
+
+
+
   /// the socket to the data handle of the nodal state's
   Framework::DataSocketSink<RealVector> socket_nstates;
   
@@ -348,7 +374,10 @@ private: //data
   // True if node is inside region 
   // False if the node is outside the region 
   Framework::DataSocketSink<bool> socket_nodeisAD; 
-  
+ 
+  Framework::DataSocketSink<CFreal> socket_nodeDistance;
+
+ 
   /// data handle cashed for efficiency  reasons
   Framework::DataHandle<CFreal> m_wallDistance;
   
@@ -361,7 +390,6 @@ private: //data
   /// builder of geometric entities
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
   Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder1;
-
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_faceTRSBuilder;
 
   
@@ -412,12 +440,33 @@ private: //data
   FiniteVolume::SimpleEdgeGraph m_edgeGraph;
 
   FiniteVolume::SimpleEdgeGraph m_edgeGraphN;
+
   // Storage of element skewness 
   Common::CFMultiMap<CFuint,CFreal>  m_mapNodeSkew1;
+
   // Storage of element aspect ratio  
   Common::CFMultiMap<CFuint,CFreal>  m_mapNodeAR1;
+
   // Storage of internal radius of the sphere
   Common::CFMultiMap<CFuint,CFreal>  m_mapNodeTS1;
+
+  //RealVector Extrapolated;
+  //RealVector m_vectorNodeElementVolume; 
+  //RealVector m_vectorNodeElementSkewness;
+  //RealVector m_vectorNodeElementSkewnessOut;
+
+  // Hybrid spring analogy
+  CFreal m_acceptableDistance;
+
+  // ST based on the middle angle for quad meshes
+  bool  m_thetaMid;
+  bool m_interpolateState;
+  bool m_smoothSpringNetwork;
+  bool m_smoothNodalDisp;
+  RealVector oldStates;
+
+  RealVector oldCoordinates;
+
   // Global RSI 
   CFreal m_erreurG;
 

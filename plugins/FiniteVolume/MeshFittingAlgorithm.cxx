@@ -1,4 +1,3 @@
-
 #include "Common/PE.hh"
 #include "Common/EventHandler.hh"
 #include "MathTools/LeastSquaresSolver.hh"
@@ -82,9 +81,10 @@ void MeshFittingAlgorithm::defineConfigOptions(Config::OptionList& options)
   // 3 : MQI Aspect Ratio quadrilateral
   // 4 : MQI Skewness quadrilateral 
   // 5 : MQI radius sphere
-  options.addConfigOption< CFuint >("MQIvalue","choosing the MQI to follow");
-
-  
+  options.addConfigOption< CFuint >("MQIvalue","choosing the MQI state variable to follow");
+  options.addConfigOption< CFreal >("AcceptableDistance","Distance from user-defined boundary");
+  options.addConfigOption< bool   >("ThetaMid","Semi torsional Sping analogy for 2D quadrilateral mesh based on the middle egde-facing  angle (true) or the 3 edge-facing angles (false) ");
+  options.addConfigOption< bool   >("InterpolateState"," State Interplation to dissociate the nodal movement and the solution in each CC. ");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -104,6 +104,8 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   socket_rhs("rhs"), 
   socket_wallDistance("wallDistance",false),
   socket_nodeisAD("nodeisAD"),
+  socket_nodeDistance("nodeDistance"),
+  socket_stencil("stencil"),
   socket_relativeError("relativeError"),
   m_wallDistance(CFNULL),
   m_lss(CFNULL),
@@ -116,6 +118,8 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   m_mapNodeSkew1(),
   m_mapNodeTS1(),
   m_mapNodeAR1(),
+  oldStates(),
+  oldCoordinates(),
   m_erreurG()
 
 {
@@ -150,6 +154,24 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   m_MQIvalue = 0;
   this->setParameter("MQIvalue", &m_MQIvalue);
 
+  m_acceptableDistance = 0.;
+  this->setParameter("AcceptableDistance",&m_acceptableDistance);
+
+  m_acceptableDistance = 0.;
+  this->setParameter("AcceptableDistance",&m_acceptableDistance);
+
+  m_thetaMid = true;
+  this->setParameter("ThetaMid",&m_thetaMid);
+
+  m_interpolateState = false;
+  this->setParameter("InterpolateState",&m_interpolateState);
+
+  m_smoothSpringNetwork = false;
+  this->setParameter("InterpolateState",&m_smoothSpringNetwork);
+
+  m_smoothNodalDisp = false;
+  this->setParameter("InterpolateState",&m_smoothNodalDisp);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -172,7 +194,7 @@ void MeshFittingAlgorithm::configure(Config::ConfigArgs& args)
   cf_assert(m_meshAcceleration > 0. && m_meshAcceleration < 1.);
   cf_assert(m_tolerance >= 0. && m_tolerance <= 1.);
   cf_assert(m_MQIvalue >= 0);
-
+  cf_assert(m_acceptableDistance >= 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -190,7 +212,8 @@ MeshFittingAlgorithm::needsSockets()
   result.push_back(&socket_rhs);
   result.push_back(&socket_wallDistance);
   result.push_back(&socket_nodeisAD);  
-
+  result.push_back(&socket_nodeDistance);
+  result.push_back(&socket_stencil);
   return result;
 }
 
@@ -221,6 +244,8 @@ MeshFittingAlgorithm::providesSockets()
   
   DataProcessingCom::setup();
 
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
 
   //resize and initialize the storage of the relative Eroor
   DataHandle<CFreal> relativeError = socket_relativeError.getDataHandle();
@@ -253,6 +278,11 @@ MeshFittingAlgorithm::providesSockets()
   isphere.resize(socket_nodes.getDataHandle().size());
   isphere = 0.;
 
+
+  oldStates.resize(nbEqs*socket_states.getDataHandle().size());
+  oldStates = 0.;
+  oldCoordinates.resize(nbDims*socket_states.getDataHandle().size());
+  oldCoordinates = 0.;
 
   // AL: this might be useless ... (@see MeshRigidMove/StdSetup.cxx)
   SubSystemStatusStack::getActive()->setMovingMesh(true);
@@ -310,11 +340,9 @@ MeshFittingAlgorithm::providesSockets()
   createNodalConnectivity();
   findBoundaryNodes();
   computeMovingInBoundaryNodeNormals();
-
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
     getTrs("InnerCells");
   const CFuint nbElemTypes = cells->getNbNodesInGeo(0);
-  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
 
   ////////////////////////////////////////
   // 2D triangular mesh                 //
@@ -500,7 +528,11 @@ MeshFittingAlgorithm::providesSockets()
     Framework::Node* fourthNode;
 
     const std::vector<Framework::GeometricEntity*>& facesInCell = *currCell->getNeighborGeos();
-    const CFuint nbFaces = facesInCell.size(); 
+    const CFuint nbFaces = facesInCell.size();
+    //
+    //
+    // std::cout<<facesInCell<<endl;
+    //
     std::vector<Framework::Node*>& faceNodes12 = *facesInCell[0]->getNodes();
     firstNode = faceNodes12[0];
     secondNode = faceNodes12[1];
@@ -693,7 +725,6 @@ MeshFittingAlgorithm::providesSockets()
   Common::CFMultiMap<CFuint,CFreal>  m_mapNodeTS(nbPairsNodeNode1);
   typedef MapCellNode::MapIterator mapItc;
 
-
   for (CFuint iCell=0; iCell<nbCells; ++iCell){
     geoData.idx = iCell;
     Framework::GeometricEntity *const currCell = m_geoBuilder.buildGE();
@@ -776,6 +807,11 @@ MeshFittingAlgorithm::providesSockets()
 
   }
 }
+ 
+  if(m_interpolateState){
+   CFLog(INFO, "Interpolation Activated ---- Save Old Mesh properties\n");
+    saveOldMeshProperties();
+  }	
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -881,6 +917,9 @@ void MeshFittingAlgorithm::computeMovingInBoundaryNodeNormals()
   }
 }
 
+
+
+
 //////////////////////////////////////////////////////////////////////////////
  
 std::vector<std::set<CFuint> > MeshFittingAlgorithm::getMapMovingInBoundaryNodeID2FaceID()
@@ -927,6 +966,7 @@ void MeshFittingAlgorithm::execute()
     Common::SafePtr<Framework::TopologicalRegionSet> cells =
       Framework::MeshDataStack::getActive()->getTrs("InnerCells");
     const CFuint nbElemTypes = cells->getNbNodesInGeo(0);
+    Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();  
 
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
   Framework::DataHandle<CFreal>relativeError  = socket_relativeError.getDataHandle();
@@ -939,6 +979,7 @@ void MeshFittingAlgorithm::execute()
     typedef MapNodeNode::MapIterator mapItN;
     Framework::CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
     typedef CFMultiMap<CFuint, CFreal> MapNodeARF;
+    // FB:hard coded, need to be revised 
     CFuint nbPairsNodeAR =200000 ; 
     Common::CFMultiMap<CFuint,CFreal>  m_mapNodeARF(nbPairsNodeAR);
     geoData.trs = cells;
@@ -1290,27 +1331,50 @@ void MeshFittingAlgorithm::execute()
    
    MPI_Allreduce(&erreur,&m_erreurG, 1,MPI_DOUBLE,MPI_MAX, communicator);
 
-   if(processRank==0){
+   /* if(processRank==0){
      epsilonFinal=m_erreurG;
-   }
-     for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) {  
+     std::ofstream myFile ; 
+     myFile.open("Quad.txt");
+     myFile << m_erreurG << "      " << SubSystemStatusStack::getActive()->getNbIter() << "\n";
+     myFile.close();
+     }*/
+   for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) {  
      relativeError[nodes[iNode]->getLocalID()]=m_erreurG;
-     }
+   }
   }
-
+  const std::string nsp = this->getMethodData().getNamespace();
+  const int nbProcesses = Common::PE::GetPE().GetProcessorCount(nsp);
+  const int processRank = Common::PE::GetPE().GetRank(nsp);
+  MPI_Comm communicator = Common::PE::GetPE().GetCommunicator(nsp);
+  //
+  if(processRank==0){
+  
+  std::ofstream myFile ;
+  myFile.open("Quad.txt", ios::app);
+  myFile << m_erreurG << "  " << SubSystemStatusStack::getActive()->getNbIter() << "\n";
+  myFile.close();
+  
+  }
+  
   ///////////////////
   //RSI deactivated//
   ///////////////////
 
   if(m_tolerance == 0.){
-    updateNodePositions();
+    updateNodePositions(); 
   }
-
+  
 
   resizeSystemSolverToStateData();
   triggerRecomputeMeshData();
+  // stateInterpolator();
+  /*if(m_interpolateState){ 
+      interpolateNewMeshProperties();     
+      CFLog(INFO, "Interpolation Step ==> end\n");
+      }*/
+      CFLog(INFO, "MeshFittingAlgorithm::execute() => end \n");
 
-  CFLog(INFO, "MeshFittingAlgorithm::execute() => end \n");}
+}
   
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1381,8 +1445,8 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
         &recvBufferCounts[0], &recvBufferDisp[0], MPI_DOUBLE, 0, communicator); 
     sendBuffer.clear();  
     if(processRank == 0) {
-      for(CFuint i=0; i<recvBuffer.size(); ++i){
-        const CFreal ke = recvBuffer[i];
+	    for(CFuint i=0; i<recvBuffer.size(); ++i){
+		    const CFreal ke = recvBuffer[i];
         minQuantileAcc(ke);
         maxQuantileAcc(ke);
         meanAcc(ke);
@@ -1425,7 +1489,6 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
   if(min1>vectorBC.norm2()){
     AR =vectorBA.norm2()/vectorBC.norm2();
   }
-  //cout<<"AR "<<AR<<endl;
   return AR;
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -1439,19 +1502,41 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
    RealVector vectorDA(nbDims); vectorDA = 0.;
    RealVector vectorAD(nbDims); vectorAD = 0.;
    RealVector vectorAB(nbDims); vectorAB = 0.;
+   RealVector vectorCD(nbDims); vectorCD = 0.;
+   RealVector vectorBA(nbDims); vectorBA = 0.;
+   RealVector vectorBC(nbDims); vectorBC = 0.;
+   RealVector vectorCB(nbDims); vectorCB = 0.;
+
    CFreal angle1;
    CFreal angle2;
+   CFreal angleC;
+   CFreal angleB;
+
+
    CFreal skew;
+   CFreal skew2;
    for (CFuint iDim=0 ; iDim<nbDims ; iDim++){
      vectorDC[iDim]= (*c1)[XX+iDim]-(*d1)[XX+iDim];
      vectorDA[iDim]= (*a1)[XX+iDim]-(*d1)[XX+iDim];
 
      vectorAB[iDim]= (*b1)[XX+iDim]-(*a1)[XX+iDim];
      vectorAD[iDim]= (*d1)[XX+iDim]-(*a1)[XX+iDim];
+
+     vectorCD[iDim]= -vectorDC[XX+iDim];
+     vectorBA[iDim]= -vectorAB[XX+iDim];
+   
+     vectorBC[iDim]= (*c1)[XX+iDim]-(*b1)[XX+iDim];
+     vectorCB[iDim]= -vectorBC[XX+iDim];
+
    }
    CFreal cosADC = MathTools::MathFunctions::innerProd(vectorDC,vectorDA)/(vectorDC.norm2()*vectorDA.norm2());
      angle1 = acos(cosADC);
-     
+    
+   CFreal cosDCB = MathTools::MathFunctions::innerProd(vectorCD,vectorCB)/(vectorCD.norm2()*vectorCB.norm2());
+     angleC=acos(cosDCB);
+
+   CFreal cosABC = MathTools::MathFunctions::innerProd(vectorBA,vectorBC)/(vectorBA.norm2()*vectorBC.norm2());
+     angleB = acos(cosABC);
    CFreal cosDAB = MathTools::MathFunctions::innerProd(vectorAB,vectorAD)/(vectorAB.norm2()*vectorAD.norm2());
    angle2 = acos(cosDAB);
    
@@ -1463,7 +1548,16 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
      skew =std:: max((angle1-pi2)/pi2  ,  (pi2-angle2)/pi2 );
      }
 
-   return std::abs(skew);
+    if(angleC>angleB){
+     skew2 =std:: max((angleC-pi2)/pi2  ,  (pi2-angleB)/pi2 );
+   }
+   else{
+     skew2 =std:: max((angleB-pi2)/pi2  ,  (pi2-angleC)/pi2 );
+     }
+
+   CFreal finalSkew = std::max( std::abs(skew), std::abs(skew2)); 
+
+   return finalSkew;
    }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -1477,7 +1571,6 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
   if (m_monitorPhysVarID == std::numeric_limits<CFuint>::max()) {
     const CFreal firstNodeValue  = nodalStates[firstNode->getLocalID()] [m_monitorVarID];
     const CFreal secondNodeValue = nodalStates[secondNode->getLocalID()][m_monitorVarID];
-    //cout<<firstNodeValue<<endl;
     return std::abs(secondNodeValue - firstNodeValue);
   }
   
@@ -1489,8 +1582,33 @@ void MeshFittingAlgorithm::computeSpringTruncationData()
   m_state->copyData(nodalStates[secondNode->getLocalID()]);
   getMethodData().getUpdateVarSet()->computePhysicalData(*m_state, m_pdata);
   const CFreal secondNodeValue  = m_pdata[m_monitorPhysVarID];
-  //cout<<firstNodeValue<<endl;
   return std::abs(secondNodeValue - firstNodeValue);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+  CFreal MeshFittingAlgorithm::computeSecondSpringConstant(const Framework::Node* const firstNode, 
+						     const Framework::Node* const secondNode) 
+  {
+//////////// FB: Test 2 different spring constants still under constraction
+    /* CFAUTOTRACE;
+  Framework::DataHandle<RealVector> nodalStates = socket_nstates.getDataHandle();
+  
+  if (m_monitorPhysVarID == std::numeric_limits<CFuint>::max()) {
+    const CFreal firstNodeValue  = nodalStates[firstNode->getLocalID()] [m_monitorVarID+1];
+    const CFreal secondNodeValue = nodalStates[secondNode->getLocalID()][m_monitorVarID+1];
+    return std::abs(secondNodeValue - firstNodeValue);
+    }*/
+  /*
+  cf_assert(m_monitorPhysVarID < m_pdata.size());
+  // physical data arrays are computed on-the-fly from given nodal states 
+  m_state->copyData(nodalStates[firstNode->getLocalID()]);
+  getMethodData().getUpdateVarSet()->computePhysicalData(*m_state, m_pdata);
+  const CFreal firstNodeValue  = m_pdata[m_monitorPhysVarID+1];
+  m_state->copyData(nodalStates[secondNode->getLocalID()]);
+  getMethodData().getUpdateVarSet()->computePhysicalData(*m_state, m_pdata);
+  const CFreal secondNodeValue  = m_pdata[m_monitorPhysVarID];
+  return std::abs(secondNodeValue - firstNodeValue);*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1540,6 +1658,8 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
   CFLog(VERBOSE, "MeshFittingAlgorithm::assembleLinearSystem()\n");
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   const CFuint nbNodes = nodes.size();
+  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
+  Framework::DataHandle <CFreal> nodeDistance = socket_nodeDistance.getDataHandle();
 
   Common::SafePtr<Framework::TopologicalRegionSet> cells =
     Framework::MeshDataStack::getActive()->getTrs("InnerCells");
@@ -1566,6 +1686,7 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
 	      if(insideRegion(nodes[iNode])){
 		if(nbElemTypes==3 && nbDims==2){
 		  assembleinRegionNode2DTriag(nodes[iNode]);
+		  //assembleInnerNode(nodes[iNode]);
 		}
 		if(nbElemTypes==4 && nbDims==2){
 		  assembleinRegionNode2DQuads(nodes[iNode]);
@@ -1593,35 +1714,46 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
 
     // No RSI computations
     if(m_tolerance == 0.){
-	if (!nodes[iNode]->isParUpdatable()){ 
-	  //do nothing
+      if (!nodes[iNode]->isParUpdatable()){ 
+	//do nothing
+      }
+      else{
+	if(isNodeMovingInBoundary(nodes[iNode])  && insideRegion(nodes[iNode])==false){
+	  assembleMovingInBoundaryNode(nodes[iNode]);
 	}
-	else{
-	  if(isNodeMovingInBoundary(nodes[iNode])){
-	    assembleMovingInBoundaryNode(nodes[iNode]);
+	else{ 
+	  if(isNodeLocked(nodes[iNode])){
+	    assembleLockedNode(nodes[iNode]);
 	  }
-	  else{ 
-	    if(isNodeLocked(nodes[iNode])){
-	      assembleLockedNode(nodes[iNode]);
+	  else{
+	    if(insideRegion(nodes[iNode]) ){
+	      if(nbElemTypes==3 && nbDims==2){
+		assembleinRegionNode2DTriag(nodes[iNode]);
+	      }
+	      if(nbElemTypes==4 && nbDims==2){
+		assembleInnerNode(nodes[iNode]);
+
+	       	//assembleLockedNode(nodes[iNode]);
+		//assembleinRegionNode2DQuads(nodes[iNode]);	
+
+	      }
+	      if(nbElemTypes==4 && nbDims==3){
+		assembleinRegionNode3DTet(nodes[iNode]);
+	      }
+	      if(nbElemTypes==8 && nbDims==3){
+		assembleInnerNode(nodes[iNode]);
+	      }
 	    }
 	    else{
-	      if(insideRegion(nodes[iNode])){
-		if(nbElemTypes==3 && nbDims==2){
-		  assembleinRegionNode2DTriag(nodes[iNode]);
-		}
-		if(nbElemTypes==4 && nbDims==2){
-		    assembleinRegionNode2DQuads(nodes[iNode]);
-		}
-		if(nbElemTypes==4 && nbDims==3){
-		  assembleinRegionNode3DTet(nodes[iNode]);
-		}
-	      }
-	      else{
-		assembleInnerNode(nodes[iNode]);
-	      }	
-	    }
+	      assembleInnerNode(nodes[iNode]);
+	      //assembleinRegionNode2DQuads(nodes[iNode]);	
+	      // assembleinRegionNode2DTriag(nodes[iNode]);
+
+
+	    }	    
 	  }
 	}
+      }
     }
   }
 }
@@ -1730,7 +1862,6 @@ void MeshFittingAlgorithm::assembleMovingInBoundaryNode(const Framework::Node* n
 bool MeshFittingAlgorithm::isNodeLocked( Framework::Node* node)
 {
   const bool isBoundary = m_boundaryNodes.find(node) != m_boundaryNodes.end();
-  
   return ((isBoundary)) ;
 }
      
@@ -1743,8 +1874,9 @@ bool MeshFittingAlgorithm::insideRegion(Framework::Node* node)
   Framework::Node& currNode = *node;
   const CFuint nodeID = currNode.getLocalID();
   Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
-  if ( (nodeisAD[nodeID] == true) && (isNodeLocked(node)==false) && (isNodeMovingInBoundary(node)==false)){
-    inRegion=true;
+ // FB : uncomment isNodeLocked(node)==false f you are not using nodal movememt interpolation
+  if  ((nodeisAD[nodeID] == true) ){ //   && (isNodeLocked(node)==false)){
+    inRegion=true;	    
   }
   return (inRegion);
 }
@@ -1835,8 +1967,7 @@ CFreal MeshFittingAlgorithm::computeConstantquads(const  RealVector xyi ,
   RealVector res(3);
   RealVector res1(3);
   RealVector res2(3);
-  
-  
+
   for (CFuint iDim=0 ; iDim<nbDims ; iDim++){
     vector1[iDim]= (xyi)[iDim]-(*firstNode)[XX+iDim];
     vector2[iDim]= (xyi)[iDim]-(*secondNode)[XX+iDim];
@@ -1848,8 +1979,6 @@ CFreal MeshFittingAlgorithm::computeConstantquads(const  RealVector xyi ,
     vector6[iDim]= (*fourthNode)[XX+iDim]-(*secondNode)[XX+iDim];
   }
 
-
-
   MathTools::MathFunctions::crossProd(vector1, vector2,res);
   const CFreal  area = (res.norm2()/2);
 
@@ -1859,20 +1988,22 @@ CFreal MeshFittingAlgorithm::computeConstantquads(const  RealVector xyi ,
   MathTools::MathFunctions::crossProd(vector5, vector6,res);
   const CFreal  area2 = (res.norm2()/2);
 
-  CFreal k =(vector1.norm2()*vector2.norm2()*vector1.norm2()*vector2.norm2())/(4*area*area);
+  CFreal k = (area/elementArea)*(vector1.norm2()*vector2.norm2()*vector1.norm2()*vector2.norm2())/(4*area*area);
 
-  CFreal k1 =(area1/elementArea)*(vector3.norm2()*vector3.norm2()*vector4.norm2()*vector4.norm2())/(4*area1*area1);
+  CFreal k1 = (area1/elementArea)*(vector3.norm2()*vector3.norm2()*vector4.norm2()*vector4.norm2())/(4*area1*area1);
 
   CFreal k2 =(area2/elementArea)*(vector5.norm2()*vector5.norm2()*vector6.norm2()*vector6.norm2())/(4*area2*area2);
   
-  // choose this option to stiffer the mesh or on a pave mesh
-  // torsionConstant =(std::max(std::max(k1,k2),k));
-
-  // choose this option for a semi torsional spring analogy based on the middle angle
-  torsionConstant= k;
-
+  // if( m_thetaMid ){
+    // choose this option for a semi torsional spring analogy based on the middle angle only
+  //torsionConstant = k;
+  // }
+  //else{
+    // choose this option to stiffer the mesh or on a pave mesh
+    torsionConstant =((std::max(std::max(k1,k2),k)));
+    // }
   return torsionConstant;
-      }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -1885,7 +2016,6 @@ CFreal MeshFittingAlgorithm::computetorsionConstant(const  Framework::Node* cons
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
   RealVector vector1(3); vector1 = 0.;
   RealVector vector2(3); vector2 = 0.;
-
   RealVector res(3);
   CFreal torsionConstant;
   for (CFuint iDim=0 ; iDim<nbDims ; iDim++){
@@ -1894,11 +2024,8 @@ CFreal MeshFittingAlgorithm::computetorsionConstant(const  Framework::Node* cons
   }
   MathTools::MathFunctions::crossProd(vector1, vector2,res);
   const CFreal  area = (res.norm2()/2);
-  CFreal k =0.;
-  k = (vector1.norm2()*vector2.norm2()*vector1.norm2()*vector2.norm2())/(4*area*area);
-
-  torsionConstant = (k);
-
+  CFreal k = (vector1.norm2()*vector2.norm2()*vector1.norm2()*vector2.norm2())/(4*area*area);
+  torsionConstant = k;
   return torsionConstant;
 }
 //////////////////////////////////////////////////////////////////////////////
@@ -1907,7 +2034,7 @@ CFreal MeshFittingAlgorithm::computetorsionConstant3DSemiOnly(CFuint  nodeID1,CF
 						    const  Framework::Node* const  firstNode,
 						    const  Framework::Node* const  secondNode){
 
-  //// semi torsional spring analogy for 3D tethrahedral+OST
+  //// semi torsional spring analogy for 3D tethrahedral
 
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
   RealVector projectedpoint(3); projectedpoint = 0.;
@@ -2100,17 +2227,15 @@ CFreal MeshFittingAlgorithm::computetorsionConstant3D(CFuint  nodeID1,CFuint nod
   const CFreal k =(projectedPointSecondNode.norm2()*projectedPointFirstNode.norm2()*(projectedPointSecondNode.norm2()*projectedPointFirstNode.norm2()))/(4*area*area);
   const  CFreal  torsionConstant=(kost+k);
 
-  return k;  
-
-// return torsionConstant;
+  return torsionConstant;
 }
 
  //////////////////////////////////////////////////////////////////////////////     
     
 CFreal  MeshFittingAlgorithm::ComputeTvolume(CFuint  n1, 
 					     CFuint  n2,
-					     CFuint n3,
-					     CFuint n4){
+					     CFuint  n3,
+					     CFuint  n4){
   
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
@@ -2251,14 +2376,126 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
   
  }
  //////////////////////////////////////////////////////////////////////////////
-     
- void MeshFittingAlgorithm::assembleinRegionNode2DQuads(const  Framework::Node* node){
-
+   
+void MeshFittingAlgorithm::assembleinRegionNode2DQuads(const  Framework::Node* node){
+  
       //2D quads
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  Framework::DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle(); 
   Framework::DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
+  Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
+  const Framework::LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  CFreal sumOffDiagonalValues = 0.;
+  CFreal sum = 0.;
+  typedef CFMultiMap<CFuint, CFuint> MapNodeNode;
+  typedef MapNodeNode::MapIterator mapIt;
+  typedef MapNodeNode::MapIterator mapItN;
+  typedef MapNodeNode::MapIterator mapItS;
+  bool found = false;
+  std::pair<mapIt,mapIt > ite=m_mapNodeNode1.find(node->getLocalID(), found);
+  cf_assert(found);
+  const std::vector<Framework::Node*>& neighboringNodes = m_edgeGraph.getNeighborNodesOfNode(node);
+  std::vector<Framework::Node*>::const_iterator it;
+  std::vector<Framework::Node*>::const_iterator itN;
+  std::vector<Framework::Node*>::const_iterator itN1;
+  std::vector<Framework::Node*>::const_iterator itSa;
+  for(it=neighboringNodes.begin(); it != neighboringNodes.end(); ++it){
+    CFreal torsionConstant=0;
+    std::vector<const Framework::Node*> sharedNodes;
+    sharedNodes.clear();
+    const  Framework::Node* neighborNode = *it;
+    const std::vector<Framework::Node*>& neighboringNodesOfN = m_edgeGraphN.getNeighborNodesOfNode(neighborNode);
+    for(itN=neighboringNodesOfN.begin(); itN != neighboringNodesOfN.end(); ++itN){
+      const Framework::Node* neighborNodeOfN = *itN;
+      for(itN1=neighboringNodes.begin(); itN1 != neighboringNodes.end(); ++itN1){
+	const Framework::Node* neighborNodeNewloop = *itN1;
+	if(neighborNodeOfN->getLocalID()==neighborNodeNewloop->getLocalID()){
+	  sharedNodes.push_back(neighborNodeNewloop);
+	}
+      }
+    }
+    if (sharedNodes.size()==4){
+      for (mapIt it = ite.first; it != ite.second; ++it) {
+	for(CFuint i=0; i<sharedNodes.size() ; ++i){
+	  if (sharedNodes[i]->getLocalID() == it->second){
+	    bool foundN = false;
+	    std::pair<mapItN,mapItN > iteN=m_mapNodeNode1.find(neighborNode->getLocalID(), foundN);
+	    cf_assert(foundN);
+	    bool foundS = false;
+	    std::pair<mapItS,mapItS > iteS=m_mapNodeNode1.find(sharedNodes[i]->getLocalID(), foundS);
+	    cf_assert(foundS);
+	    for (mapItN itNe = iteN.first; itNe != iteN.second; ++itNe) {
+	      for (mapItS itSe = iteS.first; itSe != iteS.second; ++itSe) {
+		if (itNe->second == itSe->second){
+		  for(itSa=neighboringNodes.begin(); itSa != neighboringNodes.end(); ++itSa){
+		    if((*itSa)->getLocalID() == itNe->second && (*itSa)->getLocalID()!= node->getLocalID()){
+		      RealVector d_node_neighbor(nbDims); d_node_neighbor=0.;
+		      RealVector d_neighbor_itSa(nbDims); d_neighbor_itSa=0.;
+		      for (CFuint iDim=0; iDim<nbDims; ++iDim){
+			d_node_neighbor[iDim] = (*node)[XX+iDim] - (*neighborNode)[XX+iDim];
+			d_neighbor_itSa[iDim] = (*neighborNode)[XX+iDim] - (*(*itSa))[XX+iDim];
+		      }
+		      // Activate to put ST on the smallest edge and Linear spring on the longest edge
+		      //if( d_node_neighbor.norm2() < d_neighbor_itSa.norm2() ){
+		      RealVector xyi=computeIntersection(neighborNode, sharedNodes[i],node , *itSa);
+		      CFreal elementArea=computeElementArea2dQuads(neighborNode, sharedNodes[i],node , *itSa);
+		      torsionConstant+=computeConstantquads(xyi, node , neighborNode,  sharedNodes[i]   ,   *itSa  , elementArea);
+		      //}
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+      const CFreal springConstant =computeSpringConstant(node,neighborNode);
+      const  CFreal normalizedSpringConstant =truncateSpringConstant(springConstant); 
+      CFreal f = 1.;
+      if (m_smoothSpringNetwork) {
+      	//CFreal f = (7.-2.)/(0.02-0.01)*nodeDistance[node->getLocalID()]+ 1.2 - (7.-2.)/(0.02-0.01)*0.01;  //0.09
+      	CFreal f = (5.-1.)/(0.01-m_acceptableDistance)*nodeDistance[node->getLocalID()]+ 1. - (5.-1.)/(0.01-m_acceptableDistance)*m_acceptableDistance;  // 5
+      }
+      const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
+      const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
+      const CFreal stiff=normalizedSpringConstant+(pow(torsionConstant,1.)*pow(normalizedSpringConstant,f)); 
+      //const CFreal stifNormalized = (stiff);
+      sumOffDiagonalValues +=(stiff) ;
+      sum += 0.;
 
+      stiffness[node->getLocalID()]=stiff;
+      for(CFuint iDim=0; iDim<nbDims; ++iDim){
+	jacobMatrix->addValue(rowGlobalID+iDim, colGlobalID+iDim,stiff);
+      }
+      
+    }
+  }
+  
+  for(CFuint iDim=0; iDim<nbDims; ++iDim){
+    CFreal diagValue = -sumOffDiagonalValues-sum;
+    const CFuint globalID = idxMapping.getRowID(node->getLocalID())*nbDims;  
+    jacobMatrix->addValue(globalID+iDim, globalID+iDim, diagValue);
+  }
+  //Right hand side
+  for(CFuint iDim=0; iDim<nbDims; ++iDim){
+    CFreal diagValue2 = sumOffDiagonalValues+sum;
+    const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
+    rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(diagValue2);
+  }
+ }
+
+///////////////////////////////////////////////////////////////////////      
+
+  void MeshFittingAlgorithm::assembleinRegionNode2DQuadsGeoBased(const  Framework::Node* node){
+  ////////// Try: 2D based on geometry only 
+      //2D quads
+  Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+  Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  Framework::DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle(); 
+  Framework::DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
   Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
   const Framework::LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
@@ -2314,11 +2551,11 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
 			d_neighbor_itSa[iDim] = (*neighborNode)[XX+iDim] - (*(*itSa))[XX+iDim];
 		      }
 		      // Activate to put ST on the smallest edge and Linear spring on the longest edge : Recommemded for high aspect ratio meshes.
-		      //if( d_node_neighbor.norm2() < d_neighbor_itSa.norm2() ){
+		      if( d_node_neighbor.norm2() < d_neighbor_itSa.norm2() ){
 		      RealVector xyi=computeIntersection(neighborNode, sharedNodes[i],node , *itSa);
 		      CFreal elementArea=computeElementArea2dQuads(neighborNode, sharedNodes[i],node , *itSa);
 		      torsionConstant+=computeConstantquads(xyi, node , neighborNode,  sharedNodes[i]   ,   *itSa  , elementArea);
-		      //}
+		      }
 		    }
 		  }
 		}
@@ -2327,13 +2564,10 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
 	  }
 	}
       }
-      const CFreal springConstant =computeSpringConstant(node,neighborNode);
-      const  CFreal normalizedSpringConstant =truncateSpringConstant(springConstant);
-      sumOffDiagonalValues +=(normalizedSpringConstant) ;
-      sum +=((torsionConstant)*(normalizedSpringConstant));
+      sum +=torsionConstant;
       const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
       const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
-      const CFreal stiff=(normalizedSpringConstant+((torsionConstant)*(normalizedSpringConstant))) ;
+      const CFreal stiff=torsionConstant;
       stiffness[node->getLocalID()]=stiff;
       for(CFuint iDim=0; iDim<nbDims; ++iDim){
 	jacobMatrix->addValue(rowGlobalID+iDim, colGlobalID+iDim,stiff);
@@ -2343,19 +2577,116 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
   }
   
   for(CFuint iDim=0; iDim<nbDims; ++iDim){
-    CFreal diagValue = -sumOffDiagonalValues-sum;
+    CFreal diagValue = -sum;
     const CFuint globalID = idxMapping.getRowID(node->getLocalID())*nbDims;  
     jacobMatrix->addValue(globalID+iDim, globalID+iDim, diagValue);
   }
   //Right hand side
   for(CFuint iDim=0; iDim<nbDims; ++iDim){
-    CFreal diagValue2 = sumOffDiagonalValues+sum;
+    CFreal diagValue2 = sum;
     const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
     rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(diagValue2);
   }
  }
-      
-  //////////////////////////////////////////////////////////////////////////////////
+
+
+
+  //////////////////////////////
+ void MeshFittingAlgorithm::smooth(const  Framework::Node* node){
+  CFAUTOTRACE;
+      //2D quads
+  Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+  Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  Framework::DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
+  Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
+  //cout<< nodes.size() << endl;
+  Framework::DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle();
+  const Framework::LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  CFreal sumOffDiagonalValues = 0.;
+  typedef CFMultiMap<CFuint, CFuint> MapNodeNode;
+  typedef MapNodeNode::MapIterator mapIt;
+  typedef MapNodeNode::MapIterator mapItN;
+  typedef MapNodeNode::MapIterator mapItS;
+  bool found = false;
+  bool blocked = false;
+  RealVector term2(nbDims) ; term2 = 0.;
+  RealVector term1(nbDims) ; term1 = 0.;
+  
+  std::pair<mapIt,mapIt > ite=m_mapNodeNode1.find(node->getLocalID(), found);
+  cf_assert(found);
+  const std::vector<Framework::Node*>& neighboringNodes = m_edgeGraph.getNeighborNodesOfNode(node);
+  std::vector<Framework::Node*>::const_iterator it;
+  std::vector<Framework::Node*>::const_iterator itN;
+  std::vector<Framework::Node*>::const_iterator itN1;
+  std::vector<Framework::Node*>::const_iterator itSa;
+  CFreal stiff;
+  RealVector NN_Stiff(nodes.size()); NN_Stiff = 0.;
+  std::vector<CFuint> nn_ID(4);
+  CFuint it_nn = 0;
+  RealVector num(nbDims); num = 0.; 
+  RealVector den(nbDims); den = 0.;
+  for(it=neighboringNodes.begin(); it != neighboringNodes.end(); ++it){
+    std::vector<const Framework::Node*> sharedNodes;
+    sharedNodes.clear();
+    const  Framework::Node* neighborNode = *it;
+    const std::vector<Framework::Node*>& neighboringNodesOfN = m_edgeGraphN.getNeighborNodesOfNode(neighborNode);
+    for(itN=neighboringNodesOfN.begin(); itN != neighboringNodesOfN.end(); ++itN){
+      const Framework::Node* neighborNodeOfN = *itN;
+      for(itN1=neighboringNodes.begin(); itN1 != neighboringNodes.end(); ++itN1){
+	const Framework::Node* neighborNodeNewloop = *itN1;
+	if(neighborNodeOfN->getLocalID()==neighborNodeNewloop->getLocalID()){
+	  sharedNodes.push_back(neighborNodeNewloop);
+	}
+      }
+    }
+    if (sharedNodes.size()==4){
+      for (mapIt it = ite.first; it != ite.second; ++it) {
+	for(CFuint i=0; i<sharedNodes.size() ; ++i){
+	  if (sharedNodes[i]->getLocalID() == it->second){
+	    bool foundN = false;
+	    std::pair<mapItN,mapItN > iteN=m_mapNodeNode1.find(neighborNode->getLocalID(), foundN);
+	    cf_assert(foundN); 
+	    RealVector dist(nbDims); dist = 0.;
+	    RealVector X(nbDims); X[0]=1.; X[1]=0.;
+	    RealVector Y(nbDims); Y[0]=0.; Y[1]=1.;
+	    RealVector distance(nbDims); distance = 0.;
+	    RealVector unitDirection(nbDims); unitDirection = 0.;
+
+	    for (CFuint iDim=0; iDim<nbDims; ++iDim){
+	      dist[iDim] = (*neighborNode)[XX+iDim]-(*node)[XX+iDim];
+	    }
+	    for (CFuint iDim=0; iDim<nbDims; ++iDim){
+	      unitDirection[iDim] = dist[iDim]/dist.norm2();
+	    }
+	    distance[0] =dist[0]- 100.*(MathTools::MathFunctions::innerProd(unitDirection,X))*m_equilibriumSpringLength; 
+	    distance[1] =dist[1]- 100.*(MathTools::MathFunctions::innerProd(unitDirection,Y))*m_equilibriumSpringLength; 
+	    const CFreal springConstant =computeSpringConstant(node,neighborNode);
+	    const  CFreal normalizedSpringConstant =truncateSpringConstant(springConstant);
+	    
+	    for (CFuint iDim=0; iDim<nbDims; ++iDim){
+		CFreal d = dist.norm2()/(m_equilibriumSpringLength*1000.);
+	        //num[iDim] = num[iDim] + (1.-pow(d,4.))*exp(-pow(d,4.))*unitDirection[iDim];
+		num[iDim] = num[iDim]+ (*neighborNode)[XX+iDim]*(dist.norm2()-100.*m_equilibriumSpringLength); 
+	        den[iDim] = den[iDim]+ (dist.norm2()-100.*m_equilibriumSpringLength);   
+	    }
+	  }
+	}
+      }
+    }
+  }
+  for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) { 
+    if(node->getLocalID() == nodes[iNode]->getLocalID() && nodeDistance[nodes[iNode]->getLocalID()] < .02 ){ 
+      Framework::Node& currNode = *nodes[iNode];
+      for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+	CFreal f=(.5/(0.02-0.01)) * nodeDistance[nodes[iNode]->getLocalID()] - (0.5*0.01/(0.02-0.01)) + 0.5;
+	currNode[XX+iDim] = num[iDim]/den[iDim]*0.5 + currNode[XX+iDim]*0.5 ;
+      }
+    }
+  }
+ }
+      //////////////////////////////////////////////////////////////////////////////////
 
  void MeshFittingAlgorithm::assembleinRegionNode3DTet(const  Framework::Node* node){
 
@@ -2434,13 +2765,146 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
     rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(sumOffDiagonalValues+sum);
    }
  }
+
+
+      
+      ////////////////////////////// 
+void MeshFittingAlgorithm::saveOldMeshProperties(){
+  Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+
+  for(CFuint iState = 0; iState < states.size(); ++iState) {
+    for (CFuint iVar = 0 ; iVar < nbEqs ; ++iVar){
+      oldStates[nbEqs*states[iState]->getLocalID()+iVar]= (*states[iState])[iVar];
+      //cout<< "saveOldMeshProperties::oldStates[nbEqs*states[iState]->getLocalID()+iVar]   "<<oldStates[nbEqs*states[iState]->getLocalID()+iVar]<<endl;
+    }
+    for (CFuint iDim=0; iDim< nbDims; ++iDim){ 
+      RealVector& stateCoord =  states[iState]->getCoordinates();
+      oldCoordinates[nbDims*states[iState]->getLocalID()+iDim] = stateCoord[iDim] ;
+    }
+  }
+}
+      /////////////////////////:
+void MeshFittingAlgorithm::interpolateNewMeshProperties(){
+  Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();;
+  for(CFuint iState = 0; iState < states.size(); ++iState) {
+    bool stopLooking =false;
+    bool needInterpol =true;
+    CFuint iStateOld = 0;
+    CFreal invDistance = 0.;
+    const RealVector& stateCoord =  states[iState]->getCoordinates();
+    RealVector interpolatedStates(nbEqs); interpolatedStates=0.;
+    while(iStateOld < states.size() && !stopLooking) {
+      CFuint jxx = 0;
+      for (CFuint iDim = 0; iDim < nbDims ; ++iDim){
+	if(std::abs(oldCoordinates[nbDims*states[iStateOld]->getLocalID()+iDim]-stateCoord[iDim]) < 1e-8){
+	  ++ jxx;
+	}
+      }
+      if (jxx == nbDims){
+	stopLooking = true;
+	needInterpol = false;
+	//cout<< " no Interpolation needed "<<states[iState]->getLocalID()<< endl;
+	for(CFuint iVar = 0; iVar <nbEqs ; ++iVar) {
+	  (*states[iState])[iVar] =  oldStates[nbEqs*states[iStateOld]->getLocalID()+iVar];
+	}
+      }
+      ++ iStateOld;
+    }
+
+    if(needInterpol){
+      CFuint closestState = 0;
+      CFreal minDistance = MathTools::MathConsts::CFrealMax();
+      for(CFuint iStateOld = 0; iStateOld < states.size(); ++iStateOld) {
+	RealVector oldStateCoord(nbDims); oldStateCoord=0;
+	for (CFuint iDim = 0; iDim < nbDims ; ++iDim){
+	  oldStateCoord[iDim] = oldCoordinates[nbDims*states[iStateOld]->getLocalID()+iDim];
+	}
+	CFreal  newStateToOldState = MathTools::MathFunctions::getDistance(oldStateCoord , stateCoord );
+	if (newStateToOldState < minDistance ){  
+	  minDistance = newStateToOldState;
+	  closestState = iStateOld;
+	}
+      }
+
+     // cout<< " minDistance " << minDistance << endl;
+      for(CFuint iVar = 0; iVar <nbEqs ; ++iVar) {
+	//cout<< "  OLD(*states[iState])[iVar]  " <<  (*states[iState])[iVar]  << endl;
+	//(*states[iState])[iVar] = interpolatedStates[iVar]/invDistance;
+	(*states[iState])[iVar] =  oldStates[nbEqs*states[closestState]->getLocalID()+iVar];
+	//cout<< "  NEW(*states[iState])[iVar]  " <<  (*states[iState])[iVar]  << endl;
+      }
+    }
+  }
+}
+    
+
+
+      ///////////////////////////////:
+
+void MeshFittingAlgorithm::stateInterpolator(){
+  CFAUTOTRACE;
+      //2D quads
+  Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  Framework::DataHandle< std::vector< Framework::State*> >  stencil = socket_stencil.getDataHandle();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  for(CFuint iState = 0; iState < states.size(); ++iState) {
+    RealVector interpolatedStates(totalNbEqs); interpolatedStates=0.;
+    RealVector oldState(totalNbEqs); oldState=0.;
+
+    CFreal invDistance = 0.;
+    const RealVector& stateCoord = states[iState]->getCoordinates();
+    const CFuint stencilSize = stencil[iState].size();
+    //cout<<" stencilSize " <<stencilSize << endl;
+    // loop over the neighbor cells belonging to the chosen stencil
+    for(CFuint iVar = 0; iVar <totalNbEqs ; ++iVar) {
+      oldState[iVar] = (*states[iState])[iVar];
+    }
+    for(CFuint in = 0; in < stencilSize; ++in) {
+      const RealVector& stencilCoord = stencil[iState][in]->getCoordinates();
+      //cout << "stencilCoord " << stencilCoord << endl;
+      CFreal  stateTostencil = MathTools::MathFunctions::getDistance(stencilCoord,stateCoord );
+      //cout << " stateTostencil "<<stateTostencil << endl;
+      ///WTF needs to be fixed 
+      //if(!oldState->isGhost()) {
+      invDistance += 1./stateTostencil;
+
+      for(CFuint iVar = 0; iVar <totalNbEqs ; ++iVar) {
+	interpolatedStates[iVar] += ((*stencil[iState][in])[iVar])*invDistance ;
+	//cout << " ((*stencil[iState][in])[iVar]) " <<  ((*stencil[iState][in])[iVar])  <<endl;
+	//cout << " invDis " << invDistance<<endl; ;
+      }
+    } 
+    //}
+    for(CFuint iVar = 0; iVar <totalNbEqs ; ++iVar) {
+      //cout<< "Ivar " << iVar << endl;
+      // cout<< "Oldstates[iState][iVar] " << (*states[iState])[iVar]<< endl;
+      (*states[iState])[iVar] = interpolatedStates[iVar]/invDistance;
+      //cout<< "Newstates[iState][iVar] " << (*states[iState])[iVar]<< endl;
+    }
+  } 
+}
+      
+
+
+
+
+
+
+
+
       
 //////////////////////////////////////////////////////////////////////////////
  
  void MeshFittingAlgorithm::assembleInnerNode(const Framework::Node* node){
    // quads to be handeled
    
-   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+    SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
      getTrs("InnerCells");
    const CFuint nbElemTypes = cells->getNbNodesInGeo(0);
    Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
@@ -2480,7 +2944,7 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
        const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
        rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(sumOffDiagonalValues);
      }
-  }
+   }
    
    //2D quads
    if( nbElemTypes==4 && nbDims==2){
@@ -2505,6 +2969,8 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
 	   const CFreal springConstant =computeSpringConstant(node,neighborNode);
 	   const  CFreal normalizedSpringConstant = truncateSpringConstant(springConstant);
 	   sumOffDiagonalValues +=normalizedSpringConstant ;
+	    stiffness[node->getLocalID()]= normalizedSpringConstant;
+
 	   const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
 	   const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
 	   for(CFuint iDim=0; iDim<nbDims; ++iDim){
@@ -2522,15 +2988,260 @@ CFreal  MeshFittingAlgorithm::ComputeTFacesurface(  Framework::Node* node1,
        const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
        rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(sumOffDiagonalValues);
      }
-   } 
+   
+   }
  }
+
+   ///////////////////////////////// For test 
+
+      //2D quads   For Qarman 
+   /* Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+  Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  Framework::DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
+  Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
+  const Framework::LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
+  const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+  const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  CFreal sumOffDiagonalValues = 0.;
+  CFreal sum = 0.;
+  typedef CFMultiMap<CFuint, CFuint> MapNodeNode;
+  typedef MapNodeNode::MapIterator mapIt;
+  typedef MapNodeNode::MapIterator mapItN;
+  typedef MapNodeNode::MapIterator mapItS;
+  bool found = false;
+  std::pair<mapIt,mapIt > ite=m_mapNodeNode1.find(node->getLocalID(), found);
+  cf_assert(found);
+  const std::vector<Framework::Node*>& neighboringNodes = m_edgeGraph.getNeighborNodesOfNode(node);
+  std::vector<Framework::Node*>::const_iterator it;
+  std::vector<Framework::Node*>::const_iterator itN;
+  std::vector<Framework::Node*>::const_iterator itN1;
+  std::vector<Framework::Node*>::const_iterator itSa;
+  CFuint f=0;
+  for(it=neighboringNodes.begin(); it != neighboringNodes.end(); ++it){
+    CFreal torsionConstant=0;
+    std::vector<const Framework::Node*> sharedNodes;
+    sharedNodes.clear();
+    const  Framework::Node* neighborNode = *it;
+    const std::vector<Framework::Node*>& neighboringNodesOfN = m_edgeGraphN.getNeighborNodesOfNode(neighborNode);
+    for(itN=neighboringNodesOfN.begin(); itN != neighboringNodesOfN.end(); ++itN){
+      const Framework::Node* neighborNodeOfN = *itN;
+      for(itN1=neighboringNodes.begin(); itN1 != neighboringNodes.end(); ++itN1){
+	const Framework::Node* neighborNodeNewloop = *itN1;
+	if(neighborNodeOfN->getLocalID()==neighborNodeNewloop->getLocalID()){
+	  sharedNodes.push_back(neighborNodeNewloop);
+	}
+      }
+    }
+    if (sharedNodes.size()==4){
+      for (mapIt it = ite.first; it != ite.second; ++it) {
+	for(CFuint i=0; i<sharedNodes.size() ; ++i){
+	  if (sharedNodes[i]->getLocalID() == it->second){
+	    bool foundN = false;
+	    std::pair<mapItN,mapItN > iteN=m_mapNodeNode1.find(neighborNode->getLocalID(), foundN);
+	    cf_assert(foundN);
+	    bool foundS = false;
+	    std::pair<mapItS,mapItS > iteS=m_mapNodeNode1.find(sharedNodes[i]->getLocalID(), foundS);
+	    cf_assert(foundS);
+	    for (mapItN itNe = iteN.first; itNe != iteN.second; ++itNe) {
+	      for (mapItS itSe = iteS.first; itSe != iteS.second; ++itSe) {
+		if (itNe->second == itSe->second){
+		  for(itSa=neighboringNodes.begin(); itSa != neighboringNodes.end(); ++itSa){
+		    if((*itSa)->getLocalID() == itNe->second && (*itSa)->getLocalID()!= node->getLocalID()){
+		      // Activate to put ST on the smallest edge and Linear spring on the longest edge 
+		      //RealVector d_node_neighbor(nbDims); d_node_neighbor=0.;
+		      //RealVector d_neighbor_itSa(nbDims); d_neighbor_itSa=0.;
+		      //for (CFuint iDim=0; iDim<nbDims; ++iDim){
+			//d_node_neighbor[iDim] = (*node)[XX+iDim] - (*neighborNode)[XX+iDim];
+			//d_neighbor_itSa[iDim] = (*neighborNode)[XX+iDim] - (*(*itSa))[XX+iDim];
+			//}
+		      //if( d_node_neighbor.norm2() < d_neighbor_itSa.norm2() ){
+		      RealVector xyi=computeIntersection(neighborNode, sharedNodes[i],node , *itSa);
+		      CFreal elementArea=computeElementArea2dQuads(neighborNode, sharedNodes[i],node , *itSa);
+		      torsionConstant+=computeConstantquads(xyi, node , neighborNode,  sharedNodes[i]   ,   *itSa  , elementArea);
+		      //}
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      } 
+      const CFreal springConstant =computeSpringConstant(node,neighborNode);
+      const  CFreal normalizedSpringConstant =truncateSpringConstant(springConstant);
+      sumOffDiagonalValues +=((normalizedSpringConstant));
+      const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
+      const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
+      const CFreal stiff=((normalizedSpringConstant));
+      stiffness[node->getLocalID()]=stiff;
+      for(CFuint iDim=0; iDim<nbDims; ++iDim){
+	jacobMatrix->addValue(rowGlobalID+iDim, colGlobalID+iDim,stiff);
+      }
+      f=f+1;
+    }
+  }
+  
+  for(CFuint iDim=0; iDim<nbDims; ++iDim){
+    CFreal diagValue = -sumOffDiagonalValues;
+    const CFuint globalID = idxMapping.getRowID(node->getLocalID())*nbDims;  
+    jacobMatrix->addValue(globalID+iDim, globalID+iDim, diagValue);
+  }
+  //Right hand side
+  for(CFuint iDim=0; iDim<nbDims; ++iDim){
+    CFreal diagValue2 = sumOffDiagonalValues;
+    const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
+    rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(diagValue2);
+  }
+  }*/
+
+
+////////////// For test the second monitor variable
+ 
+ void MeshFittingAlgorithm::assembleInnerNodeSecond(const Framework::Node* node){
+   // quads to be handeled
+   
+    SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->
+     getTrs("InnerCells");
+   const CFuint nbElemTypes = cells->getNbNodesInGeo(0);
+   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
+   Framework::DataHandle<CFreal> stiffness = socket_stiffness.getDataHandle();
+   Framework::DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+   Common::SafePtr<Framework::LSSMatrix> jacobMatrix = m_lss->getMatrix();
+   const Framework::LSSIdxMapping& idxMapping = m_lss->getLocalToGlobalMapping();
+   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
+   const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+   ////2D triangular or 3D tetrahedral
+   if( (nbElemTypes==3 && nbDims==2) || (nbElemTypes==4 && nbDims==3) ){
+     CFreal sumOffDiagonalValues = 0.;
+     std::vector<const Framework::Node*> sharedNodes;
+     const std::vector<Framework::Node*>& neighboringNodes = m_edgeGraph.getNeighborNodesOfNode(node);
+     std::vector<Framework::Node*>::const_iterator it;
+     for(it=neighboringNodes.begin(); it != neighboringNodes.end(); ++it){
+       const Framework::Node* neighborNode = *it;
+       const CFreal springConstant = computeSecondSpringConstant(node,neighborNode);
+       CFreal normalizedSpringConstant =truncateSpringConstant(springConstant);
+       sumOffDiagonalValues += normalizedSpringConstant;
+       const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
+       const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
+       CFreal stiff = normalizedSpringConstant;
+       stiffness[node->getLocalID()]=stiff;
+       for(CFuint iDim=0; iDim<nbDims; ++iDim){
+	 jacobMatrix->addValue(rowGlobalID+iDim, colGlobalID+iDim,normalizedSpringConstant);
+       }
+     }
+     //Diagonal value 
+     for(CFuint iDim=0; iDim<nbDims; ++iDim){
+       CFreal diagValue = -sumOffDiagonalValues;    
+       const CFuint globalID = idxMapping.getRowID(node->getLocalID())*nbDims;  
+      jacobMatrix->addValue(globalID+iDim, globalID+iDim, diagValue);
+     }
+     //Right hand side
+     for(CFuint iDim=0; iDim<nbDims; ++iDim){
+       const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
+       rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(sumOffDiagonalValues);
+     }
+   }
+   
+   //2D quads
+   if( nbElemTypes==4 && nbDims==2){
+     CFreal sumOffDiagonalValues = 0.;
+     typedef CFMultiMap<CFuint, CFuint> MapNodeNode;
+     typedef MapNodeNode::MapIterator mapIt;
+     typedef MapNodeNode::MapIterator mapItN;
+     typedef MapNodeNode::MapIterator mapItS;
+     bool found = false;
+     std::pair<mapIt,mapIt > ite=m_mapNodeNode1.find(node->getLocalID(), found);
+     cf_assert(found);
+     const std::vector<Framework::Node*>& neighboringNodes = m_edgeGraph.getNeighborNodesOfNode(node);
+     std::vector<Framework::Node*>::const_iterator it;
+     std::vector<Framework::Node*>::const_iterator itN;
+     std::vector<Framework::Node*>::const_iterator itN1;
+     std::vector<Framework::Node*>::const_iterator itSa;
+     
+     for(it=neighboringNodes.begin(); it != neighboringNodes.end(); ++it){
+       const  Framework::Node* neighborNode = *it;
+       for (mapIt it = ite.first; it != ite.second; ++it) {
+	 if (neighborNode->getLocalID() == it->second){
+	   const CFreal springConstant =computeSecondSpringConstant(node,neighborNode);
+	   const  CFreal normalizedSpringConstant = truncateSpringConstant(springConstant);
+	   sumOffDiagonalValues +=normalizedSpringConstant ;
+	    stiffness[node->getLocalID()]= normalizedSpringConstant;
+
+	   const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
+	   const CFuint colGlobalID = idxMapping.getColID(neighborNode->getLocalID())*nbDims;
+	   for(CFuint iDim=0; iDim<nbDims; ++iDim){
+	     jacobMatrix->addValue(rowGlobalID+iDim, colGlobalID+iDim,normalizedSpringConstant);
+	   }
+	 }
+    }
+     }
+     for(CFuint iDim=0; iDim<nbDims; ++iDim){
+       const CFuint globalID = idxMapping.getRowID(node->getLocalID())*nbDims;  
+       jacobMatrix->addValue(globalID+iDim, globalID+iDim, -sumOffDiagonalValues);
+     }
+     //Right hand side
+     for(CFuint iDim=0; iDim<nbDims; ++iDim){
+       const CFreal equilibriumLength = m_equilibriumSpringLength*m_ratioBoundaryToInnerEquilibriumSpringLength;
+       rhs[node->getLocalID()*totalNbEqs+XX+iDim] = equilibriumLength*(sumOffDiagonalValues);
+     }
+   
+   }
+ }
+/////////////
+
+
+      /////////////
+
+void MeshFittingAlgorithm::computeWallDistanceExtrapolate(){
+  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
+  Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();  
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  Common::SafePtr<Framework::TopologicalRegionSet> cells =
+    Framework::MeshDataStack::getActive()->getTrs("InnerCells");
+  const CFuint nbCells = cells->getLocalNbGeoEnts();
+  Framework::CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
+  geoData.trs = cells;
+  for (CFuint iCell=0; iCell<nbCells; ++iCell){
+    geoData.idx = iCell;
+    CFuint nbNodesInSideRegion = 0;
+    bool foundCell = false;
+    const CFuint nbNodesInCell = cells->getNbNodesInGeo(iCell);
+    for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+      CFuint nodeIDinC=cells->getNodeID(iCell, iNodeC);
+      if ( (nodeisAD[nodeIDinC] == true) ){  
+	  foundCell = true;
+	}
+	
+	if(foundCell){
+	  for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+	    CFuint nodeIDinC2=cells->getNodeID(iCell, iNodeC);
+
+	    if(nodeisAD[nodeIDinC2]){
+	      nbNodesInSideRegion= nbNodesInSideRegion+1;
+	      
+	    }
+	  }
+	  if(nbNodesInSideRegion >= 3){
+	    for (CFuint iNodeC = 0; iNodeC < nbNodesInCell; ++iNodeC){
+	      CFuint nodeIDinC3=cells->getNodeID(iCell, iNodeC);
+		nodeisAD[nodeIDinC3] = true;
+	    }
+	  }
+	}
+      }
+  }
+    m_geoBuilder.releaseGE();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 void MeshFittingAlgorithm::updateNodePositions () {
   CFAUTOTRACE;
-  CFLog(VERBOSE, "MeshFittingAlgorithm::updateNodePositions()\n");  
+  CFLog(VERBOSE, "MeshFittingAlgorithm::updateNodePositions()\n"); 
+  Framework::DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle(); 
   Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
   Framework::DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
   const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   Framework::DataHandle<CFreal> iradius = socket_iradius.getDataHandle();
@@ -2538,14 +3249,24 @@ void MeshFittingAlgorithm::updateNodePositions () {
   Framework::DataHandle<CFreal> AR = socket_AR.getDataHandle();
   Framework::DataHandle<CFreal> isphere = socket_isphere.getDataHandle();
   const CFuint nbDims = Framework::PhysicalModelStack::getActive()->getDim();
-  for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) {  
+  for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) { 
+   CFreal f=1.;
     if (nodes[iNode]->isParUpdatable()) {
       Framework::Node& currNode = *nodes[iNode];
-      for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
-        currNode[XX+iDim] = currNode[XX+iDim]*(1.-m_meshAcceleration) + rhs[iNode*totalNbEqs+XX+iDim]*m_meshAcceleration; 
+      bool exit = false;
+      if (m_smoothNodalDisp){
+	if( nodeDistance[nodes[iNode]->getLocalID()] < 0.01 &&  insideRegion(nodes[iNode])==false ){ 				
+	  f=(1./(0.001-m_acceptableDistance)) * nodeDistance[nodes[iNode]->getLocalID()] - (m_acceptableDistance/(0.001-m_acceptableDistance)); 
+	
+	}
       }
+      for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
+	currNode[XX+iDim] =  currNode[XX+iDim]*(1.-m_meshAcceleration*f) + rhs[iNode*totalNbEqs+XX+iDim]*m_meshAcceleration*f;
+      }
+      
     }
   }
+
   /////////2d triangular 
   if(m_MQIvalue==2){
     CFuint nbPairsNodeNode = 300000;
@@ -3040,7 +3761,7 @@ void MeshFittingAlgorithm::updateNodePositions () {
   }
   //synchronize Nodes
   nodes.beginSync();
-   nodes.endSync();
+  nodes.endSync();
   }
 
 //////////////////////////////////////////////////////////////////////////////
