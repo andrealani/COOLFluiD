@@ -85,6 +85,14 @@ void MeshFittingAlgorithm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("AcceptableDistance","Distance from user-defined boundary");
   options.addConfigOption< bool   >("ThetaMid","Semi torsional Sping analogy for 2D quadrilateral mesh based on the middle egde-facing  angle (true) or the 3 edge-facing angles (false) ");
   options.addConfigOption< bool   >("InterpolateState"," State Interplation to dissociate the nodal movement and the solution in each CC. ");
+
+
+  options.addConfigOption< bool >("smoothSpringNetwork","smooth the spring network");
+  options.addConfigOption< bool >("smoothNodalDisp","smooth the nodal displacememt");
+
+
+
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -167,11 +175,10 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   this->setParameter("InterpolateState",&m_interpolateState);
 
   m_smoothSpringNetwork = false;
-  this->setParameter("InterpolateState",&m_smoothSpringNetwork);
+  this->setParameter("smoothSpringNetwork",&m_smoothSpringNetwork);
 
   m_smoothNodalDisp = false;
-  this->setParameter("InterpolateState",&m_smoothNodalDisp);
-
+  this->setParameter("smoothNodalDisp",&m_smoothNodalDisp);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1731,10 +1738,9 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
 		assembleinRegionNode2DTriag(nodes[iNode]);
 	      }
 	      if(nbElemTypes==4 && nbDims==2){
-		assembleInnerNode(nodes[iNode]);
+	        assembleLockedNode(nodes[iNode]);
 
-	       	//assembleLockedNode(nodes[iNode]);
-		//assembleinRegionNode2DQuads(nodes[iNode]);	
+	    //assembleinRegionNode2DQuads(nodes[iNode]);	
 
 	      }
 	      if(nbElemTypes==4 && nbDims==3){
@@ -1745,7 +1751,9 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
 	      }
 	    }
 	    else{
-	      assembleInnerNode(nodes[iNode]);
+	      //assembleInnerNode(nodes[iNode]);
+	      assembleinRegionNode2DQuads(nodes[iNode]);
+
 	      //assembleinRegionNode2DQuads(nodes[iNode]);	
 	      // assembleinRegionNode2DTriag(nodes[iNode]);
 
@@ -2457,6 +2465,7 @@ void MeshFittingAlgorithm::assembleinRegionNode2DQuads(const  Framework::Node* n
       CFreal f = 1.;
       if (m_smoothSpringNetwork) {
       	//CFreal f = (7.-2.)/(0.02-0.01)*nodeDistance[node->getLocalID()]+ 1.2 - (7.-2.)/(0.02-0.01)*0.01;  //0.09
+	// FB :test case dependent
       	CFreal f = (5.-1.)/(0.01-m_acceptableDistance)*nodeDistance[node->getLocalID()]+ 1. - (5.-1.)/(0.01-m_acceptableDistance)*m_acceptableDistance;  // 5
       }
       const CFuint rowGlobalID = idxMapping.getRowID(node->getLocalID())*nbDims;
@@ -3255,9 +3264,10 @@ void MeshFittingAlgorithm::updateNodePositions () {
       Framework::Node& currNode = *nodes[iNode];
       bool exit = false;
       if (m_smoothNodalDisp){
+	// FB : test case dependent
+
 	if( nodeDistance[nodes[iNode]->getLocalID()] < 0.01 &&  insideRegion(nodes[iNode])==false ){ 				
 	  f=(1./(0.001-m_acceptableDistance)) * nodeDistance[nodes[iNode]->getLocalID()] - (m_acceptableDistance/(0.001-m_acceptableDistance)); 
-	
 	}
       }
       for(CFuint iDim = 0; iDim < nbDims; ++iDim) {
