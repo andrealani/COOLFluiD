@@ -37,7 +37,7 @@ CFEnv.ExceptionOutputs   = false
 Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
 
 # Simulation Parameters
-Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV_24dir
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/Sphere3DFV
 Simulator.Paths.ResultsDir = ./RESULTS_Sphere_air_24dir_100bin
 
 ###############################################################################
