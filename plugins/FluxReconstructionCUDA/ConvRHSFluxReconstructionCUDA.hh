@@ -6,6 +6,12 @@
 #include "FluxReconstructionMethod/ConvRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/KernelData.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#include "Framework/MathTypes.hh"
+#include "Framework/VarSetTransformerT.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -30,12 +36,12 @@ class ConvRHSFluxReconstructionCUDA : public ConvRHSFluxReconstruction {
 public:
 
   /**
-   * Constructor.
+   * Constructor
    */
   explicit ConvRHSFluxReconstructionCUDA(const std::string& name);
   
   /**
-   * Destructor.
+   * Destructor
    */
   virtual ~ConvRHSFluxReconstructionCUDA();
   
@@ -86,21 +92,24 @@ protected:
   
 protected:
   
-  /// storage for the stencil via pointers to neighbors
-  Framework::DataSocketSink<std::vector<Framework::State*> > socket_stencil;
-  
   /// storage for the states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
+  /// storage for the solution point normals
+  Framework::DataSocketSink< CFreal > socket_solPntNormals;
+  
   /// cell-face connectivity
   Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellFaces;
+  
+  /// cell-nodes connectivity
+  Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellNodes;
   
   /// storage of useful cell info: 
   /// in [cellID*5+0] - ptr to corresponding stencil
   /// in [cellID*5+1] - stencil size
   /// in [cellID*5+2] - number of cell faces
   /// in [cellID*5+3] - cell geoshape
-  /// in [cellID*5+4] - number of active cell faces (partition faces are excluded)  
+  /// in [cellID*5+4] - number of solution points depending on a single solution point
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_cellInfo;
   
   /// stencil connectivity for cellID: 
@@ -118,6 +127,9 @@ protected:
   // cell connectivity
   Framework::LocalArray<Framework::CellConn>::MALLOC_TYPE m_cellConn;
   
+  // cell-state connectivity
+  Framework::LocalArray<Framework::CellConn>::MALLOC_TYPE m_cellStateConn;
+  
   /// number of blocks in x 
   CFuint m_nbBlocksPerGridX;
   
@@ -129,6 +141,15 @@ protected:
 
   /// number of OpenMP threads
   CFuint m_nbThreadsOMP;
+  
+  /// IDs of the solution points per cellID
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_stateIDs;
+  
+  /// sol sol dep in different format
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_solSolDep2;
+  
+  /// derivatives of base polynomials in different format
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_solPolyDerivAtSolPnts2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;

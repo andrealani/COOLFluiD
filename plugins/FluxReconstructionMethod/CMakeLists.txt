@@ -58,7 +58,7 @@ RoeFlux.hh
 CentredFlux.cxx
 CentredFlux.hh
 #LaxFriedrichsFlux.cxx
-#LaxFriedrichsFlux.hh
+LaxFriedrichsFlux.hh
 FluxReconstructionElementData.cxx
 FluxReconstructionElementData.hh
 QuadFluxReconstructionElementData.cxx
@@ -317,8 +317,7 @@ FluxData.hh
 
 IF (NOT CF_HAVE_CUDA)
 LIST ( APPEND FluxReconstructionMethod_files
-     LaxFriedrichsFlux.cxx
-     LaxFriedrichsFlux.hh     
+     LaxFriedrichsFlux.cxx     
 ) 
 ELSE()
 EXECUTE_PROCESS(COMMAND cp LaxFriedrichsFlux.cxx LaxFriedrichsFlux.cu
@@ -326,7 +325,6 @@ WORKING_DIRECTORY ${COOLFluiD_SOURCE_DIR}/plugins/FluxReconstructionMethod
 )
 LIST ( APPEND FluxReconstructionMethod_files
      LaxFriedrichsFlux.cu
-     LaxFriedrichsFlux.hh
 ) 
 LIST ( APPEND ${MYLIBNAME}_includedirs ${MPI_INCLUDE_DIR} ${CUDA_INCLUDE_DIR} )
 LIST ( APPEND ${MYLIBNAME}_libs ${CUDA_LIBRARIES} )

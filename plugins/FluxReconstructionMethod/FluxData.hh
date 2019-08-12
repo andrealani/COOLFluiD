@@ -19,12 +19,12 @@ public:
   /// initialize the flux data
   HOST_DEVICE void initialize() 
   {
-    for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
+    for (CFuint j = 0; j < 4; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
     for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
     for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_nodes[j][i] = 0.;}}
     for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_rnodes[j][i] = 0.;}}
-    for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_flux[i] = 0.;}
-    for (CFuint i = 0; i < PHYS::DIM; ++i) {m_unitNormal[i] = 0.;}
+    for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {for (CFuint k = 0; k < PHYS::NBEQS; ++k) {m_flux[i][j][k] = 0.;}}}
+    for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}
     m_updateCoeff = 0.; m_faceArea = 0.; 
     m_stateID[0] = 0; m_stateID[1] = 0; 
     m_nbSolPnts = 0;
@@ -44,10 +44,10 @@ public:
   HOST_DEVICE CFreal* getRnode(const CFuint i) {return &m_rnodes[i][0];}
   
   /// get the flux array
-  HOST_DEVICE CFreal* getFlux() {return &m_flux[0];}
+  HOST_DEVICE CFreal* getFlux(const CFuint iSol, const CFuint iDim) {return &m_flux[iSol][iDim][0];}
   
   /// get the face normal scaled with jacobian
-  HOST_DEVICE CFreal* getScaledNormal() {return &m_unitNormal[0];}
+  HOST_DEVICE CFreal* getScaledNormal(const CFuint iSol) {return &m_unitNormal[iSol][0];}
   
   /// get the face area
   HOST_DEVICE CFreal getFaceArea() const {return m_faceArea;}
@@ -106,10 +106,10 @@ private:
   CFreal m_rnodes[2][PHYS::DIM];
   
   /// residual
-  CFreal m_flux[PHYS::NBEQS];
+  CFreal m_flux[4][PHYS::DIM][PHYS::NBEQS];
   
   /// unit normal
-  CFreal m_unitNormal[PHYS::DIM];
+  CFreal m_unitNormal[4][PHYS::DIM*PHYS::DIM];
   
   /// left and right update coefficient
   CFreal m_updateCoeff;

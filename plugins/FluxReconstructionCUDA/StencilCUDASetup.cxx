@@ -16,9 +16,6 @@
 #include "Framework/ElementDataArray.hh"
 #include "Framework/SubSystemStatus.hh"
 
-//#include "FiniteVolume/FiniteVolume.hh"
-//#include "FiniteVolume/ComputeStencil.hh"
-
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/ComputeStencil.hh"
 

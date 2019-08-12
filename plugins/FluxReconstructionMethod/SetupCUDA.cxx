@@ -163,7 +163,7 @@ void SetupCUDA::createNormalSockets()
             
           for (CFuint jDim = 0; jDim < dim; ++jDim)
           {
-            solPntNormals[solID*iDim+jDim] = temp[iSol][jDim];
+            solPntNormals[solID*dim*dim+iDim*dim+jDim] = temp[iSol][jDim];
           }
         }
       }

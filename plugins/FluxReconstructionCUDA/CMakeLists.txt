@@ -3,6 +3,9 @@ LIST ( APPEND FluxReconstructionCUDA_files
      FluxReconstructionCUDA.hh
      StencilCUDASetup.cxx
      StencilCUDASetup.hh
+     ConvRHSFluxReconstructionCUDA.hh
+     ConvRHSFluxReconstructionCUDA.ci
+     ConvRHSFluxReconstructionCUDA.cu
 )
     
 # StencilCUDASetup.cxx or some other DUMMY file is 

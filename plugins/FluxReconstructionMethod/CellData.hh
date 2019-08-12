@@ -25,10 +25,12 @@ public:
   /// Constructor
   HOST_DEVICE CellData(const CFuint    nbCellsIn, 
 		       const CFuint*   cellInfoIn,
-                       const CFuint*   cellStateIDsIn) :
+                       const CFuint*   cellStateIDsIn,
+                       const CFuint    nbrSolPntsIn) :
     nbCells(nbCellsIn), 
     cellInfo(cellInfoIn),
-    cellStateIDs(cellStateIDsIn)
+    cellStateIDs(cellStateIDsIn),
+    nbrSolPnts(nbrSolPntsIn)
 //    cellStencil(cellStencilIn),
 //    cellFaces(cellFacesIn),
 //    cellNodes(cellNodesIn),
@@ -45,24 +47,24 @@ public:
   public:
     /// Constructor
     HOST_DEVICE Itr(CellData* cd, const CFuint cellID) : 
-      m_cd(cd), m_cellID(cellID), m_startc(cellID*5) {m_starts = m_cd->cellInfo[m_startc];}  
+      m_cd(cd), m_cellID(cellID), m_startc(cellID*5), m_startSolPnts(cellID*4) {m_starts = m_cd->cellInfo[m_startc];}  
     
     /// Copy constructor
     HOST_DEVICE Itr(const CellData::Itr& in) : 
-      m_cd(in.m_cd), m_cellID(in.m_cellID), m_startc(in.m_startc), m_starts(in.m_starts) {}
+      m_cd(in.m_cd), m_cellID(in.m_cellID), m_startc(in.m_startc), m_starts(in.m_starts), m_startSolPnts(in.m_startSolPnts) {}
     
     /// Overloading of the assignment operator
     HOST_DEVICE const CellData::Itr& operator= (const CellData::Itr& in)
     {
-      m_cd = in.m_cd; m_cellID = in.m_cellID; m_startc = in.m_startc; m_starts = in.m_starts;
+      m_cd = in.m_cd; m_cellID = in.m_cellID; m_startc = in.m_startc; m_starts = in.m_starts; m_startSolPnts = in.m_startSolPnts;
       return *this;
     }
     
     /// Overloading of the operator++
-    HOST_DEVICE void operator++() {m_cellID++; m_startc+=5; m_starts = m_cd->cellInfo[m_startc];}
+    HOST_DEVICE void operator++() {m_cellID++; m_startc+=5; m_starts = m_cd->cellInfo[m_startc]; m_startSolPnts += 4;}
    
     /// Overloading of the operator--
-    HOST_DEVICE void operator--() {m_cellID--; m_startc-=5; m_starts = m_cd->cellInfo[m_startc];}
+    HOST_DEVICE void operator--() {m_cellID--; m_startc-=5; m_starts = m_cd->cellInfo[m_startc]; m_startSolPnts -= 4;}
  
     /// Overloading of the ==
     HOST_DEVICE bool operator== (const Itr& other) {return (m_cellID == other.m_cellID);}
@@ -78,6 +80,9 @@ public:
     
     /// Get the number of faces in cell
     HOST_DEVICE CFuint getNbFacesInCell() const {return m_cd->cellInfo[m_startc+2];}
+    
+    /// Get the number of solution points in cell
+    HOST_DEVICE CFuint getNbrSolPnts() const {return 4;}
     
     /// Get the number of faces in cell, excluding partition faces
     HOST_DEVICE CFuint getNbActiveFacesInCell() const {return m_cd->cellInfo[m_startc+4];}
@@ -120,6 +125,9 @@ public:
     
     /// pointer to the start of the stencil
     CFuint m_starts;
+    
+    /// pointer to start of the solution points
+    CFuint m_startSolPnts;
   };
   
   /// Get the current cell
@@ -134,6 +142,7 @@ public:
   const CFuint    nbCells;
   const CFuint*   cellInfo;
   const CFuint*   cellStateIDs;
+  const CFuint    nbrSolPnts;
   const CFuint*   cellStencil;
   const CFuint*   cellFaces;
   const CFuint*   cellNodes;
