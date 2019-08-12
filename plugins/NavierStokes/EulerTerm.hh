@@ -5,6 +5,10 @@
 
 #include "Framework/BaseTerm.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -21,10 +25,49 @@ namespace COOLFluiD {
  *
  * @author Andrea Lani
  * @author Tiago Quintino
- *
  */
 class EulerTerm : public Framework::BaseTerm {
 public:
+    
+  #ifdef CF_HAVE_CUDA
+  /// nested class defining local options
+  template <typename P = NOTYPE>
+  class DeviceConfigOptions {
+  public:
+    /// constructor
+    HOST_DEVICE DeviceConfigOptions() {}
+    
+    /// destructor
+    HOST_DEVICE virtual ~DeviceConfigOptions() {}
+    
+    /// initialize with another object of the same kind
+    HOST_DEVICE void init(DeviceConfigOptions<P> *const in) 
+    {
+      gamma = in->gamma;
+      R = in->R;
+    }
+    
+    /// gamma
+    CFreal gamma; 
+  
+    /// R
+    CFreal R;
+  };
+  
+  /// copy the local configuration options to the Framework::DEVICE
+  void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+    CudaEnv::copyHost2Dev(&dco->gamma, &_gamma, 1);
+    CudaEnv::copyHost2Dev(&dco->R, &_RDim, 1);
+  }  
+  
+  /// copy the local configuration options to the Framework::DEVICE
+  void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+    dco->gamma = _gamma;
+    dco->R = _RDim;
+  }     
+  #endif
 
   /**
    * Defines the Config Option's of this class

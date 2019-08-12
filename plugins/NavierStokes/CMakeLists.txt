@@ -25,6 +25,7 @@ Euler2DCharToConsInRef.cxx
 Euler2DCharToConsInRef.hh
 Euler2DCons.cxx
 Euler2DCons.hh
+Euler2DConsT.hh
 Euler2DConsToCharInCons.cxx
 Euler2DConsToCharInCons.hh
 Euler2DConsToCharInRef.cxx
@@ -117,6 +118,7 @@ Euler2DSymmToConsInRef.cxx
 Euler2DSymmToConsInRef.hh
 Euler2DVarSet.cxx
 Euler2DVarSet.hh
+Euler2DVarSetT.hh
 Euler3DCons.cxx
 Euler3DCons.hh
 Euler3DConsToPvtInPvt.cxx
