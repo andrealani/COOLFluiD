@@ -209,13 +209,10 @@ void Euler2DGReKOPuvt::setDimensionalValuesPlusExtraValues
   const CFreal vdim = state[2]*refData[EulerTerm::V];
   const CFreal Tdim = state[3]*getModel()->getTempRef();
 
-
-
   result[0] = pdim;
   result[1] = udim;
   result[2] = vdim;
   result[3] = Tdim;
-
 
   const CFuint iK = getModel()->getFirstScalarVar(0);
   const CFreal Kdim = state[4]*refData[iK];
@@ -226,14 +223,14 @@ void Euler2DGReKOPuvt::setDimensionalValuesPlusExtraValues
   result[5] = Omegadim;
   result[6] = Gadim;
   result[7] = Redim;
-
+  
   extra.resize(6);
-
+  
   const CFreal Rdim = getModel()->getRdim();
   const CFreal rhoDim = pdim/(Rdim*Tdim);
-
-
-// TO BE ADDED MODIFOED mut is not correct
+  
+  
+  // TO BE ADDED MODIFOED mut is not correct
   SafePtr<NSTurbTerm> nsTurbTerm  =
     PhysicalModelStack::getActive()->getImplementor()->
     getDiffusiveTerm().d_castTo<NSTurbTerm>();
@@ -248,53 +245,56 @@ void Euler2DGReKOPuvt::setDimensionalValuesPlusExtraValues
   const CFreal V2 = udim*udim + vdim*vdim;
   const CFreal V = std::sqrt(V2);
   // CFreal Tu=  100 * (std::sqrt(2*Kdim/3))/(V);
-   CFreal Tu= (V > 0) ? 100 * (std::sqrt(2*Kdim/3))/(V) : 0.;
+  CFreal Tu= (V > 0) ? 100 * (std::sqrt(2*Kdim/3))/(V) : 0.;
   //const CFreal Tu       = 100 * (std::sqrt(2*Kdim/3))/(V);
   //const CFreal Tu1       = 100 * (std::sqrt(2*Kdim/3))/(std::max(V,1e-12));
   //const CFreal Tu1       = 100 * (std::sqrt(2*Kdim/3))/V; 
   //const CFreal Tu        = std::max(Tu1,0.027);
   //const CFreal Tu2       = std::min(Tu1,100.0);
   //const CFreal Tu        = std::max(Tu2,0.00031773);
- // const CFreal Tu        = std::max(Tu2,0.0);
+  // const CFreal Tu        = std::max(Tu2,0.0);
   const CFreal overTu    = (V>0) ? 1/Tu : 0;
-   
-   
-           if (Tu<=1.3) {
-              CFreal  Rethetat = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
-  extra[3] = Rethetat;
-                 }
-          else {
-                const CFreal lamco5   = Tu - 0.5658;
-                const CFreal pwtu   = -0.671;
-               CFreal Rethetat = 331.5*std::pow(lamco5,pwtu);
-  extra[3] = Rethetat;
-               }
-
+  
+  
+  if (Tu<=1.3) {
+    CFreal  Rethetat = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
+    extra[3] = Rethetat;
+  }
+  else {
+    const CFreal lamco5   = Tu - 0.5658;
+    const CFreal pwtu   = -0.671;
+    CFreal Rethetat = 331.5*std::pow(lamco5,pwtu);
+    extra[3] = Rethetat;
+  }
+  
   std::string namespaceName = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
- //cout << namespaceName<< endl; 
- std::string dataHandleName = namespaceName + "_wallDistance";
+  //cout << namespaceName<< endl; 
+  std::string dataHandleName = namespaceName + "_wallDistance";
   //std::string dataHandleName =  "WallDistance";
-// cout << dataHandleName << endl;
+  // cout << dataHandleName << endl;
   bool exists = Framework::MeshDataStack::getActive()->getDataStorage()->checkData(dataHandleName);
   //bool exists = Framework::MeshDataStack::getActive()->getDataStorage()->checkData(dataHandleName);
- // cout << exists << endl;
-
-  if(exists)
-  {
-  DataHandle< double> wallDistance = MeshDataStack::getActive()->getDataStorage()->
-    getData<CFreal>(dataHandleName);
-
-  const CFuint stateID = state.getLocalID();
-  //Output the wall distance
-  extra[4] = wallDistance[stateID];
-  // cout << " stateID   " << stateID <<  " wallDistance  " << wallDistance[stateID] << endl;
-}
-else{
-  extra[4] = 0.;
+  // cout << exists << endl;
+  
+  if(exists) {// this can only work when data are cell-centered otherwise you can have nodal stateID > actual array storage 
+    DataHandle< double> wallDistance = MeshDataStack::getActive()->getDataStorage()->
+      getData<CFreal>(dataHandleName);
+    // const CFuint stateID = state.getLocalID();
+    // if (stateID >= wallDistance.size()) {
+    //  CFLog(INFO, "Euler2DGReKOPuvt::setDimensionalValuesPlusExtraValues() => " << stateID << " >= " << wallDistance.size() << "\n");
+    //}
+    
+    //Output the wall distance
+    extra[4] = 0.; //wallDistance[stateID];
+    
+    // cout << " stateID   " << stateID <<  " wallDistance  " << wallDistance[stateID] << endl;
   }
-
+  else{
+    extra[4] = 0.;
+  }
+  
   extra[5] = Tu;
-
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////

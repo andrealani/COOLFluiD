@@ -48,8 +48,16 @@ public: // classes
     _iPerturbVar = iVar;
   }
   
-
-
+  /**
+   * Get number of turbulent variables
+   */
+  virtual CFuint getNbTurbVars() const 
+  {
+    const CFuint nbTurbVars = _eulerModel->getNbScalarVars(0);
+    cf_assert(nbTurbVars == 4);
+    return nbTurbVars;
+  }
+  
   /**
    * Get the diffusive flux
    */
