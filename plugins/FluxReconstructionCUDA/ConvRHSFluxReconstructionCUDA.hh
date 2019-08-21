@@ -95,6 +95,9 @@ protected:
   /// storage for the states
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
+  /// number of cell flux points
+  CFuint m_nbrFlxPnts;
+  
   /// storage for the solution point normals
   Framework::DataSocketSink< CFreal > socket_solPntNormals;
   
@@ -148,8 +151,17 @@ protected:
   /// sol sol dep in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_solSolDep2;
   
+  /// sol flx dep in different format
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_solFlxDep2;
+  
   /// derivatives of base polynomials in different format
   Framework::LocalArray<CFreal>::MALLOC_TYPE m_solPolyDerivAtSolPnts2;
+  
+  /// values of base polynomials in different format
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_solPolyValsAtFlxPnts2;
+  
+  /// flx pnt normal directions in different format
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_flxPntFlxDim2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;

@@ -168,11 +168,10 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
   else
   {
     typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
-printf("LF1\n");
+
     // right physical data, flux
     updateVS->computePhysicalData(data->getState(iSol), &m_pdata[0]);
-    //printf("state: %f %f %f %f \n",(data->getState(iSol))[0],(data->getState(iSol))[1],(data->getState(iSol))[2],(data->getState(iSol))[3]);
-printf("LF2\n");
+
     typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
     m_tempUnitNormal = unitNormal;
     for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
@@ -180,9 +179,6 @@ printf("LF2\n");
       typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getFlux(iSol,iDim));
         
       updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[iDim*VS::DIM], &m_tmp[0]); 
-      printf("un: %f %f\n", m_tempUnitNormal[0], m_tempUnitNormal[1]);
-
-      printf("LF Flux: %f %f %f %f %f %f %f %f \n", m_tmp[0], m_tmp[1], m_tmp[2], m_tmp[3], m_tmp[4], m_tmp[5], m_tmp[6], m_tmp[7]);
       
       for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
       {

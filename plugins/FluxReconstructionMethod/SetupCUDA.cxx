@@ -19,6 +19,12 @@
 #include "Common/ConnectivityTable.hh"
 #include "Common/NotImplementedException.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Framework/CudaDeviceManager.hh"
+#include "Framework/CudaDeviceManager.hh"
+#include "Common/CUDA/CFVec.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -130,6 +136,8 @@ void SetupCUDA::createNormalSockets()
   // resize the datahandle for the face Jacobian vector sizes
   solPntNormals.resize(totNbrStates*dim*dim);
 
+CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << socket_solPntNormals.getDataHandle().size() << "\n");
+
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
@@ -178,5 +186,4 @@ void SetupCUDA::createNormalSockets()
 
   }  // namespace FluxReconstructionMethod
 }  // namespace COOLFluiD
-
 

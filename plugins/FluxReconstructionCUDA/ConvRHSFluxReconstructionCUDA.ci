@@ -297,8 +297,15 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() START\n");
   
   ConvRHSFluxReconstruction::setup();
-  
-  socket_solPntNormals.getDataHandle().getLocalArray()->put(); 
+
+   // get the local FR data
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  cf_assert(frLocalData.size() > 0);
+  // for now, there should be only one type of element
+  cf_assert(frLocalData.size() == 1);
+    
+  // get flux point local coordinates
+  m_nbrFlxPnts = frLocalData[0]->getFlxPntsLocalCoords()->size();
   
   // store locally the cell centers
   // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
@@ -309,7 +316,10 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_stateIDs.resize(nbStates);
   
   m_solSolDep2.resize(m_nbrSolPnts*m_nbrSolSolDep);
+  m_solFlxDep2.resize(m_nbrSolPnts*m_nbrFlxDep);
   m_solPolyDerivAtSolPnts2.resize(m_nbrSolPnts*m_nbrSolPnts*m_dim);
+  m_solPolyValsAtFlxPnts2.resize(m_nbrFlxPnts*m_nbrSolPnts);
+  m_flxPntFlxDim2.resize(m_nbrFlxPnts);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -317,9 +327,24 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
     {
       m_solSolDep2[iSolPnt*m_nbrSolSolDep+jSolPnt] = (*m_solSolDep)[iSolPnt][jSolPnt]; 
     }
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+    {
+      m_solFlxDep2[iSolPnt*m_nbrSolSolDep+iFlxPnt] = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+    }
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxPnts; ++iFlxPnt)
+    {
+      m_solPolyValsAtFlxPnts2[iSolPnt+iFlxPnt*m_nbrSolPnts] = (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt];
+    }
+  }
+  
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxPnts; ++iFlxPnt)
+  {
+    m_flxPntFlxDim2[iFlxPnt] = (*m_flxPntFlxDim)[iFlxPnt];
   }
   
   m_solSolDep2.put();
+  m_solFlxDep2.put();
+  m_flxPntFlxDim2.put();
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -386,12 +411,6 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   // get the geodata of the geometric entity builder and set the TRS
   StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.trs = cells;
-
-  // get SpectralFDElementData
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-
-  // compute total number of states
-  cf_assert(elemType->size() == frLocalData.size());
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
