@@ -1751,8 +1751,8 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
 	      }
 	    }
 	    else{
-	      //assembleInnerNode(nodes[iNode]);
-	      assembleinRegionNode2DQuads(nodes[iNode]);
+	      assembleInnerNode(nodes[iNode]);
+	      //assembleinRegionNode2DQuads(nodes[iNode]);
 
 	      //assembleinRegionNode2DQuads(nodes[iNode]);	
 	      // assembleinRegionNode2DTriag(nodes[iNode]);
