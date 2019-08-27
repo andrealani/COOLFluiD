@@ -26,10 +26,14 @@ public:
   HOST_DEVICE CellData(const CFuint    nbCellsIn, 
 		       const CFuint*   cellInfoIn,
                        const CFuint*   cellStateIDsIn,
+                       const CFuint*   neighbCellIDsIn,
+                       const CFuint    nbrFacesIn,
                        const CFuint    nbrSolPntsIn) :
     nbCells(nbCellsIn), 
     cellInfo(cellInfoIn),
     cellStateIDs(cellStateIDsIn),
+    neighbCellIDs(neighbCellIDsIn),
+    nbrFaces(nbrFacesIn),
     nbrSolPnts(nbrSolPntsIn)
 //    cellStencil(cellStencilIn),
 //    cellFaces(cellFacesIn),
@@ -112,6 +116,19 @@ public:
       return m_cd->cellNodes[cellNodeID*m_cd->nbCells + m_cellID];
     }
     
+    /// Get the state ID of a state in a neighbor cell
+    HOST_DEVICE CFuint getNeighbStateID(const CFuint iFace, const CFuint iSolPnt)
+    {
+      const CFuint neighbCellID = m_cd->neighbCellIDs[m_cellID*4+iFace];
+      return m_cd->cellStateIDs[neighbCellID];
+    }
+    
+    /// Get the neighbor cell ID
+    HOST_DEVICE CFuint getNeighbCellID(const CFuint iFace)
+    {
+      return m_cd->neighbCellIDs[m_cellID*4+iFace];
+    }
+    
   private:
     
     /// cell data pointer
@@ -142,11 +159,13 @@ public:
   const CFuint    nbCells;
   const CFuint*   cellInfo;
   const CFuint*   cellStateIDs;
+  const CFuint*   neighbCellIDs;
   const CFuint    nbrSolPnts;
   const CFuint*   cellStencil;
   const CFuint*   cellFaces;
   const CFuint*   cellNodes;
   const CFint*    neighborTypes; 
+  const CFuint    nbrFaces;
   const Framework::CellConn* cellConn;
 };
       

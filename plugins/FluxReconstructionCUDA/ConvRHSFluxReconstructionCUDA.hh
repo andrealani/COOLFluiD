@@ -107,6 +107,9 @@ protected:
   /// cell-nodes connectivity
   Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellNodes;
   
+  /// builder of cells
+  Common::SafePtr< Framework::GeometricEntityPool<CellToFaceGEBuilder> > m_cellBuilder2;
+  
   /// storage of useful cell info: 
   /// in [cellID*5+0] - ptr to corresponding stencil
   /// in [cellID*5+1] - stencil size
@@ -148,6 +151,9 @@ protected:
   /// IDs of the solution points per cellID
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_stateIDs;
   
+  /// IDs of the neighbor cell IDs per cellID
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbCellIDs;
+  
   /// sol sol dep in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_solSolDep2;
   
@@ -162,6 +168,9 @@ protected:
   
   /// flx pnt normal directions in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_flxPntFlxDim2;
+  
+  /// divergence of correction functions in different format
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_corrFctDiv2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;

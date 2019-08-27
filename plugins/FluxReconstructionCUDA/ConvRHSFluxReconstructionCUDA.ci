@@ -27,6 +27,7 @@ ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxRecon
   m_nbBlocksPerGridX(),
   m_nbBlocksPerGridY(),
   m_stateIDs(),
+  m_neighbCellIDs(),
   m_solSolDep2(),
   m_solPolyDerivAtSolPnts2()
 {
@@ -320,6 +321,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_solPolyDerivAtSolPnts2.resize(m_nbrSolPnts*m_nbrSolPnts*m_dim);
   m_solPolyValsAtFlxPnts2.resize(m_nbrFlxPnts*m_nbrSolPnts);
   m_flxPntFlxDim2.resize(m_nbrFlxPnts);
+  m_corrFctDiv2.resize(m_nbrSolPnts*m_nbrFlxPnts);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -334,6 +336,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxPnts; ++iFlxPnt)
     {
       m_solPolyValsAtFlxPnts2[iSolPnt+iFlxPnt*m_nbrSolPnts] = (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt];
+      m_corrFctDiv2[iSolPnt*m_nbrSolPnts+iFlxPnt] = m_corrFctDiv[iSolPnt][iFlxPnt];
     }
   }
   
@@ -345,6 +348,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_solSolDep2.put();
   m_solFlxDep2.put();
   m_flxPntFlxDim2.put();
+  m_corrFctDiv2.put();
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -406,11 +410,15 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
 
   // get geometric entity builder
-  Common::SafePtr<GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
+  //Common::SafePtr<GeometricEntityPool<StdTrsGeoBuilder> > geoBuilder = getMethodData().getStdTrsGeoBuilder();
+  
+  m_cellBuilder2 = getMethodData().getCellBuilder();
 
   // get the geodata of the geometric entity builder and set the TRS
-  StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
+  CellToFaceGEBuilder::GeoData& geoData = m_cellBuilder2->getDataGE();
   geoData.trs = cells;
+  
+  m_neighbCellIDs.resize(nbCells*4);
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -427,21 +435,42 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
     {
       // build the GeometricEntity
       geoData.idx = elemIdx;
-      GeometricEntity *const cell = geoBuilder->buildGE();
+      GeometricEntity *const cell = m_cellBuilder2->buildGE();
+      
+      const CFuint cellID = cell->getID();
 
       // get the states in this cell
       vector< State* >* states = cell->getStates();
+      
+      const std::vector< Framework::GeometricEntity* >* faces = cell->getNeighborGeos();
+      
+      const CFuint nbFaces = faces->size();
 
       for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
       {
-        m_stateIDs[cell->getID() * nbrStates + iSol] = (*states)[iSol]->getLocalID();
+        m_stateIDs[cellID * nbrStates + iSol] = (*states)[iSol]->getLocalID();
+      }
+      
+      for (CFuint iFace = 0; iFace < nbFaces; ++iFace)
+      {
+        const CFuint leftID = (*faces)[iFace]->getNeighborGeo(LEFT)->getID();
+          
+        if (leftID != cellID)
+        {
+          m_neighbCellIDs[cellID*nbFaces + iFace] = leftID;
+        }
+        else
+        {
+          m_neighbCellIDs[cellID*nbFaces + iFace] = (*faces)[iFace]->getNeighborGeo(RIGHT)->getID();
+        }
       }
 
       //release the GeometricEntity
-      geoBuilder->releaseGE();
+      m_cellBuilder2->releaseGE();
     }
   }
   m_stateIDs.put();
+  m_neighbCellIDs.put();
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() END\n");
 }
       

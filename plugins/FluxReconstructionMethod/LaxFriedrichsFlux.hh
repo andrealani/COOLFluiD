@@ -71,7 +71,9 @@ public:  // methods
     typename MathTypes<CFreal, DT, VS::NBEQS>::VEC m_tmp;
     typename MathTypes<CFreal, DT, VS::NBEQS>::VEC m_tmp2;
     typename MathTypes<CFreal, DT, VS::DATASIZE>::VEC m_pdata;
+    typename MathTypes<CFreal, DT, VS::DATASIZE>::VEC m_pdata2;
     typename MathTypes<CFreal, DT, VS::DIM*VS::DIM>::VEC m_tempUnitNormal;
+    typename MathTypes<CFreal, DT, VS::DIM>::VEC m_tempFlxUnitNormal;
   };
   
   /// copy the local configuration options to the device
@@ -131,6 +133,72 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
 {
   if (isInterface)
   {
+    typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
+
+    // right physical data, flux
+    updateVS->computePhysicalData(data->getLstate(iSol), &m_pdata[0]);
+    updateVS->computePhysicalData(data->getRstate(iSol), &m_pdata2[0]);
+
+    typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getFlxScaledNormal(iSol));
+    m_tempFlxUnitNormal = unitNormal;
+    
+    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getInterfaceFlux(iSol));
+        
+    updateVS->getFlux(&m_pdata[0], &m_tempFlxUnitNormal[0], &m_tmp[0]); 
+    updateVS->getFlux(&m_pdata2[0], &m_tempFlxUnitNormal[0], &m_tmp2[0]); 
+    
+    const CFreal lMaxAbsEVal = updateVS->getMaxAbsEigenValue(&m_pdata[0], &m_tempFlxUnitNormal[0]);
+    const CFreal rMaxAbsEVal = updateVS->getMaxAbsEigenValue(&m_pdata2[0], &m_tempFlxUnitNormal[0]);
+
+    const CFreal absA = 0.5*(lMaxAbsEVal+rMaxAbsEVal);
+    
+    Framework::VarSetTransformerT<typename VS::UPDATE_VS, typename VS::SOLUTION_VS, NOTYPE>* up2Sol = model->getUpdateToSolution();
+  
+    // transform to solution variables
+    up2Sol->transform(data->getRstate(LEFT), &m_tmp[0]);
+    up2Sol->transform(data->getRstate(RIGHT), &m_tmp2[0]);
+  
+    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateL(&m_tmp[0]);
+    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateR(&m_tmp2[0]);
+      
+    for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
+    {
+      flux[iEq] = 0.5*(m_tmp[iEq]+m_tmp[iEq]) - 0.5*absA*(stateR[iEq] - stateL[iEq]);
+    }
+
+//  // Set members to current left and right update state
+//  m_updateStates[LEFT]  = &lState;
+//  m_updateStates[RIGHT] = &rState;
+//
+//  //CFLog(VERBOSE, "stateLF = "  << rState << "\n");
+//  // compute physical data for the left and the right internal flux points
+//  updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
+//  updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
+//  
+//  // flux for right and left state (the physical data must be passed here!)
+//  m_sumFlux  = updateVarSet->getFlux()(m_pData[LEFT], normal);
+//  m_sumFlux += updateVarSet->getFlux()(m_pData[RIGHT], normal);
+//  
+//  // compute left and right maximum absolute eigenvalues
+//  const CFreal lMaxAbsEVal = updateVarSet->getMaxAbsEigenValue(m_pData[LEFT], normal);
+//  const CFreal rMaxAbsEVal = updateVarSet->getMaxAbsEigenValue(m_pData[RIGHT], normal);
+//  
+//  // compute absoluteJacobian |A|
+//  const CFreal absA = 0.5*(lMaxAbsEVal+rMaxAbsEVal);
+//  
+//  // transform from update states (which are stored) to solution states (in which the equations are written)
+//  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]);              
+//  m_solStates[RIGHT] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[RIGHT]);
+//  
+//  State& lSolState = *(m_solStates)[LEFT ];
+//  State& rSolState = *(m_solStates)[RIGHT];
+//  
+//  // compute the Riemann flux
+//  // Flux = 1/2*(Fmin + Fplus) - 1/2*|A|*(Uplus - Umin)
+//  m_rFlux = 0.5*(m_sumFlux -  absA*(rSolState - lSolState));
+//  
+//  return m_rFlux;
+    
 //    typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal());
 //    const CFreal coeff = (data->isOutward()) ? 1. : -1.;
 //    m_tempUnitNormal = coeff*unitNormal;
@@ -172,7 +240,7 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
     // right physical data, flux
     updateVS->computePhysicalData(data->getState(iSol), &m_pdata[0]);
 
-    typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
+    typename MathTypes<CFreal,DT,VS::DIM*VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
     m_tempUnitNormal = unitNormal;
     for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
     {
