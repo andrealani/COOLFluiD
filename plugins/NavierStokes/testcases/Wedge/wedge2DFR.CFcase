@@ -70,52 +70,84 @@ Simulator.SubSystem.Default.PhysicalModelType = Euler2D
 
 Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot 
 
-Simulator.SubSystem.CFmesh.FileName     = wedge2DFR-sol.CFmesh
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
-Simulator.SubSystem.CFmesh.SaveRate = 200
+Simulator.SubSystem.CFmesh.FileName     = wedge2DFR.CFmesh
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
+Simulator.SubSystem.CFmesh.SaveRate = 1000
 Simulator.SubSystem.CFmesh.AppendTime = false
-Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.AppendIter = true
 
-Simulator.SubSystem.Tecplot.FileName = wedge2DFR-sol.plt
+Simulator.SubSystem.Tecplot.FileName = wedge2DFR.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 200
+Simulator.SubSystem.Tecplot.SaveRate = 1000
 Simulator.SubSystem.Tecplot.AppendTime = false
-Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = artVisc outputPP smoothness
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = artVisc outputPP smoothness
 
-Simulator.SubSystem.ParaView.FileName    = wedge2DFR-sol.vtu
+Simulator.SubSystem.ParaView.FileName    = Awedge2DFR.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 200
+Simulator.SubSystem.ParaView.SaveRate = 500
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.SocketNames = artVisc outputPP smoothness
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.VariableNames = artVisc outputPP smoothness
 
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10000
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -4
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10000000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8.0
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.3
+Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceWedge.plt
+Simulator.SubSystem.FwdEuler.ShowRate        = 50
+Simulator.SubSystem.FwdEuler.ConvRate        = 50
 
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
 
 Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet SlipWall
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge2DFRUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge2DFRUpgraded.CFmesh #wedge2DFRP4Sol.CFmesh #wedge2DFRP3ww.CFmesh #wedge2DFR-solP5.CFmesh #wedge2DFRimpl-RealSol.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
-Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiterEuler2D
-Simulator.SubSystem.FluxReconstruction.TVBLimiterEuler2D.TVBFactor = 100
-Simulator.SubSystem.FluxReconstruction.TVBLimiterEuler2D.DensPresPosCheck = true
+
+Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = true
+Simulator.SubSystem.FluxReconstruction.ArtificialViscosityCom = LLAV
+Simulator.SubSystem.FluxReconstruction.LLAV.Kappa = 0.5 #P1 4.0 P2 4.0
+Simulator.SubSystem.FluxReconstruction.LLAV.Peclet = 5.0 #P1 40.0 P2 20.0
+Simulator.SubSystem.FluxReconstruction.LLAV.S0 = -0.5
+Simulator.SubSystem.FluxReconstruction.LLAV.FreezeLimiterIter = 1000000
+Simulator.SubSystem.FluxReconstruction.LLAV.ShowRate = 50
+Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.MonitoredVar = 0
+
+Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = true
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-3 
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-3
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 50
+
+
+#Simulator.SubSystem.FluxReconstruction.LimiterCom = MLPLimiterEuler2D #TVBLimiterEuler2D #
+#Simulator.SubSystem.FluxReconstruction.MLPLimiterEuler2D.LimFactor = 5.0
+#Simulator.SubSystem.FluxReconstruction.MLPLimiterEuler2D.FreezeLimiterRes = -8.0 #-1.55
+#Simulator.SubSystem.FluxReconstruction.MLPLimiterEuler2D.FreezeLimiterIter = 1000
+
+#Simulator.SubSystem.FluxReconstruction.LimiterCom = TVBLimiterEuler2D
+#Simulator.SubSystem.FluxReconstruction.TVBLimiterEuler2D.TVBFactor = 50
+#Simulator.SubSystem.FluxReconstruction.TVBLimiterEuler2D.DensPresPosCheck = true
+
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #RoeFlux #
 
 #Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
 
@@ -123,22 +155,27 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.333333333333 #0.015 #0.013 #0.000000001 #4.0/135.0 #1.0/3.0 #0.035 #1.0/3.0 #3.0/3150.0 #8.0/496125.0  #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.3 #0.000952380952380952380952380952380952380952380952380952380 #1.6966507e-7 #1.6125e-5 #0.0296296296 #0.33333333333333333 #0.3333333333 #0.0035 #0.333333333333 #0.015 #0.013 #0.000000001 #4.0/135.0 #1.0/3.0 #0.035 #1.0/3.0 #3.0/3150.0 #8.0/496125.0  #5.0/29469825
 
-Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def = 1. 2.366431913 0.0 5.3
+Simulator.SubSystem.FluxReconstruction.InField.Def =  1.0 2.366431913 0.0 5.3 #if(x>0.5+y,1.0+x-y,1.0) 2.366431913 0.0 5.3 # 1.0 9.4657277 0.0 47.3 #1.0 0.591607978 0.0 2.675 # 0.2*x+y+1.0  if(x-0.2*y>1.1,1.5,1.0)
 
 Simulator.SubSystem.FluxReconstruction.BcNames = Inlet Outlet Wall
 Simulator.SubSystem.FluxReconstruction.Inlet.applyTRS = SuperInlet
 Simulator.SubSystem.FluxReconstruction.Outlet.applyTRS = SuperOutlet
 Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = SlipWall
 
+#Simulator.SubSystem.FluxReconstruction.BcNamesAV = InletAV OutletAV WallAV
+#Simulator.SubSystem.FluxReconstruction.InletAV.applyTRS = SuperInlet
+#Simulator.SubSystem.FluxReconstruction.OutletAV.applyTRS = SuperOutlet
+#Simulator.SubSystem.FluxReconstruction.WallAV.applyTRS = SlipWall
+
 Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Dirichlet  SuperOutlet  MirrorEuler2D
 Simulator.SubSystem.FluxReconstruction.Data.BcNames = Inlet      Outlet       Wall
 
 Simulator.SubSystem.FluxReconstruction.Data.Inlet.Vars = x y
-Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = 1. 2.366431913 0.0 5.3
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = 1.0 2.366431913 0.0 5.3 #1.0 9.4657277 0.0 47.3 #1.0 0.591607978 0.0 2.675 #
