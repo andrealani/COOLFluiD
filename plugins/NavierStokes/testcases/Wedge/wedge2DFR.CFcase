@@ -82,13 +82,13 @@ Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate = 1000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = artVisc outputPP smoothness
-#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = artVisc outputPP smoothness
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = artVisc outputPP smoothness
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = artVisc outputPP smoothness
 
 Simulator.SubSystem.ParaView.FileName    = Awedge2DFR.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 500
+Simulator.SubSystem.ParaView.SaveRate = 1000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 Simulator.SubSystem.ParaView.Data.DataHandleOutput.SocketNames = artVisc outputPP smoothness

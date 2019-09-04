@@ -1,0 +1,6 @@
+Simulator.SubSystem.BwdEuler.Data.CFL.Interactive.CFL = 0.5
+Simulator.SubSystem.FluxReconstruction.LLAVJacob.Kappa = 0.5 
+Simulator.SubSystem.FluxReconstruction.LLAVJacob.Peclet = 5.0
+Simulator.SubSystem.FluxReconstruction.LLAVJacob.S0 = -0.6
+Simulator.SubSystem.FluxReconstruction.LLAVJacob.FreezeLimiterIter = 10000000000000
+Simulator.SubSystem.FluxReconstruction.LLAVJacob.MonitoredVar = 1
