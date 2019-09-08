@@ -27,12 +27,14 @@ public:
 		       const CFuint*   cellInfoIn,
                        const CFuint*   cellStateIDsIn,
                        const CFuint*   neighbCellIDsIn,
+                       const CFuint* neighbFaceIDsIn, 
                        const CFuint    nbrFacesIn,
                        const CFuint    nbrSolPntsIn) :
     nbCells(nbCellsIn), 
     cellInfo(cellInfoIn),
     cellStateIDs(cellStateIDsIn),
     neighbCellIDs(neighbCellIDsIn),
+    neighbFaceIDs(neighbFaceIDsIn),
     nbrFaces(nbrFacesIn),
     nbrSolPnts(nbrSolPntsIn)
 //    cellStencil(cellStencilIn),
@@ -129,6 +131,12 @@ public:
       return m_cd->neighbCellIDs[m_cellID*4+iFace];
     }
     
+    /// Get the neighbor face ID
+    HOST_DEVICE CFuint getNeighbFaceID(const CFuint iFace)
+    {
+      return m_cd->neighbFaceIDs[m_cellID*4+iFace];
+    }
+    
   private:
     
     /// cell data pointer
@@ -160,6 +168,7 @@ public:
   const CFuint*   cellInfo;
   const CFuint*   cellStateIDs;
   const CFuint*   neighbCellIDs;
+  const CFuint*   neighbFaceIDs;
   const CFuint    nbrSolPnts;
   const CFuint*   cellStencil;
   const CFuint*   cellFaces;

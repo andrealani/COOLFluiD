@@ -29,6 +29,7 @@ public:
 			 T* updateCoeffIn, 
 			 T* rhsIn,
                          T* solPntNormalsIn,
+                         T* flxPntNormalsIn,
                          CFuint nbSolPntsIn)
   {
     nbCells = nbCellsIn; 
@@ -36,6 +37,7 @@ public:
     updateCoeff = updateCoeffIn; 
     rhs = rhsIn;
     solPntNormals = solPntNormalsIn;
+    flxPntNormals = flxPntNormalsIn;
     nbSolPnts = nbSolPntsIn;
 //    normals = normalsIn;
 //    uX = uxIn;
@@ -52,6 +54,7 @@ public:
   T* updateCoeff; 
   T* rhs;
   T* solPntNormals;
+  T* flxPntNormals;
   CFuint nbSolPnts;
 //  T* normals;
 //  T* uX;

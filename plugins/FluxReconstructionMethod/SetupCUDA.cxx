@@ -44,7 +44,11 @@ MethodCommandProvider< SetupCUDA,FluxReconstructionSolverData,FluxReconstruction
 
 SetupCUDA::SetupCUDA(const std::string& name) :
   StdSetup(name),
-  socket_solPntNormals("solPntNormals")
+  socket_solPntNormals("solPntNormals"),
+  socket_flxPntNormals("flxPntNormals"),
+  m_face(CFNULL),
+  m_flxLocalCoords(),
+  m_faceJacobVecs()
 {
 }
 
@@ -61,6 +65,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 {
   std::vector< Common::SafePtr< BaseDataSocketSource > > result = StdSetup::providesSockets();
   result.push_back(&socket_solPntNormals);
+  result.push_back(&socket_flxPntNormals);
 
   return result;
 }
@@ -178,6 +183,75 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
 
       //release the GeometricEntity
       geoBuilder->releaseGE();
+    }
+  }
+
+  // get InnerFaces TopologicalRegionSet
+  SafePtr<TopologicalRegionSet> faces = MeshDataStack::getActive()->getTrs("InnerFaces");
+  
+  // get face builder
+  m_faceBuilder = getMethodData().getFaceBuilder();
+
+  // get the face start indexes
+  vector< CFuint >& innerFacesStartIdxs = getMethodData().getInnerFacesStartIdxs();
+
+  // get number of face orientations
+  const CFuint nbrFaceOrients = innerFacesStartIdxs.size()-1;
+
+  // get the geodata of the face builder and set the TRSs
+  FaceToCellGEBuilder::GeoData& geoDataFace = m_faceBuilder->getDataGE();
+  geoDataFace.cellsTRS = cells;
+  geoDataFace.facesTRS = faces;
+  geoDataFace.isBoundary = false;
+
+  // compute flux point coordinates
+  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  const CFuint nbFaceFlxPnts = flxLocalCoords->size();
+
+  // get the face flux point projection vector size data handle
+  DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
+      
+  // resize flx pnt normal socket
+  flxPntNormals.resize(innerFacesStartIdxs[nbrFaceOrients]*nbFaceFlxPnts*dim);
+
+  // get the face local coords of the flux points on one face
+  m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  
+  m_faceJacobVecs.resize(nbFaceFlxPnts);
+  
+  for (CFuint iFlx = 0; iFlx < nbFaceFlxPnts; ++iFlx)
+  {
+    m_faceJacobVecs[iFlx].resize(dim);
+  }
+
+  // loop over different orientations
+  for (CFuint orient = 0; orient < nbrFaceOrients; ++orient)
+  {
+    // start and stop index of the faces with this orientation
+    const CFuint faceStartIdx = innerFacesStartIdxs[orient  ];
+    const CFuint faceStopIdx  = innerFacesStartIdxs[orient+1];
+
+    // loop over faces with this orientation
+    for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
+    {
+      // build the face GeometricEntity
+      geoDataFace.idx = faceID;
+      m_face = m_faceBuilder->buildGE();
+
+      // compute face Jacobian vectors
+      m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+
+      // Loop over flux points to set the normal vectors
+      for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
+      {
+        for (CFuint iDim = 0; iDim < dim; ++iDim)
+        {
+          // set unit normal vector
+          flxPntNormals[faceID*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
+        }
+      }
+      
+      m_faceBuilder->releaseGE();
     }
   }
 }

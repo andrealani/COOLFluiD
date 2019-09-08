@@ -55,6 +55,21 @@ protected: // data
   /// storage for the normals in the solution points
   Framework::DataSocketSource< CFreal > socket_solPntNormals;
   
+  /// storage for the normals in the solution points
+  Framework::DataSocketSource< CFreal > socket_flxPntNormals;
+  
+  /// variable for current face
+  Framework::GeometricEntity* m_face;
+  
+  /// builder of faces
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
+  
+  /// face local coordinates of the flux points on one face
+  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+  
+  /// vector to store the face jacobians in
+  std::vector< RealVector > m_faceJacobVecs;
+  
 };  // class SetupCUDA
 
 //////////////////////////////////////////////////////////////////////////////

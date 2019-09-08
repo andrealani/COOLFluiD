@@ -101,6 +101,9 @@ protected:
   /// storage for the solution point normals
   Framework::DataSocketSink< CFreal > socket_solPntNormals;
   
+  /// storage for the flux point normals
+  Framework::DataSocketSink< CFreal > socket_flxPntNormals;
+  
   /// cell-face connectivity
   Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellFaces;
   
@@ -109,6 +112,9 @@ protected:
   
   /// builder of cells
   Common::SafePtr< Framework::GeometricEntityPool<CellToFaceGEBuilder> > m_cellBuilder2;
+  
+  /// pointer to booleans telling whether a face is on the boundary
+  Common::SafePtr< std::vector< bool > > m_isFaceOnBoundaryCell;
   
   /// storage of useful cell info: 
   /// in [cellID*5+0] - ptr to corresponding stencil
@@ -154,11 +160,17 @@ protected:
   /// IDs of the neighbor cell IDs per cellID
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbCellIDs;
   
+  /// IDs of the neighbor face IDs per cellID
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbFaceIDs;
+  
   /// sol sol dep in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_solSolDep2;
   
   /// sol flx dep in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_solFlxDep2;
+  
+  /// flx sol dep in different format
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_flxSolDep2;
   
   /// derivatives of base polynomials in different format
   Framework::LocalArray<CFreal>::MALLOC_TYPE m_solPolyDerivAtSolPnts2;
@@ -171,6 +183,9 @@ protected:
   
   /// divergence of correction functions in different format
   Framework::LocalArray<CFreal>::MALLOC_TYPE m_corrFctDiv2;
+  
+  /// connectivity between faces and flx pnt indexes in different format
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_faceFlxPntConn2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;
