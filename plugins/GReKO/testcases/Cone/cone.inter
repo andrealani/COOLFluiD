@@ -1,0 +1,10 @@
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.5
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.coeffCFL = 1.001
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.maxCFL = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.power = 0.6
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.LimitCFL = 1. 
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.Tol = 0.5 
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = 4.0 
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation = 1. 	
+#freezed at iter =1236

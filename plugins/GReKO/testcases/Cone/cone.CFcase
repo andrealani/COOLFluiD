@@ -1,0 +1,320 @@
+#############################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume, NavierStokes2DGReKO, RANS Langtry Menter model, NewtonIterator,
+# CFL SER function law, mesh with quads, first order, 
+# supersonic inlet and outlet, isothermal noslip wall, parallel computation of 
+# distance to the wall
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -5.0521195
+
+CFEnv.ExceptionDumps=true
+CFEnv.AssertionDumps=true
+CFEnv.AssertionThrows=true
+
+#=======================================================================
+# Loading of Modules
+#=======================================================================
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libGReKO libFiniteVolume libNewtonMethod libFiniteVolumeNavierStokes libFiniteVolumeGReKO libMeshTools libMeshToolsFVM libGambit2CFmesh libPetscI libAeroCoefFVM
+
+#=======================================================================
+# Directory paths
+#=======================================================================
+
+Simulator.Paths.WorkingDir = plugins/GReKO/testcases/Cone/
+Simulator.Paths.ResultsDir = ./RESULTS_CONE
+
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/GReKO/testcases/Cone/cone.inter 
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+#CFEnv.ExceptionLogLevel = 200
+#CFEnv.ExceptionDumps = true
+#CFEnv.RegistSignalHandlers = false
+
+#=======================================================================
+# Physical model and reference values
+#=======================================================================
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DGReKO
+Simulator.SubSystem.NavierStokes2DGReKO.refValues  = 331.02 1159.3 100. 53.18  80.64  5.068e4 1.0  801.269 
+#Simulator.SubSystem.NavierStokes2DGReKO.refValues  =  696.7 939.15 10. 60.976 0.00159 15653. 1.0  1.3349e+03 
+#Simulator.SubSystem.NavierStokes2DGReKO.refValues  =  696.7 939.15 10. 60.976 33. 4e12  1.0  1063.
+Simulator.SubSystem.NavierStokes2DGReKO.refLength  = 1.0
+Simulator.SubSystem.NavierStokes2DGReKO.ConvTerm.machInf = 7.93
+
+#=======================================================================
+# Stop condition
+#=======================================================================
+
+Simulator.SubSystem.StopCondition           = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps  = 200 
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -4.0
+#=======================================================================
+# Mesh Reading, Scaling and Restart
+#=======================================================================
+
+Simulator.SubSystem.Default.listTRS = NoSlipWall Symmetry Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = cone_restart.CFmesh 
+Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = wallDistance 
+Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 1
+
+# Comment these lines to restart
+#--------------------------------
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarNames = wallDistance 
+#Simulator.SubSystem.CFmeshFileReader.Data.ExtraStateVarStrides = 1
+
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 100
+
+
+# Uncomment this line to Restart
+#--------------------------------
+
+Simulator.SubSystem.CellCenterFVM.Restart = true
+
+#=======================================================================
+# Mesh writting
+#=======================================================================
+
+Simulator.SubSystem.OutputFormat     = Tecplot CFmesh
+
+Simulator.SubSystem.Tecplot.FileName               = plate.plt
+Simulator.SubSystem.Tecplot.Data.updateVar         = Puvt
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS        = NoSlipWall
+Simulator.SubSystem.Tecplot.SaveRate               = 200
+Simulator.SubSystem.Tecplot.AppendTime             = false
+Simulator.SubSystem.Tecplot.AppendIter             = false 
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = wallDistance
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = D
+
+Simulator.SubSystem.CFmesh.FileName   = Plate.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 1000
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false 
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarNames = wallDistance 
+Simulator.SubSystem.CFmesh.Data.ExtraStateVarStrides = 1
+#=======================================================================
+# Compute the wall distances
+#=======================================================================
+
+#Simulator.SubSystem.DataPreProcessing = DataProcessing
+#Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+#Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CCMPI #ComputeWallDistanceFVMCC
+#Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVector2CC
+#Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceFVMCC
+#Simulator.SubSystem.DataProcessing1.Names = WallDistance
+#Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = NoSlipWall
+#Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+#
+#=======================================================================
+# Linear Solver
+#=======================================================================
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 10000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-3
+#Simulator.SubSystem.NewtonIteratorLSS.Data.SaveSystemToFile = false
+#Simulator.SubSystem.NewtonIteratorLSS.Data.Output= false
+
+#=======================================================================
+#=======================================================================
+# Pseudo-time discretization
+#=======================================================================
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.Data.CollaboratorNames = NavierStokesLSS 
+#Simulator.SubSystem.NewtonIterator.UpdateSol = TurbUpdateSol
+Simulator.SubSystem.NewtonIterator.UpdateSol = GReKOUpdateSol
+#Simulator.SubSystem.NewtonIterator.UpdateSol = TurbGReKOUpdateSol
+
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 0.1
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = SER
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.coeffCFL = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.maxCFL = 1.
+Simulator.SubSystem.NewtonIterator.Data.CFL.SER.power = 0.6
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+
+Simulator.SubSystem.NewtonIterator.ConvRate = 1
+Simulator.SubSystem.NewtonIterator.ShowRate = 1
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence.plt
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 0 
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 1 0 0 1 1 1 1 1 
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0.
+
+
+
+#=======================================================================
+# Space discretization
+#=======================================================================
+
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#Simulator.SubSystem.CellCenterFVM.Restart = false
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpTurb2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMFlux = PlusUpTurb2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpTurb2D.Flux.machInf = 6
+
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpGReKO2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpGReKO2D.machInf = 7.93 
+
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMS2D
+Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMS2D.machInf = 7.93
+#Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUp2D
+#Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUp2D.machInf = 7.93 
+
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar   = Cons
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar     = Puvt
+Simulator.SubSystem.CellCenterFVM.Data.LinearVar     = Roe
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar  = BSLPuvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar  = SSTPuvt
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokes
+#Simulator.SubSystem.CellCenterFVM.Data.DerivativeStrategy = Corrected2D
+
+#Simulator.SubSystem.CellCenterFVM.Data.hasSourceTerm = true
+Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = NavierStokesGReKO2DSourceTerm_Lang
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm.H = 494829
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm.Hinf = 494829
+#Simulator.SubSystem.CellCenterFVM.Data.NavierStokesGReKO2DSourceTerm_Lang.Hinf= 494829
+
+
+
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm.NavierStokesGReKO2DSourceTerm.Vars= x y 
+#Simulator.SubSystem.CellCenterFVM.Data.SourceTerm.NavierStokesGReKO2DSourceTerm.Def = 10
+
+
+
+#=======================================================================
+# Solution order
+#=======================================================================
+
+# seond order (Uncomment)
+#-------------------------
+
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+#Simulator.SubSystem.CellCenterFVM.Setup1.FaceVertexPlusGhost.TRSNames = NoSlipWall  Symmetry
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+#
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+#Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.5 
+
+#=======================================================================
+# node extrapolation enforcing strongly the no slip condition on boundary nodes
+#=======================================================================
+
+Simulator.SubSystem.CellCenterFVM.Data.NodalExtrapolation = DistanceBasedGMoveGReKO2D	
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveGReKO2D.TrsPriorityList =  NoSlipWall Symmetry Inlet Outlet
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveGReKO2D.TRSName = NoSlipWall
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveGReKO2D.ValuesIdx = 1 2 3 4   
+Simulator.SubSystem.CellCenterFVM.Data.DistanceBasedGMoveGReKO2D.Values = 0. 0. 303.24 1e-7 
+
+#=======================================================================
+# Solution Initialization
+#=======================================================================
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
+
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Def = 331.02 1159.3 0. 53.18  201.596  126743 1.0 584.302
+#Simulator.SubSystem.CellCenterFVM.InField.Def = 331.02 1159.3 0. 53.18  80.64  5.068e4 1.0 584.302  #801.269
+#Simulator.SubSystem.CellCenterFVM.InField.Def = 590.928 2445.4 0.001 67.0117 398.665 3.98665e+07 1. 3363.62
+
+#=======================================================================
+# Boundary conditions
+#=======================================================================
+
+Simulator.SubSystem.CellCenterFVM.BcComds = NoSlipWallIsothermalNSGReKOPvt2DFVMCC \
+	                                   MirrorVelocity2DTurbFVMCC \
+                                            SuperInletFVMCC \
+                                            SuperOutletFVMCC
+
+Simulator.SubSystem.CellCenterFVM.BcNames = NSWall \
+					    Mirror \
+					    SInlet \
+					    SOutlet
+
+
+Simulator.SubSystem.CellCenterFVM.NSWall.applyTRS = NoSlipWall
+Simulator.SubSystem.CellCenterFVM.NSWall.KWall = 1e-7
+Simulator.SubSystem.CellCenterFVM.NSWall.TWall = 303.24
+#Simulator.SubSystem.CellCenterFVM.NSWall.ZeroGradientFlags = 1 1 1 1 1 1
+
+Simulator.SubSystem.CellCenterFVM.Mirror.applyTRS = Symmetry 
+Simulator.SubSystem.CellCenterFVM.Mirror.VelocityIDs = 1 2
+#Simulator.SubSystem.CellCenterFVM.Mirror.ZeroGradientFlags = 1 0 0 1
+
+Simulator.SubSystem.CellCenterFVM.SInlet.applyTRS = Inlet
+Simulator.SubSystem.CellCenterFVM.SInlet.Vars = x y
+Simulator.SubSystem.CellCenterFVM.SInlet.Def = 331.02 1159.3 0. 53.18  201.596  126743 1.0 584.302  #578.492     #  Si je mets pas 10 a infield il dive
+#Simulator.SubSystem.CellCenterFVM.SInlet.Def = 331.02 1159.3 0. 53.18  80.64  5.068e4 1.0 584.302  #578.492     #  Si je mets pas 10 a infield il dive
+
+#Simulator.SubSystem.CellCenterFVM.SInlet.Def = 590.928 2445.4 0. 67.0117 398.665 3.98665e+07 1. 3363.62 
+
+#mu=1.35958e-05 Dyn
+#nu=0.000422055 Ki
+
+Simulator.SubSystem.CellCenterFVM.SOutlet.applyTRS = Outlet
+#Simulator.SubSystem.CellCenterFVM.SupOutlet.ZeroGradientFlags = 1 1 1 1
+
+
+#=======================================================================
+# Post process data to compute the skin friction and y+
+#=======================================================================
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.ProcessRate = 1000
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxCC 
+Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = NoSlipWall
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFile = bluntTCNEQHF.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = false 
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.02169
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 331.02 
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf =  1159.3
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 53.18
+Simulator.SubSystem.DataProcessing2.SkinFriction.UID = 1
+Simulator.SubSystem.DataProcessing2.SkinFriction.VID = 2
+Simulator.SubSystem.DataProcessing2.SkinFriction.TID = 3
+
+######################################################
+
+# Vient de chez Milan => pour extraire profils?
+
+#Simulator.SubSystem.DataProcessing2.Comds = NavierStokesBLExtractionCC
+#Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileBL = profile.plt
+#Simulator.SubSystem.DataProcessing2.SkinFriction.ExtractCoord = 0.995 0.0
+#Simulator.SubSystem.DataProcessing2.SkinFriction.BLThickness = 0.050
+

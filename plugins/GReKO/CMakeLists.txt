@@ -37,3 +37,6 @@ LIST ( APPEND GReKO_cflibs NavierStokes KOmega )
 LIST ( APPEND GReKO_requires_mods NavierStokes KOmega)
 CF_ADD_PLUGIN_LIBRARY ( GReKO )
 CF_WARN_ORPHAN_FILES()
+
+ADD_SUBDIRECTORY ( testcases )
+
