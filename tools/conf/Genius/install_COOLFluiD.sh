@@ -63,9 +63,9 @@ export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
 
 if [ "$2" == "--download=1" ] ; then
 cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
-elif [ "$2" == "--download=0" ] ; then
+#elif [ "$2" == "--download=0" ] ; then
 # clean up old object files and libraries
-rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
+#rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
 fi
 
 export COOLFLUID_CONF_FILE="${COOLFLUID_TOP_DIR}/${CONF_FILE}"
