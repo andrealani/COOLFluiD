@@ -1587,7 +1587,7 @@ sub install_boost()
     my $mversion = $version;
     $mversion =~ s/_/./g;
     print my_colored("Downloading $pack\n with version $mversion",$HEADINGCOLOR);
-    run_command_or_die("wget http://vorboss.dl.sourceforge.net/project/boost/boost/$mversion/$pack.tar.bz2");
+    run_command_or_die("wget https://sourceforge.net/projects/boost/files/boost/$mversion/$pack.tar.bz2");
   }
 
   unless ($opt_fetchonly)
