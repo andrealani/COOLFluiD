@@ -31,6 +31,10 @@ export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius"
 # download COOLFluiD
 if [ "$2" == "--download=1" ] ; then
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
+elif [ "$2" == "--download=0" ] ; then
+#update COOLFluiD
+cd ${COOLFLUID_TOP_DIR} 
+svn up .
 fi
 
 if [ "$1" == "DEBUG_CUDA" ] ; then
@@ -57,7 +61,13 @@ fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
 
+if [ "$2" == "--download=1" ] ; then
 cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
+elif [ "$2" == "--download=0" ] ; then
+# clean up old object files and libraries
+rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
+fi
+
 export COOLFLUID_CONF_FILE="${COOLFLUID_TOP_DIR}/${CONF_FILE}"
 export COOLFLUID_INSTALL_DIR="${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}/INSTALL"
 export ALL_ACTIVE=1
