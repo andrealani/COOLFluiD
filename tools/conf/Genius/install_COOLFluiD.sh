@@ -60,20 +60,18 @@ module load PETSc/3.9.0-foss-2018a-cpu
 fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
-
-if [ "$2" == "--download=1" ] ; then
-cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
-#elif [ "$2" == "--download=0" ] ; then
-# clean up old object files and libraries
-#rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
-fi
-
 export COOLFLUID_CONF_FILE="${COOLFLUID_TOP_DIR}/${CONF_FILE}"
 export COOLFLUID_INSTALL_DIR="${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}/INSTALL"
 export ALL_ACTIVE=1
 
+if [ "$2" == "--download=1" ] ; then
+cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
 cd ${COOLFLUID_TOP_DIR}
 ./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
+#elif [ "$2" == "--download=0" ] ; then
+# clean up old object files and libraries
+#rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
+fi
 
 cd ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}
 make -j 10
