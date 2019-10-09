@@ -69,6 +69,9 @@ protected: // data
   
   /// vector to store the face jacobians in
   std::vector< RealVector > m_faceJacobVecs;
+
+  /// local cell face - mapped coordinate direction per orientation
+  Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
   
 };  // class SetupCUDA
 

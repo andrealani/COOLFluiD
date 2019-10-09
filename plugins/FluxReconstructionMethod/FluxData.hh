@@ -20,7 +20,7 @@ public:
   HOST_DEVICE void initialize() 
   {
     for (CFuint j = 0; j < 4; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
-    for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
+    for (CFuint j = 0; j < 8; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
     for (CFuint j = 0; j < 8; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_lstates[j][i] = 0.;}}
     for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_nodes[j][i] = 0.;}}
     for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_rnodes[j][i] = 0.;}}
@@ -164,5 +164,6 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_Numerics_FluxReconstructionMethod_FluxData_hh
+
 
 

@@ -336,12 +336,12 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
     }
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
-      m_solFlxDep2[iSolPnt*m_nbrSolSolDep+iFlxPnt] = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      m_solFlxDep2[iSolPnt*m_nbrFlxDep+iFlxPnt] = (*m_solFlxDep)[iSolPnt][iFlxPnt];
     }
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxPnts; ++iFlxPnt)
     {
       m_solPolyValsAtFlxPnts2[iSolPnt+iFlxPnt*m_nbrSolPnts] = (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt];
-      m_corrFctDiv2[iSolPnt*m_nbrSolPnts+iFlxPnt] = m_corrFctDiv[iSolPnt][iFlxPnt];
+      m_corrFctDiv2[iSolPnt*m_nbrFlxPnts+iFlxPnt] = m_corrFctDiv[iSolPnt][iFlxPnt];
     }
   }
   
@@ -382,6 +382,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   }
   
   m_solPolyDerivAtSolPnts2.put();
+  m_solPolyValsAtFlxPnts2.put();
   
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
@@ -558,3 +559,4 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::copyLocalCe
     } // namespace FluxReconstructionMethod
   
 } // namespace COOLFluiD
+

@@ -48,7 +48,8 @@ SetupCUDA::SetupCUDA(const std::string& name) :
   socket_flxPntNormals("flxPntNormals"),
   m_face(CFNULL),
   m_flxLocalCoords(),
-  m_faceJacobVecs()
+  m_faceJacobVecs(),
+  m_faceMappedCoordDir()
 {
 }
 
@@ -216,6 +217,9 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  // get flux point mapped coordinate directions per orient
+  m_faceMappedCoordDir = frLocalData[0]->getFaceMappedCoordDirPerOrient();
   
   m_faceJacobVecs.resize(nbFaceFlxPnts);
   
@@ -247,7 +251,7 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
         for (CFuint iDim = 0; iDim < dim; ++iDim)
         {
           // set unit normal vector
-          flxPntNormals[faceID*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
+          flxPntNormals[faceID*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim]*(*m_faceMappedCoordDir)[orient][LEFT];
         }
       }
       
