@@ -7,7 +7,7 @@ if [ -z "$1" ] ; then
     echo '"./install_COOLFluiD.sh OPTIM_CUDA $2 (w/o debugging, production version with CUDA)"'
     echo '"./install_COOLFluiD.sh DEBUG_NOCUDA $2 (with debugging, development version w/o CUDA)"'
     echo '"./install_COOLFluiD.sh OPTIM_NOCUDA $2 (w/o debugging, production version w/o CUDA)"'
-    echo '"where $2 is either --download=1 (download source code via svn) or --download=0 (no download)"' 
+    echo '"where $2 is either --download=0 (update) or --download=1 (update,configure) or --download=2 (download,update,configure)"' 
     exit 1 
 fi
 
@@ -17,7 +17,7 @@ if [ -z "$2" ] ; then
     echo '"./install_COOLFluiD.sh OPTIM_CUDA $2 (w/o debugging, production version with CUDA)"'
     echo '"./install_COOLFluiD.sh DEBUG_NOCUDA $2 (with debugging, development version w/o CUDA)"'
     echo '"./install_COOLFluiD.sh OPTIM_NOCUDA $2 (w/o debugging, production version w/o CUDA)"'
-    echo '"where $2 is either --download=1 (download source code via svn) or --download=0 (no download)"' 
+    echo '"where $2 is either --download=0 (update) or --download=1 (update,configure) or --download=2 (download,update,configure)"' 
     exit 1
 fi
 
@@ -29,9 +29,9 @@ module load ParMETIS/4.0.3-foss-2018a
 export TOP_DIR="${VSC_DATA}"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius"
 # download COOLFluiD
-if [ "$2" == "--download=1" ] ; then
+if [ "$2" == "--download=2" ] ; then
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
-elif [ "$2" == "--download=0" ] ; then
+elif [ "$2" == "--download=0" ] || [ "$2" == "--download=1" ] ; then
 #update COOLFluiD
 cd ${COOLFLUID_TOP_DIR} 
 svn up .
@@ -64,13 +64,15 @@ export COOLFLUID_CONF_FILE="${COOLFLUID_TOP_DIR}/${CONF_FILE}"
 export COOLFLUID_INSTALL_DIR="${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}/INSTALL"
 export ALL_ACTIVE=1
 
-if [ "$2" == "--download=1" ] ; then
+if [ "$2" == "--download=2" ] ; then
 cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
 cd ${COOLFLUID_TOP_DIR}
 ./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
-#elif [ "$2" == "--download=0" ] ; then
+elif [ "$2" == "--download=1" ] ; then
 # clean up old object files and libraries
-#rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
+rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
+cd ${COOLFLUID_TOP_DIR}
+./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
 fi
 
 cd ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}
