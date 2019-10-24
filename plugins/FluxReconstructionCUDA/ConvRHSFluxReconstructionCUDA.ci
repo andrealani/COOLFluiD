@@ -327,6 +327,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_flxPntFlxDim2.resize(m_nbrFlxPnts);
   m_corrFctDiv2.resize(m_nbrSolPnts*m_nbrFlxPnts);
   m_faceFlxPntConn2.resize(m_nbrFlxPnts);
+  m_faceIntegrationCoefs2.resize(m_nbrFaceFlxPnts);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -362,6 +363,11 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
       m_faceFlxPntConn2[iFace*m_nbrFaceFlxPnts+iFlxPnt] = (*m_faceFlxPntConn)[iFace][iFlxPnt];
     }
   }
+
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+    m_faceIntegrationCoefs2[iFlxPnt] = (*m_faceIntegrationCoefs)[iFlxPnt];
+  }
   
   m_solSolDep2.put();
   m_solFlxDep2.put();
@@ -369,6 +375,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_flxPntFlxDim2.put();
   m_corrFctDiv2.put();
   m_faceFlxPntConn2.put();
+  m_faceIntegrationCoefs2.put();
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {

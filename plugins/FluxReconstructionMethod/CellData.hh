@@ -97,7 +97,7 @@ public:
     HOST_DEVICE CFuint getCellID() const {return m_cellID;}
     
     /// Get the state ID
-    HOST_DEVICE CFuint getStateID(CFuint localID) const {return m_cd->cellStateIDs[localID];}
+    HOST_DEVICE CFuint getStateID(CFuint localID) const {return m_cd->cellStateIDs[m_startSolPnts+localID];}
     
     /// Get the shape index
     HOST_DEVICE CFuint getShapeIdx() const {return m_cd->cellInfo[m_startc+3];}

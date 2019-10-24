@@ -64,7 +64,7 @@ public:  // methods
     HOST_DEVICE void prepareComputation(FluxData<VS>* data, VS* model) {}
    
     /// Compute the flux : implementation
-    HOST_DEVICE void operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iSol, const CFuint cellID); 
+    HOST_DEVICE void operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID); 
     
   private:
     DeviceConfigOptions<NOTYPE>* m_dco;
@@ -131,7 +131,7 @@ private: // data
 #ifdef CF_HAVE_CUDA
 /// nested class defining the flux
 template <DeviceType DT, typename VS>
-void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iSol, const CFuint cellID) 
+void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID) 
 {
   if (isInterface)
   {
@@ -172,6 +172,24 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
 //if (cellID == 11) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, absA %f, normalX %f, normalY %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],absA,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1]);
     }
 //    printf("ok3\n");
+
+    CFreal faceJacobVecAbsSizeFlxPnts = 0.0;
+    
+    for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
+    {
+      faceJacobVecAbsSizeFlxPnts += m_tempFlxUnitNormal[iDim]*m_tempFlxUnitNormal[iDim];
+    }
+
+    faceJacobVecAbsSizeFlxPnts = pow(faceJacobVecAbsSizeFlxPnts,0.5);
+
+    const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
+
+    // compute the wave speed updates
+    const CFreal waveSpeedUpd = faceJacobVecAbsSizeFlxPnts * intCoeff * lMaxAbsEVal;
+
+if (cellID == 11) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, 1.0, faceJacobVecAbsSizeFlxPnts);
+
+    data->addUpdateCoeff(waveSpeedUpd);
   }
   else
   {

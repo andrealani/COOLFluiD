@@ -186,6 +186,9 @@ protected:
   
   /// connectivity between faces and flx pnt indexes in different format
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_faceFlxPntConn2;
+
+  /// face integration coefficients
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_faceIntegrationCoefs2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;

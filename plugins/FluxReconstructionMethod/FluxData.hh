@@ -28,7 +28,8 @@ public:
     for (CFuint i = 0; i < 2; ++i) {for (CFuint j = 0; j < PHYS::NBEQS; ++j) {m_fluxFlxPnt[i][j] = 0.;}}
     for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}
     for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {m_unitFlxNormal[i][j] = 0.;}}
-    m_updateCoeff = 0.; m_faceArea = 0.; 
+    for (CFuint i = 0; i < 2; ++i) {m_faceIntegrationCoefs[i] = 0.;}
+    m_updateCoeff = 0.; m_faceArea = 0.;
     m_stateID[0] = 0; m_stateID[1] = 0; m_stateID[2] = 0; m_stateID[3] = 0;
     m_nbSolPnts = 4;
     m_isBFace = false; m_isOutward = false; m_isPerturb = false; 
@@ -101,7 +102,16 @@ public:
   HOST_DEVICE CFreal getUpdateCoeff() {return m_updateCoeff;}
   
   /// set the update coefficient
-  HOST_DEVICE void setUpdateCoeff(const CFreal coeff) {m_updateCoeff = coeff;}
+  HOST_DEVICE void addUpdateCoeff(const CFreal coeff) {m_updateCoeff += coeff;}
+
+  /// get the update coefficient
+  HOST_DEVICE void resetUpdateCoeff() {m_updateCoeff = 0.;}
+
+  /// get face integration coefficient
+  HOST_DEVICE CFreal getFaceIntegrationCoef(const CFuint iFlx) {return m_faceIntegrationCoefs[iFlx];}
+
+  /// set face integration coefficient
+  HOST_DEVICE void setFaceIntegrationCoef(const CFuint iFlx, const CFreal coeff) {m_faceIntegrationCoefs[iFlx] = coeff;}
     
 private:
   
@@ -152,6 +162,9 @@ private:
   
   /// flag telling if jacobian perturbation has to be applied
   bool m_isPerturb;
+
+  /// face integration coefficients
+  CFreal m_faceIntegrationCoefs[2];
   
 };
       
