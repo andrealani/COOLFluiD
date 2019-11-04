@@ -46,10 +46,12 @@ SetupCUDA::SetupCUDA(const std::string& name) :
   StdSetup(name),
   socket_solPntNormals("solPntNormals"),
   socket_flxPntNormals("flxPntNormals"),
+  socket_faceDir("faceDir"),
   m_face(CFNULL),
   m_flxLocalCoords(),
   m_faceJacobVecs(),
-  m_faceMappedCoordDir()
+  m_faceMappedCoordDir(),
+  m_faceFlxPntConnPerOrient()
 {
 }
 
@@ -67,6 +69,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   std::vector< Common::SafePtr< BaseDataSocketSource > > result = StdSetup::providesSockets();
   result.push_back(&socket_solPntNormals);
   result.push_back(&socket_flxPntNormals);
+  result.push_back(&socket_faceDir);
 
   return result;
 }
@@ -114,6 +117,7 @@ void SetupCUDA::createNormalSockets()
   // compute total number of states
   cf_assert(elemType->size() == frLocalData.size());
   CFuint totNbrStates = 0;
+  CFuint totNbrCells = 0; 
   const CFuint nbrElemTypes = elemType->size();
   
   std::vector< std::vector< std::vector< CFuint > > > dimList(nbrElemTypes);
@@ -123,6 +127,7 @@ void SetupCUDA::createNormalSockets()
     const CFuint nbSolPnts = frLocalData[iElemType]->getNbrOfSolPnts();
     
     totNbrStates += (*elemType)[iElemType].getNbElems()*nbSolPnts;
+    totNbrCells += (*elemType)[iElemType].getNbElems();
   
     // create a list of the dimensions in which the deriv will be calculated
     dimList[iElemType].resize(dim);
@@ -205,21 +210,30 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
   geoDataFace.facesTRS = faces;
   geoDataFace.isBoundary = false;
 
+  const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
+
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   const CFuint nbFaceFlxPnts = flxLocalCoords->size();
 
   // get the face flux point projection vector size data handle
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
-      
+  DataHandle< CFint > faceDir = socket_faceDir.getDataHandle();
+
+  const CFuint totNbFlxPnts = frLocalData[0]->getNbrOfFlxPnts();
+
   // resize flx pnt normal socket
-  flxPntNormals.resize(innerFacesStartIdxs[nbrFaceOrients]*nbFaceFlxPnts*dim);
+  flxPntNormals.resize(nbFaces*nbFaceFlxPnts*dim);//innerFacesStartIdxs[nbrFaceOrients]
+  faceDir.resize(totNbrCells*totNbFlxPnts);
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
 
   // get flux point mapped coordinate directions per orient
   m_faceMappedCoordDir = frLocalData[0]->getFaceMappedCoordDirPerOrient();
+
+  // get the face - flx pnt connectivity per orient
+  m_faceFlxPntConnPerOrient = frLocalData[0]->getFaceFlxPntConnPerOrient();
   
   m_faceJacobVecs.resize(nbFaceFlxPnts);
   
@@ -242,17 +256,27 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
+      const CFuint leftCellID = m_face->getNeighborGeo(LEFT)->getID();
+      const CFuint rightCellID = m_face->getNeighborGeo(RIGHT)->getID();
+
       // compute face Jacobian vectors
       m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
       // Loop over flux points to set the normal vectors
       for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
       {
+        // local flux point indices in the left and right cell
+        const CFuint flxPntIdxL = (*m_faceFlxPntConnPerOrient)[orient][LEFT][iFlxPnt];
+        const CFuint flxPntIdxR = (*m_faceFlxPntConnPerOrient)[orient][RIGHT][iFlxPnt];
+
         for (CFuint iDim = 0; iDim < dim; ++iDim)
         {
           // set unit normal vector
-          flxPntNormals[faceID*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim]*(*m_faceMappedCoordDir)[orient][LEFT];
+          flxPntNormals[m_face->getID()*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
         }
+     
+        faceDir[leftCellID*totNbFlxPnts+flxPntIdxL] = (*m_faceMappedCoordDir)[orient][LEFT];
+        faceDir[rightCellID*totNbFlxPnts+flxPntIdxR] = (*m_faceMappedCoordDir)[orient][RIGHT];
       }
       
       m_faceBuilder->releaseGE();

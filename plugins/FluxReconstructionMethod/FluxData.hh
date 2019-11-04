@@ -99,7 +99,7 @@ public:
   HOST_DEVICE void setStateID(const CFuint iState, const CFuint sID) {m_stateID[iState] = sID;}
   
   /// get the update coefficient
-  HOST_DEVICE CFreal getUpdateCoeff() {return m_updateCoeff;}
+  HOST_DEVICE CFreal* getUpdateCoeff() {return &m_updateCoeff;}
   
   /// set the update coefficient
   HOST_DEVICE void addUpdateCoeff(const CFreal coeff) {m_updateCoeff += coeff;}
@@ -119,10 +119,10 @@ private:
   CFreal m_states[4][PHYS::NBEQS];
    
   /// right reconstructed states
-  CFreal m_rstates[2][PHYS::NBEQS];
+  CFreal m_rstates[8][PHYS::NBEQS];
   
   /// left reconstructed states
-  CFreal m_lstates[2][PHYS::NBEQS];
+  CFreal m_lstates[8][PHYS::NBEQS];
     
   /// left and right state nodes
   CFreal m_nodes[2][PHYS::DIM];
@@ -140,7 +140,7 @@ private:
   CFreal m_unitNormal[4][PHYS::DIM*PHYS::DIM];
   
   /// unit normal
-  CFreal m_unitFlxNormal[2][PHYS::DIM];
+  CFreal m_unitFlxNormal[4][PHYS::DIM];
   
   /// left and right update coefficient
   CFreal m_updateCoeff;

@@ -30,6 +30,7 @@ public:
 			 T* rhsIn,
                          T* solPntNormalsIn,
                          T* flxPntNormalsIn,
+                         CFint* faceDirIn,
                          CFuint nbSolPntsIn)
   {
     nbCells = nbCellsIn; 
@@ -39,6 +40,7 @@ public:
     solPntNormals = solPntNormalsIn;
     flxPntNormals = flxPntNormalsIn;
     nbSolPnts = nbSolPntsIn;
+    faceDir = faceDirIn;
 //    normals = normalsIn;
 //    uX = uxIn;
 //    uY = uyIn;
@@ -55,6 +57,7 @@ public:
   T* rhs;
   T* solPntNormals;
   T* flxPntNormals;
+  CFint* faceDir;
   CFuint nbSolPnts;
 //  T* normals;
 //  T* uX;

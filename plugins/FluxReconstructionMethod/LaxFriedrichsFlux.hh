@@ -144,14 +144,28 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
 
     typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getFlxScaledNormal(iSol));
     m_tempFlxUnitNormal = unitNormal;
+
+    CFreal nJacob2 = 0.0;
+
+    for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
+    {
+      nJacob2 += m_tempFlxUnitNormal[iDim]*m_tempFlxUnitNormal[iDim];
+    }
+
+    const CFreal nJacob = pow(nJacob2,0.5);
+
+    for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
+    {
+      m_tempFlxUnitNormal[iDim] *= 1.0/nJacob;
+    }
     
     typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getInterfaceFlux(iSol));
         
     updateVS->getFlux(&m_pdata[0], &m_tempFlxUnitNormal[0], &m_tmp[0]); 
     updateVS->getFlux(&m_pdata2[0], &m_tempFlxUnitNormal[0], &m_tmp2[0]); 
 
-
     
+
     const CFreal lMaxAbsEVal = updateVS->getMaxAbsEigenValue(&m_pdata[0], &m_tempFlxUnitNormal[0]);
     const CFreal rMaxAbsEVal = updateVS->getMaxAbsEigenValue(&m_pdata2[0], &m_tempFlxUnitNormal[0]);
 
@@ -168,28 +182,23 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
       
     for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
     {
-      flux[iEq] = 0.5*(m_tmp[iEq]+m_tmp2[iEq]) - 0.5*absA*(stateR[iEq] - stateL[iEq]);
-//if (cellID == 11) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, absA %f, normalX %f, normalY %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],absA,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1]);
+      flux[iEq] = (0.5*(m_tmp[iEq]+m_tmp2[iEq]) - 0.5*absA*(stateR[iEq] - stateL[iEq]))*nJacob;
+//if (cellID == 1) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1]);
     }
 //    printf("ok3\n");
 
-    CFreal faceJacobVecAbsSizeFlxPnts = 0.0;
-    
-    for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
-    {
-      faceJacobVecAbsSizeFlxPnts += m_tempFlxUnitNormal[iDim]*m_tempFlxUnitNormal[iDim];
-    }
-
-    faceJacobVecAbsSizeFlxPnts = pow(faceJacobVecAbsSizeFlxPnts,0.5);
-
     const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
 
+    //const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
+
     // compute the wave speed updates
-    const CFreal waveSpeedUpd = faceJacobVecAbsSizeFlxPnts * intCoeff * lMaxAbsEVal;
 
-if (cellID == 11) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, 1.0, faceJacobVecAbsSizeFlxPnts);
+    *(data->getUpdateCoeff()) = *(data->getUpdateCoeff()) + nJacob * intCoeff * lMaxAbsEVal;
 
-    data->addUpdateCoeff(waveSpeedUpd);
+//if (cellID == 11) printf("cellID: %d, upd: %f\n",cellID,*(data->getUpdateCoeff()));
+//if (cellID == 11) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, intCoeff, faceJacobVecAbsSizeFlxPnts);
+
+    //data->addUpdateCoeff(waveSpeedUpd);
   }
   else
   {
@@ -205,6 +214,7 @@ if (cellID == 11) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol
       typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getFlux(iSol,iDim));
         
       updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[iDim*VS::DIM], &m_tmp[0]); 
+//if(cellID == 11) printf("iSol: %d, iDim: %d, nX: %f, nY: %f\n", iSol, iDim, m_tempUnitNormal[iDim*VS::DIM],m_tempUnitNormal[iDim*VS::DIM+1]);
       
       for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
       {

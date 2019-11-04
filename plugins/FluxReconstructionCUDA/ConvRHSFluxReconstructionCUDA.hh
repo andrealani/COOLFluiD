@@ -103,6 +103,9 @@ protected:
   
   /// storage for the flux point normals
   Framework::DataSocketSink< CFreal > socket_flxPntNormals;
+
+  /// storage for the face directions
+  Framework::DataSocketSink< CFint > socket_faceDir;
   
   /// cell-face connectivity
   Common::SafePtr< Common::ConnectivityTable<CFuint> > m_cellFaces;

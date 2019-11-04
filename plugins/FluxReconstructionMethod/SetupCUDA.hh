@@ -57,6 +57,9 @@ protected: // data
   
   /// storage for the normals in the solution points
   Framework::DataSocketSource< CFreal > socket_flxPntNormals;
+
+  /// storage for the face directions
+  Framework::DataSocketSource< CFint > socket_faceDir;
   
   /// variable for current face
   Framework::GeometricEntity* m_face;
@@ -72,6 +75,9 @@ protected: // data
 
   /// local cell face - mapped coordinate direction per orientation
   Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
+
+  /// flx pnt - face connectivity per orient
+  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
   
 };  // class SetupCUDA
 
