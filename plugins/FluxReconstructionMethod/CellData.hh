@@ -27,7 +27,8 @@ public:
 		       const CFuint*   cellInfoIn,
                        const CFuint*   cellStateIDsIn,
                        const CFuint*   neighbCellIDsIn,
-                       const CFuint* neighbFaceIDsIn, 
+                       const CFuint* neighbFaceIDsIn,
+                       const CFint* innerCellIsLeftIn, 
                        const CFuint    nbrFacesIn,
                        const CFuint    nbrSolPntsIn) :
     nbCells(nbCellsIn), 
@@ -35,6 +36,7 @@ public:
     cellStateIDs(cellStateIDsIn),
     neighbCellIDs(neighbCellIDsIn),
     neighbFaceIDs(neighbFaceIDsIn),
+    innerCellIsLeft(innerCellIsLeftIn),
     nbrFaces(nbrFacesIn),
     nbrSolPnts(nbrSolPntsIn)
 //    cellStencil(cellStencilIn),
@@ -131,6 +133,12 @@ public:
       return m_cd->neighbCellIDs[m_cellID*4+iFace];
     }
     
+    /// Get bool telling whether inner state is LEFT or RIGHT
+    HOST_DEVICE CFint getInnerCellIsLeft(const CFuint iFace)
+    {
+      return m_cd->innerCellIsLeft[m_cellID*4+iFace];
+    }
+
     /// Get the neighbor face ID
     HOST_DEVICE CFuint getNeighbFaceID(const CFuint iFace)
     {
@@ -169,6 +177,7 @@ public:
   const CFuint*   cellStateIDs;
   const CFuint*   neighbCellIDs;
   const CFuint*   neighbFaceIDs;
+  const CFint*     innerCellIsLeft;
   const CFuint    nbrSolPnts;
   const CFuint*   cellStencil;
   const CFuint*   cellFaces;

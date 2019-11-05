@@ -31,6 +31,7 @@ ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxRecon
   m_nbBlocksPerGridY(),
   m_stateIDs(),
   m_neighbCellIDs(),
+  m_innerCellIsLeft(),
   m_solSolDep2(),
   m_solPolyDerivAtSolPnts2()
 {
@@ -452,6 +453,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   
   m_neighbCellIDs.resize(nbCells*4);
   m_neighbFaceIDs.resize(nbCells*4);
+  m_innerCellIsLeft.resize(nbCells*4);
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -495,10 +497,12 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
           if (leftID != cellID)
           {
             m_neighbCellIDs[cellID*nbFaces + iFace] = leftID;
+            m_innerCellIsLeft[cellID*nbFaces + iFace] = 0;
           }
           else
           {
             m_neighbCellIDs[cellID*nbFaces + iFace] = (*faces)[iFace]->getNeighborGeo(RIGHT)->getID();
+            m_innerCellIsLeft[cellID*nbFaces + iFace] = 1;
           }
         }
       }
@@ -510,6 +514,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   m_stateIDs.put();
   m_neighbCellIDs.put();
   m_neighbFaceIDs.put();
+  m_innerCellIsLeft.put();
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() END\n");
 }
       

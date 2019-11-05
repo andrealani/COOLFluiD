@@ -64,7 +64,7 @@ public:  // methods
     HOST_DEVICE void prepareComputation(FluxData<VS>* data, VS* model) {}
    
     /// Compute the flux : implementation
-    HOST_DEVICE void operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID); 
+    HOST_DEVICE void operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID, const bool isLEFT, CFreal &waveSpeedUpd); 
     
   private:
     DeviceConfigOptions<NOTYPE>* m_dco;
@@ -131,14 +131,13 @@ private: // data
 #ifdef CF_HAVE_CUDA
 /// nested class defining the flux
 template <DeviceType DT, typename VS>
-void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID) 
+void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID, const bool isLEFT, CFreal &waveSpeedUpd)
 {
   if (isInterface)
   {
     typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
-//printf("ok2\n");
+
     // right physical data, flux
-    //for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq){printf("state %d, var %d: %f\n",iSol, iEq, &m_pdata[0]);}
     updateVS->computePhysicalData(data->getLstate(iSol), &m_pdata[0]);
     updateVS->computePhysicalData(data->getRstate(iSol), &m_pdata2[0]);
 
@@ -179,25 +178,34 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
   
     typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateL(&m_tmpState[0]);
     typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateR(&m_tmpState2[0]); 
-      
-    for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
-    {
-      flux[iEq] = (0.5*(m_tmp[iEq]+m_tmp2[iEq]) - 0.5*absA*(stateR[iEq] - stateL[iEq]))*nJacob;
-//if (cellID == 1) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1]);
-    }
-//    printf("ok3\n");
-
-    const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
 
     //const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
 
+    if (isLEFT)
+    { 
+      for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
+      {
+        flux[iEq] = 0.5*((m_tmp[iEq]+m_tmp2[iEq]) - absA*(stateR[iEq] - stateL[iEq]))*nJacob;
+//if (cellID == 768) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f, jacob %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1],nJacob);
+      }
+    }
+    else
+    {
+      for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
+      {
+        flux[iEq] = 0.5*((m_tmp[iEq]+m_tmp2[iEq]) - absA*(stateL[iEq] - stateR[iEq]))*nJacob;
+//if (cellID == 768) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f, jacob %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1],nJacob);
+      }
+    }
+//if (cellID == 768) printf("upBefore: %f\n", waveSpeedUpd);
     // compute the wave speed updates
-
-    *(data->getUpdateCoeff()) = *(data->getUpdateCoeff()) + nJacob * intCoeff * lMaxAbsEVal;
+    //*(data->getUpdateCoeff()) = *(data->getUpdateCoeff()) + nJacob * 1.0 * lMaxAbsEVal;
+    waveSpeedUpd += nJacob * 1.0 * lMaxAbsEVal;
+    
 
 //if (cellID == 11) printf("cellID: %d, upd: %f\n",cellID,*(data->getUpdateCoeff()));
-//if (cellID == 11) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, intCoeff, faceJacobVecAbsSizeFlxPnts);
-
+//if (cellID == 768) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, 1.0, nJacob);
+//if (cellID == 768) printf("upAfter: %f\n", waveSpeedUpd);
     //data->addUpdateCoeff(waveSpeedUpd);
   }
   else
@@ -206,7 +214,7 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
 
     // right physical data, flux
     updateVS->computePhysicalData(data->getState(iSol), &m_pdata[0]);
-//printf("LFBefore\n");
+
     typename MathTypes<CFreal,DT,VS::DIM*VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
     m_tempUnitNormal = unitNormal;
     for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
@@ -214,7 +222,6 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
       typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getFlux(iSol,iDim));
         
       updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[iDim*VS::DIM], &m_tmp[0]); 
-//if(cellID == 11) printf("iSol: %d, iDim: %d, nX: %f, nY: %f\n", iSol, iDim, m_tempUnitNormal[iDim*VS::DIM],m_tempUnitNormal[iDim*VS::DIM+1]);
       
       for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
       {
