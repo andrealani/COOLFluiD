@@ -31,7 +31,7 @@ namespace COOLFluiD {
  * @author Ray Vandenhoeck
  *
  */
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
 class ConvRHSFluxReconstructionCUDA : public ConvRHSFluxReconstruction {
 public:
 
@@ -119,26 +119,6 @@ protected:
   /// pointer to booleans telling whether a face is on the boundary
   Common::SafePtr< std::vector< bool > > m_isFaceOnBoundaryCell;
   
-  /// storage of useful cell info: 
-  /// in [cellID*5+0] - ptr to corresponding stencil
-  /// in [cellID*5+1] - stencil size
-  /// in [cellID*5+2] - number of cell faces
-  /// in [cellID*5+3] - cell geoshape
-  /// in [cellID*5+4] - number of solution points depending on a single solution point
-  Framework::LocalArray<CFuint>::MALLOC_TYPE m_cellInfo;
-  
-  /// stencil connectivity for cellID: 
-  /// starts at m_cellInfo[cellID*5]
-  /// its size is given by m_cellInfo[cellID*5+1]
-  /// first m_cellInfo[cellID*5+2] are faces
-  Framework::LocalArray<CFuint>::MALLOC_TYPE m_cellStencil;
-  
-  /// storage of flags for neighbors (1: internal, 0:partition, <0: boundary)
-  /// starts at m_cellInfo[cellID*5]
-  /// its size is given by m_cellInfo[cellID*5+1]
-  /// first m_cellInfo[cellID*5+2] are faces
-  Framework::LocalArray<CFint>::MALLOC_TYPE m_neighborTypes;
-  
   // cell connectivity
   Framework::LocalArray<Framework::CellConn>::MALLOC_TYPE m_cellConn;
   
@@ -164,7 +144,7 @@ protected:
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbCellIDs;
 
   /// bools telling whether the inner cell is LEFT or RIGHT 
-  Framework::LocalArray<CFint>::MALLOC_TYPE m_innerCellIsLeft;
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_innerCellIsLeft;
   
   /// IDs of the neighbor face IDs per cellID
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbFaceIDs;

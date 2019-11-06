@@ -34,13 +34,22 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#define FR_EULER_RHS_PROV(__dim__,__svars__,__uvars__,__nbBThreads__,__providerName__) \
+#define FR_EULER_RHS_PROV(__dim__,__svars__,__uvars__,__order__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<ConvRHSFluxReconstructionCUDA<LaxFriedrichsFlux, \
-                      VarSetListT<Euler##__dim__##__svars__##T, Euler##__dim__##__uvars__##T>, __nbBThreads__>, \
+                      VarSetListT<Euler##__dim__##__svars__##T, Euler##__dim__##__uvars__##T>,__order__,__nbBThreads__>, \
 		      FluxReconstructionSolverData,FluxReconstructionCUDAModule>	\
-FR_RhsEuler##__dim__##__svars__##__uvars__##__nbBThreads__##Provider(__providerName__);
+FR_RhsEuler##__dim__##__svars__##__uvars__##__order__##__nbBThreads__##Provider(__providerName__);
 // 48 block threads (default)
-FR_EULER_RHS_PROV(2D, Cons, Cons, 48, "EulerFRLaxFriedrichs2DCons")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 0, 48, "EulerFRLaxFriedrichs2DConsP0")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 1, 48, "EulerFRLaxFriedrichs2DConsP1")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 2, 48, "EulerFRLaxFriedrichs2DConsP2")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 3, 48, "EulerFRLaxFriedrichs2DConsP3")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 4, 48, "EulerFRLaxFriedrichs2DConsP4")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 5, 48, "EulerFRLaxFriedrichs2DConsP5")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 6, 48, "EulerFRLaxFriedrichs2DConsP6")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 7, 48, "EulerFRLaxFriedrichs2DConsP7")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 8, 48, "EulerFRLaxFriedrichs2DConsP8")
+FR_EULER_RHS_PROV(2D, Cons, Cons, 9, 48, "EulerFRLaxFriedrichs2DConsP9")
 //FR_EULER_RHS_PROV(3D, Cons, Cons, 48, "EulerFRLaxFried3DCons")
 //FR_NS_RHS_PROV(2D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD2DPrim")
 //FR_NS_RHS_PROV(3D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD3DPrim")
@@ -59,9 +68,9 @@ HOST_DEVICE inline void setState(CFreal* state, CFreal* statePtr)
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename PHYS>
+template <typename PHYS, CFuint ORDER>
 HOST_DEVICE void setFluxData(const CFuint stateID, const CFuint cellID, 
-			     KernelData<CFreal>* kd, FluxData<PHYS>* fd, const CFuint iSol)
+			     KernelData<CFreal>* kd, FluxData<PHYS,ORDER>* fd, const CFuint iSol)
 {
   fd->setStateID(LEFT, stateID);
   CFreal* statePtrR = &kd->states[stateID*PHYS::NBEQS];  
@@ -220,7 +229,7 @@ void print(const std::string& name, T* array)
   
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYS>
+template <typename SCHEME, typename PHYS, CFuint ORDER>
 __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
                                   typename SCHEME::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
                                   const CFuint nbCells,
@@ -234,13 +243,10 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
                                   const CFuint nbSolPnts,
                                   const CFuint nbrFaces,
                                   const CFuint* faceFlxPntConn,
-				  const CFuint* cellInfo,
                                   const CFuint* stateIDs,
                                   const CFuint* neighbCellIDs,
                                   const CFuint* neighbFaceIDs,
-                                  const CFint* innerCellIsLeft,
-                                  const CFuint dim,
-                                  const CFuint nbrEqs,
+                                  const CFuint* innerCellIsLeft,
                                   const CFuint nbrFlxPnts,
                                   const CFuint nbrSolSolDep,
                                   const CFuint* solSolDep,
@@ -263,7 +269,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     KernelData<CFreal> kd (nbCells, states, updateCoeff, rhs, solPntNormals, flxPntNormals, faceDir, nbSolPnts);
 
     // current flux data
-    FluxData<typename SCHEME::MODEL> currFd; 
+    FluxData<typename SCHEME::MODEL,ORDER> currFd; 
 
     // initialize flux data
     currFd.initialize();
@@ -273,18 +279,18 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     SCHEME fluxScheme(dcof);
     
     // current cell data
-    CellData cells(nbCells, cellInfo, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts);
+    CellData cells(nbCells, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts, ORDER);
     
     // get current cell
     CellData::Itr cell = cells.getItr(cellID);
           
-    const CFuint nbFlxPntFlx = SCHEME::MODEL::NBEQS*8;
+    const CFuint nbFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1)*2*PHYS::DIM;//8;
     
-    const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*2;
+    const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
    
-    const CFuint nbrFaceFlxPnts = 2;
+    const CFuint nbrFaceFlxPnts = (ORDER+1);
 
-    const CFuint totNbrFlxPnts = 8;
+    const CFuint totNbrFlxPnts = (ORDER+1)*2*PHYS::DIM;
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntFlx;
     
@@ -294,18 +300,20 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     
     flxPntSol = 0.0;
 
-    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
-    {
-//
-      currFd.setFaceIntegrationCoef(iFlx,faceIntCoeff[iFlx]);
+    //CudaEnv::CFVecSlice<CFreal,nbrFaceFlxPnts> intCoeff(currFd.getFaceIntegrationCoef());
+
+    //for (CFuint iFlxPnt = 0; iFlxPnt < nbrFaceFlxPnts; ++iFlxPnt)
+    //{
+      //intCoeff[iFlxPnt] = faceIntCoeff[iFlxPnt];
+    //}
+    //currFd.setFaceIntegrationCoef(iFlx,faceIntCoeff[iFlx]);
 //if (cellID == 11) printf("iFlx , coeff\n");
-    }
+
  //     if (cellID == 1) printf("iFlx , coeff\n");
 //if (cellID == 11) printf("hello %d\n", 0);
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
     {
-//ok
       // get current state ID
       const CFuint stateID = cell.getStateID(iSolPnt);
       //printf("Hello from block %d, thread %d\n", blockIdx.x, threadIdx.x);
@@ -323,11 +331,11 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       {
         nFd[i] = n[i];
       }
-CFreal dummy = 0.0;
+
       // get the flux
       fluxScheme.prepareComputation(&currFd, &pmodel);
 
-      fluxScheme(&currFd, &pmodel, false, 1, iSolPnt, cellID, false, dummy);
+      fluxScheme(&currFd, &pmodel, iSolPnt);
     }
 
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -346,12 +354,12 @@ CFreal dummy = 0.0;
         CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> res(&rhs[stateID*SCHEME::MODEL::NBEQS]);
 
         // Loop over deriv directions and sum them to compute divergence
-        for (CFuint iDir = 0; iDir < dim; ++iDir)
+        for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
         {
-          const CFreal polyCoef = solPolyDerivAtSolPnts[iSolPnt*dim*nbSolPnts+iDir*nbSolPnts+jSolIdx];//(*m_solPolyDerivAtSolPnts)[jSolPnt][iDir][iSolIdx]; 
+          const CFreal polyCoef = solPolyDerivAtSolPnts[iSolPnt*PHYS::DIM*nbSolPnts+iDir*nbSolPnts+jSolIdx];//(*m_solPolyDerivAtSolPnts)[jSolPnt][iDir][iSolIdx]; 
           
           // Loop over conservative fluxes 
-          for (CFuint iEq = 0; iEq < nbrEqs; ++iEq)
+          for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
           {
             // Store divFD in the vector that will be divFC
             res[iEq] -= polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq])*resFactor;
@@ -373,11 +381,11 @@ CFreal dummy = 0.0;
         const CFuint solIdx = flxSolDep[iFlxPnt*nbrFlxSolDep + iSolPnt];
 
         // Loop over conservative fluxes 
-        for (CFuint iEq = 0; iEq < nbrEqs; ++iEq)
+        for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
         {
-          flxPntFlx[iFlxPnt*nbrEqs+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*currFd.getFlux(solIdx, dim)[iEq];
+          flxPntFlx[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*currFd.getFlux(solIdx, dim)[iEq];
 
-          flxPntSol[iFlxPnt*nbrEqs+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];          
+          flxPntSol[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];          
         }
       }
     }
@@ -408,10 +416,10 @@ CFreal dummy = 0.0;
         const CFreal divh = corrFctDiv[iSolPnt*nbrFlxPnts+flxIdx];
 
         // Fill in the corrections
-        for (CFuint iVar = 0; iVar < nbrEqs; ++iVar)
+        for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
         {
-          res[iVar] += flxPntFlx[flxIdx*nbrEqs+iVar] * divh * resFactor;
-//if (cellID==11 && abs(flxPntFlx[flxIdx*nbrEqs+iVar] * divh) > 1e-8) printf("State: %d, flx: %d, var: %d, update: %f\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*nbrEqs+iVar] * divh);  
+          res[iVar] += flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh * resFactor;
+//if (cellID==11 && abs(flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh) > 1e-8) printf("State: %d, flx: %d, var: %d, update: %f\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh);  
         }
       }
     }
@@ -424,7 +432,7 @@ CFreal dummy = 0.0;
     for (CFuint iFlxPnt = 0; iFlxPnt < nbFlxPntFlx; ++iFlxPnt) {flxPntSolNeighb[iFlxPnt] = 0.0;}
 
     // current neighb cell data
-    CellData cells2(nbCells, cellInfo, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts);
+    CellData cells2(nbCells, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts, ORDER);
 
     for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
     {
@@ -465,9 +473,9 @@ CFreal dummy = 0.0;
           const CFuint solIdx = flxSolDep[jFlxIdx*nbrFlxSolDep+iSolPnt]; 
 
           // Loop over conservative vars 
-          for (CFuint iEq = 0; iEq < nbrEqs; ++iEq)
+          for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
           {
-            flxPntSolNeighb[flxIdx*nbrEqs+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
+            flxPntSolNeighb[flxIdx*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
           }
         }
 
@@ -488,7 +496,7 @@ CFreal dummy = 0.0;
         // get the flux
         fluxScheme.prepareComputation(&currFd, &pmodel);
 
-        fluxScheme(&currFd, &pmodel, true, iFlxPnt, flxIdx, cellID, isLEFT, waveSpeedUpd);
+        fluxScheme(&currFd, &pmodel, iFlxPnt, flxIdx, faceIntCoeff[iFlxPnt], isLEFT, waveSpeedUpd);
 
         // extrapolate the fluxes to the flux points
         for (CFuint iSolPnt = 0; iSolPnt < nbrFlxSolDep; ++iSolPnt)
@@ -505,7 +513,7 @@ CFreal dummy = 0.0;
           const CFreal divh = corrFctDiv[solIdx*nbrFlxPnts+flxIdx] * faceDir[cellID*totNbrFlxPnts+flxIdx];
 
           // Fill in the corrections
-          for (CFuint iVar = 0; iVar < nbrEqs; ++iVar)
+          for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
           {
             res[iVar] -= currFd.getInterfaceFlux(flxIdx)[iVar] * divh * resFactor;
 //if (cellID==768) printf("resID: %d, State: %d, flx: %d, var: %d, updateFace: %f, flx %f, divh %f\n",stateID*SCHEME::MODEL::NBEQS+iVar,solIdx,flxIdx,iVar,-currFd.getInterfaceFlux(flxIdx)[iVar] * divh, currFd.getInterfaceFlux(flxIdx)[iVar],divh); 
@@ -686,8 +694,8 @@ CFreal dummy = 0.0;
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execute()
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
@@ -748,17 +756,17 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
     getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
   
 #ifdef CF_HAVE_CUDA
-  typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS> FluxScheme;  
+  typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS, ORDER> FluxScheme;  
 #else
-  typedef typename SCHEME::template DeviceFunc<CPU, PHYSICS> FluxScheme;
+  typedef typename SCHEME::template DeviceFunc<CPU, PHYSICS, ORDER> FluxScheme;
 #endif 
   
   if (m_onGPU) 
   {
 #ifdef CF_HAVE_CUDA
 
-    CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
-    timer.start();
+    //CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
+    //timer.start();
     
     // copy of data that change at every iteration
     socket_states.getDataHandle().getGlobalArray()->put(); 
@@ -766,14 +774,14 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
     socket_updateCoeff.getDataHandle().getLocalArray()->put();
     socket_faceDir.getDataHandle().getLocalArray()->put();
     
-    CFLog(VERBOSE, "nb normals: " << socket_solPntNormals.getDataHandle().size() << ", n0: " << socket_solPntNormals.getDataHandle()[0] << "\n");
+    //CFLog(VERBOSE, "nb normals: " << socket_solPntNormals.getDataHandle().size() << ", n0: " << socket_solPntNormals.getDataHandle()[0] << "\n");
  
     socket_solPntNormals.getDataHandle().getLocalArray()->put();
     socket_flxPntNormals.getDataHandle().getLocalArray()->put();
     DataHandle<Framework::State*, Framework::GLOBAL > statesI = socket_states.getDataHandle();
      
-    CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
-    timer.start();
+    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    //timer.start();
     
     ConfigOptionPtr<SCHEME,  NOTYPE, GPU> dcof(lf);
     ConfigOptionPtr<typename PHYSICS::PTERM, NOTYPE, GPU> dcop(phys);
@@ -797,7 +805,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
     // cudaFuncSetCacheConfig("computeFluxKernel", cudaFuncCachePreferL1);
 
     // compute the convective flux in each cell
-    computeStateLocalRHSKernel<FluxScheme,PHYSICS> <<<blocksPerGrid,nThreads>>> 
+    computeStateLocalRHSKernel<FluxScheme,PHYSICS,ORDER> <<<blocksPerGrid,nThreads>>> 
       (dcof.getPtr(),
        dcop.getPtr(),
        nbCells,
@@ -811,13 +819,10 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
        m_nbrSolPnts,
        4,
        m_faceFlxPntConn2.ptrDev(),
-       m_cellInfo.ptrDev(),
        m_stateIDs.ptrDev(),
        m_neighbCellIDs.ptrDev(),
        m_neighbFaceIDs.ptrDev(),
        m_innerCellIsLeft.ptrDev(),
-       m_dim,
-       m_nbrEqs,
        m_nbrFlxPnts,
        m_nbrSolSolDep,
        m_solSolDep2.ptrDev(),
@@ -830,14 +835,14 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
        m_flxPntFlxDim2.ptrDev(),
        m_corrFctDiv2.ptrDev(),
        m_faceIntegrationCoefs2.ptrDev());
-    
+   
     cudaDeviceSynchronize();
     
     //for (CFuint i = 0; i < m_solPolyValsAtFlxPnts2.size(); ++i) {CFLog(INFO, "thing: " << m_solPolyValsAtFlxPnts2[i] << "\n");}
     
     //CFLog(INFO, "After Kernel, size: " << socket_states.getDataHandle().size() << "\n");
     
-    CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
+    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
     
     //for (CFuint i = 0; i < rhs.size(); ++i) {CFLog(INFO, "res before: " << rhs[i] << "\n");}
     
@@ -845,12 +850,12 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
     //rhsB.resize(rhs.size());
     //for (CFuint i = 0; i < rhs.size(); ++i) {rhsB[i] = rhs[i];}
     
-    timer.start();
+    //timer.start();
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
     
     //for (CFuint i = 0; i < rhs.size(); ++i) {CFLog(INFO, "res after: " << rhs[i]-rhsB[i] << "\n");}
-    CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
     //CFLog(INFO, "resSize: " << rhs.size() << "\n");
     //for (CFuint i = 0; i < rhs.size(); ++i)
     //{
@@ -1019,7 +1024,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::execute()
     }
   }
 
-DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+    //DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
 
     //for (CFuint i = 0; i < rhs.size(); ++i)
     //{

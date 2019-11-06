@@ -14,8 +14,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxReconstructionCUDA(const std::string& name) :
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::ConvRHSFluxReconstructionCUDA(const std::string& name) :
   ConvRHSFluxReconstruction(name), 
   socket_states("states"),
   socket_solPntNormals("solPntNormals"),
@@ -23,9 +23,6 @@ ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxRecon
   socket_faceDir("faceDir"),
   m_cellFaces(CFNULL),
   m_isFaceOnBoundaryCell(CFNULL),
-  m_cellInfo(),
-  m_cellStencil(),
-  m_neighborTypes(),
   m_cellConn(),
   m_nbBlocksPerGridX(),
   m_nbBlocksPerGridY(),
@@ -45,28 +42,28 @@ ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::ConvRHSFluxRecon
   
   m_onGPU = true;
   setParameter("OnGPU",&m_onGPU);
-  CFLog(INFO,"Creating cuda solver\n");
+  CFLog(VERBOSE,"Creating cuda solver\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::~ConvRHSFluxReconstructionCUDA()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::~ConvRHSFluxReconstructionCUDA()
 {  
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::unsetup()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::unsetup()
 {  
   ConvRHSFluxReconstruction::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
   options.template addConfigOption< CFuint > ("NbThreadsOMP", "Number of OMP threads");
@@ -75,8 +72,8 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::defineConfi
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::configure ( Config::ConfigArgs& args )
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::configure ( Config::ConfigArgs& args )
 {
   ConvRHSFluxReconstruction::configure(args);
 }
@@ -84,8 +81,8 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::configure (
 //////////////////////////////////////////////////////////////////////////////
 
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::initializeComputationRHS()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::initializeComputationRHS()
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
@@ -93,15 +90,15 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::initializeC
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::initializeComputationRHS() START\n");
   
   // copy locally the ghost states, gstates should be treated as states, with pointers to a 1D storage
-  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  //const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::initializeComputationRHS() END\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::needsSockets()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::needsSockets()
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
@@ -116,8 +113,8 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvRHSFluxReconstr
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::storeStencilData()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::storeStencilData()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -292,8 +289,8 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::storeStenci
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::setup()
 {
   CFAUTOTRACE;
   
@@ -410,12 +407,6 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::setup() after storeStencilData\n");
   
   //m_cellFaces = MeshDataStack::getActive()->getConnectivity("cellFaces");
-  
-  // copy of data that will not change during the computation, unless mesh changes
-  m_cellInfo.put();
-  m_cellStencil.put();
-  //m_cellFaces->getPtr()->put(); 
-  m_neighborTypes.put();
 //  
 //  copyLocalCellConnectivity();	
   
@@ -450,10 +441,10 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
   geoData.trs = cells;
   
   m_isFaceOnBoundaryCell = m_cellBuilder2->getGeoBuilder()->getIsFaceOnBoundary();
-  
-  m_neighbCellIDs.resize(nbCells*4);
-  m_neighbFaceIDs.resize(nbCells*4);
-  m_innerCellIsLeft.resize(nbCells*4);
+
+  m_neighbCellIDs.resize(nbCells*2*PHYSICS::DIM);
+  m_neighbFaceIDs.resize(nbCells*2*PHYSICS::DIM);
+  m_innerCellIsLeft.resize(nbCells*2*PHYSICS::DIM);
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -520,8 +511,8 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::setup()
       
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,NB_BLOCK_THREADS>::copyLocalCellConnectivity()
+template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::copyLocalCellConnectivity()
 {
   CFAUTOTRACE;
   

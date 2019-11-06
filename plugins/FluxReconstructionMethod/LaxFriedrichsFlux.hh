@@ -51,7 +51,7 @@ public:  // methods
   };
   
   /// nested class defining a functor
-  template <DeviceType DT, typename VS>
+  template <DeviceType DT, typename VS, CFuint ORDER>
   class DeviceFunc {
   public:
     typedef VS MODEL;
@@ -61,10 +61,13 @@ public:  // methods
     HOST_DEVICE DeviceFunc(DeviceConfigOptions<NOTYPE>* dco) : m_dco(dco) {}
  
     /// Compute needed private variables that do not depend on the physical state
-    HOST_DEVICE void prepareComputation(FluxData<VS>* data, VS* model) {}
+    HOST_DEVICE void prepareComputation(FluxData<VS,ORDER>* data, VS* model) {}
    
     /// Compute the flux : implementation
-    HOST_DEVICE void operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID, const bool isLEFT, CFreal &waveSpeedUpd); 
+    HOST_DEVICE void operator()(FluxData<VS,ORDER>* data, VS* model, const CFuint iFlxPnt, const CFuint flxIdx, const CFreal intCoeff, const bool isLEFT, CFreal &waveSpeedUpd);
+
+    /// Compute the flux : implementation
+    HOST_DEVICE void operator()(FluxData<VS,ORDER>* data, VS* model, const CFuint iSol); 
     
   private:
     DeviceConfigOptions<NOTYPE>* m_dco;
@@ -130,18 +133,16 @@ private: // data
 
 #ifdef CF_HAVE_CUDA
 /// nested class defining the flux
-template <DeviceType DT, typename VS>
-void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* model, bool isInterface, const CFuint iFlxPnt, const CFuint iSol, const CFuint cellID, const bool isLEFT, CFreal &waveSpeedUpd)
+template <DeviceType DT, typename VS, CFuint ORDER>
+void LaxFriedrichsFlux::DeviceFunc<DT, VS, ORDER>::operator()(FluxData<VS,ORDER>* data, VS* model, const CFuint iFlxPnt, const CFuint flxIdx, const CFreal intCoeff, const bool isLEFT, CFreal &waveSpeedUpd)
 {
-  if (isInterface)
-  {
     typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
 
     // right physical data, flux
-    updateVS->computePhysicalData(data->getLstate(iSol), &m_pdata[0]);
-    updateVS->computePhysicalData(data->getRstate(iSol), &m_pdata2[0]);
+    updateVS->computePhysicalData(data->getLstate(flxIdx), &m_pdata[0]);
+    updateVS->computePhysicalData(data->getRstate(flxIdx), &m_pdata2[0]);
 
-    typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getFlxScaledNormal(iSol));
+    typename MathTypes<CFreal,DT,VS::DIM>::SLICEVEC unitNormal(data->getFlxScaledNormal(flxIdx));
     m_tempFlxUnitNormal = unitNormal;
 
     CFreal nJacob2 = 0.0;
@@ -158,7 +159,7 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
       m_tempFlxUnitNormal[iDim] *= 1.0/nJacob;
     }
     
-    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getInterfaceFlux(iSol));
+    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getInterfaceFlux(flxIdx));
         
     updateVS->getFlux(&m_pdata[0], &m_tempFlxUnitNormal[0], &m_tmp[0]); 
     updateVS->getFlux(&m_pdata2[0], &m_tempFlxUnitNormal[0], &m_tmp2[0]); 
@@ -173,12 +174,13 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
     Framework::VarSetTransformerT<typename VS::UPDATE_VS, typename VS::SOLUTION_VS, NOTYPE>* up2Sol = model->getUpdateToSolution();
   
     // transform to solution variables
-    up2Sol->transform(data->getLstate(iSol), &m_tmpState[0]);
-    up2Sol->transform(data->getRstate(iSol), &m_tmpState2[0]);
+    up2Sol->transform(data->getLstate(flxIdx), &m_tmpState[0]);
+    up2Sol->transform(data->getRstate(flxIdx), &m_tmpState2[0]);
   
     typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateL(&m_tmpState[0]);
     typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC stateR(&m_tmpState2[0]); 
 
+    //CFreal* intCoeff = data->getFaceIntegrationCoef();
     //const CFreal intCoeff = data->getFaceIntegrationCoef(iFlxPnt);
 
     if (isLEFT)
@@ -200,33 +202,39 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS>::operator()(FluxData<VS>* data, VS* m
 //if (cellID == 768) printf("upBefore: %f\n", waveSpeedUpd);
     // compute the wave speed updates
     //*(data->getUpdateCoeff()) = *(data->getUpdateCoeff()) + nJacob * 1.0 * lMaxAbsEVal;
-    waveSpeedUpd += nJacob * 1.0 * lMaxAbsEVal;
+    waveSpeedUpd += nJacob * intCoeff * lMaxAbsEVal;
     
-
+//printf("intCoeff: %f\n", *intCoeff);
 //if (cellID == 11) printf("cellID: %d, upd: %f\n",cellID,*(data->getUpdateCoeff()));
-//if (cellID == 768) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", iSol, lMaxAbsEVal, 1.0, nJacob);
+//if (cellID == 768) printf("iFlx: %d, maxAbs: %f, intCoeff: %f, jacob: %f\n", flxIdx, lMaxAbsEVal, 1.0, nJacob);
 //if (cellID == 768) printf("upAfter: %f\n", waveSpeedUpd);
     //data->addUpdateCoeff(waveSpeedUpd);
-  }
-  else
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+#ifdef CF_HAVE_CUDA
+/// nested class defining the flux
+template <DeviceType DT, typename VS, CFuint ORDER>
+void LaxFriedrichsFlux::DeviceFunc<DT, VS, ORDER>::operator()(FluxData<VS,ORDER>* data, VS* model, const CFuint iSol)
+{
+  typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
+
+  // right physical data, flux
+  updateVS->computePhysicalData(data->getState(iSol), &m_pdata[0]);
+
+  typename MathTypes<CFreal,DT,VS::DIM*VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
+  m_tempUnitNormal = unitNormal;
+  for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
   {
-    typename VS::UPDATE_VS* updateVS = model->getUpdateVS();
-
-    // right physical data, flux
-    updateVS->computePhysicalData(data->getState(iSol), &m_pdata[0]);
-
-    typename MathTypes<CFreal,DT,VS::DIM*VS::DIM>::SLICEVEC unitNormal(data->getScaledNormal(iSol));
-    m_tempUnitNormal = unitNormal;
-    for (CFuint iDim = 0; iDim < VS::DIM; ++iDim)
-    {
-      typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getFlux(iSol,iDim));
+    typename MathTypes<CFreal,DT,VS::NBEQS>::SLICEVEC flux(data->getFlux(iSol,iDim));
         
-      updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[iDim*VS::DIM], &m_tmp[0]); 
+    updateVS->getFlux(&m_pdata[0], &m_tempUnitNormal[iDim*VS::DIM], &m_tmp[0]); 
       
-      for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
-      {
-        flux[iEq] = m_tmp[iEq];
-      }
+    for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
+    {
+      flux[iEq] = m_tmp[iEq];
     }
   }
 }

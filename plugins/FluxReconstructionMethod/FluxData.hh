@@ -13,25 +13,26 @@ namespace COOLFluiD {
             
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename PHYS>      
+template <typename PHYS, CFuint ORDER>      
 class FluxData {
 public:
   /// initialize the flux data
   HOST_DEVICE void initialize() 
   {
-    for (CFuint j = 0; j < 4; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
-    for (CFuint j = 0; j < 8; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
-    for (CFuint j = 0; j < 8; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_lstates[j][i] = 0.;}}
-    for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_nodes[j][i] = 0.;}}
-    for (CFuint j = 0; j < 2; j++) {for (CFuint i = 0; i < PHYS::DIM; ++i) {m_rnodes[j][i] = 0.;}}
-    for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {for (CFuint k = 0; k < PHYS::NBEQS; ++k) {m_flux[i][j][k] = 0.;}}}
-    for (CFuint i = 0; i < 2; ++i) {for (CFuint j = 0; j < PHYS::NBEQS; ++j) {m_fluxFlxPnt[i][j] = 0.;}}
-    for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}
-    for (CFuint i = 0; i < 4; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {m_unitFlxNormal[i][j] = 0.;}}
-    for (CFuint i = 0; i < 2; ++i) {m_faceIntegrationCoefs[i] = 0.;}
+    const CFuint nbSolPnts = (ORDER+1)*(ORDER+1);
+    const CFuint nbFaceFlxPnts = ORDER+1;
+    const CFuint nbFlxPnts = 2*PHYS::DIM*(ORDER+1);
+    for (CFuint j = 0; j < nbSolPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
+    for (CFuint j = 0; j < nbFlxPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
+    for (CFuint j = 0; j < nbFlxPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_lstates[j][i] = 0.;}}
+    for (CFuint i = 0; i < nbSolPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {for (CFuint k = 0; k < PHYS::NBEQS; ++k) {m_flux[i][j][k] = 0.;}}}
+    for (CFuint i = 0; i < nbFaceFlxPnts; ++i) {for (CFuint j = 0; j < PHYS::NBEQS; ++j) {m_fluxFlxPnt[i][j] = 0.;}}
+    for (CFuint i = 0; i < nbSolPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}
+    for (CFuint i = 0; i < nbFlxPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {m_unitFlxNormal[i][j] = 0.;}}
+    for (CFuint i = 0; i < nbFaceFlxPnts; ++i) {m_faceIntegrationCoefs[i] = 0.;}
     m_updateCoeff = 0.; m_faceArea = 0.;
     m_stateID[0] = 0; m_stateID[1] = 0; m_stateID[2] = 0; m_stateID[3] = 0;
-    m_nbSolPnts = 4;
+    m_nbSolPnts = nbSolPnts;
     m_isBFace = false; m_isOutward = false; m_isPerturb = false; 
   }
     
@@ -43,12 +44,6 @@ public:
   
   /// get the left reconstructed state
   HOST_DEVICE CFreal* getLstate(const CFuint iState) {return &m_lstates[iState][0];}
-    
-  /// get the left or right state node
-  HOST_DEVICE CFreal* getNode(const CFuint i) {return &m_nodes[i][0];}
-  
-  /// get the left or right reconstructed node
-  HOST_DEVICE CFreal* getRnode(const CFuint i) {return &m_rnodes[i][0];}
   
   /// get the flux array
   HOST_DEVICE CFreal* getFlux(const CFuint iSol, const CFuint iDim) {return &m_flux[iSol][iDim][0];}
@@ -108,7 +103,7 @@ public:
   HOST_DEVICE void resetUpdateCoeff() {m_updateCoeff = 0.;}
 
   /// get face integration coefficient
-  HOST_DEVICE CFreal getFaceIntegrationCoef(const CFuint iFlx) {return m_faceIntegrationCoefs[iFlx];}
+  HOST_DEVICE CFreal* getFaceIntegrationCoef() {return &m_faceIntegrationCoefs[0];}
 
   /// set face integration coefficient
   HOST_DEVICE void setFaceIntegrationCoef(const CFuint iFlx, const CFreal coeff) {m_faceIntegrationCoefs[iFlx] = coeff;}
@@ -116,31 +111,25 @@ public:
 private:
   
   /// inner states
-  CFreal m_states[4][PHYS::NBEQS];
+  CFreal m_states[(ORDER+1)*(ORDER+1)][PHYS::NBEQS];
    
   /// right reconstructed states
-  CFreal m_rstates[8][PHYS::NBEQS];
+  CFreal m_rstates[2*PHYS::DIM*(ORDER+1)][PHYS::NBEQS];
   
   /// left reconstructed states
-  CFreal m_lstates[8][PHYS::NBEQS];
-    
-  /// left and right state nodes
-  CFreal m_nodes[2][PHYS::DIM];
-  
-  /// left and right reconstructed nodes
-  CFreal m_rnodes[2][PHYS::DIM];
+  CFreal m_lstates[2*PHYS::DIM*(ORDER+1)][PHYS::NBEQS];
   
   /// flux in solution points
-  CFreal m_flux[4][PHYS::DIM][PHYS::NBEQS];
+  CFreal m_flux[(ORDER+1)*(ORDER+1)][PHYS::DIM][PHYS::NBEQS];
   
   /// flux in flux points
-  CFreal m_fluxFlxPnt[2][PHYS::NBEQS];
+  CFreal m_fluxFlxPnt[ORDER+1][PHYS::NBEQS];
   
   /// unit normal
-  CFreal m_unitNormal[4][PHYS::DIM*PHYS::DIM];
+  CFreal m_unitNormal[(ORDER+1)*(ORDER+1)][PHYS::DIM*PHYS::DIM];
   
   /// unit normal
-  CFreal m_unitFlxNormal[4][PHYS::DIM];
+  CFreal m_unitFlxNormal[2*PHYS::DIM*(ORDER+1)][PHYS::DIM];
   
   /// left and right update coefficient
   CFreal m_updateCoeff;
@@ -149,7 +138,7 @@ private:
   CFreal m_faceArea;
   
   /// state IDs
-  CFuint m_stateID[4];
+  CFuint m_stateID[(ORDER+1)*(ORDER+1)];
   
   /// number of solution points
   CFuint m_nbSolPnts;
@@ -164,7 +153,7 @@ private:
   bool m_isPerturb;
 
   /// face integration coefficients
-  CFreal m_faceIntegrationCoefs[2];
+  CFreal m_faceIntegrationCoefs[ORDER+1];
   
 };
       
