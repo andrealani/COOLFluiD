@@ -101,6 +101,8 @@ protected:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
+  
+  void computeEMField();
 
 protected: // data
 

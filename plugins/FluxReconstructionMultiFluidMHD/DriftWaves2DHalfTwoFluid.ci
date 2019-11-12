@@ -149,6 +149,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
 
   for (CFuint iSol = 0; iSol < nbrSol; ++iSol)
   { 
+    RealVector DebugCOORD = (*m_cellStates)[iSol]->getCoordinates();
     m_varSet->computePhysicalData(*((*m_cellStates)[iSol]), m_solPhysData);
 
     const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
@@ -171,6 +172,17 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
     const CFuint nbEqs = eqSS.getNbEqsSS();  	
 		
     const CFuint iEqSS = eqSS.getEqSS();
+    
+      _Etotal = 0;
+      _Btotal = 0;
+
+      _Btotal[XX] = m_solPhysData[UPDATEVAR::PTERM::BX] + _NonInducedEMField[0];
+
+  _Btotal[YY] = m_solPhysData[UPDATEVAR::PTERM::BY] + _NonInducedEMField[1];
+  _Btotal[ZZ] = m_solPhysData[UPDATEVAR::PTERM::BZ] + _NonInducedEMField[2];
+  _Etotal[XX] = m_solPhysData[UPDATEVAR::PTERM::EX] + _NonInducedEMField[3];
+  _Etotal[YY] = m_solPhysData[UPDATEVAR::PTERM::EY] + _NonInducedEMField[4];
+  _Etotal[ZZ] = m_solPhysData[UPDATEVAR::PTERM::EZ] + _NonInducedEMField[5];
 
     // DRIFTWAVES //
     const CFreal kB = Framework::PhysicalConsts::Boltzmann(); 
@@ -186,6 +198,12 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
     //std::cout << "rhoe = " << rhoe << "\n";
     //std::cout << "rhoi = " << rhoi << std::endl;
     const CFreal Qtot = qe*rhoe/me + qi*rhoi/mi;
+//    if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-80000&&DebugCOORD[1]<-75000)
+//{
+ //       CFLog(VERBOSE, "Qtot = "<<Qtot<<", qe = "<<qe<<", rhoe = "<<rhoe<<", me = "<<me<<", qi = "<<qi<<", rhoi =      "<<rhoi<<", mi = "<<mi<<"\n");
+//}
+
+
     const CFuint firstVelocity = term->getFirstScalarVar(1);
     const CFreal ue = m_solPhysData[firstVelocity];
     const CFreal ve = m_solPhysData[firstVelocity + 1];
@@ -218,7 +236,22 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       m_source[4] = -Jy*ovEpsilon;  //y-Ampere's Law
       m_source[5] = -Jz*ovEpsilon;  //z-Ampere's Law
       m_source[6] = 0.;             //divB
+//if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-80000&&DebugCOORD[1]<-75000)
+//{
+
+//	CFLog(VERBOSE,"Qtot = "<<Qtot<<", ovEpsilon = "<<ovEpsilon<<"\n");
+
+
+//}
       m_source[7] = Qtot*ovEpsilon; //divE
+//if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-80000&&DebugCOORD[1]<-75000)
+//{
+
+//	CFLog(VERBOSE,"Qtot = "<<Qtot<<", ovEpsilon = "<<ovEpsilon<<"\n");
+
+
+//}
+
       //printf("me %.15e mi %.15e rhoe %.15e rhoi %.15e ue %.15e ui %.15e ve %.15e vi %.15e we %.15e wi %.15e ",me, mi, rhoe, rhoi, ue, ui, ve, vi, we, wi);
       //printf("Jx %.15e Jy %.15e Jz %.15e ovEpsilon %.15e Qtot %.15e \n", Jx, Jy, Jz, ovEpsilon, Qtot);
     }
@@ -265,6 +298,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       const CFreal tau_minusOne_ei = 16*std::sqrt(pi)/3*ni*std::pow(gamma_ie/2,3./2.)*std::pow(qi*qe/(4*pi*Epsilon0*mu_ie),2.)*C_log;//electron collision frequency for collisions with ions (target)
       //std::cout <<"coll freq_e = "<< tau_minusOne_ie << "\n";
 
+      
       CFreal emMomentumXe = qe*ne*(_Etotal[XX] + ve*_Btotal[ZZ] - we*_Btotal[YY]);        //Electromagnetic momentum for electrons in X
       CFreal emMomentumXi = qi*ni*(_Etotal[XX] + vi*_Btotal[ZZ] - wi*_Btotal[YY]);        //Electromagnetic momentum for ions in X
       CFreal emMomentumYe = qe*ne*(_Etotal[YY] + we*_Btotal[XX] - ue*_Btotal[ZZ]);        //Electromagnetic momentum for electrons in Y
@@ -306,6 +340,12 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
         m_source[13] = emMomentumXi;   //Ions X momentum
         m_source[14] = emMomentumYi;   //Ions Y momentum
         m_source[15] = emMomentumZi;   //Ions Z momentum
+        if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-79000&&DebugCOORD[1]<-73000)
+      { 
+            CFLog(VERBOSE," _Btotal = "<<_Btotal<<" ne = "<<ne<<" mu_ie = "<<mu_ie<<" tau_minusOne_ei = "<<tau_minusOne_ei<<" ue - ui = "<<ue - ui<<" ve - vi = "<<ve - vi<<" we - wi = "<<we - wi<<" tau_minusOne_ei = "<<tau_minusOne_ei<<"\n");
+          //CFLog(VERBOSE,"emMomentumXe = "<<emMomentumXe<<" emMomentumYe = "<<emMomentumYe<<" emMomentumZe = "<<emMomentumZe<<"\n\n ");
+          //CFLog(VERBOSE,"emMomentumXi = "<<emMomentumXi<<" emMomentumYi = "<<emMomentumYi<<" emMomentumZi = "<<emMomentumZi<<"\n\n ");
+      }
       }
 
 
@@ -321,7 +361,7 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       const CFreal heatColle = -3*kB*ne*(mu_ie/(me + mi))*tau_minusOne_ei*(Te - Ti); // collisional energy transfer
       const CFreal heatColli = -3*kB*ni*(mu_ie/(me + mi))*tau_minusOne_ie*(Ti - Te);
 
-      const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons
+      const CFreal emEnergye = qe*(rhoe/me)*(ue*_Etotal[XX] + ve*_Etotal[YY] + we*_Etotal[ZZ]); //electrons 
       const CFreal emEnergyi = qi*(rhoi/mi)*(ui*_Etotal[XX] + vi*_Etotal[YY] + wi*_Etotal[ZZ]); //ions
 
       if(_isCollisional) {
@@ -331,7 +371,58 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       else {
         m_source[16] = emEnergye;
         m_source[17] = emEnergyi;
+        if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-79000&&DebugCOORD[1]<-73000)
+      {
+            CFLog(VERBOSE," qe = "<<qe<<" rhoe = "<<rhoe<<" me = "<<me<<" ue = "<<ue<<" _Etotal["<<XX<<"] = "<<_Etotal[XX]<<" ve = "<<ve<<" _Etotal["<<YY<<"] = "<<_Etotal[YY]<<" we = "<<we<<" _Etotal["<<ZZ<<"] = "<<_Etotal[ZZ]<<" qi = "<<qi<<" rhoi = "<<rhoi<<" mi = "<<mi<<" ui = "<<ui<<" vi = "<<vi<<" wi = "<<wi<<"\n");
+          //CFLog(VERBOSE," emEnergye = "<<emEnergye<<" emEnergyi = "<<emEnergyi<<"\n\n");
       }
+      }
+
+
+if(DebugCOORD[0]>-25000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-79000&&DebugCOORD[1]<-73000)//DebugCOORD[0]>-24000&&DebugCOORD[0]<-20000&&DebugCOORD[1]>-79000&&DebugCOORD[1]<-76000
+      {
+        CFLog(VERBOSE,"coordinates = "<<DebugCOORD<<"\n"); 	   //" iVar = "<<iVar<<" residuals = "<<rhs[resID+iVar]<<
+for(CFuint testint = 0; testint < 18; ++testint)
+{   
+
+   CFLog(VERBOSE, "m_source["<<testint<<"]"<<" = "<<m_source[testint]<<"\n");
+
+}
+      }
+      
+if(DebugCOORD[0]>90000&&DebugCOORD[0]<93000&&DebugCOORD[1]>80000&&DebugCOORD[1]<84000)
+      {
+        //CFLog(VERBOSE,"coordinates = "<<DebugCOORD<<"\n"); 	   //<<" iVar = "<<iVar<<" residuals = "<<rhs[resID+iVar]
+for(CFuint testint = 0; testint < 18; ++testint)
+{   
+
+   //CFLog(VERBOSE, "m_source["<<testint<<"]"<<" = "<<m_source[testint]<<"\n");
+
+}
+      }      
+      
+if(DebugCOORD[0]>15000&&DebugCOORD[0]<19000&&DebugCOORD[1]>60000&&DebugCOORD[1]<63000)
+      {
+        //CFLog(VERBOSE,"coordinates = "<<DebugCOORD<<"\n"); 	   //<<" iVar = "<<iVar<<" residuals = "<<rhs[resID+iVar]
+for(CFuint testint = 0; testint < 18; ++testint)
+{   
+
+   //CFLog(VERBOSE, "m_source["<<testint<<"]"<<" = "<<m_source[testint]<<"\n");
+
+}
+      }
+
+if(DebugCOORD[0]>-64000&&DebugCOORD[0]<-60000&&DebugCOORD[1]>-43000&&DebugCOORD[1]<-40000)
+      {
+//        CFLog(VERBOSE,"coordinates = "<<DebugCOORD<<"\n"); 	   //<<" iVar = "<<iVar<<" residuals = "<<rhs[resID+iVar]
+for(CFuint testint = 0; testint < 18; ++testint)
+{   
+
+  // CFLog(VERBOSE, "m_source["<<testint<<"]"<<" = "<<m_source[testint]<<"\n");
+
+}
+      }      
+
 
   }
 
@@ -340,7 +431,8 @@ void DriftWaves2DHalfTwoFluid<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
   for (CFuint iEq = 0; iEq < totalNbEqs; ++iEq){
 
        resUpdates[m_nbrEqs*iSol + iEq] = m_source[iEq];
-     }
+ 
+}
   }
 
 }
