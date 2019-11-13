@@ -126,18 +126,22 @@ void BDF2TimeRHSJacob::addTimeResidual()
 //      }
 
       // store dUdt for next time step
-      if(SubSystemStatusStack::getActive()->isLastStep())
+      if((SubSystemStatusStack::getActive()->isLastStep())
+       && (SubSystemStatusStack::getActive()->isSubIterationLastStep()))
       {
         pastTimeRhs(stateID,iEq,m_nbrEqs) = dUdt;
       }
     }
     
-    // add the values in the jacobian matrix
-    //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
-    m_lss->getMatrix()->addValues(*m_acc);
+    if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
+    {
+      // add the values in the jacobian matrix
+      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
+      m_lss->getMatrix()->addValues(*m_acc);
 
-    // reset to zero the entries in the block accumulator
-    m_acc->reset();
+      // reset to zero the entries in the block accumulator
+      m_acc->reset();
+    }
   }
 }
 

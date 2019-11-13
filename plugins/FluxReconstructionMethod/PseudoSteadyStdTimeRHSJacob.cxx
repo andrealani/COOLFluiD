@@ -302,12 +302,15 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
       }
     }
 
-    // add the values in the jacobian matrix
-    //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
-    m_lss->getMatrix()->addValues(*m_acc);
+    if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
+    {
+      // add the values in the jacobian matrix
+      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
+      m_lss->getMatrix()->addValues(*m_acc);
 
-    // reset to zero the entries in the block accumulator
-    m_acc->reset();
+      // reset to zero the entries in the block accumulator
+      m_acc->reset();
+    }
 
     //m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);
   }
