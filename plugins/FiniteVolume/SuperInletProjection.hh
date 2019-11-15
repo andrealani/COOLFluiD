@@ -51,6 +51,9 @@ private: //data
   
   /// phi value that is to be fixed
   CFreal _refPhi;
+  CFint _inletCoronalBC;
+  CFint _Phi_divB_zero;
+  CFint _Phi_divB_extrapolated;
   
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;

@@ -84,6 +84,8 @@ DistanceBasedExtrapolatorGMoveCoupledAndNot.cxx
 DistanceBasedExtrapolatorGMoveCoupledAndNot.hh
 DistanceBasedExtrapolatorGMoveMultiTRS.cxx
 DistanceBasedExtrapolatorGMoveMultiTRS.hh
+DistanceBasedExtrapolatorMagnetogram.cxx
+DistanceBasedExtrapolatorMagnetogram.hh
 FileInitState.cxx
 FileInitState.hh
 FiniteVolume.hh
