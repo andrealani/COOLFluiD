@@ -84,8 +84,8 @@ void DistanceBasedExtrapolatorMagnetogram::setup()
       
       // Run a python script for preparing the magnetogram:
       std::string cmd = _pyCommand + " prepare-the-magnetogram.py " + _link + " " +
-	to_string(_sigma) + " " + to_string(_scaling_factor) +  " " + to_string(_Brefval) +
-	" ; cp -r magnetogram*.dat " + m_fileNameTw;
+      StringOps::to_str(_sigma) + " " + StringOps::to_str(_scaling_factor) +  " " + 
+      StringOps::to_str(_Brefval) + " ; cp -r magnetogram*.dat " + m_fileNameTw;
       
       CFLog(INFO, "DistanceBasedExtrapolatorMagnetogram::setup() => running \"" << cmd << "\"\n");
       
