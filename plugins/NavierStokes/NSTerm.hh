@@ -6,6 +6,10 @@
 #include "Framework/BaseTerm.hh"
 #include "NavierStokes/DynamicViscosityLaw.hh"
 
+#ifdef CF_HAVE_CUDA
+#include "Common/CUDA/CudaEnv.hh"
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -25,6 +29,52 @@ namespace COOLFluiD {
 class NSTerm : public Framework::BaseTerm {
 
 public:
+    
+    #ifdef CF_HAVE_CUDA
+  /// nested class defining local options
+  template <typename P = NOTYPE>
+  class DeviceConfigOptions {
+  public:
+    /// constructor
+    HOST_DEVICE DeviceConfigOptions() {}
+    
+    /// destructor
+    HOST_DEVICE virtual ~DeviceConfigOptions() {}
+    
+    /// initialize with another object of the same kind
+    HOST_DEVICE void init(DeviceConfigOptions<P> *const in) 
+    {
+      coeffTau = in->coeffTau;
+      coeffQ = in->coeffQ;
+      cpOverPrandtl = in->cpOverPrandtl;
+    }
+    
+    /// coeffTau
+    CFreal coeffTau; 
+  
+    /// coeffQ
+    CFreal coeffQ;
+    
+    /// Cp over Pr
+    CFreal cpOverPrandtl;
+  };
+  
+  /// copy the local configuration options to the Framework::DEVICE
+  void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+    CudaEnv::copyHost2Dev(&dco->coeffTau, &_coeffTau, 1);
+    CudaEnv::copyHost2Dev(&dco->coeffQ, &_coeffQ, 1);
+    CudaEnv::copyHost2Dev(&dco->cpOverPrandtl, &_cpOverPrandtl, 1);
+  }  
+  
+  /// copy the local configuration options to the Framework::DEVICE
+  void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco) 
+  {
+    dco->coeffTau = _coeffTau;
+    dco->coeffQ = _coeffQ;
+    dco->cpOverPrandtl = _cpOverPrandtl;
+  }     
+  #endif
 
   /**
    * Defines the Config Option's of this class

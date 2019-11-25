@@ -181,6 +181,7 @@ NSTurbTerm.hh
 NavierStokes.hh
 NavierStokes2DCons.cxx
 NavierStokes2DCons.hh
+NavierStokes2DConsT.hh
 NavierStokes1DCons.cxx
 NavierStokes1DCons.hh
 NavierStokes1DPvt.cxx
@@ -195,6 +196,7 @@ NavierStokes1DVarSet.cxx
 NavierStokes1DVarSet.hh
 NavierStokes2DVarSet.cxx
 NavierStokes2DVarSet.hh
+NavierStokes2DVarSetT.hh
 NavierStokes3DCons.cxx
 NavierStokes3DCons.hh
 NavierStokes3DPvt.cxx
