@@ -119,7 +119,7 @@ public: // function
 //      _tau(ZZ,ZZ) = coeffTauMu*(2.*gradW[ZZ] - twoThirdDivV);
 //    }
   
-    const CFreal qFlux = -m_dcoNS->coeffQ()*lambda*(gradients[3*4]*normal[XX] + gradients[3*4+1]*normal[YY]);
+    const CFreal qFlux = -m_dcoNS->coeffQ*lambda*(gradients[3*4]*normal[XX] + gradients[3*4+1]*normal[YY]);
     
     flux[0] = 0.0;
     flux[1] = tauXX*normal[XX] + tauXY*normal[YY];
@@ -153,7 +153,7 @@ public: // function
   
   //////////////////////////////////////////////////////////////////////////////
 
-HOST_DEVICE CFreal getDynViscosity(const RealVector& state)
+HOST_DEVICE CFreal getDynViscosity(const CFreal* state)
 {
   // here it is assumed that state is in Cons variables
   const CFreal R = m_dco->R;
@@ -174,7 +174,7 @@ HOST_DEVICE CFreal getDynViscosity(const RealVector& state)
 
 //////////////////////////////////////////////////////////////////////////////
 
-HOST_DEVICE CFreal getDensity(const RealVector& state)
+HOST_DEVICE CFreal getDensity(const CFreal* state)
 {
   return state[0];
 }
