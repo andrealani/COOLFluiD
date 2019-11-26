@@ -20,7 +20,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /// Computes the sparticity of the global jacobian matrix for a cell-centered
-/// space discretization methods.
+/// space discretization methods + FB: a Nodal based sparsity for AMR
 /// @author Andrea Lani
 /// @author Tiago Quintino
 /// @author Kris Van den Abeele
@@ -50,6 +50,11 @@ public: // functions
   (DataSocketSink<Framework::State*, Framework::GLOBAL> statesSocket,
    Common::ConnectivityTable<CFuint>& matrixPattern);
   
+  /// FB: For Mesh Adaptation we need a nodal based sparsity 
+  /// Computes the non zero entries in the global jacobian matrix
+  /// using nodes instead of states
+  virtual void computeNNzNodeBased(std::valarray<CFint>& nnz,
+				   std::valarray<CFint>& ghostNnz);
 }; // class CellCenteredSparsity
 
 //////////////////////////////////////////////////////////////////////////////
