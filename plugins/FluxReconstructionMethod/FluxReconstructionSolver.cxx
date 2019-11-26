@@ -53,6 +53,8 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("ComputeErrorCom","Command to compute the error of the solution.");
   options.addConfigOption< std::string >("FinalizeRHSCom","Finilaze computation of the RHS.");
   options.addConfigOption< std::string >("ArtificialViscosityCom","Command to add artificial viscosity.");
+   options.addConfigOption< std::string >("AfterMeshUpdateCom","Command to run after mesh update.");
+   options.addConfigOption< std::string >("BeforeMeshUpdateCom","Command to run before mesh update.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -87,7 +89,7 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_builder = "StdBuilder";
   
   // set default global jacobian sparsity
-  m_sparsity = "None";
+  m_sparsity = "CellCentered";
   
   m_spaceRHSJacobStr = "RHS";
   setParameter("SpaceRHSJacobCom", &m_spaceRHSJacobStr);
@@ -149,6 +151,13 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   // options for bc commands
   m_bcNameDiffStr = std::vector<std::string>();
   setParameter("BcNamesDiff",&m_bcNameDiffStr);
+
+ // Moving Mesh
+  _beforeMeshUpdateStr = "Null";
+  setParameter("BeforeMeshUpdateCom",&_beforeMeshUpdateStr);
+
+  _afterMeshUpdateStr = "Null";
+  setParameter("AfterMeshUpdateCom",&_afterMeshUpdateStr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -206,6 +215,12 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_computeError,m_computeErrorStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_finalizeRHS,m_finalizeRHSStr,m_data );
+
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
+    args, _beforeMeshUpdate, _beforeMeshUpdateStr, m_data);
+
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
+    args, _afterMeshUpdate,_afterMeshUpdateStr,m_data);
 
   cf_assert(m_setup.isNotNull());
   cf_assert(m_unsetup.isNotNull());
@@ -574,6 +589,7 @@ void FluxReconstructionSolver::postProcessSolutionImpl()
 Common::Signal::return_t FluxReconstructionSolver::beforeMeshUpdateActionImpl(Common::Signal::arg_t eBefore)
 {
   CFAUTOTRACE;
+  _beforeMeshUpdate->execute();
   return Common::Signal::return_t ();
 }
 
@@ -582,6 +598,8 @@ Common::Signal::return_t FluxReconstructionSolver::beforeMeshUpdateActionImpl(Co
 Common::Signal::return_t FluxReconstructionSolver::afterMeshUpdateActionImpl(Common::Signal::arg_t eAfter)
 {
   CFAUTOTRACE;
+  _afterMeshUpdate->execute();
+
   return Common::Signal::return_t ();
 }
 

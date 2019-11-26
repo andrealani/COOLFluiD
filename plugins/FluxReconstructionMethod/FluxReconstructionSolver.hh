@@ -187,6 +187,13 @@ private: // data
   /// The commands to use for initializing the solution.
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_inits;
 
+  /// The command to use for the action before the mesh is updated
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > _beforeMeshUpdate;
+
+  /// The command to use for the action after the mesh has been updated
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > _afterMeshUpdate;
+
+
   ///The Setup string for configuration
   std::string m_setupStr;
 
@@ -264,6 +271,12 @@ private: // data
 
   /// The commands to use for applying the boundary conditions for the diffusive terms
   std::vector< Common::SelfRegistPtr< FluxReconstructionSolverCom > > m_bcsDiffComs;
+
+  /// The string for the configuration of the action before mesh update
+  std::string _beforeMeshUpdateStr;
+
+  /// The string for the configuration of the action after mesh update
+  std::string _afterMeshUpdateStr;
 
 //////////////////////////////////////////////////////////////////////////////
 
