@@ -313,6 +313,13 @@ CellData.hh
 ComputeStencil.hh
 ComputeStencil.cxx
 FluxData.hh
+MeshFittingAlgorithmFR.hh
+MeshFittingAlgorithmFR.cxx
+StdMeshFittingUpdateFR.cxx
+StdMeshFittingUpdateFR.hh
+SimpleEdgeGraphFR.cxx
+SimpleEdgeGraphFR.hh
+
 )
 
 IF (NOT CF_HAVE_CUDA)
