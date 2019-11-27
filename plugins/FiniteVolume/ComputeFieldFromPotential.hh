@@ -82,7 +82,10 @@ private:
 
   /// storage of the ghost states
   Framework::DataSocketSink<Framework::State*> socket_gstates;
-  
+
+  // storage of the past states
+  Framework::DataSocketSink<Framework::State*> socket_pastStates;
+
   /// storage of nodes
   Framework::DataSocketSink < Framework::Node* , Framework::GLOBAL > socket_nodes;
   

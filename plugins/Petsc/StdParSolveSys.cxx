@@ -94,11 +94,12 @@ stopTimer.start();
   // assemble the rhs vector
   rhsVec.assembly();
   
-
-//mat.printToFile("matPETSC.txt");
-//rhsVec.printToFile("rhsPETSC.txt");
-//abort();
-
+  /*if (getMethodData().getNbSysEquations() == 9) {
+    mat.printToFile("matPETSC.txt");
+    rhsVec.printToFile("rhsPETSC.txt");
+    exit(1);
+    }*/
+  
   const CFuint nbIter = SubSystemStatusStack::getActive()->getNbIter();
   if (getMethodData().getSaveRate() > 0) {
     if (getMethodData().isSaveSystemToFile() || (nbIter%getMethodData().getSaveRate() == 0)) { 

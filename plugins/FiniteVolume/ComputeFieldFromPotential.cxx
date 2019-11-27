@@ -58,6 +58,7 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
   CellCenterFVMCom(name),
   socket_states("states"),
   socket_gstates("gstates"),
+  socket_pastStates("pastStates"),
   socket_nodes("nodes"),
   socket_otherUX("uX"),
   socket_otherUY("uY"),
@@ -94,6 +95,7 @@ ComputeFieldFromPotential::needsSockets()
   std::vector<Common::SafePtr<BaseDataSocketSink> > result;
   result.push_back(&socket_states);
   result.push_back(&socket_gstates);
+  result.push_back(&socket_pastStates);
   result.push_back(&socket_nodes);
   result.push_back(&socket_otherUX);
   result.push_back(&socket_otherUY);
@@ -436,6 +438,15 @@ void ComputeFieldFromPotential::execute()
     // AL: this has to be changed when doing unsteady cases!!!!!!
     // We need to implement a generic logic to aply the processing only when Poisson is solved
     m_applyProcessing = false;
+
+    // update the pastStates
+    DataHandle<State*> pastStates  = socket_pastStates.getDataHandle();
+    // Set Initial States to current states
+    if(SubSystemStatusStack::getActive()->isSubIterationFirstStep()){
+      for(CFuint i = 0; i < states.size(); ++i) {
+	*(pastStates[i]) = *(states[i]);
+      }
+    }
   } 
   
   CFLog(VERBOSE, "ComputeFieldFromPotential::execute() => END\n");

@@ -244,6 +244,8 @@ void FVMCC_ComputeRHS::execute()
 	  CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::execute() => before conv computeFlux()\n");
 	  if (!isBFace) {
 	    _fluxSplitter->computeFlux(_flux);
+
+
 	  }
 	  else {
 	    _currBC->computeFlux(_flux);
@@ -272,9 +274,13 @@ void FVMCC_ComputeRHS::execute()
 	    CFLog(DEBUG_MIN, "FVMCC_ComputeRHS::execute() => after diff computeFlux()\n");
 	    _flux -= _dFlux;
 	  }
-	  
-	  // cout.precision(12);cout << "["<< iFace << "] in " << currTrs->getName() << " C+D flux = " << _flux << endl; 
-	  // EXIT_AT(1);
+
+	  /*if (_flux.size() == 9 && currTrs->getName() == "InnerFaces") {
+	    cout.precision(12);cout << "SL[" << _currFace->getState(0)->getLocalID() << "] = [" << *_currFace->getState(0) << "]\n";
+	    cout.precision(12);cout << "SR[" << _currFace->getState(1)->getLocalID() << "] = [" << *_currFace->getState(1) << "]\n";
+	    cout.precision(12);cout << "["<< iFace << "] in " << currTrs->getName() << " C+D flux = " << _flux << endl; 
+	    EXIT_AT(100);
+	    }*/
 	  
 	  CFLogDebugMed("flux = " <<  _flux  << "\n");
 	  
@@ -300,17 +306,19 @@ void FVMCC_ComputeRHS::execute()
     
   finalizeComputationRHS();
   
+  /*const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  if (nbEqs == 9) {
+  DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+  ofstream fout("rhs.dat");
+  for (CFuint iState = 0; iState < states.size(); ++iState) {
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+      fout.precision(14); fout.setf(ios::scientific,ios::floatfield); fout << rhs(iState, iEq, nbEqs) << " ";
+    }
+    fout << endl;
+  }
+  }*/
   
-  //   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  //   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
-  //   DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
-//   for (CFuint iState = 0; iState < states.size(); ++iState) {
-//     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-//       cout.precision(14); cout.setf(ios::scientific,ios::floatfield); cout << rhs(iState, iEq, nbEqs) << " ";
-//     }
-//     cout << endl;
-//   }
- 
   CFLog(VERBOSE, "FVMCC_ComputeRHS::execute() END\n");
   
   CFTRACEEND;

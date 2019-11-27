@@ -54,6 +54,15 @@ private: //data
   CFint _inletCoronalBC;
   CFint _Phi_divB_zero;
   CFint _Phi_divB_extrapolated;
+  CFint _JensVelocityBC;
+  CFint _DanasVelocityBC;
+  CFint _DifferentialRotation;
+  CFint _JensBfieldBC;
+  CFint _DanasBfieldBC;
+  CFint _JonLinkersBfieldSuggestion;
+
+
+
   
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;

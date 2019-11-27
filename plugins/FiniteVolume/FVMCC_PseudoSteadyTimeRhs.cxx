@@ -1,5 +1,5 @@
 #include "FiniteVolume/FiniteVolume.hh"
-#include "FVMCC_PseudoSteadyTimeRhs.hh"
+#include "FiniteVolume/FVMCC_PseudoSteadyTimeRhs.hh"
 #include "Framework/CFL.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MethodCommandProvider.hh"
@@ -174,6 +174,19 @@ void FVMCC_PseudoSteadyTimeRhs::execute()
       }
     }
   }
+
+  /* const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  if (nbEqs == 9) {
+  DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
+  ofstream fout("rhs_after.dat");
+  for (CFuint iState = 0; iState < states.size(); ++iState) {
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+      fout.precision(14); fout.setf(ios::scientific,ios::floatfield); fout << rhs(iState, iEq, nbEqs) << " ";
+    }
+    fout << endl;
+  }
+  }*/
   
 #ifdef CF_HAVE_CUDA  
   CFLog(VERBOSE, "FVMCC_PseudoSteadyTimeRhs::execute() took " << timer.elapsed() << " s\n");
@@ -195,20 +208,28 @@ void FVMCC_PseudoSteadyTimeRhs::computeNumericalTransMatrix(const CFuint iState)
   // the second call to transform()
   _tempState = static_cast<RealVector&>
     (*_updateToSolutionVecTrans->transform(currState));
-
   
   const State *const tPastState =
     _updateToSolutionVecTrans->transform(pastStates[iState]);
 
+  //CFLog(INFO, "currState  = " << *currState << "\n");
+  //CFLog(INFO, "_tempState = " << _tempState << "\n");
+  //CFLog(INFO, "tPastState = " << *tPastState << "\n");
+  //CFLog(INFO, "pastStates = " << (*pastStates[iState]) << "\n");
+  
   const CFreal resFactor = getMethodData().getResFactor();
-
+  
   // first the contribution to the rhs is computed
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
     const CFreal dU = _tempState[iEq] - (*tPastState)[iEq];
     rhs(iState, iEq, nbEqs) -= (!_zeroDiagValue[iEq]) ? dU*_diagValue*resFactor : 0.0;
+    /*if (nbEqs == 9) {
+      CFLog(INFO, rhs(iState, iEq, nbEqs) << ", dU[" << iEq << "]" << dU << ", resFactor = "
+      << resFactor << ", _diagValue = " << _diagValue << "\n");
+      }*/
   }
-  
+    
   if ((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian()) {
     // now the contribution to the jacobian matrix is calculated
     _acc->setRowColIndex(0, currState->getLocalID());

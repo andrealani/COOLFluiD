@@ -44,7 +44,7 @@ StdSetNodalStates::~StdSetNodalStates()
 void StdSetNodalStates::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >
-    ("updateGradients", "Flag telling wheether to recompute the gradients."); 
+    ("updateGradients", "Flag telling whether to recompute the gradients."); 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -59,9 +59,11 @@ void StdSetNodalStates::execute()
    if (m_updateGradients) {
      // compute the gradients
      getMethodData().getPolyReconstructor()->computeGradients();
+     
+     CFLog(VERBOSE, "StdSetNodalStates::execute()\n");
    }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

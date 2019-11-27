@@ -36,7 +36,6 @@ void StdPrepare::execute()
   DataHandle<State*> pastStates  = socket_pastStates.getDataHandle();
 
   // Set Initial States to current states
-  //  CFuint nodeID;
   if(SubSystemStatusStack::getActive()->isSubIterationFirstStep()){
     for(CFuint i = 0; i < states.size(); ++i) {
       *(pastStates[i]) = *(states[i]);
