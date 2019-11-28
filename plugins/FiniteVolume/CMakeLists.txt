@@ -117,10 +117,12 @@ FVMCC_ComputeRHS.cxx
 FVMCC_ComputeRHS.hh
 FVMCC_ComputeRHSSingleState.cxx
 FVMCC_ComputeRHSSingleState.hh
-FVMCC_ComputeRhsJacobCoupling.cxx
-FVMCC_ComputeRhsJacobCoupling.hh
+FVMCC_ComputeRhsBlockJacob.cxx
+FVMCC_ComputeRhsBlockJacob.hh
 FVMCC_ComputeRhsJacob.cxx
 FVMCC_ComputeRhsJacob.hh
+FVMCC_ComputeRhsJacobCoupling.cxx
+FVMCC_ComputeRhsJacobCoupling.hh
 FVMCC_ComputeRhsJacobAnalytic.cxx
 FVMCC_ComputeRhsJacobAnalytic.hh
 #FVMCC_ComputeRhsJacobConv.hh
