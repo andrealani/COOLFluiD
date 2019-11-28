@@ -46,6 +46,7 @@ SetupCUDA::SetupCUDA(const std::string& name) :
   StdSetup(name),
   socket_solPntNormals("solPntNormals"),
   socket_flxPntNormals("flxPntNormals"),
+  socket_gradientsCUDA("gradientsCUDA"),
   socket_faceDir("faceDir"),
   m_face(CFNULL),
   m_flxLocalCoords(),
@@ -69,6 +70,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   std::vector< Common::SafePtr< BaseDataSocketSource > > result = StdSetup::providesSockets();
   result.push_back(&socket_solPntNormals);
   result.push_back(&socket_flxPntNormals);
+  result.push_back(&socket_gradientsCUDA);
   result.push_back(&socket_faceDir);
 
   return result;
@@ -97,6 +99,9 @@ void SetupCUDA::createNormalSockets()
   
   // get dimensions
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+  // number of equations
+  const CFuint nbrEqs = PhysicalModelStack::getActive()->getNbEq();
 
   // get InnerCells TopologicalRegionSet
   Common::SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
@@ -143,6 +148,10 @@ void SetupCUDA::createNormalSockets()
   
   // get the face flux point projection vector size data handle
   DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
+
+  DataHandle< CFreal > gradients = socket_gradientsCUDA.getDataHandle();
+
+  gradients.resize(totNbrStates*dim*nbrEqs);
 
   // resize the datahandle for the face Jacobian vector sizes
   solPntNormals.resize(totNbrStates*dim*dim);

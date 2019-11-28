@@ -22,9 +22,9 @@ public:
     const CFuint nbSolPnts = (ORDER+1)*(ORDER+1);
     const CFuint nbFaceFlxPnts = ORDER+1;
     const CFuint nbFlxPnts = 2*PHYS::DIM*(ORDER+1);
-    for (CFuint j = 0; j < nbSolPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
-    for (CFuint j = 0; j < nbFlxPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
-    for (CFuint j = 0; j < nbFlxPnts; j++) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_lstates[j][i] = 0.;}}
+    for (CFuint j = 0; j < nbSolPnts; ++j) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_states[j][i] = 0.;}}
+    for (CFuint j = 0; j < nbFlxPnts; ++j) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_rstates[j][i] = 0.;}}
+    for (CFuint j = 0; j < nbFlxPnts; ++j) {for (CFuint i = 0; i < PHYS::NBEQS; ++i) {m_lstates[j][i] = 0.;}}
     for (CFuint i = 0; i < nbSolPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {for (CFuint k = 0; k < PHYS::NBEQS; ++k) {m_flux[i][j][k] = 0.;}}}
     for (CFuint i = 0; i < nbFaceFlxPnts; ++i) {for (CFuint j = 0; j < PHYS::NBEQS; ++j) {m_fluxFlxPnt[i][j] = 0.;}}
     for (CFuint i = 0; i < nbSolPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}

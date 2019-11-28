@@ -212,6 +212,7 @@ NavierStokesTurbVarSet.hh
 NavierStokesTurbVarSetTypes.hh
 NavierStokesVarSet.cxx
 NavierStokesVarSet.hh
+NSVarSetListT.hh
 RMS.cxx
 RMS.hh
 RMSTurb.cxx

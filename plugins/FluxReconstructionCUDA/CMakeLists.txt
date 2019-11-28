@@ -6,6 +6,15 @@ LIST ( APPEND FluxReconstructionCUDA_files
      ConvRHSFluxReconstructionCUDA.hh
      ConvRHSFluxReconstructionCUDA.ci
      ConvRHSFluxReconstructionCUDA.cu
+     ConvDiffRHSFluxReconstructionCUDA.hh
+     ConvDiffRHSFluxReconstructionCUDA.ci
+     ConvDiffRHSFluxReconstructionCUDA.cu
+     NSBndGradientComputerCUDA.hh
+     NSBndGradientComputerCUDA.cxx
+     DiffBndCorrectionsRHSFluxReconstructionNSCUDA.hh
+     DiffBndCorrectionsRHSFluxReconstructionNSCUDA.cxx
+     PrepareCUDA.hh
+     PrepareCUDA.cxx
 )
     
 # StencilCUDASetup.cxx or some other DUMMY file is 

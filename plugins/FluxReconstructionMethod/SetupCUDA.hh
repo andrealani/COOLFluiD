@@ -58,6 +58,9 @@ protected: // data
   /// storage for the normals in the solution points
   Framework::DataSocketSource< CFreal > socket_flxPntNormals;
 
+/// storage for the gradients
+  Framework::DataSocketSource< CFreal > socket_gradientsCUDA;
+
   /// storage for the face directions
   Framework::DataSocketSource< CFint > socket_faceDir;
   

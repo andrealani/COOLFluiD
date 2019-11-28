@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionCUDA_ConvRHSFluxReconstructionCUDA_hh
-#define COOLFluiD_FluxReconstructionCUDA_ConvRHSFluxReconstructionCUDA_hh
+#ifndef COOLFluiD_FluxReconstructionCUDA_ConvDiffRHSFluxReconstructionCUDA_hh
+#define COOLFluiD_FluxReconstructionCUDA_ConvDiffRHSFluxReconstructionCUDA_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,25 +25,25 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represent a command that computes the convective RHS using
+ * This class represent a command that computes the convective-diffusive RHS using
  * FR with CUDA bindings
  *
  * @author Ray Vandenhoeck
  *
  */
-template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
-class ConvRHSFluxReconstructionCUDA : public ConvRHSFluxReconstruction {
+template <typename SCHEME, typename PHYSICS, typename PHYSICSNS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+class ConvDiffRHSFluxReconstructionCUDA : public ConvRHSFluxReconstruction {
 public:
 
   /**
    * Constructor
    */
-  explicit ConvRHSFluxReconstructionCUDA(const std::string& name);
+  explicit ConvDiffRHSFluxReconstructionCUDA(const std::string& name);
   
   /**
    * Destructor
    */
-  virtual ~ConvRHSFluxReconstructionCUDA();
+  virtual ~ConvDiffRHSFluxReconstructionCUDA();
   
   /**
    * Defines the Config Option's of this class
@@ -192,8 +192,8 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "ConvRHSFluxReconstructionCUDA.ci"
+#include "ConvDiffRHSFluxReconstructionCUDA.ci"
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionCUDA_ConvRHSFluxReconstructionCUDA_hh
+#endif // COOLFluiD_FluxReconstructionCUDA_ConvDiffRHSFluxReconstructionCUDA_hh

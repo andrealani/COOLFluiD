@@ -1,4 +1,4 @@
-#include "FluxReconstructionCUDA/ConvRHSFluxReconstructionCUDA.hh"
+#include "FluxReconstructionCUDA/ConvDiffRHSFluxReconstructionCUDA.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/CellConn.hh"
 #include "Config/ConfigOptionPtr.hh"
@@ -13,8 +13,12 @@
 #include "FluxReconstructionCUDA/FluxReconstructionCUDA.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/VarSetListT.hh"
+#include "Framework/MathTypes.hh"
 #include "NavierStokes/Euler2DVarSetT.hh"
 #include "NavierStokes/Euler2DConsT.hh"
+#include "NavierStokes/NavierStokes2DVarSetT.hh"
+#include "NavierStokes/NavierStokes2DConsT.hh"
+#include "NavierStokes/NSVarSetListT.hh"
 
 #include "FluxReconstructionMethod/LaxFriedrichsFlux.hh"
 #include <stdio.h>
@@ -34,26 +38,26 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#define FR_EULER_RHS_PROV(__dim__,__svars__,__uvars__,__order__,__nbBThreads__,__providerName__) \
-MethodCommandProvider<ConvRHSFluxReconstructionCUDA<LaxFriedrichsFlux, \
-                      VarSetListT<Euler##__dim__##__svars__##T, Euler##__dim__##__uvars__##T>,__order__,__nbBThreads__>, \
+#define FR_NS_RHS_PROV(__dim__,__svars__,__uvars__,__order__,__nbBThreads__,__providerName__) \
+MethodCommandProvider<ConvDiffRHSFluxReconstructionCUDA<LaxFriedrichsFlux, \
+                      VarSetListT<Euler##__dim__##__svars__##T, Euler##__dim__##__uvars__##T>,NSVarSetListT<NavierStokes##__dim__##__svars__##T, NavierStokes##__dim__##__uvars__##T>,__order__,__nbBThreads__>, \
 		      FluxReconstructionSolverData,FluxReconstructionCUDAModule>	\
-FR_RhsEuler##__dim__##__svars__##__uvars__##__order__##__nbBThreads__##Provider(__providerName__);
+FR_RhsNS##__dim__##__svars__##__uvars__##__order__##__nbBThreads__##Provider(__providerName__);
 // 48 block threads (default)
-FR_EULER_RHS_PROV(2D, Cons, Cons, 0, 48, "EulerFRLaxFriedrichs2DConsP0")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 1, 48, "EulerFRLaxFriedrichs2DConsP1")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 2, 48, "EulerFRLaxFriedrichs2DConsP2")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 3, 48, "EulerFRLaxFriedrichs2DConsP3")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 4, 48, "EulerFRLaxFriedrichs2DConsP4")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 5, 48, "EulerFRLaxFriedrichs2DConsP5")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 6, 48, "EulerFRLaxFriedrichs2DConsP6")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 7, 48, "EulerFRLaxFriedrichs2DConsP7")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 8, 48, "EulerFRLaxFriedrichs2DConsP8")
-FR_EULER_RHS_PROV(2D, Cons, Cons, 9, 48, "EulerFRLaxFriedrichs2DConsP9")
+FR_NS_RHS_PROV(2D, Cons, Cons, 0, 48, "NSFRLaxFriedrichs2DConsP0")
+FR_NS_RHS_PROV(2D, Cons, Cons, 1, 48, "NSFRLaxFriedrichs2DConsP1")
+FR_NS_RHS_PROV(2D, Cons, Cons, 2, 48, "NSFRLaxFriedrichs2DConsP2")
+FR_NS_RHS_PROV(2D, Cons, Cons, 3, 48, "NSFRLaxFriedrichs2DConsP3")
+FR_NS_RHS_PROV(2D, Cons, Cons, 4, 48, "NSFRLaxFriedrichs2DConsP4")
+FR_NS_RHS_PROV(2D, Cons, Cons, 5, 48, "NSFRLaxFriedrichs2DConsP5")
+FR_NS_RHS_PROV(2D, Cons, Cons, 6, 48, "NSFRLaxFriedrichs2DConsP6")
+FR_NS_RHS_PROV(2D, Cons, Cons, 7, 48, "NSFRLaxFriedrichs2DConsP7")
+FR_NS_RHS_PROV(2D, Cons, Cons, 8, 48, "NSFRLaxFriedrichs2DConsP8")
+FR_NS_RHS_PROV(2D, Cons, Cons, 9, 48, "NSFRLaxFriedrichs2DConsP9")
 //FR_EULER_RHS_PROV(3D, Cons, Cons, 48, "EulerFRLaxFried3DCons")
 //FR_NS_RHS_PROV(2D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD2DPrim")
 //FR_NS_RHS_PROV(3D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD3DPrim")
-#undef FR_EULER_RHS_PROV
+#undef FR_NS_RHS_PROV
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -229,12 +233,14 @@ void print(const std::string& name, T* array)
   
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYS, CFuint ORDER>
+template <typename SCHEME, typename PHYS, typename PHYSNS, CFuint ORDER>
 __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template DeviceConfigOptions<NOTYPE>* dcof,
                                   typename SCHEME::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
+                                  typename PHYSNS::DTERM::template DeviceConfigOptions<NOTYPE>* dcopNS,
                                   const CFuint nbCells,
                                   const CFreal resFactor,
 				  CFreal* states, 
+                                  CFreal* gradients,
                                   CFreal* updateCoeff, 
 				  CFreal* rhs,
                                   CFreal* solPntNormals,
@@ -291,6 +297,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     const CFuint nbrFaceFlxPnts = (ORDER+1);
 
     const CFuint totNbrFlxPnts = (ORDER+1)*2*PHYS::DIM;
+
+    const CFuint nbNormals = PHYS::DIM*PHYS::DIM;
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntFlx;
     
@@ -321,12 +329,14 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     
       setFluxData(stateID, cellID, &kd, &currFd, iSolPnt);
 
-      const CFuint nbNormals = PHYS::DIM*PHYS::DIM;
+      CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS*PHYS::DIM> grad(&gradients[stateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
 
       CudaEnv::CFVecSlice<CFreal,nbNormals> n(&(kd.solPntNormals[stateID*nbNormals]));
 
       CudaEnv::CFVecSlice<CFreal,nbNormals> nFd(currFd.getScaledNormal(iSolPnt));
       
+      CFuint k = 0;
+
       for (CFuint i = 0; i < nbNormals; ++i) 
       {
         nFd[i] = n[i];
@@ -336,6 +346,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       fluxScheme.prepareComputation(&currFd, &pmodel);
 
       fluxScheme(&currFd, &pmodel, iSolPnt);
+
+/// add diff fluxes here to currFD!
     }
 
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -370,6 +382,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       }
     }
 
+    CudaEnv::CFVec<CFreal,nbFlxPntFlx*nbNormals> flxPntGrads;
+
     // extrapolate the fluxes to the flux points
     for (CFuint iFlxPnt = 0; iFlxPnt < nbrFlxPnts; ++iFlxPnt)
     {
@@ -385,7 +399,12 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         {
           flxPntFlx[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*currFd.getFlux(solIdx, dim)[iEq];
 
-          flxPntSol[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];          
+          flxPntSol[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
+
+          for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
+          {
+
+          }          
         }
       }
     }
@@ -539,8 +558,10 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
   
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYS, CFuint ORDER>
+template <typename SCHEME, typename PHYS, typename PHYSNS, CFuint ORDER>
 __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template DeviceConfigOptions<NOTYPE>* dcop,
+                                       typename PHYSNS::DTERM::template DeviceConfigOptions<NOTYPE>* dcopNS,
+                                       typename PHYSNS::PTERM::template DeviceConfigOptions<NOTYPE>* dcopNSConv,
                                        const CFuint nbCells,
 				       CFreal* states, 
                                        CFreal* gradients,
@@ -576,7 +597,9 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
     
     // physical model
     typename SCHEME::MODEL pmodel(dcop);
-    
+    //typename PHYSNS pmodelNS(dcopNS);
+    PHYSNS pmodelNS(dcopNS,dcopNSConv);    
+
     // current cell data
     CellData cells(nbCells, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts, ORDER);
     
@@ -594,16 +617,29 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntFlx;
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntSol;
+
+    CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS> stateGradVars;
+    //typename MathTypes<CFreal, GPU, SCHEME::MODEL::NBEQS>::VEC stateGradVars;
     
     flxPntFlx = 0.0;
     
     flxPntSol = 0.0;
+
+    stateGradVars = 0.0;
 
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
     {
       // get current state ID
       const CFuint stateID = cell.getStateID(iSolPnt);
+
+      //typename MathTypes<CFreal, GPU, SCHEME::MODEL::NBEQS>::SLICEVEC currState(&states[stateID*SCHEME::MODEL::NBEQS]);
+
+      CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
+
+      pmodelNS.getUpdateVS()->setGradientVars(&currState[0],&stateGradVars[0]);
+
+      CudaEnv::CFVecSlice<CFreal,PHYS::DIM*PHYS::DIM> currNormals(&solPntNormals[stateID*PHYS::DIM*PHYS::DIM]);
 
       // get current vector slice out of gradients
       CudaEnv::CFVecSlice<CFreal,PHYS::DIM*SCHEME::MODEL::NBEQS> grad(&gradients[stateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
@@ -624,7 +660,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
             for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
             {
               // Store divFD in the vector that will be divFC
-              grad[iEq*PHYS::DIM+jDir] += polyCoef*solPntNormals[stateID*PHYS::DIM*PHYS::DIM+iDir*PHYS::DIM+jDir]*states[stateID*SCHEME::MODEL::NBEQS+iEq];  
+              grad[iEq*PHYS::DIM+jDir] += polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq];//*states[stateID*SCHEME::MODEL::NBEQS+iEq];  
 	    }
           }
         }
@@ -771,15 +807,15 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 
 //////////////////////////////////////////////////////////////////////////////
 
-template <typename SCHEME, typename PHYSICS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
-void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execute()
+template <typename SCHEME, typename PHYSICS, typename PHYSICSNS, CFuint ORDER, CFuint NB_BLOCK_THREADS>
+void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_THREADS>::execute()
 {
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
   
   CFTRACEBEGIN;
   
-  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() START\n");
+  CFLog(VERBOSE, "ConvDiffRHSFluxReconstructionCUDA::execute() START\n");
   
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
@@ -833,6 +869,12 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
   SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().d_castTo<SCHEME>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
     getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+
+  SafePtr<typename PHYSICSNS::DTERM> physNS = PhysicalModelStack::getActive()->getImplementor()->
+    getDiffusiveTerm().d_castTo<typename PHYSICSNS::DTERM>();
+
+  SafePtr<typename PHYSICSNS::PTERM> physNSConv = PhysicalModelStack::getActive()->getImplementor()->
+    getConvectiveTerm().d_castTo<typename PHYSICSNS::PTERM>();
   
 #ifdef CF_HAVE_CUDA
   typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS, ORDER> FluxScheme;  
@@ -863,11 +905,13 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
 
     DataHandle<Framework::State*, Framework::GLOBAL > statesI = socket_states.getDataHandle();
      
-    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
+    //CFLog(VERBOSE, "ConvDiffRHSFluxReconstructionCUDA::execute() => CPU-->GPU data transfer took " << timer.elapsed() << " s\n");
     //timer.start();
     
     ConfigOptionPtr<SCHEME,  NOTYPE, GPU> dcof(lf);
     ConfigOptionPtr<typename PHYSICS::PTERM, NOTYPE, GPU> dcop(phys);
+    ConfigOptionPtr<typename PHYSICSNS::DTERM, NOTYPE, GPU> dcopNS(physNS);
+    ConfigOptionPtr<typename PHYSICSNS::PTERM, NOTYPE, GPU> dcopNSConv(physNSConv);
 
     const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
     const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
@@ -890,43 +934,13 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
     
     // cudaFuncSetCacheConfig("computeFluxKernel", cudaFuncCachePreferL1);
 
-    // compute the convective flux in each cell
-    computeStateLocalRHSKernel<FluxScheme,PHYSICS,ORDER> <<<blocksPerGrid,nThreads>>> 
-      (dcof.getPtr(),
-       dcop.getPtr(),
-       nbCells,
-       resFactor,
-       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
-       updateCoeff.getLocalArray()->ptrDev(), 
-       rhs.getLocalArray()->ptrDev(),
-       solPntNormals.getLocalArray()->ptrDev(),
-       flxPntNormals.getLocalArray()->ptrDev(),
-       faceDir.getLocalArray()->ptrDev(),
-       m_nbrSolPnts,
-       4,
-       m_faceFlxPntConn2.ptrDev(),
-       m_stateIDs.ptrDev(),
-       m_neighbCellIDs.ptrDev(),
-       m_neighbFaceIDs.ptrDev(),
-       m_innerCellIsLeft.ptrDev(),
-       m_nbrFlxPnts,
-       m_nbrSolSolDep,
-       m_solSolDep2.ptrDev(),
-       m_nbrFlxDep,
-       m_solFlxDep2.ptrDev(),
-       m_nbrSolDep,
-       m_flxSolDep2.ptrDev(),
-       m_solPolyDerivAtSolPnts2.ptrDev(),
-       m_solPolyValsAtFlxPnts2.ptrDev(),
-       m_flxPntFlxDim2.ptrDev(),
-       m_corrFctDiv2.ptrDev(),
-       m_faceIntegrationCoefs2.ptrDev());
-
     // if there is a diffusive term, compute the gradients
     if (hasDiffTerm)
     {
-      computeGradientsKernel<FluxScheme,PHYSICS,ORDER> <<<blocksPerGrid,nThreads>>>(
+      computeGradientsKernel<FluxScheme,PHYSICS,PHYSICSNS,ORDER> <<<blocksPerGrid,nThreads>>>(
                                        dcop.getPtr(),
+                                       dcopNS.getPtr(),
+                                       dcopNSConv.getPtr(),
                                        nbCells,
 				       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
                                        gradients.getLocalArray()->ptrDev(), 
@@ -952,6 +966,40 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
                                        m_flxPntFlxDim2.ptrDev(),
                                        m_corrFctDiv2.ptrDev());
     }
+
+    // compute the convective flux in each cell
+    computeStateLocalRHSKernel<FluxScheme,PHYSICS,PHYSICSNS,ORDER> <<<blocksPerGrid,nThreads>>> 
+      (dcof.getPtr(),
+       dcop.getPtr(),
+       dcopNS.getPtr(),
+       nbCells,
+       resFactor,
+       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       gradients.getLocalArray()->ptrDev(), 
+       updateCoeff.getLocalArray()->ptrDev(), 
+       rhs.getLocalArray()->ptrDev(),
+       solPntNormals.getLocalArray()->ptrDev(),
+       flxPntNormals.getLocalArray()->ptrDev(),
+       faceDir.getLocalArray()->ptrDev(),
+       m_nbrSolPnts,
+       4,
+       m_faceFlxPntConn2.ptrDev(),
+       m_stateIDs.ptrDev(),
+       m_neighbCellIDs.ptrDev(),
+       m_neighbFaceIDs.ptrDev(),
+       m_innerCellIsLeft.ptrDev(),
+       m_nbrFlxPnts,
+       m_nbrSolSolDep,
+       m_solSolDep2.ptrDev(),
+       m_nbrFlxDep,
+       m_solFlxDep2.ptrDev(),
+       m_nbrSolDep,
+       m_flxSolDep2.ptrDev(),
+       m_solPolyDerivAtSolPnts2.ptrDev(),
+       m_solPolyValsAtFlxPnts2.ptrDev(),
+       m_flxPntFlxDim2.ptrDev(),
+       m_corrFctDiv2.ptrDev(),
+       m_faceIntegrationCoefs2.ptrDev());
    
     cudaDeviceSynchronize();
     
@@ -959,7 +1007,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
     
     //CFLog(INFO, "After Kernel, size: " << socket_states.getDataHandle().size() << "\n");
     
-    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
+    //CFLog(VERBOSE, "ConvDiffRHSFluxReconstructionCUDA::execute() => computeFluxKernel took " << timer.elapsed() << " s\n");
     
     //for (CFuint i = 0; i < rhs.size(); ++i) {CFLog(INFO, "res before: " << rhs[i] << "\n");}
     
@@ -973,7 +1021,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
     gradients.getLocalArray()->get();
     
     //for (CFuint i = 0; i < rhs.size(); ++i) {CFLog(INFO, "res after: " << rhs[i]-rhsB[i] << "\n");}
-    //CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
+    //CFLog(VERBOSE, "ConvDiffRHSFluxReconstructionCUDA::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");
     //CFLog(INFO, "resSize: " << rhs.size() << "\n");
     //for (CFuint i = 0; i < rhs.size(); ++i)
     //{
@@ -1152,7 +1200,7 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
   
   //finalizeComputationRHS();
   
-  CFLog(VERBOSE, "ConvRHSFluxReconstructionCUDA::execute() END\n");
+  CFLog(VERBOSE, "ConvDiffRHSFluxReconstructionCUDA::execute() END\n");
   
   CFTRACEEND;
 }
