@@ -23,6 +23,8 @@ BaseSetupFVMCC.ci
 BaseTerm.hh
 BlockAccumulator.cxx
 BlockAccumulator.hh
+BlockAccumulatorBase.hh
+BlockAccumulatorBase.cxx
 CallWithNoEffectException.hh
 CatalycityModel.cxx
 CatalycityModel.hh

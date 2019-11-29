@@ -11,6 +11,7 @@
 
 #include "Common/COOLFluiD.hh"
 #include "Framework/Framework.hh"
+#include "MathTools/RealMatrix.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -107,6 +108,43 @@ public:
       const CFuint idx = getIndex(i,j,ib,jb);
       cf_assert(idx < m_bsize);
       m_values[idx] += inValues[ib];
+    }
+  }
+
+  /// Adds the entries of a matrix in the vector
+  void addValuesM(const RealMatrix& matrix)
+  {
+    cf_assert(matrix.nbRows() == m_m*m_nb);
+    cf_assert(matrix.nbCols() == m_n*m_nb);
+    CFuint matCol = 0;
+    CFuint matRow = 0;
+    
+    for (CFuint R=0; R<m_m; R++) {
+      for (CFuint r=0; r<m_nb; r++) {
+	matRow = R*m_nb + r;
+	for (CFuint C=0; C<m_n; C++) {
+	  for (CFuint c=0; c<m_nb; c++) {
+	    matCol = C*m_nb + c;
+	    m_values[getIndex(R,C,r,c)] += matrix(matRow,matCol);
+	  }
+	}
+      }
+    }
+  }
+
+  /// Adds a RealMatrix of values in the vector
+  void addValuesM(const CFuint i,
+		  const CFuint j,
+		  const RealMatrix& matrix)
+  {
+    cf_assert(matrix.nbRows() == m_nb);
+    cf_assert(matrix.nbCols() == m_nb);
+    for (CFuint ib = 0; ib < m_nb; ++ib) {
+      for (CFuint jb = 0; jb < m_nb; ++jb) {
+	const CFuint idx = getIndex(i,j,ib,jb);
+	cf_assert(idx < m_m*m_n*m_nb*m_nb);
+	m_values[idx] += matrix(ib,jb);
+      }
     }
   }
   
