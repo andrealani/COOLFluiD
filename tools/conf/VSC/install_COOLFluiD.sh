@@ -9,11 +9,11 @@ if [ -z "$1" ] ; then
 fi
 
 module load CMake/3.10.2-GCCcore-6.4.0
-module load PETSc/3.9.0-foss-2018a
+module load PETSc/3.9.0-foss-2018a-cpu
 #module load Subversion/1.8.14-foss-2015a
-#module load Boost/1.66.0-foss-2018a 
+module load Boost/1.66.0-foss-2018a 
 #module load Boost/1.70.0-foss-2018a
-#module load ParMETIS/4.0.3-foss-2018a
+module load ParMETIS/4.0.3-foss-2018a
 
 export TOP_DIR="${VSC_DATA}"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_VSC"
