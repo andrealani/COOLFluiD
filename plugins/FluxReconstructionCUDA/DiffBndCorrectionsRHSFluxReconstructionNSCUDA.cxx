@@ -206,15 +206,17 @@ void DiffBndCorrectionsRHSFluxReconstructionNSCUDA::setup()
   
   m_tempStates.resize(m_nbrFaceFlxPnts);
 
-  m_cellGrads.resize(m_nbrSolPnts);
-
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    m_cellGrads.push_back(new vector< RealVector >(m_nbrEqs) );
-    
+    m_cellGrads.push_back(new vector< RealVector >(0) );
+
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      (*(m_cellGrads[iSol]))[iEq].resize(m_dim);
+      RealVector temp;
+      temp.resize(m_dim);
+      temp = 0.0;
+
+      (*(m_cellGrads[iSol])).push_back(temp);
     }
   }
 }

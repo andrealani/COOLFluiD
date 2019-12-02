@@ -659,8 +659,12 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
             // Loop over conservative fluxes 
             for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
             {
+              //if (cellID == 11) printf("iSol: %d, iEq: %d, iDir: %d: %f\n", iSolPnt, iEq, jDir, polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq]); 
+
               // Store divFD in the vector that will be divFC
-              grad[iEq*PHYS::DIM+jDir] += polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq];//*states[stateID*SCHEME::MODEL::NBEQS+iEq];  
+              grad[iEq*PHYS::DIM+jDir] += polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq];//*states[stateID*SCHEME::MODEL::NBEQS+iEq]; 
+
+              //if (cellID == 11) printf("after  iSol: %d, iEq: %d, iDir: %d: %f\n", iSolPnt, iEq, jDir, grad[iEq*PHYS::DIM+jDir]); 
 	    }
           }
         }
@@ -677,10 +681,14 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
       {
         const CFuint solIdx = flxSolDep[iFlxPnt*nbrFlxSolDep + iSolPnt];
 
+        CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS]);
+
+        pmodelNS.getUpdateVS()->setGradientVars(&currState[0],&stateGradVars[0]);
+
         // Loop over conservative fluxes 
         for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
         {
-          flxPntSol[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*states[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];          
+          flxPntSol[iFlxPnt*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*stateGradVars[iEq];          
         }
       }
     }
@@ -726,15 +734,21 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
           const CFuint flxIdx = faceFlxPntConn[iFace*nbrFaceFlxPnts+iFlxPnt];
           const CFuint jFlxIdx = faceFlxPntConn[jFaceIdx*nbrFaceFlxPnts+nbrFaceFlxPnts-1-iFlxPnt];
 
+          const CFreal dirFactor = faceDir[cellID*totNbrFlxPnts+flxIdx];
+
           // loop over sol pnts to compute sol at flx pnt
           for (CFuint iSolPnt = 0; iSolPnt < nbrFlxSolDep; ++iSolPnt)
           {
             const CFuint solIdx = flxSolDep[jFlxIdx*nbrFlxSolDep+iSolPnt]; 
 
+            CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS]);
+
+            pmodelNS.getUpdateVS()->setGradientVars(&currState[0],&stateGradVars[0]);
+
             // Loop over conservative vars 
             for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
             {
-              flxPntSolNeighb[flxIdx*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
+              flxPntSolNeighb[flxIdx*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*stateGradVars[iEq];
             }
           }
 
@@ -762,7 +776,9 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
                 for (CFuint jDir = 0; jDir < PHYS::DIM; ++jDir)
                 {
                   // Store divFD in the vector that will be divFC
-                  grad[iEq*PHYS::DIM+jDir] += divh*corrFactor*solPntNormals[stateID*PHYS::DIM*PHYS::DIM+iDir*PHYS::DIM+jDir];  
+                  grad[iEq*PHYS::DIM+jDir] += divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+jDir]*dirFactor; 
+
+              //if (cellID == 11) printf("iSol: %d, iEq: %d, iFlx %d, iDir: %d: %e\n", iSolPnt, iEq, flxIdx, jDir, divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+jDir]*dirFactor);  
 	        }
               }
             }
@@ -801,6 +817,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 	  }
         }
       }
+        //if (cellID == 11) printf("iSol: %d, invJacob: %e\n", iSolPnt, temp);
     }
   }
 }
