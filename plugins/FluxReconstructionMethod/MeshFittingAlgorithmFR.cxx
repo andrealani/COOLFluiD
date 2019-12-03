@@ -694,11 +694,11 @@ void MeshFittingAlgorithmFR::assembleLinearSystem(){
 	  //do nothing
 	}
     else{
-    if(isNodeMovingInBoundary(nodes[iNode])){
+    //if(isNodeMovingInBoundary(nodes[iNode])){
 
-      assembleMovingInBoundaryNode(nodes[iNode]);
-    }
-    else{
+      //assembleMovingInBoundaryNode(nodes[iNode]);
+    //}
+    //else{
       if(isNodeLocked(nodes[iNode])){
 	assembleLockedNode(nodes[iNode]);
 	
@@ -709,7 +709,7 @@ void MeshFittingAlgorithmFR::assembleLinearSystem(){
     }
   }
 }
-}
+//}
 /////////////////////////////////////////////////////////////////////////////
 bool MeshFittingAlgorithmFR::isNodeLocked( Framework::Node* node)
 {
