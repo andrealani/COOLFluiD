@@ -100,10 +100,10 @@ public: // function
 //      divTerm = gradW[ZZ];
 //    }
   
-    const CFreal gradUX = gradients[1*4];
-    const CFreal gradUY = gradients[1*4+1];
-    const CFreal gradVX = gradients[2*4];
-    const CFreal gradVY = gradients[2*4+2];
+    const CFreal gradUX = gradients[1*2];
+    const CFreal gradUY = gradients[1*2+1];
+    const CFreal gradVX = gradients[2*2];
+    const CFreal gradVY = gradients[2*2+1];
 
     const CFreal twoThirdDivV = 2.0/3.0*(gradUX + gradVY);
     
@@ -118,9 +118,20 @@ public: // function
 //      _tau(YY,ZZ) = _tau(ZZ,YY) = coeffTauMu*(gradV[ZZ] + gradW[YY]);
 //      _tau(ZZ,ZZ) = coeffTauMu*(2.*gradW[ZZ] - twoThirdDivV);
 //    }
+    const CFreal R = m_dco->R;
+  const CFreal cv = R/(m_dco->gamma - 1.);
+  const CFreal T = (state[3] - 0.5*state[0]*(u*u + v*v))/(state[0]*cv);
+  //const CFreal p = R*state[0]*T;
   
-    const CFreal qFlux = -m_dcoNS->coeffQ*lambda*(gradients[3*4]*normal[XX] + gradients[3*4+1]*normal[YY]);
-    
+  //const CFreal Tdim = _eulerModel->getTempRef()*T;
+  //const CFreal pdim = _eulerModel->getPressRef()*p;
+  
+  //CFLog(INFO, "mu: " << getModel().getDynViscosityDim(pdim, Tdim)/(getModel().getReferencePhysicalData())[NSTerm::MU] << "\n");
+
+  const CFreal mu2 = 0.000001458*pow(T,1.5)/(110.4+T);
+  
+    const CFreal qFlux = -m_dcoNS->coeffQ*lambda*(gradients[3*2]*normal[XX] + gradients[3*2+1]*normal[YY]);
+
     flux[0] = 0.0;
     flux[1] = tauXX*normal[XX] + tauXY*normal[YY];
     flux[2] = tauXY*normal[XX] + tauYY*normal[YY];
@@ -135,7 +146,7 @@ public: // function
     flux[3] = (tauXX*u + tauXY*v)*normal[XX] + (tauXY*u + tauYY*v)*normal[YY] - qFlux;
   }
   
-///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
   
   HOST_DEVICE void setGradientVars(const CFreal* state, CFreal* values)
 {  

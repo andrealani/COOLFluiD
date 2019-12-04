@@ -96,7 +96,7 @@ LLAVJacobFluxReconstruction::LLAVJacobFluxReconstruction(const std::string& name
     m_s0 = 0.0;
     setParameter( "S0", &m_s0);
     
-    m_dampingCoeff = 0.2;
+    m_dampingCoeff = 1.0;
     setParameter( "DampingCoeff", &m_dampingCoeff);
     
     m_freezeLimiterRes = -20.0;
