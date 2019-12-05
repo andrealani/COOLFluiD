@@ -272,8 +272,6 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
 
   if (cellID < nbCells) 
   { 
-            //printf("Hello from %d!!!!!\n",cellID);
-
     // current kernel data
     KernelData<CFreal> kd (nbCells, states, updateCoeff, rhs, solPntNormals, flxPntNormals, faceDir, nbSolPnts);
 
@@ -295,6 +293,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     // get current cell
     CellData::Itr cell = cells.getItr(cellID);
           
+    // initialize constants and vectors
     const CFuint nbFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1)*2*PHYS::DIM;//8;
     
     const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
@@ -332,25 +331,12 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     avgGrad = 0.0;
     
     currFlxPntFlx = 0.0;
-    
-    //CudaEnv::CFVecSlice<CFreal,nbrFaceFlxPnts> intCoeff(currFd.getFaceIntegrationCoef());
 
-    //for (CFuint iFlxPnt = 0; iFlxPnt < nbrFaceFlxPnts; ++iFlxPnt)
-    //{
-      //intCoeff[iFlxPnt] = faceIntCoeff[iFlxPnt];
-    //}
-    //currFd.setFaceIntegrationCoef(iFlx,faceIntCoeff[iFlx]);
-//if (cellID == 11) printf("iFlx , coeff\n");
-
- //     if (cellID == 1) printf("iFlx , coeff\n");
-//if (cellID == 11) printf("hello %d\n", 0);
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
     {
       // get current state ID
       const CFuint stateID = cell.getStateID(iSolPnt);
-      //printf("Hello from block %d, thread %d\n", blockIdx.x, threadIdx.x);
-    //if (cellID == 0) printf("GPUstate: %f %f %f %f\n", kd.states[0], kd.states[1], kd.states[2], kd.states[3]);
     
       setFluxData(stateID, cellID, &kd, &currFd, iSolPnt);
 
@@ -376,11 +362,12 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       {
         pmodelNS.getUpdateVS()->getFlux(&currState[0],&grad[0],&nFd[iDim*PHYS::DIM],&solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS]);
         
-        for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
-        {  
-          //if (cellID == 11) printf("here1\n");
-          //if (cellID == 11) printf("iSol: %d, iDir: %d, iEq: %d, grad: %e, flux: %e\n", iSolPnt, iDim, iEq, grad[iEq*PHYS::DIM+iDim], solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS+iEq]);
-        }
+//        for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
+//        {  
+//          if (cellID == 11) printf("iSol: %d, iDir: %d, iEq: %d, state: %e, grad: %e, nx: %e, ny: %e, flux: %e\n", 
+//                  iSolPnt, iDim, iEq, currState[iEq], grad[iEq*PHYS::DIM+iDim], nFd[iDim*PHYS::DIM], nFd[iDim*PHYS::DIM+1], 
+//                  solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS+iEq]);
+//        }
       }
     }
 
@@ -411,7 +398,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
             // Store divFD in the vector that will be divFC
             res[iEq] -= polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq] - solPntFlx[jSolIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iDir*SCHEME::MODEL::NBEQS+iEq])*resFactor;
 
-//if (cellID == 11 && abs(polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq])) > 1e-8) printf("State: %d, jSol: %d, iDir: %d, var: %d, up: %f, poly: %f, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,polyCoef*(currFd.getFlux(iSolPnt, iDir)[iEq]),polyCoef,currFd.getFlux(jSolIdx, iDir)[iEq]);  
+//if (cellID == 11) printf("State: %d, jSol: %d, iDir: %d, var: %d, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,solPntFlx[jSolIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iDir*SCHEME::MODEL::NBEQS+iEq]);  
 	  }
         }
       }
@@ -471,7 +458,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
         {
           res[iVar] += flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh * resFactor;
-//if (cellID==11 && abs(flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh) > 1e-8) printf("State: %d, flx: %d, var: %d, update: %f\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh);  
+          //if (cellID==11) printf("State: %d, flx: %d, var: %d, update: %f\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh);  
         }
       }
     }
@@ -535,7 +522,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           {
             flxPntSolNeighb[flxIdx*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
             
-            for (CFuint iDir = 0; iDir < PHYS::DIM; +iDir)
+            for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
             {
               flxPntGradNeighb[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*gradients[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir];
             }
@@ -548,7 +535,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           
           avgSol[iEq] = 0.5*(flxPntSolNeighb[flxIdx*PHYS::NBEQS+iEq] + flxPntSol[flxIdx*SCHEME::MODEL::NBEQS+iEq]);
           
-          for (CFuint iDir = 0; iDir < PHYS::DIM; +iDir)
+          for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
           {
             avgGrad[iEq*PHYS::DIM+iDir] = 0.5*(flxPntGradNeighb[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] + flxPntGrads[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir]);
           }
@@ -588,7 +575,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
           {
             res[iVar] -= (currFd.getInterfaceFlux(flxIdx)[iVar] - currFlxPntFlx[iVar]) * divh * resFactor;
-//if (cellID==768) printf("resID: %d, State: %d, flx: %d, var: %d, updateFace: %f, flx %f, divh %f\n",stateID*SCHEME::MODEL::NBEQS+iVar,solIdx,flxIdx,iVar,-currFd.getInterfaceFlux(flxIdx)[iVar] * divh, currFd.getInterfaceFlux(flxIdx)[iVar],divh); 
+//if (cellID==11) printf("State: %d, flx: %d, var: %d, up: %e\n",solIdx,flxIdx,iVar,currFlxPntFlx[iVar]*divh); 
           }
         }
       }
@@ -606,6 +593,14 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       //currFd.resetUpdateCoeff();
       }
     }
+//    
+//    for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
+//      {  
+//        // get current state ID
+//        const CFuint stateID = cell.getStateID(iSolPnt);
+//
+//        if (abs(rhs[stateID*SCHEME::MODEL::NBEQS+1])>1e-3) printf("state: %d, resU: %e\n", stateID, rhs[stateID*SCHEME::MODEL::NBEQS+1]);
+//      }
   }
 }
   
@@ -694,25 +689,28 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 
       CudaEnv::CFVecSlice<CFreal,PHYS::DIM*PHYS::DIM> currNormals(&solPntNormals[stateID*PHYS::DIM*PHYS::DIM]);
 
-      // get current vector slice out of gradients
-      CudaEnv::CFVecSlice<CFreal,PHYS::DIM*SCHEME::MODEL::NBEQS> grad(&gradients[stateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
-
       // Loop over solution pnts to count the factor of all sol pnt polys
       for (CFuint jSolPnt = 0; jSolPnt < nbrSolSolDep; ++jSolPnt)
       { 
-        const CFuint jSolIdx = solSolDep[iSolPnt*nbrSolSolDep+jSolPnt]; //(*m_solSolDep)[iSolPnt][jSolPnt];
+        const CFuint jSolIdx = solSolDep[iSolPnt*nbrSolSolDep+jSolPnt];
+        
+        // get current j state ID
+        const CFuint jStateID = cell.getStateID(jSolIdx);
+        
+        // get current vector slice out of gradients
+        CudaEnv::CFVecSlice<CFreal,PHYS::DIM*SCHEME::MODEL::NBEQS> grad(&gradients[jStateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
 
         // Loop over deriv directions and sum them to compute divergence
         for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
         {
-          const CFreal polyCoef = solPolyDerivAtSolPnts[iSolPnt*PHYS::DIM*nbSolPnts+iDir*nbSolPnts+jSolIdx];
-
-          for (CFuint jDir = 0; jDir < PHYS::DIM; ++jDir)
+          const CFreal polyCoef = solPolyDerivAtSolPnts[jSolIdx*PHYS::DIM*nbSolPnts+iDir*nbSolPnts+iSolPnt];
+          
+          for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
           {
-            // Loop over conservative fluxes 
-            for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
-            {
-              //if (cellID == 11) printf("iSol: %d, iEq: %d, iDir: %d: %f\n", iSolPnt, iEq, jDir, polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq]); 
+            for (CFuint jDir = 0; jDir < PHYS::DIM; ++jDir)
+            {            
+//              if (cellID == 11) printf("iSol: %d, jSol: %d, iEq: %d, iDir: %d, jDir: %d: %f\n", 
+//                      iSolPnt, jSolIdx, iEq, iDir, jDir, polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq]); 
 
               // Store divFD in the vector that will be divFC
               grad[iEq*PHYS::DIM+jDir] += polyCoef*currNormals[iDir*PHYS::DIM+jDir]*stateGradVars[iEq];//*states[stateID*SCHEME::MODEL::NBEQS+iEq]; 
@@ -826,14 +824,12 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
               // Loop over deriv directions and sum them to compute divergence
               for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
               {
-                for (CFuint jDir = 0; jDir < PHYS::DIM; ++jDir)
-                {
-                  // Store divFD in the vector that will be divFC
-                  grad[iEq*PHYS::DIM+jDir] += divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+jDir]*dirFactor; 
+                // Store divFD in the vector that will be divFC
+                grad[iEq*PHYS::DIM+iDir] += divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactor; 
 
-              //if (cellID == 11) printf("iSol: %d, iEq: %d, iFlx %d, iDir: %d: %e\n", iSolPnt, iEq, flxIdx, jDir, divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+jDir]*dirFactor);  
-	        }
-              }
+//              if (cellID == 11) printf("iSol: %d, iEq: %d, iFlx %d, iDir: %d: %e\n", solIdx, iEq, flxIdx, iDir,
+//                      divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactor);  
+	      }
             }
           }
         }
@@ -983,8 +979,9 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
     ConfigOptionPtr<typename PHYSICSNS::DTERM, NOTYPE, GPU> dcopNS(physNS);
     ConfigOptionPtr<typename PHYSICSNS::PTERM, NOTYPE, GPU> dcopNSConv(physNSConv);
 
-    const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
-    const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    const CFuint nThreads = m_nbCellsPerBlock;//512; //CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    const CFuint blocksPerGrid = ceil(nbCells*1.0/nThreads); //CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
+    
     CFLog(VERBOSE, "blocksPerGrid: " << blocksPerGrid << ", threads: " << nThreads << "\n");
 
     // boolean telling whether there is a diffusive term
@@ -1073,8 +1070,10 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
        m_flxPntFlxDim2.ptrDev(),
        m_corrFctDiv2.ptrDev(),
        m_faceIntegrationCoefs2.ptrDev());
+    
    
     cudaDeviceSynchronize();
+    
     
     //for (CFuint i = 0; i < m_solPolyValsAtFlxPnts2.size(); ++i) {CFLog(INFO, "thing: " << m_solPolyValsAtFlxPnts2[i] << "\n");}
     

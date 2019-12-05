@@ -101,13 +101,13 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1 #1000000
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1000000
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -12
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.4
-Simulator.SubSystem.FwdEuler.ShowRate        = 1
-Simulator.SubSystem.FwdEuler.ConvRate        = 1
+Simulator.SubSystem.FwdEuler.ShowRate        = 100
+Simulator.SubSystem.FwdEuler.ConvRate        = 100
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -151,7 +151,7 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def = 0.000014139 0.000732703 0.0 3.03248 #0.000014139+x*x/1.0e6 0.000732703+y/1.0e5 0.0 3.03248+y*y/1.0e3 #1.0 0.1774823934930 0.0 2.51575 #
+Simulator.SubSystem.FluxReconstruction.InField.Def = 0.000014139 0.000732703 0.0 3.03248 #0.000014139+x*x/1.0e6 0.000732703+y/1.0e5 0.0 3.03248+y*y/1.0e3 #if(x+y>-0.17,0.000014139,0.00003) if(x+y>-0.17,0.000732703,0.0002) 0.0 if(x+y>-0.17,3.03248,2.5) #1.0 0.1774823934930 0.0 2.51575 #
 
 Simulator.SubSystem.FluxReconstruction.BcNames = Wall FarField
 Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = Cylinder
@@ -166,7 +166,7 @@ Simulator.SubSystem.FluxReconstruction.Data.BcTypes = NoSlipWallHeatFluxNS2D  Di
 Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall                    FarField 
 
 Simulator.SubSystem.FluxReconstruction.Data.FarField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.Data.FarField.Def  = 0.000014139 0.000732703 0.0 3.03248 #0.000014139+x*x/1.0e6 0.000732703+y/1.0e5 0.0 3.03248+y*y/1.0e3 #1.0 0.1774823934930 0.0 2.51575 #
+Simulator.SubSystem.FluxReconstruction.Data.FarField.Def  = 0.000014139 0.000732703 0.0 3.03248 #0.000014139+x*x/1.0e6 0.000732703+y/1.0e5 0.0 3.03248+y*y/1.0e3 #if(x+y>-0.17,0.000014139,0.00003) if(x+y>-0.17,0.000732703,0.0002) 0.0 if(x+y>-0.17,3.03248,2.5) #1.0 0.1774823934930 0.0 2.51575 #
 
 
 ###################################

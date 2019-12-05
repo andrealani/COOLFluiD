@@ -91,15 +91,15 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.ParaView.FileName    = bumpFRCUDA.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
-Simulator.SubSystem.ParaView.SaveRate = 20000
+Simulator.SubSystem.ParaView.SaveRate = 10000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 20000 #0000
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 100000 #0000
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.01
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.4
 Simulator.SubSystem.FwdEuler.ShowRate        = 100
 Simulator.SubSystem.FwdEuler.ConvRate        = 100
 
@@ -114,8 +114,8 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
 Simulator.SubSystem.FluxReconstruction.ConvSolveCom = EulerFRLaxFriedrichs2DConsP1
-Simulator.SubSystem.FluxReconstruction.EulerFRLaxFried2DConsP1.NbCellsPerBlock = 16
-Simulator.SubSystem.FluxReconstruction.EulerFRLaxFried2DConsP1.OnGPU = true
+Simulator.SubSystem.FluxReconstruction.EulerFRLaxFriedrichs2DConsP1.NbCellsPerBlock = 32
+Simulator.SubSystem.FluxReconstruction.EulerFRLaxFriedrichs2DConsP1.OnGPU = true #false #
 
 Simulator.SubSystem.FluxReconstruction.SetupCom = SetupCUDA
 

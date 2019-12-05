@@ -35,7 +35,7 @@ ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_THREAD
 {
   this->addConfigOptionsTo(this);
   
-  m_nbCellsPerBlock = 1;
+  m_nbCellsPerBlock = 32;
   setParameter("NbCellsPerBlock",&m_nbCellsPerBlock);
 
   m_nbThreadsOMP = 12;

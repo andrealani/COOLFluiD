@@ -364,7 +364,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
             // Store divFD in the vector that will be divFC
             res[iEq] -= polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq])*resFactor;
 
-//if (cellID == 11 && abs(polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq])) > 1e-8) printf("State: %d, jSol: %d, iDir: %d, var: %d, up: %f, poly: %f, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,polyCoef*(currFd.getFlux(iSolPnt, iDir)[iEq]),polyCoef,currFd.getFlux(jSolIdx, iDir)[iEq]);  
+//if (cellID == 11) printf("State: %d, jSol: %d, iDir: %d, var: %d, up: %f, poly: %f, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,polyCoef*(currFd.getFlux(iSolPnt, iDir)[iEq]),polyCoef,currFd.getFlux(jSolIdx, iDir)[iEq]);  
 	  }
         }
       }
@@ -869,8 +869,9 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
     ConfigOptionPtr<SCHEME,  NOTYPE, GPU> dcof(lf);
     ConfigOptionPtr<typename PHYSICS::PTERM, NOTYPE, GPU> dcop(phys);
 
-    const CFuint blocksPerGrid = CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
-    const CFuint nThreads = CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    const CFuint nThreads = m_nbCellsPerBlock;//512; //CudaEnv::CudaDeviceManager::getInstance().getNThreads();
+    const CFuint blocksPerGrid = ceil(nbCells*1.0/nThreads); //CudaEnv::CudaDeviceManager::getInstance().getBlocksPerGrid(nbCells);
+
     CFLog(VERBOSE, "blocksPerGrid: " << blocksPerGrid << ", threads: " << nThreads << "\n");
 
     // boolean telling whether there is a diffusive term
