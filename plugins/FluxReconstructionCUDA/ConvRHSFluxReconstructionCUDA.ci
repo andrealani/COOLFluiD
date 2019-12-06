@@ -498,6 +498,10 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::setup
             m_innerCellIsLeft[cellID*nbFaces + iFace] = 1;
           }
         }
+        else
+        {
+          m_neighbCellIDs[cellID*nbFaces + iFace] = -1;
+        }
       }
 
       //release the GeometricEntity

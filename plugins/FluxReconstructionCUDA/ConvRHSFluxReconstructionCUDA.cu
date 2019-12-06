@@ -244,7 +244,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
                                   const CFuint nbrFaces,
                                   const CFuint* faceFlxPntConn,
                                   const CFuint* stateIDs,
-                                  const CFuint* neighbCellIDs,
+                                  const CFint* neighbCellIDs,
                                   const CFuint* neighbFaceIDs,
                                   const CFuint* innerCellIsLeft,
                                   const CFuint nbrFlxPnts,
@@ -436,26 +436,26 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
 
     for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
     {
-      const CFuint neighbCellID = cell.getNeighbCellID(iFace);  
+      const CFint neighbCellID = cell.getNeighbCellID(iFace);  
 
       // get current cell
       CellData::Itr cell2 = cells2.getItr(neighbCellID);
-
-      CFuint jFaceIdx = 100;
-
-      for (CFuint jFace = 0; jFace < nbrFaces; ++jFace)
+      
+      if (neighbCellID != -1)
       {
-        if (cell2.getNeighbCellID(jFace) == cellID)
+        CFuint jFaceIdx = 0;
+
+        for (CFuint jFace = 0; jFace < nbrFaces; ++jFace)
         {
-          jFaceIdx = jFace; 
-          break;
+          if (cell2.getNeighbCellID(jFace) == cellID)
+          {
+            jFaceIdx = jFace; 
+            break;
+          }  
         }
-      }
 
-      CFreal waveSpeedUpd = 0.0;
-
-      if (jFaceIdx != 100)
-      {
+        CFreal waveSpeedUpd = 0.0;
+      
         const CFuint faceID = cell.getNeighbFaceID(iFace);
 
         const bool isLEFT = (bool) cell.getInnerCellIsLeft(iFace);
@@ -551,7 +551,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
                                        const CFuint nbrFaces,
                                        const CFuint* faceFlxPntConn,
                                        const CFuint* stateIDs,
-                                       const CFuint* neighbCellIDs,
+                                       const CFint* neighbCellIDs,
                                        const CFuint* neighbFaceIDs,
                                        const CFuint* innerCellIsLeft,
                                        const CFuint nbrFlxPnts,
@@ -661,24 +661,24 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 
     for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
     {
-      const CFuint neighbCellID = cell.getNeighbCellID(iFace);  
+      const CFint neighbCellID = cell.getNeighbCellID(iFace);  
 
       // get current cell
       CellData::Itr cell2 = cells2.getItr(neighbCellID);
 
-      CFuint jFaceIdx = 100;
-
-      for (CFuint jFace = 0; jFace < nbrFaces; ++jFace)
+      if (neighbCellID != -1)
       {
-        if (cell2.getNeighbCellID(jFace) == cellID)
+        CFuint jFaceIdx = 0;
+
+        for (CFuint jFace = 0; jFace < nbrFaces; ++jFace)
         {
-          jFaceIdx = jFace; 
-          break;
+          if (cell2.getNeighbCellID(jFace) == cellID)
+          {
+            jFaceIdx = jFace; 
+            break;
+          }
         }
-      }
 
-      if (jFaceIdx != 100)
-      {
         const CFuint faceID = cell.getNeighbFaceID(iFace);
 
         const bool isLEFT = (bool) cell.getInnerCellIsLeft(iFace);

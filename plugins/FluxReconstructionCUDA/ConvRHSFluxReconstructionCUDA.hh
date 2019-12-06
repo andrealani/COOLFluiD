@@ -144,7 +144,7 @@ protected:
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_stateIDs;
   
   /// IDs of the neighbor cell IDs per cellID
-  Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbCellIDs;
+  Framework::LocalArray<CFint>::MALLOC_TYPE m_neighbCellIDs;
 
   /// bools telling whether the inner cell is LEFT or RIGHT 
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_innerCellIsLeft;

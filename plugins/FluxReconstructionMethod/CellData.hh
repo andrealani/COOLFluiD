@@ -25,7 +25,7 @@ public:
   /// Constructor
   HOST_DEVICE CellData(const CFuint    nbCellsIn, 
                        const CFuint*   cellStateIDsIn,
-                       const CFuint*   neighbCellIDsIn,
+                       const CFint*   neighbCellIDsIn,
                        const CFuint*   neighbFaceIDsIn,
                        const CFuint*   innerCellIsLeftIn, 
                        const CFuint    nbrFacesIn,
@@ -96,11 +96,12 @@ public:
     HOST_DEVICE CFuint getNeighbStateID(const CFuint iFace, const CFuint iSolPnt)
     {
       const CFuint neighbCellID = m_cd->neighbCellIDs[m_cellID*4+iFace];
+      cf_assert(neighbCellID>-1);
       return m_cd->cellStateIDs[neighbCellID];
     }
     
     /// Get the neighbor cell ID
-    HOST_DEVICE CFuint getNeighbCellID(const CFuint iFace)
+    HOST_DEVICE CFint getNeighbCellID(const CFuint iFace)
     {
       return m_cd->neighbCellIDs[m_cellID*4+iFace];
     }
@@ -143,7 +144,7 @@ public:
   
   const CFuint    nbCells;
   const CFuint*   cellStateIDs;
-  const CFuint*   neighbCellIDs;
+  const CFint*   neighbCellIDs;
   const CFuint*   neighbFaceIDs;
   const CFuint*   innerCellIsLeft;
   const CFuint    nbrSolPnts;

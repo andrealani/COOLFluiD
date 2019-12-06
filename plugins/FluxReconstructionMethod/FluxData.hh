@@ -30,8 +30,8 @@ public:
     for (CFuint i = 0; i < nbSolPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM*PHYS::DIM; ++j) {m_unitNormal[i][j] = 0.;}}
     for (CFuint i = 0; i < nbFlxPnts; ++i) {for (CFuint j = 0; j < PHYS::DIM; ++j) {m_unitFlxNormal[i][j] = 0.;}}
     for (CFuint i = 0; i < nbFaceFlxPnts; ++i) {m_faceIntegrationCoefs[i] = 0.;}
+    for (CFuint j = 0; j < nbSolPnts; ++j) {m_stateID[j] = 0.;}
     m_updateCoeff = 0.; m_faceArea = 0.;
-    m_stateID[0] = 0; m_stateID[1] = 0; m_stateID[2] = 0; m_stateID[3] = 0;
     m_nbSolPnts = nbSolPnts;
     m_isBFace = false; m_isOutward = false; m_isPerturb = false; 
   }
