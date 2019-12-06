@@ -265,7 +265,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
                                   const CFreal* solPolyValsAtFlxPnts,
                                   const CFuint* flxPntFlxDim,
                                   const CFreal* corrFctDiv,
-                                  const CFreal* faceIntCoeff)
+                                  const CFreal* faceIntCoeff,
+                                  const CFreal cflConvDiffRatio)
 {    
   // one thread per cell
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x;
@@ -331,6 +332,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     avgGrad = 0.0;
     
     currFlxPntFlx = 0.0;
+    
+    CFreal currVol = 0.0;
 
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -346,11 +349,28 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
 
       CudaEnv::CFVecSlice<CFreal,nbNormals> nFd(currFd.getScaledNormal(iSolPnt));
       
+      
       for (CFuint i = 0; i < nbNormals; ++i) 
       {
         nFd[i] = n[i];
       }
+        
+      CFreal jacob = 1.0;
+          
+      for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
+      {
+        CFreal nJacob2 = 0.0;
 
+        for (CFuint jDir = 0; jDir < PHYS::DIM; ++jDir)
+        {
+          nJacob2 += solPntNormals[stateID*PHYS::DIM*PHYS::DIM+iDir*PHYS::DIM+jDir]*solPntNormals[stateID*PHYS::DIM*PHYS::DIM+iDir*PHYS::DIM+jDir];
+        }
+
+        jacob *= pow(nJacob2,0.5);
+      }
+
+      currVol += jacob;
+      
       // get the flux
       fluxScheme.prepareComputation(&currFd, &pmodel);
 
@@ -398,7 +418,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
             // Store divFD in the vector that will be divFC
             res[iEq] -= polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq] - solPntFlx[jSolIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iDir*SCHEME::MODEL::NBEQS+iEq])*resFactor;
 
-//if (cellID == 11) printf("State: %d, jSol: %d, iDir: %d, var: %d, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,solPntFlx[jSolIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iDir*SCHEME::MODEL::NBEQS+iEq]);  
+//if (cellID == 11) printf("State: %d, jSol: %d, iDir: %d, var: %d, flx: %f\n",iSolPnt,jSolIdx,iDir,iEq,polyCoef*(currFd.getFlux(jSolIdx, iDir)[iEq] - solPntFlx[jSolIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iDir*SCHEME::MODEL::NBEQS+iEq])*resFactor);  
 	  }
         }
       }
@@ -458,7 +478,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
         {
           res[iVar] += flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh * resFactor;
-          //if (cellID==11) printf("State: %d, flx: %d, var: %d, update: %f\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh);  
+          //if (cellID==11) printf("State: %d, flx: %d, var: %d, update: %e, flux: %e, divh: %e\n",iSolPnt,flxIdx,iVar,flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar] * divh, flxPntFlx[flxIdx*SCHEME::MODEL::NBEQS+iVar], divh);  
         }
       }
     }
@@ -545,15 +565,25 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
 
         CudaEnv::CFVecSlice<CFreal,PHYS::DIM> nFd(currFd.getFlxScaledNormal(flxIdx));
 
+        CFreal faceVecAbsSize2 = 0.0;
+        
         for (CFuint i = 0; i < PHYS::DIM; ++i) 
         {
           nFd[i] = n[i];
+          
+          faceVecAbsSize2 += n[i]*n[i];
         }
 
         // get the flux
         fluxScheme.prepareComputation(&currFd, &pmodel);
 
         fluxScheme(&currFd, &pmodel, iFlxPnt, flxIdx, faceIntCoeff[iFlxPnt], isLEFT, waveSpeedUpd);
+        
+        // add diff contribution to wvspd upd
+        const CFreal mu = pmodelNS.getUpdateVS()->getDynViscosity(&avgSol[0]);
+        const CFreal rho = pmodelNS.getUpdateVS()->getDensity(&avgSol[0]);
+        
+        waveSpeedUpd += mu/rho*faceVecAbsSize2*faceIntCoeff[iFlxPnt]/currVol*cflConvDiffRatio;
         
         pmodelNS.getUpdateVS()->getFlux(&avgSol[0],&avgGrad[0],&nFd[0],&currFlxPntFlx[0]);
 
@@ -954,13 +984,12 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
 
     //CudaEnv::CudaTimer& timer = CudaEnv::CudaTimer::getInstance();
     //timer.start();
-    
+      
     // copy of data that change at every iteration
     socket_states.getDataHandle().getGlobalArray()->put(); 
     socket_gradientsCUDA.getDataHandle().getLocalArray()->put();
     socket_rhs.getDataHandle().getLocalArray()->put(); 
     socket_updateCoeff.getDataHandle().getLocalArray()->put();
-
     
     //CFLog(VERBOSE, "nb normals: " << socket_solPntNormals.getDataHandle().size() << ", n0: " << socket_solPntNormals.getDataHandle()[0] << "\n");
 
@@ -1069,7 +1098,8 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
        m_solPolyValsAtFlxPnts2.ptrDev(),
        m_flxPntFlxDim2.ptrDev(),
        m_corrFctDiv2.ptrDev(),
-       m_faceIntegrationCoefs2.ptrDev());
+       m_faceIntegrationCoefs2.ptrDev(),
+       m_cflConvDiffRatio);
     
    
     cudaDeviceSynchronize();

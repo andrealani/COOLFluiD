@@ -182,6 +182,9 @@ protected:
   /// flag telling to solve on GPU
   bool m_onGPU;
   
+  /// ratio between conv and diff CFL
+  CFreal m_cflConvDiffRatio;
+  
 }; // class FVMCC_ComputeRHSCell
 
 //////////////////////////////////////////////////////////////////////////////

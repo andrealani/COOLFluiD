@@ -31,7 +31,8 @@ ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_THREAD
   m_neighbCellIDs(),
   m_innerCellIsLeft(),
   m_solSolDep2(),
-  m_solPolyDerivAtSolPnts2()
+  m_solPolyDerivAtSolPnts2(),
+  m_cflConvDiffRatio()
 {
   this->addConfigOptionsTo(this);
   
@@ -312,6 +313,9 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
     
   // get flux point local coordinates
   m_nbrFlxPnts = frLocalData[0]->getFlxPntsLocalCoords()->size();
+  
+  // get convective/diffusive CFL ratio
+  m_cflConvDiffRatio = frLocalData[0]->getCFLConvDiffRatio();
   
   // store locally the cell centers
   // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
