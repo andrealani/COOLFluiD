@@ -47,6 +47,7 @@ SetupCUDA::SetupCUDA(const std::string& name) :
   socket_solPntNormals("solPntNormals"),
   socket_flxPntNormals("flxPntNormals"),
   socket_gradientsCUDA("gradientsCUDA"),
+  socket_cellVolumes("cellVolumes"),
   socket_faceDir("faceDir"),
   m_face(CFNULL),
   m_flxLocalCoords(),
@@ -71,6 +72,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   result.push_back(&socket_solPntNormals);
   result.push_back(&socket_flxPntNormals);
   result.push_back(&socket_gradientsCUDA);
+  result.push_back(&socket_cellVolumes);
   result.push_back(&socket_faceDir);
 
   return result;
@@ -150,8 +152,12 @@ void SetupCUDA::createNormalSockets()
   DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
 
   DataHandle< CFreal > gradients = socket_gradientsCUDA.getDataHandle();
+  
+  DataHandle< CFreal > cellVolumes = socket_cellVolumes.getDataHandle();
 
   gradients.resize(totNbrStates*dim*nbrEqs);
+  
+  cellVolumes.resize(totNbrCells);
 
   // resize the datahandle for the face Jacobian vector sizes
   solPntNormals.resize(totNbrStates*dim*dim);
@@ -177,6 +183,9 @@ CFLog(INFO, "new size: " << solPntNormals.size() << ", datahandle size: " << soc
       // build the GeometricEntity
       geoData.idx = elemIdx;
       GeometricEntity *const cell = geoBuilder->buildGE();
+      
+      cellVolumes[elemIdx] = cell->computeVolume();
+      cf_assert(cellVolumes[elemIdx] > 0.0);
 
       // get the states in this cell
       vector< State* >* states = cell->getStates();

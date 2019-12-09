@@ -246,6 +246,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
 				  CFreal* rhs,
                                   CFreal* solPntNormals,
                                   CFreal* flxPntNormals,
+                                  CFreal* cellVolumes,
                                   CFint* faceDir,
                                   const CFuint nbSolPnts,
                                   const CFuint nbrFaces,
@@ -333,7 +334,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     
     currFlxPntFlx = 0.0;
     
-    CFreal currVol = 0.0;
+    CFreal currVol = cellVolumes[cellID];
 
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -354,8 +355,6 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       {
         nFd[i] = n[i];
       }
-        
-      CFreal jacob = 1.0;
           
       for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
       {
@@ -365,11 +364,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         {
           nJacob2 += n[iDir*PHYS::DIM+jDir]*n[iDir*PHYS::DIM+jDir];
         }
-
-        jacob *= pow(nJacob2,0.5);
       }
-
-      currVol += jacob;
       
       // get the flux
       fluxScheme.prepareComputation(&currFd, &pmodel);
@@ -584,13 +579,6 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         const CFreal rho = pmodelNS.getUpdateVS()->getDensity(&avgSol[0]);
         
         waveSpeedUpd += mu/rho*faceVecAbsSize2*faceIntCoeff[iFlxPnt]/currVol*cflConvDiffRatio;
-        
-        const CFreal n0 = n[0]/pow(faceVecAbsSize2,0.5);
-        const CFreal n1 = n[1]/pow(faceVecAbsSize2,0.5);
-        for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
-          {
-//if(cellID == 11) printf("flx: %d, var: %d, state: %e, grad: %e %e, n: %e %e\n",iFlxPnt,iVar,avgSol[iVar],avgGrad[iVar*PHYS::DIM],avgGrad[iVar*PHYS::DIM+1],n0,n1); 
-        }
 
         pmodelNS.getUpdateVS()->getFlux(&avgSol[0],&avgGrad[0],&n[0],&currFlxPntFlx[0]);
         
@@ -953,6 +941,7 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
   DataHandle<CFint> faceDir = socket_faceDir.getDataHandle(); 
   DataHandle<CFreal> gradients = socket_gradientsCUDA.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
+  DataHandle<CFreal> cellVolumes = socket_cellVolumes.getDataHandle();
  
 
   SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().d_castTo<SCHEME>();
@@ -990,6 +979,7 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
     socket_solPntNormals.getDataHandle().getLocalArray()->put();
     socket_flxPntNormals.getDataHandle().getLocalArray()->put();
     socket_volumes.getDataHandle().getLocalArray()->put();
+    socket_cellVolumes.getDataHandle().getLocalArray()->put();
 
     DataHandle<Framework::State*, Framework::GLOBAL > statesI = socket_states.getDataHandle();
      
@@ -1073,6 +1063,7 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
        rhs.getLocalArray()->ptrDev(),
        solPntNormals.getLocalArray()->ptrDev(),
        flxPntNormals.getLocalArray()->ptrDev(),
+       cellVolumes.getLocalArray()->ptrDev(),
        faceDir.getLocalArray()->ptrDev(),
        m_nbrSolPnts,
        4,

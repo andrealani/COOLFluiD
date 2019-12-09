@@ -23,6 +23,7 @@ ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_THREAD
   socket_flxPntNormals("flxPntNormals"),
   socket_faceDir("faceDir"),
   socket_volumes("volumes"),
+  socket_cellVolumes("cellVolumes"),
   m_cellFaces(CFNULL),
   m_isFaceOnBoundaryCell(CFNULL),
   m_cellConn(),
@@ -113,6 +114,7 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvDiffRHSFluxReco
   result.push_back(&socket_flxPntNormals);
   result.push_back(&socket_faceDir);
   result.push_back(&socket_volumes);
+  result.push_back(&socket_cellVolumes);
   return result;
 }
       
