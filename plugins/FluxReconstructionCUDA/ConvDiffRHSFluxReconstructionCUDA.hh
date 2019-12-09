@@ -98,6 +98,9 @@ protected:
   /// storage for the gradients
   Framework::DataSocketSink< CFreal >  socket_gradientsCUDA;
   
+    /// storage for the volumes
+  Framework::DataSocketSink< CFreal >  socket_volumes;
+  
   /// number of cell flux points
   CFuint m_nbrFlxPnts;
   
