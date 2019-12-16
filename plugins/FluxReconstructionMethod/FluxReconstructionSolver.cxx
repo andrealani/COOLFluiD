@@ -468,11 +468,11 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   cf_assert(m_convSolve.isNotNull());
   m_convSolve->execute();
   
-//  if (m_artificialViscStr != "Null")
-//  {
-//    cf_assert(m_artificialVisc.isNotNull());
-//    m_artificialVisc->execute();
-//  }
+  if (m_artificialViscStr != "Null")
+  {
+    cf_assert(m_artificialVisc.isNotNull());
+    m_artificialVisc->execute();
+  }
   
   // if there is a diffusive term, compute the diffusive contributions to the residual
   if (m_data->hasDiffTerm())
@@ -495,11 +495,11 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
     m_finalizeRHS->execute();
   }
   
-  if (m_artificialViscStr != "Null")
-  {
-    cf_assert(m_artificialVisc.isNotNull());
-    m_artificialVisc->execute();
-  }
+//  if (m_artificialViscStr != "Null")
+//  {
+//    cf_assert(m_artificialVisc.isNotNull());
+//    m_artificialVisc->execute();
+//  }
   
   //cf_assert(m_limiter.isNotNull());
   //m_limiter->execute();
