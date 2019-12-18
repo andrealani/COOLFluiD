@@ -336,6 +336,8 @@ void FVMCC_PseudoSteadyTimeRhsBlockDiag::solveSys()
 {
   DataHandle<CFreal> rhs = socket_rhs.getDataHandle();
   DataHandle<CFreal> diagMatrix = socket_diagMatrix.getDataHandle();
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint nbEqs2 = nbEqs*nbEqs;
   const CFuint nbStates = socket_states.getDataHandle().size();
@@ -348,19 +350,21 @@ void FVMCC_PseudoSteadyTimeRhsBlockDiag::solveSys()
   for (CFuint i = 0; i < rhs.size(); ++i) {_tempRHS[i] = rhs[i];}
   
   for (CFuint iState = 0; iState < nbStates; ++iState) {
-    const CFuint startv = iState*nbEqs;
-    const CFuint startm = iState*nbEqs2;
-    
-    // assign to the rhs the result: inverse*rhs
-    dU.wrap(nbEqs, &rhs[startv]);
-    mat.wrap(nbEqs, nbEqs, &diagMatrix[startm]);
-    b = dU; // back up rhs
-    inverse = 0.;
-    _inverter->invert(mat, inverse);
-    dU = inverse*b;
+    if (states[iState]->isParUpdatable()) {
+      const CFuint startv = iState*nbEqs;
+      const CFuint startm = iState*nbEqs2;
+      
+      // assign to the rhs the result: inverse*rhs
+      dU.wrap(nbEqs, &rhs[startv]);
+      mat.wrap(nbEqs, nbEqs, &diagMatrix[startm]);
+      b = dU; // back up rhs
+      inverse = 0.;
+      _inverter->invert(mat, inverse);
+      dU = inverse*b;
+    }
   }
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume
