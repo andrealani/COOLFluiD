@@ -167,6 +167,8 @@ FVMCC_PolyRec.hh
 #FVMCC_PolyRecLin.hh
 FVMCC_PseudoSteadyTimeRhs.cxx
 FVMCC_PseudoSteadyTimeRhs.hh
+FVMCC_PseudoSteadyTimeRhsBlockDiag.cxx
+FVMCC_PseudoSteadyTimeRhsBlockDiag.hh
 FVMCC_PseudoSteadyTimeRhsCoupling.cxx
 FVMCC_PseudoSteadyTimeRhsCoupling.hh
 FVMCC_PseudoSteadyTimeRhsDiag.cxx

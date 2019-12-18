@@ -119,7 +119,7 @@ protected:
   
 protected:
   
-  /// storage of face normals
+  /// storage of diagonal block matrix
   Framework::DataSocketSource<CFreal> socket_diagMatrix;
   
   /// pointer to the linear system solver
