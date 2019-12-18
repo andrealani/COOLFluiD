@@ -24,6 +24,7 @@ cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImplLimiterIO.CFcase CASE
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVM_in.CFcase CASEFILES jets2D-sol.CFmesh )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVM_out.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP )
 cf_add_case( MPI default CASEDIR Jets2D PCASE jets2DFVMImpl.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP )
+cf_add_case( MPI 1       CASEDIR Jets2D PCASE jets2DFVMImpl_point.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImplAUSMAnalytic.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP )
 cf_add_case( MPI 8       CASEDIR Jets2D PCASE jets2DFVMImpl_MatFree.CFcase CASEFILES jets2DFVM.thor jets2DFVM.SP )
 cf_add_case( MPI 8       CASEDIR Jets3D PCASE jets3DFVM_in.CFcase CASEFILES jets3DFVM_binary.CFmesh )
