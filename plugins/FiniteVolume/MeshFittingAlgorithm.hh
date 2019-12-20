@@ -223,6 +223,17 @@ private:
 			      const  Framework::Node* const  thirdNode,
 			      const  Framework::Node* const  fourthNode,
 			      CFreal elementArea);
+
+  CFreal computeConstantquads3D(const  Framework::Node* const  firstNode,
+				const  Framework::Node* const  secondNode,
+				const Framework::Node* const  thirdNode,
+				const Framework::Node* const  fourthNode);
+
+  CFreal computeConstantquads3DElemArea(const  RealVector xyi , const  Framework::Node* const  firstNode,
+				const  Framework::Node* const  secondNode,
+				const Framework::Node* const  thirdNode,
+				const Framework::Node* const  fourthNode, 
+				CFreal elementArea);
   /** Compute the skewness of a quadrilateral element 
    *
    */
@@ -233,7 +244,7 @@ private:
    * assemble the system lines for a node moving in along the boundary
    */
   void assembleMovingInBoundaryNode(const Framework::Node* node);
-
+  void assembleMovingInBoundaryNode3DHexa(const Framework::Node* node);
   /**
    * Queries if the node is locked 
    */
@@ -272,6 +283,18 @@ private:
   
   void assembleinRegionNode2DQuadsGeoBased(const  Framework::Node* node);
 
+   /**
+   * checks if 4 given points are coplanar
+   */
+   bool areCoplanar(const  Framework::Node* const  firstNode,
+		    const  Framework::Node* const  secondNode,
+		    const Framework::Node* const  thirdNode,
+		    const Framework::Node* const  fourthNode);
+  /**
+   * assemble the systme lines for 3D hexahedral element
+   */
+  void assembleinRegionNode3DHexa(const  Framework::Node* node);
+
   /**
  * assemble system lines for 3D tetrahedral elemnt 
  */
@@ -282,6 +305,9 @@ private:
    */
   RealVector computeIntersection(const  Framework::Node* const  a, const  Framework::Node* const  c,
 				 const  Framework::Node* const  b, const  Framework::Node* const  d);
+
+  RealVector computeIntersectionQuad3D(const  Framework::Node* const  a,const  Framework::Node* const  c,
+						      const  Framework::Node* const  b, const  Framework::Node* const  d);
   
   /**
    * assemble the system lines for an inner Node
@@ -319,6 +345,9 @@ private: //data
   
   /// the socket of the 3D terahedral mesh connectivity 
   Common::CFMultiMap <CFuint , CFuint>  m_mapCellNode1;
+
+  /// the socket of the 3D hexahedral mesh connectivity 
+  Common::CFMultiMap <CFuint , CFuint>  m_mapNodeCell1;
   
   /// the socket of cell internal radius at setup 
   Common::CFMultiMap <CFuint , CFreal>  m_mapNodeRadius1;
@@ -469,6 +498,8 @@ private: //data
 
   // Global RSI 
   CFreal m_erreurG;
+
+  CFuint movingIter;
 
 }; // end of class MeshFittingAlgorithm
       
