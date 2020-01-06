@@ -270,16 +270,19 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
     m_tempState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(currState));
 
     const State *const tPastState = m_updateToSolutionVecTrans->transform(pastStates[stateID]);
-
-    // add contribution to rhs and jacobian
-    CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++globalID)
-    {
+    
+    // add contribution to rhs
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {      
       rhs(stateID, iEq, m_nbrEqs) -= (m_tempState[iEq] - (*tPastState)[iEq])*m_diagValues[iSol];
-//       CF_DEBUG_OBJ(rhs(stateID, iEq, m_nbrEqs));
+    }
 
-      if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
-      {
+    // add contribution to jacobian
+    if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
+    {    
+      //CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)// ++globalID)
+      {        
         // perturb the given component of the state vector
         m_numericalJacob->perturb(iEq, (*currState)[iEq]);
 

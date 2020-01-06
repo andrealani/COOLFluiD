@@ -70,16 +70,18 @@ RealVector& LaxFriedrichsFlux::computeFlux(Framework::State& lState,
   const CFreal absA = 0.5*(lMaxAbsEVal+rMaxAbsEVal);
   
   // transform from update states (which are stored) to solution states (in which the equations are written)
-  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]);              
+  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]); 
+  
+  const RealVector lSolState = *(m_solStates)[LEFT ];
+  
   m_solStates[RIGHT] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[RIGHT]);
   
-  State& lSolState = *(m_solStates)[LEFT ];
-  State& rSolState = *(m_solStates)[RIGHT];
+  const RealVector rSolState = *(m_solStates)[RIGHT];
   
   // compute the Riemann flux
   // Flux = 1/2*(Fmin + Fplus) - 1/2*|A|*(Uplus - Umin)
   m_rFlux = 0.5*(m_sumFlux -  absA*(rSolState - lSolState));
-  
+
   return m_rFlux;
 }
 

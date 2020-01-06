@@ -82,22 +82,33 @@ void BDF2TimeRHSJacob::addTimeResidual()
     // get state
     State *const currState = (*m_cellStates)[iSol];
     
-   m_tempState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(currState));
+    m_tempState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(currState));
 
     // get state ID
     const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
 
     // get past state
     const State *const pastState = m_updateToSolutionVecTrans->transform(pastStates[stateID]); //*pastStates[stateID];
-
-    // add contribution to rhs and jacobian
-    CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++globalID)
+    
+    // add contriution to rhs
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)//, ++globalID)
     {
       const CFreal dUdt = (m_tempState[iEq] - (*pastState)[iEq])*m_diagValues[iSol];
-      rhs(stateID,iEq,m_nbrEqs) -= dUdt*resFactorP1 - resFactor*pastTimeRhs(stateID,iEq,m_nbrEqs);
+      rhs(stateID,iEq,m_nbrEqs) -= dUdt*resFactorP1 - resFactor*pastTimeRhs(stateID,iEq,m_nbrEqs); 
       
-      if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
+      // store dUdt for next time step
+      if((SubSystemStatusStack::getActive()->isLastStep())
+       && (SubSystemStatusStack::getActive()->isSubIterationLastStep()))
+      {
+        pastTimeRhs(stateID,iEq,m_nbrEqs) = dUdt;
+      }
+    }
+
+    // add contribution to jacobian
+    if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
+    {
+      //CFuint globalID = idxMapping.getColID(stateID)*m_nbrEqs;
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)//, ++globalID)
       {
         // perturb the given component of the state vector
         m_numericalJacob->perturb(iEq, (*currState)[iEq]);
@@ -124,13 +135,6 @@ void BDF2TimeRHSJacob::addTimeResidual()
 //      {
 //        m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]*resFactorP1);
 //      }
-
-      // store dUdt for next time step
-      if((SubSystemStatusStack::getActive()->isLastStep())
-       && (SubSystemStatusStack::getActive()->isSubIterationLastStep()))
-      {
-        pastTimeRhs(stateID,iEq,m_nbrEqs) = dUdt;
-      }
     }
     
     if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
