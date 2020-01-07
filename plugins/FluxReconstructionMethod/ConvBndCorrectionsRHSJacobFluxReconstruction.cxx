@@ -97,7 +97,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   
   // boolean telling whether there is a diffusive term
   const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
-  
+  m_bcStateComputer->preProcess();
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {

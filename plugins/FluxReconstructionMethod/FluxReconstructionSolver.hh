@@ -91,9 +91,10 @@ protected: // interface implementation functions
   virtual void setMethodImpl(){
     SpaceMethod::setMethodImpl();
 
-    setupCommandsAndStrategies();
+   // setupCommandsAndStrategies();
     cf_assert(m_setup.isNotNull());
     m_setup->execute(); 
+    setupCommandsAndStrategies();
   }
 
   /// Unsets the data, commands and strategies of this Method

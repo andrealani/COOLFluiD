@@ -53,6 +53,14 @@ public:  // methods
   /// Set up private data and data
   virtual void setup();
   
+   //Added from FV for parallelization
+  /**
+   * Set the preProcesses connectivity between faces belonging to different process
+   *
+   */
+  virtual void preProcess();
+
+  
   /// Unset up private data and data
   virtual void unsetup();
 

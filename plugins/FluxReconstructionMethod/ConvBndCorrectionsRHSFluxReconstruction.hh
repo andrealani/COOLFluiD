@@ -48,7 +48,8 @@ public:
    * in this command before processing phase
    */
   virtual void setup();
-
+  
+ 
   /**
    * Unset up private data and data of the aggregated classes
    * in this command after processing phase

@@ -7,6 +7,7 @@
 #include "Framework/BaseMethodStrategyProvider.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+#include "Common/MPI/MPIStructDef.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -49,6 +50,14 @@ public:  // methods
   
   /// Unset up private data
   void unsetup();
+  
+  //Added from FV
+   /**
+   * Set the preProcesses connectivity between faces belonging to different processes
+   */
+  virtual void preProcess();
+  //till here
+  
 
   /**
    * Sets the ghost states in all the boundary points (depends on the boundary condition type)
@@ -71,7 +80,46 @@ public:  // methods
   void createFaceOrientationStartIndexes();
 
 protected:
+    //Added from FV
+    
+    // flx pnt mapped coordinates
+  std::vector< RealVector > m_flxPntsLocalCoords;
+  
+  // All flux points of a cell
+  Common::SafePtr<std::vector< RealVector > > m_allCellFlxPnts;
+  
+  /// extrapolated states in the flux points of the cell
+  std::vector< Framework::State* > m_cellStatesFlxPnt;
+  
+  /// builder of faces
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
+  
+  /// local cell face - mapped coordinate direction per orientation
+  Common::SafePtr< std::vector< CFint > > m_faceMappedCoordDir;
+  
+  /// vector for the face jacobian vectors
+  std::vector< RealVector > m_faceJacobVecs;
+  
+ 
+  
+   /// face Jacobian vector sizes (abs)
+  std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
+  
+  /// face Jacobian vector sizes
+  std::vector< CFreal > m_faceJacobVecSizeFlxPnts;
+  
+   /// unit normal vector in flux points
+  std::vector< RealVector > m_unitNormalFlxPnts;
 
+    /// setup MPI parameters
+  virtual void setupMPI();
+  
+  /**
+   * Compute the periodic state given the face. 
+   * It is assumed that MPI-communication has occured in preProcess() first
+   */
+  //Framework::State* computePeriodicState(Framework::GeometricEntity *const face);
+  //till here
   /// TRS in which this BC is defined
   Common::SafePtr< Framework::TopologicalRegionSet > m_thisTRS;
 
@@ -130,6 +178,9 @@ protected:
 
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+   /// socket for size of projection vector in face flux points
+  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
 
   //Framework::DataSocketSink<CFreal> socket_normals;
   //Framework::DataSocketSink<CFreal> socket_states;
@@ -146,7 +197,19 @@ protected:
   /// threshold
   CFreal _threshold;
         
-
+  /**
+   * Definition of a pair containing the processor number and the faceID
+   */
+  class PairStruct
+  {
+    private:
+      CFuint _process;
+      CFuint _faceID;
+    public:
+      PairStruct(const CFuint& process, const CFuint& faceID) : _process(process), _faceID(faceID) {}
+      CFuint getFaceID() {return _faceID;}
+      CFuint getProcess() {return _process;}
+  };
 
   /**
    * Definition of a structure containing face-centred coordinates and faceID's of a face
@@ -171,6 +234,40 @@ protected:
       CFuint getLocalFluxID() const {return _localFluxID;}
       void setCentreCoordinates(const RealVector& centreCoordinates) { _centreCoordinates.resize(centreCoordinates.size()); _centreCoordinates = centreCoordinates;}
       const RealVector& getCentreCoordinates() const {return _centreCoordinates;}
+  };
+  
+  /**
+   * FaceStruct with MPI functionality
+   */ 
+  class FaceMPIStruct : public FlxPntStruct {
+  private:
+    Common::MPIStruct ms;
+    int ln[3];
+    MPI_Comm _comm;
+    
+  public:
+    FaceMPIStruct() : FlxPntStruct() { 
+      CFuint dim = Framework::PhysicalModelStack::getActive()->getDim();
+      ln[0] = 1;     // first block is localFaceID --> 1 element
+      ln[1] = 1;     // second block is globalFaceID --> 1 element
+      ln[2] = dim;   // third block is Face coordinates --> "dim" elementsbuild(); 
+      _centreCoordinates.resize(dim);
+      
+      const std::string nsp = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+      _comm = Common::PE::GetPE().GetCommunicator(nsp);
+      Common::MPIStructDef::buildMPIStruct(&_localFaceID, &_globalFaceID, &_centreCoordinates[0], ln, ms);
+    }
+    
+    void broadcast(const CFuint& iP) {
+      MPI_Bcast(ms.start, 1, ms.type, iP, _comm);
+    }
+    
+    void copy(const FlxPntStruct& face) {
+      setLocalFaceID(face.getLocalFaceID());
+      setGlobalFaceID(face.getGlobalFaceID());
+      setCentreCoordinates(face.getCentreCoordinates());
+      setLocalFluxID(face.getLocalFaceID());
+    }
   };
 
 
@@ -203,7 +300,54 @@ protected:
 
   /// Translation Vector between planes
   std::vector<CFreal> _translationVector;
+  //Added from FV
+protected: //data
     
+    //No. of equations
+    CFuint NbEqs;
+    
+    
+    //No. of faces in the TRS
+    CFuint nbGeoEnts;
+    
+    
+    /// maps local face to periodic process and periodic face (can be more than 1)
+  std::vector< std::vector< PairStruct > > _localConnectivityMap;
+    
+    /**
+   * MPI Related parameters
+   */
+   
+  /// MPI_COMM_WORLD
+  MPI_Comm _comm;
+
+  /// number of processes
+  CFuint _nbProcesses;
+  
+  /// rank of this process
+  CFuint _rank;
+  
+  /// number of faces per process
+  std::vector<CFuint> _nbFacesPerProcess;
+
+  /// A temporary container for a state
+  Framework::State* _periodicState;
+
+  /// SendReceive parameters
+  std::vector<int> _sendcounts;
+  std::vector<int> _recvcounts;
+  std::vector<int> _recvdispls;
+  std::vector<int> _senddispls;
+  std::vector<double> _recvbuf;
+  std::vector<double> _sendbuf;
+
+  std::vector<double> _recvbufLimiter;
+  std::vector<double> _sendbufLimiter;
+  std::vector<std::vector<double> > _recvbufGrad;
+  std::vector<std::vector<double> > _sendbufGrad;
+    
+  CFuint _LastDisplacement;
+  //till here
   
 }; // class BCPeriodic
     

@@ -139,7 +139,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
   
   // boolean telling whether there is a diffusive term
   const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
-  
+  m_bcStateComputer->preProcess();
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
@@ -319,10 +319,11 @@ void ConvBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
   
   // get face Jacobian vector sizes in the flux points
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
-  
   // Loop over flux points to set the unit normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
+       // CFLog(INFO,"size of m_faceJacobVecAbsSizeFlxPnts = "<< m_faceJacobVecAbsSizeFlxPnts.size()<<" size of faceJacobVecSizeFaceFlxPnts = "<<faceJacobVecSizeFaceFlxPnts.size()<<" faceGlobalID = "<<faceID<<" iFlx = "<<iFlxPnt<<"\n");
+
     // get face Jacobian vector size
     m_faceJacobVecAbsSizeFlxPnts[iFlxPnt] = faceJacobVecSizeFaceFlxPnts[faceID][iFlxPnt];
     
@@ -484,6 +485,13 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeGradientBndFaceCorrections(
     }
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+//void ConvBndCorrectionsRHSFluxReconstruction::preProcess()
+//{
+
+//}
 
 //////////////////////////////////////////////////////////////////////////////
 
