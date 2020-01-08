@@ -80,7 +80,6 @@ void BCStateComputer::setup()
 
 void BCStateComputer::preProcess()
 {
-    CFLog(INFO,"\nI am preProcess from BCStateComputer\n\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
