@@ -79,6 +79,11 @@ public:
     AddFunction("R2", Radius2D, 2);
     AddFunction("R3", Radius3D, 3);
     AddFunction("rand", Rand, 0);
+    AddConstant("RSun", 6.955e8);
+    AddConstant("RSS", 1.495325e10);
+    AddConstant("mH", 1.66e-27);
+    AddConstant("G", 6.6726e-8);
+    AddConstant("MSun", 2.0e33);
   }
 };
 
