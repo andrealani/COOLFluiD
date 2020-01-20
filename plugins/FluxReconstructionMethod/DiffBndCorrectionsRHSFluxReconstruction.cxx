@@ -560,7 +560,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   m_cellGradFlxPnt.resize(m_nbrFaceFlxPnts);
   m_flxPntGhostGrads.resize(m_nbrFaceFlxPnts);
   m_avgSol.resize(m_nbrEqs);
-  m_avgGrad.reserve(m_nbrEqs);
+  m_avgGrad.resize(m_nbrEqs);
   m_corrFctDiv.resize(m_nbrSolPnts);
   m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
   

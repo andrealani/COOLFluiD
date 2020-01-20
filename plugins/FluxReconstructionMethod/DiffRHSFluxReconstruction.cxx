@@ -281,7 +281,7 @@ void DiffRHSFluxReconstruction::execute()
       //divideByJacobDet();
       
       // print out the residual updates for debugging
-      if(true) //m_cell->getID() == 35)
+      if(m_cell->getID() == 35)
       {
 	CFLog(VERBOSE, "ID  = " << (*m_cellStates)[0]->getLocalID() << "\n");
         CFLog(VERBOSE, "TotalUpdate = \n");
@@ -303,6 +303,13 @@ void DiffRHSFluxReconstruction::execute()
       m_cellBuilder->releaseGE();
     }
   }
+  
+//  DataHandle<CFreal> rhs = socket_rhs.getDataHandle(); 
+//
+//    for (CFuint i = 0; i < rhs.size()/4; ++i)
+//    {
+//    CFLog(INFO, "stateID: " << i << ", resV: " << rhs[i*4+2] << "\n");
+//    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -480,6 +487,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
         {
           // Store divFD in the vector that will be divFC
           residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          //if (m_cell->getID() == 11) CFLog(INFO,"State: " << iSolPnt << ", jSol: " << jSolIdx << ", iDir: " << iDir << ", var: " << iEq << ", flx: " << m_contFlx[jSolIdx][iDir][iEq] << "\n");  
 	}
       }
     }
@@ -495,6 +503,8 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
         residuals[iSolPnt][iVar] += -m_extrapolatedFluxes[flxIdx][iVar] * divh; 
+//if (m_cell->getID() == 11 && iVar == 2) CFLog(INFO,"State: " << iSolPnt << ", iFlx: " << flxIdx << ", var: " 
+//        << iVar << ", up: " << -m_extrapolatedFluxes[flxIdx][iVar] * divh << ", flux: " << -m_extrapolatedFluxes[flxIdx][iVar] << ", divh: " << divh << "\n");  
       }
     }
   }
@@ -595,6 +605,7 @@ void DiffRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
         corrections[solIdx][iVar] += currentCorrFactor[iVar] * divh;
+//if (m_cells[side]->getID() == 11 && iVar == 2 && flxIdx == 1) CFLog(INFO, "State: " << solIdx << ", flx: " << flxIdx << ", var: " << iVar << ", up: " << currentCorrFactor[iVar] * divh << ", divh: " << divh << "\n");
       }
     }
   }
@@ -819,7 +830,7 @@ void DiffRHSFluxReconstruction::setup()
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
   m_faceInvCharLengths.resize(m_nbrFaceFlxPnts);
   m_avgSol.resize(m_nbrEqs);
-  m_avgGrad.reserve(m_nbrEqs);
+  m_avgGrad.resize(m_nbrEqs);
   m_tempGrad.resize(m_nbrEqs);
   m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
   

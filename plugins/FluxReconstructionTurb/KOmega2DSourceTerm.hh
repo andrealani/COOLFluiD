@@ -77,11 +77,29 @@ protected:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
+  
+  virtual void prepareComputeSource();
+  
+  virtual  void computeProductionTerm(const CFuint iState,
+				      const CFreal& PcoFactor,const CFreal& MUT,
+				      CFreal& KProdTerm,
+				      CFreal& OmegaProdTerm);
+  
+  virtual void  computeDestructionTerm(const CFuint iState,
+				       const CFreal& DcoFactor, CFreal& K_desterm, 
+				       CFreal& Omega_desterm);
+
+  virtual CFreal GetNSSourceTerm(); 
+
+  static std::string getModuleName(); 
 
 protected: // data
   
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+  /// handle to the wall distance
+  Framework::DataSocketSink<CFreal> socket_wallDistance;
 
   /// the source term for one state
   RealVector m_srcTerm;
@@ -102,7 +120,26 @@ protected: // data
   std::vector<RealVector*> m_dummyGradients;
   
   /// the gradients in the neighbouring cell
-  std::vector< std::vector< RealVector >* > m_cellGrads;
+  std::vector< std::vector< RealVector* > > m_cellGrads;
+  
+  // k production term
+  CFreal  m_prodTerm_k;
+  
+  // omega production term
+  CFreal  m_prodTerm_Omega;
+  
+  // omega destruction term
+  CFreal  m_destructionTerm_Omega;
+  
+  // k destruction term
+  CFreal  m_destructionTerm_k;
+  
+  // wall distance in current sol point
+  RealVector m_currWallDist; 
+  
+  // boolean telling whether the case is axisymmetric
+  bool m_isAxisymmetric;
+
   
 }; // class KOmega2DSourceTerm
 
