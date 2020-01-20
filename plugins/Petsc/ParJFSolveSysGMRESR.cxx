@@ -102,7 +102,7 @@ void ParJFSolveSysGMRESR::execute()
 	// assemble the rhs vector
 	rhsVec.assembly();
 
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12  
 	CFuint ierr = KSPSetOperators(ksp,mat.getMat(), mat.getMat());
 #else
 	CFuint ierr = KSPSetOperators(ksp,mat.getMat(), mat.getMat(),DIFFERENT_NONZERO_PATTERN);

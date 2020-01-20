@@ -117,7 +117,7 @@ void ParJFSolveSys::execute()
       //cout << "\n\n\n Setting up J-F different preconditioner matrix ParBAIJ with Petsc preconditioner \n\n\n";
       precondMat.finalAssembly();
       
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat()));
 #else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat(), DIFFERENT_NONZERO_PATTERN));
@@ -126,7 +126,7 @@ void ParJFSolveSys::execute()
     else {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix with Shell preconditioner \n\n\n";
       precondMat.finalAssembly();
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat()));
 #else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
@@ -136,7 +136,7 @@ void ParJFSolveSys::execute()
   }
   else {
     //cout << "\n\n\n Setting up J-F with Shell preconditioner or without preconditioner\n\n\n" ;
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
     CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat()));
 #else
     CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
