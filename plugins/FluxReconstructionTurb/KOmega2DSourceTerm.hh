@@ -78,18 +78,21 @@ protected:
    */
   virtual void configure ( Config::ConfigArgs& args );
   
-  virtual void prepareComputeSource();
-  
+  /**
+   * compute the production term
+   */
   virtual  void computeProductionTerm(const CFuint iState,
 				      const CFreal& PcoFactor,const CFreal& MUT,
 				      CFreal& KProdTerm,
 				      CFreal& OmegaProdTerm);
   
+  /**
+   * compute the destruction term
+   */
   virtual void  computeDestructionTerm(const CFuint iState,
 				       const CFreal& DcoFactor, CFreal& K_desterm, 
 				       CFreal& Omega_desterm);
 
-  virtual CFreal GetNSSourceTerm(); 
 
   static std::string getModuleName(); 
 
@@ -119,7 +122,7 @@ protected: // data
   ///Dummy vector for the gradients
   std::vector<RealVector*> m_dummyGradients;
   
-  /// the gradients in the neighbouring cell
+  /// the gradients in the current cell
   std::vector< std::vector< RealVector* > > m_cellGrads;
   
   // k production term

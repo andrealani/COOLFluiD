@@ -158,45 +158,6 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
   K_desterm     = std::min(0., K_desterm );
   Omega_desterm = std::min(0., Omega_desterm);
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-CFreal KOmega2DSourceTerm::GetNSSourceTerm()  
-{ 
-//  using namespace COOLFluiD::Framework;
-//  using namespace COOLFluiD::Physics::NavierStokes;
-//    
-//  const CFuint uID = getStateVelocityIDs()[XX];
-//  const CFuint vID = getStateVelocityIDs()[YY];
-//  const CFreal coeffTauMu = _diffVarSet->getModel().getCoeffTau();
-//  const CFreal Tau_tt = (-2./3.)*coeffTauMu*((*(_gradients[uID]))[XX] + (*(_gradients[vID]))[YY] - 2*_vOverRadius);
-//  const CFreal Source3 = _physicalData[EulerTerm::P] - Tau_tt;
-//  return Source3;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void KOmega2DSourceTerm::prepareComputeSource()
-{  
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
-  using namespace COOLFluiD::Physics::NavierStokes;
-  
-  //DataHandle<CFreal> normals  = this->socket_normals.getDataHandle();
-  //DataHandle<CFint> isOutward =  this->socket_isOutward.getDataHandle();
-  //DataHandle<CFreal> volumes  = socket_volumes.getDataHandle();
-  
-  cf_assert(m_eulerVarSet.isNotNull());
-  
-  //m_isAxisymmetric = this->getMethodData().isAxisymmetric();
-  
-//  _Radius = (_isAxisymmetric) ? (currState->getCoordinates())[YY] : 1.; 
-//  if((_Radius > MathTools::MathConsts::CFrealEps()) && (_isAxisymmetric)) {
-//    _vOverRadius = _physicalData[EulerTerm::VX]/_Radius;
-//  }
-}
       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -207,60 +168,6 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Physics::NavierStokes; 
-  
-//  for (CFuint iSol = 0; iSol < nbrSol; ++iSol)
-//  {
-//    m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]), m_solPhysData);
-//    
-//    const CFreal R = m_eulerVarSet->getModel()->getR();
-//
-//    CFreal dUdX = 0.0;
-//    CFreal dVdR = 0.0;
-//    
-//    const CFuint uID = 1;
-//    const CFuint vID = 2;
-//    
-//    if (true) //Puvt
-//    {
-//      dUdX = (*(m_cellGrads[iSol]))[uID][XX];
-//      dVdR = (*(m_cellGrads[iSol]))[vID][YY];
-//    }
-//    else
-//    {
-//      const CFreal invRho = 1.0/(*((*m_cellStates)[iSol]))[0];
-//      const CFreal u = invRho*(*((*m_cellStates)[iSol]))[uID];
-//      const CFreal v = invRho*(*((*m_cellStates)[iSol]))[vID];
-//      
-//      // apply chain rule
-//      dUdX = invRho*((*(m_cellGrads[iSol]))[uID][XX] - u*(*(m_cellGrads[iSol]))[0][XX]);
-//      dVdR = invRho*((*(m_cellGrads[iSol]))[vID][YY] - v*(*(m_cellGrads[iSol]))[0][YY]);
-//    }
-//    
-//    const CFreal avV = m_solPhysData[EulerTerm::VY];
-//    
-//    // @todo this will not work if gradients are needed (Menter SST turb model)
-//    const CFreal mu = navierStokesVarSet->getDynViscosity(*((*m_cellStates)[iSol]), m_dummyGradients);
-//    const CFreal coeffMu = navierStokesVarSet->getModel().getCoeffTau()*2.0/3.0*mu;
-//    const CFreal invR = 1.0/(m_cell->computeCoordFromMappedCoord((*m_solPntsLocalCoords)[iSol]))[YY];
-//    const CFreal tauThetaTheta = -coeffMu*(dUdX + dVdR - 2.0*avV*invR);
-//    
-//    // AL: check this in Hontzatko's report (dp!)
-//    //m_srcTerm[vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
-//    resUpdates[m_nbrEqs*iSol + vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
-//
-////     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq, ++resID)
-////     {
-////       rhs[resID] += resFactor*m_solPntJacobDets[iSol]*m_srcTerm[iEq];
-////     }
-//  }
-  
-  //prepareComputeSource(); 
-  
-  // compute PUVTKOmega by averaging the nodes
-  // NO!!! If we do it like that we nearly certainly
-  // get negative values!!!
-  // So we just take the state value
-//  const State& avState = *element->getState(0);
   
   const CFuint kID = (*m_cellStates)[0]->size() - 2;
   const CFuint omegaID = kID + 1;
@@ -301,7 +208,6 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     // Set the wall distance before computing the turbulent viscosity
     navierStokesVarSet->setWallDistance(m_currWallDist[iSol]);
     
-//  const CFreal mut = _diffVarSet->getTurbDynViscosityFromGradientVars(avState, _gradients);
     const CFreal mut = navierStokesVarSet->getTurbDynViscosityFromGradientVars(*((*m_cellStates)[iSol]), m_cellGrads[iSol]);
         
     navierStokesVarSet->computeBlendingCoefFromGradientVars(*((*m_cellStates)[iSol]), *(m_cellGrads[iSol][kID]), *(m_cellGrads[iSol][omegaID]));
@@ -318,58 +224,6 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
     resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
   }
-//  
-//  //Computation of the source term
-//  const CFuint vID = getStateVelocityIDs()[YY];
-//  source[vID] = (_isAxisymmetric) ? GetNSSourceTerm() : 0.0 ;
-//  
-//  //What we do with the source term depends if
-//  //we are computing the jacobian or not
-//  const bool isPerturb = this->getMethodData().isPerturb();
-//  const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
-//  if(isPerturb)
-//  {
-//    /// Compute the jacobian contribution
-//    // only perturb the negative part of the source term
-//    if(iPerturbVar == kID)
-//    {
-//      source[kID] = _destructionTerm_k;
-//      source[kID] += _unperturbedPositivePart[0];
-//    }
-//    else
-//    {
-//      source[kID] = _unperturbedNegativePart[0];
-//      source[kID] += _unperturbedPositivePart[0];
-//    }
-//
-//    if(iPerturbVar == omegaID)
-//    {
-//      source[omegaID] = _destructionTerm_Omega;
-//      source[omegaID] += _unperturbedPositivePart[1];
-//    }
-//    else
-//    {
-//      source[omegaID] = _unperturbedNegativePart[1];
-//      source[omegaID] += _unperturbedPositivePart[1];
-//    }
-//  }
-//  else
-//  {
-//    /// Compute the rhs contribution
-//    // and Store the unperturbed source terms
-//    source[kID] = _prodTerm_k;
-//    source[kID] += _destructionTerm_k;
-//    _unperturbedPositivePart[0] = _prodTerm_k;
-//    _unperturbedNegativePart[0] = _destructionTerm_k;
-//
-//    source[omegaID] = _prodTerm_Omega;
-//    source[omegaID] += _destructionTerm_Omega;
-//    _unperturbedPositivePart[1] = _prodTerm_Omega;
-//    _unperturbedNegativePart[1] = _destructionTerm_Omega;
-//  }
-//  
-//  // Finally multiply by the cell volume
-//  source *= _volumes_elemID;
 }
 
 //////////////////////////////////////////////////////////////////////////////

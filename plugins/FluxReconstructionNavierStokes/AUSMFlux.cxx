@@ -6,6 +6,8 @@
 
 #include "NavierStokes/Euler2DVarSet.hh"
 #include "NavierStokes/Euler3DVarSet.hh"
+#include "NavierStokes/Euler2DPuvt.hh"
+#include "NavierStokes/Euler3DPvt.hh"
 
 #include "NavierStokes/MultiScalarVarSet.hh"
 
@@ -45,6 +47,18 @@ Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler3DVarSet>
                        RiemannFlux,
 		       FluxReconstructionNavierStokesModule>
 AUSMPlusFluxMS3DProvider("AUSMPlusFluxMS3D");
+
+Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler2DPuvt> >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusFluxTurb2DProvider("AUSMPlusFluxTurb2D");
+
+Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler3DPvt<Euler3DVarSet> > >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusFluxTurb3DProvider("AUSMPlusFluxTurb3D");
 				   
 // AUSM+Up
 Framework::MethodStrategyProvider< AUSMPlusUpFlux<Euler2DVarSet>,

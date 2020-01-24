@@ -94,6 +94,9 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
   
+  const CFuint iK = m_varSetTurb->getModel()->getFirstScalarVar(0);
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+  
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   
   if (iter >= m_changeToIsoT && m_heatFlux)
@@ -112,9 +115,6 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
     // dereference states
     State& intState   = (*intStates[iState]);
     State& ghostState = (*ghostStates[iState]);
-
-    cf_assert(intState.size() == 6);
-    cf_assert(ghostState.size() == 6);
 
     // set the physical data starting from the inner state
     m_varSetTurb->computePhysicalData(intState,m_intSolPhysData);
@@ -160,15 +160,12 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
                                          (m_ghostSolPhysData[EulerTerm::P]/m_ghostSolPhysData[EulerTerm::RHO]);
     }
 
-    const CFuint iK = m_varSetTurb->getModel()->getFirstScalarVar(0);
-    const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
-
     m_ghostSolPhysData[iK] = m_wallK;
     
     if(nbTurbVars == 2)
     {
       //Compute distance to innerstate
-      CFreal y0 = 1.e-9;
+      CFreal y0 = 1.e-2;//1.e-9;
     
       //avoid too small distances
       //y0 = std::max(y0, 10.e-10);
@@ -186,6 +183,8 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
       ///@todo here should this be adimensionalized (by the distance)???
       //Menter's definition
       const CFreal omegaWall = (10. * 6. * nu) / (beta1 * y0 * y0);
+      
+      cf_assert(omegaWall>0.0);
     
       const CFuint omegaID = iK+1; 
 
@@ -194,6 +193,8 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
 
     // set the ghost state from its physical data
     m_varSetTurb->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
+    
+    //CFLog(INFO, "ghostState: " << ghostState << "\n");
   }
 }
 

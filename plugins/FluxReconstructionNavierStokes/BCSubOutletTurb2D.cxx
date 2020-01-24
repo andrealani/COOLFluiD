@@ -81,9 +81,6 @@ void BCSubOutletTurb2D::computeGhostStates(const vector< State* >& intStates,
     State& intState   = (*intStates[iState]);
     State& ghostState = (*ghostStates[iState]);
 
-    cf_assert(intState.size() == 6);
-    cf_assert(ghostState.size() == 6);
-
     // set the physical data starting from the inner state
     m_varSetTurb->computePhysicalData(intState,m_intSolPhysData);
     

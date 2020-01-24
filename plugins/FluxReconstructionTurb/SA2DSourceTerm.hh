@@ -4,6 +4,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/StdSourceTerm.hh"
+#include "SA/NavierStokesSAVarSetTypes.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -82,6 +83,9 @@ protected: // data
   
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
+  
+  /// handle to the wall distance
+  Framework::DataSocketSink<CFreal> socket_wallDistance;
 
   /// the source term for one state
   RealVector m_srcTerm;
@@ -93,7 +97,7 @@ protected: // data
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
   
   /// corresponding diffusive variable set
-  Common::SafePtr<Framework::DiffusiveVarSet> m_diffVarSet;
+  Common::SafePtr<Physics::SA::NavierStokes2DSA> m_diffVarSet;
   
   /// variable for physical data of sol
   RealVector m_solPhysData;
@@ -101,8 +105,14 @@ protected: // data
   ///Dummy vector for the gradients
   std::vector<RealVector*> m_dummyGradients;
   
-  /// the gradients in the neighbouring cell
-  std::vector< std::vector< RealVector >* > m_cellGrads;
+  /// the gradients in the current cell
+  std::vector< std::vector< RealVector* > > m_cellGrads;
+  
+  /// wall distance in current sol point
+  RealVector m_currWallDist; 
+  
+  /// boolean telling whether to add the compressibility correction term
+  bool m_compTerm;
   
 }; // class SA2DSourceTerm
 
