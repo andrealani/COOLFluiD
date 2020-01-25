@@ -27,6 +27,8 @@ StdSetup.cxx
 StdSetup.hh
 SetupCUDA.cxx
 SetupCUDA.hh
+SetupExtra.cxx
+SetupExtra.hh
 PseudoSteadyStdTimeRHSJacob.cxx
 PseudoSteadyStdTimeRHSJacob.hh
 ConvRHSFluxReconstruction.cxx
@@ -99,6 +101,10 @@ DiffBndCorrectionsRHSJacobFluxReconstruction.cxx
 DiffBndCorrectionsRHSJacobFluxReconstruction.hh
 ConvBndCorrectionsRHSJacobFluxReconstruction.cxx
 ConvBndCorrectionsRHSJacobFluxReconstruction.hh
+ConvDiffLLAVJacobFluxReconstruction.cxx
+ConvDiffLLAVJacobFluxReconstruction.hh
+ConvDiffLLAVFluxReconstruction.cxx
+ConvDiffLLAVFluxReconstruction.hh
 FluxReconstructionGeometricEntities.cxx
 FluxReconstructionBaseFunctionQuadP0.hh
 FluxReconstructionBaseFunctionQuadP0.cxx

@@ -10,7 +10,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 
-#include "FluxReconstructionMethod/StdSetup.hh"
+#include "FluxReconstructionMethod/SetupExtra.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,7 +24,7 @@ namespace COOLFluiD {
  * 
  * @author Ray Vandenhoeck
  */
-class SetupCUDA : public StdSetup {
+class SetupCUDA : public SetupExtra {
 
 public: // functions
 
@@ -48,42 +48,15 @@ private: // private functions
   /**
    * Creates sockets that store the needed normals
    */
-  void createNormalSockets();
+  void createCUDASockets();
   
 protected: // data
-  
-  /// storage for the normals in the solution points
-  Framework::DataSocketSource< CFreal > socket_solPntNormals;
-  
-  /// storage for the normals in the solution points
-  Framework::DataSocketSource< CFreal > socket_flxPntNormals;
 
   /// storage for the gradients
   Framework::DataSocketSource< CFreal > socket_gradientsCUDA;
-  
-  /// storage for the cell volumes
-  Framework::DataSocketSource< CFreal > socket_cellVolumes;
 
   /// storage for the face directions
   Framework::DataSocketSource< CFint > socket_faceDir;
-  
-  /// variable for current face
-  Framework::GeometricEntity* m_face;
-  
-  /// builder of faces
-  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
-  
-  /// face local coordinates of the flux points on one face
-  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
-  
-  /// vector to store the face jacobians in
-  std::vector< RealVector > m_faceJacobVecs;
-
-  /// local cell face - mapped coordinate direction per orientation
-  Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
-
-  /// flx pnt - face connectivity per orient
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
   
 };  // class SetupCUDA
 
