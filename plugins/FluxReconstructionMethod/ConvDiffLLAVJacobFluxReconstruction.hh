@@ -366,6 +366,18 @@ protected: //data
   /// average gradients in a flux point
   std::vector< RealVector* > m_avgGradAV;
   
+  /// stores the flux jacobian for each side, in each sol pnt, for each variable, for each direction
+  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_fluxJacobian;
+  
+  /// stores the Riemann flux jacobian in each face flx pnt, for each variable
+  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxJacobian;
+  
+  /// convective Riemann flux
+  std::vector < RealVector > m_flxPntRiemannFluxConv;
+  
+  /// perturbed convective Riemann Flux
+  std::vector < RealVector > m_flxPntRiemannFluxConvPert;
+  
   private:
 
   /// Physical data temporary vector

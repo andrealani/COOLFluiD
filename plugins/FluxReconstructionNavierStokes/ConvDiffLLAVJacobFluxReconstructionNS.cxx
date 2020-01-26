@@ -152,9 +152,11 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
     
     // compute the convective riemann flux
-    m_flxPntRiemannFlux[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
-									*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
-									m_unitNormalFlxPnts[iFlxPnt]);
+    m_flxPntRiemannFluxConv[iFlxPnt] = - m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+									    *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
+									    m_unitNormalFlxPnts[iFlxPnt]);
+    
+    m_flxPntRiemannFlux[iFlxPnt] += m_flxPntRiemannFluxConv[iFlxPnt];
     
     // compute artificial part
     // get epsilon
