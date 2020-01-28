@@ -202,6 +202,21 @@ protected: //functions
   /// set face data for gradient computation
   void setFaceDataForGradients(const CFuint faceID);
   
+  /// initialize the data needed for the jacobian
+  void initJacobianComputation();
+  
+  /// compute the cell flux jacobian numerically
+  void computeCellFluxJacobianNum(const CFreal resFactor);
+  
+  /// compute the Riemann flux jacobian numerically
+  virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
+  
+  /// compute the flux to gradient jacobian numerically
+  void computeFluxToGradJacobianNum(const CFreal resFactor);
+  
+  /// compute the gradient to state jacobian analytically
+  void computeGradToStateJacobianAna();
+  
 protected: //data
     
   /// update variable set
@@ -378,6 +393,15 @@ protected: //data
   /// perturbed convective Riemann Flux
   std::vector < RealVector > m_flxPntRiemannFluxConvPert;
   
+  /// temporary storage for a flux
+  RealVector m_tempFlux;
+  
+  /// stores the flux jacobian to the gradients for each side, in each sol pnt, for each variable, for each gradient direction for each flux direction
+  std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > m_gradientFluxJacobian;
+  
+  /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
+  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_gradientStateJacobian;
+  
   private:
 
   /// Physical data temporary vector
@@ -393,4 +417,3 @@ protected: //data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_FluxReconstructionMethod_ConvDiffLLAVJacobFluxReconstruction_hh
-

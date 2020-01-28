@@ -120,6 +120,9 @@ protected: //functions
    */
   virtual void computeEpsilon0(const CFuint side);
   
+  /// compute the Riemann flux jacobian numerically
+  virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
+  
 protected: // data
     
   /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
@@ -184,4 +187,3 @@ protected: // data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_FluxReconstructionMethod_ConvDiffLLAVJacobFluxReconstructionNS_hh
-

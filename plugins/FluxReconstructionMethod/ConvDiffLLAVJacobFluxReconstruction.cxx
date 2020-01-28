@@ -95,7 +95,10 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
   m_fluxJacobian(),
   m_riemannFluxJacobian(),
   m_flxPntRiemannFluxConv(),
-  m_flxPntRiemannFluxConvPert()
+  m_flxPntRiemannFluxConvPert(),
+  m_tempFlux(),
+  m_gradientFluxJacobian(),
+  m_gradientStateJacobian()
   {
     addConfigOptionsTo(this);
     
@@ -729,14 +732,14 @@ void ConvDiffLLAVJacobFluxReconstruction::computeInterfaceFlxCorrection()
     prepareFluxComputation();
      
     // compute diffusive flux
-    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
+    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxConv[iFlxPnt]);
     
     // compute the convective riemann flux
-    m_flxPntRiemannFluxConv[iFlxPnt] = - m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+    m_flxPntRiemannFluxConv[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
 									    *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									    m_unitNormalFlxPnts[iFlxPnt]);
     
-    m_flxPntRiemannFlux[iFlxPnt] += m_flxPntRiemannFluxConv[iFlxPnt];
+    m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxConv[iFlxPnt];
     
     // compute artificial part
     // get epsilon
@@ -804,26 +807,14 @@ void ConvDiffLLAVJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
+void ConvDiffLLAVJacobFluxReconstruction::initJacobianComputation()
 {
-  // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
-  
   // get the sol pnt normals
   DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
-
-  // dereference accumulator
-  BlockAccumulator& acc = *m_acc;
-
+  
   // set block row and column indices, proj vectors and make a backup of discontinuous fluxes
-  CFuint solIdx = 0;
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, ++solIdx)
-    {
-      acc.setRowColIndex(solIdx,(*m_states[m_pertSide])[iSol]->getLocalID());
-    }
-  
     // store the sol pnt normals
     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
     {
@@ -855,16 +846,22 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       // calculate the discontinuous flux projected on x, y, z-directions
       for (CFuint iDim = 0; iDim < m_dim; ++iDim)
       {
-        //computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+        // diffusive part 
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxBackup[m_pertSide][m_pertSol][iDim]);
         
         // convective part
-        m_contFlxBackup[m_pertSide][m_pertSol][iDim] = - m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol]);
+        m_contFlxBackup[m_pertSide][m_pertSol][iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol]);
         
         //m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxNeighb[m_pertSide][m_pertSol][iDim];
       }
     }
   }
+}
 
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeCellFluxJacobianNum(const CFreal resFactor)
+{
   // loop over left and right cell to compute flux jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
@@ -879,6 +876,11 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
     {
       // dereference state
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
+      
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        *(m_tempGrad[iVar]) = (*(m_cellGrads[m_pertSide][m_pertSol]))[iVar];
+      }
 
       // loop over the variables in the state
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
@@ -888,25 +890,30 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         
         // compute perturbed physical data
         m_updateVarSet->computePhysicalData(*((*(m_states[m_pertSide]))[m_pertSol]), m_pData); 
+
+        m_avgSol = *((*(m_states[m_pertSide]))[m_pertSol]->getData());
         
         // compute perturbed fluxes
         prepareFluxComputation();
 
         // calculate the discontinuous flux projected on x, y, z-directions
         for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-        {        
+        {       
+          // diffusive part
+          computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+                    
           // convective part
-          m_contFlxNeighb[m_pertSide][m_pertSol][iDim] = - m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol]);
+          m_contFlxNeighb[m_pertSide][m_pertSol][iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol]);
 
           // compute the flux current jacobian term
           // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
-          m_numJacob->computeDerivative(m_contFlxNeighb[m_pertSide][m_pertSol][iDim],m_contFlxBackup[m_pertSide][m_pertSol][iDim],m_avgSol);
+          m_numJacob->computeDerivative(m_contFlxNeighb[m_pertSide][m_pertSol][iDim],m_contFlxBackup[m_pertSide][m_pertSol][iDim],m_tempFlux);
 
           // multiply residual update derivatives with residual factor so it is taken into the final jacobian
-          m_avgSol *= resFactor;
+          m_tempFlux *= resFactor;
         
           // store the flux jacobian
-          m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim] = m_avgSol;
+          m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim] = m_tempFlux;
         }
 
         // restore physical variable in state
@@ -914,14 +921,28 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       }
     }
   }
-  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeRiemannFluxJacobianNum(const CFreal resFactor)
+{
   // loop over the face flux points to compute the Riemann flux jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
+    // variable for the other side
+    const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+    
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
     {
       // dereference state
       State& pertState = *(m_cellStatesFlxPnt[m_pertSide][iFlxPnt]);
+      
+      // compute the average grad to use the BR2 scheme
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;            
+      }
                 
       // loop over the variables in the state
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
@@ -929,17 +950,28 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         // perturb physical variable in state
         m_numJacob->perturb(m_pertVar,pertState[m_pertVar]);
         
+        // compute the average sol
+        for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+        {        
+          m_avgSol[iVar] = (pertState[iVar] + (*(m_cellStatesFlxPnt[iOtherSide][iFlxPnt]))[iVar])/2.0; 
+        }
+    
+        prepareFluxComputation();
+     
+        // compute diffusive flux
+        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxConvPert[iFlxPnt]);
+        
         if (m_pertSide == LEFT)
         {
           // compute the convective riemann flux
-          m_flxPntRiemannFluxConvPert[iFlxPnt] = - m_riemannFluxComputer->computeFlux(pertState,
+          m_flxPntRiemannFluxConvPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(pertState,
 									              *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									              m_unitNormalFlxPnts[iFlxPnt]);
         }
         else
         {
           // compute the convective riemann flux
-          m_flxPntRiemannFluxConvPert[iFlxPnt] = - m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+          m_flxPntRiemannFluxConvPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
                                                                                       pertState,
 									              m_unitNormalFlxPnts[iFlxPnt]);
         }
@@ -956,6 +988,161 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       }
     }
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeFluxToGradJacobianNum(const CFreal resFactor)
+{
+  // loop over left and right cell to compute flux jacobian
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    // variable for the other side
+    const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+    
+    // cell ID of the cell at the non-perturbed side
+    const CFuint otherCellID = m_cells[iOtherSide]->getID();
+
+    // loop over the states to perturb the states
+    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+    {
+      // dereference state
+      m_avgSol = *((*(m_states[m_pertSide]))[m_pertSol]->getData());
+      
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        *(m_tempGrad[iVar]) = (*(m_cellGrads[m_pertSide][m_pertSol]))[iVar];
+      }
+
+      // loop over the variables in the state
+      for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+      {
+        for (CFuint pertDim = 0; pertDim < m_dim; ++pertDim)
+        {
+          // perturb physical variable in state
+          m_numJacob->perturb(m_pertVar,(*(m_tempGrad[m_pertVar]))[pertDim]);
+        
+          // compute perturbed fluxes
+          prepareFluxComputation();
+
+          // calculate the discontinuous flux projected on x, y, z-directions
+          for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+          {       
+            // diffusive part
+            computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+
+            // compute the flux current jacobian term
+            // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
+            m_numJacob->computeDerivative(m_contFlxNeighb[m_pertSide][m_pertSol][iDim],m_contFlxBackup[m_pertSide][m_pertSol][iDim],m_tempFlux);
+
+            // multiply residual update derivatives with residual factor so it is taken into the final jacobian
+            m_tempFlux *= resFactor;
+        
+            // store the flux jacobian
+            m_gradientFluxJacobian[m_pertSide][m_pertSol][m_pertVar][pertDim][iDim] = m_tempFlux;
+          }
+
+          // restore physical variable in state
+          m_numJacob->restore((*(m_tempGrad[m_pertVar]))[pertDim]);
+        }
+      }
+    }
+  }  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeGradToStateJacobianAna()
+{
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    // variable for the other side
+    const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+    
+    // loop over the sol pnts of which the gradients will be derived
+    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+    {
+      // loop over the sol pnts to which to derive
+      for (CFuint jSol = 0; jSol < m_nbrSolSolDep; ++jSol)
+      {
+        const CFuint jSolIdx = (*m_solSolDep)[m_pertSol][jSol];  
+        
+        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+        {
+          m_gradientStateJacobian[m_pertSide][m_pertSol][m_pertSide][jSolIdx][iDim] = 0.0;
+                    
+          for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+          {
+            m_gradientStateJacobian[m_pertSide][m_pertSol][m_pertSide][jSolIdx][iDim] += m_neighbCellFluxProjVects[m_pertSide][iDim][jSolIdx][jDim];
+          }
+          
+          m_gradientStateJacobian[m_pertSide][m_pertSol][m_pertSide][jSolIdx][iDim] *= (*m_solPolyDerivAtSolPnts)[m_pertSol][iDim][jSolIdx];
+
+        }
+      }
+    }
+    
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    {
+      // local flux point indices in the left and right cell
+      const CFuint flxPntIdxThis = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlx];
+      const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlx];
+      
+      for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+      {
+        const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol]; 
+    
+        for (CFuint jSol = 0; jSol < m_nbrSolDep; ++jSol)
+        {
+          const CFuint jSolIdx = (*m_flxSolDep)[flxPntIdxThis][jSol];  
+          const CFuint jSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][jSol];  
+        
+          for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+          {
+            m_gradientStateJacobian[m_pertSide][pertSolIdx][m_pertSide][jSolIdx][iDim] -= 0.5 * m_corrFctDiv[pertSolIdx][flxPntIdxThis] * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][jSolIdx] *
+                    (*m_faceMappedCoordDir)[m_orient][m_pertSide]*m_faceJacobVecs[iFlx][iDim];
+                    
+            m_gradientStateJacobian[m_pertSide][pertSolIdx][iOtherSide][jSolIdxOther][iDim] += 0.5 * m_corrFctDiv[pertSolIdx][flxPntIdxThis] * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][jSolIdxOther] *
+                    (*m_faceMappedCoordDir)[m_orient][m_pertSide]*m_faceJacobVecs[iFlx][iDim];
+          }
+        }   
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
+{
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  // dereference accumulator
+  BlockAccumulator& acc = *m_acc;
+  
+  CFuint solIdx = 0;
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, ++solIdx)
+    {
+      acc.setRowColIndex(solIdx,(*m_states[m_pertSide])[iSol]->getLocalID());
+    }
+  }
+
+  //// compute the needed flux jacobians
+  
+  initJacobianComputation();
+  
+  computeCellFluxJacobianNum(resFactor);
+  
+  computeRiemannFluxJacobianNum(resFactor);
+  
+  computeFluxToGradJacobianNum(resFactor);
+  
+  computeGradToStateJacobianAna();
+  
+  //// add the total jacobians to the system jacobian
   
   // loop over left and right cell to add the discontinuous part to the jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
@@ -985,16 +1172,31 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
           {
             const CFuint jSolIdx = (*m_solSolDep)[m_pertSol][jSolPnt];
             
-            m_avgSol = 0.;
+            m_tempFlux = 0.;
 
             for (CFuint iDim = 0; iDim < m_dim; ++iDim)
             {
               const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][m_pertSol]; 
           
-              m_avgSol += m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim] * polyCoef;
+              m_tempFlux += m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim] * polyCoef;
             }
             
-            acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_avgSol[0]);
+            // add the discontinuous gradient part of the jacobian
+            for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolSolDep; ++kSolPnt)
+            {
+              const CFuint kSolIdx = (*m_solSolDep)[m_pertSol][kSolPnt];
+              
+              for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+              {
+                for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+                {
+                  m_tempFlux += m_gradientFluxJacobian[m_pertSide][m_pertSol][m_pertVar][jDim][iDim] * (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][kSolIdx] * 
+                          m_gradientStateJacobian[m_pertSide][kSolIdx][m_pertSide][m_pertSol][jDim];
+                }
+              }
+            }
+            
+            acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
           
           for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
@@ -1011,9 +1213,21 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
               // get the divergence of the correction function
               const CFreal divh = m_corrFctDiv[jSolIdx][flxIdx];
                            
-              m_avgSol = -m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][m_pertSol] * divh;
+              m_tempFlux = -m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][m_pertSol] * divh;
               
-              acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_avgSol[0]);
+              // add the second part of the discontinuous gradient part of the jacobian
+              for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolSolDep; ++kSolPnt)
+              {
+                const CFuint kSolIdx = (*m_solSolDep)[m_pertSol][kSolPnt];
+              
+                for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+                {
+                  m_tempFlux += divh * m_gradientFluxJacobian[m_pertSide][m_pertSol][m_pertVar][jDim][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][kSolIdx] * 
+                          m_gradientStateJacobian[m_pertSide][kSolIdx][m_pertSide][m_pertSol][jDim];
+                }
+              }
+              
+              acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
             }
           }
         }
@@ -1060,17 +1274,17 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             // get the divergence of the correction function
             CFreal divh = m_corrFctDiv[jSolIdxThis][flxPntIdxThis];
               
-            m_avgSol = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide] 
+            m_tempFlux = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide] 
                     * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] * divh;
               
-            acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_avgSol[0]);
+            acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           
             divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
           
-            m_avgSol = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide] 
+            m_tempFlux = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide] 
                     * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] * divh;
               
-            acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_avgSol[0]);
+            acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
         }
       }
@@ -2326,6 +2540,13 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   m_riemannFluxJacobian[RIGHT].resize(m_nbrFaceFlxPnts);
   m_flxPntRiemannFluxConv.resize(m_nbrFaceFlxPnts);
   m_flxPntRiemannFluxConvPert.resize(m_nbrFaceFlxPnts);
+  m_tempFlux.resize(m_nbrEqs);
+  m_gradientFluxJacobian.resize(2);
+  m_gradientFluxJacobian[LEFT].resize(m_nbrSolPnts);
+  m_gradientFluxJacobian[RIGHT].resize(m_nbrSolPnts);
+  m_gradientStateJacobian.resize(2);
+  m_gradientStateJacobian[LEFT].resize(m_nbrSolPnts);
+  m_gradientStateJacobian[RIGHT].resize(m_nbrSolPnts);
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -2335,15 +2556,42 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
     
     m_fluxJacobian[LEFT][iSol].resize(m_nbrEqs);
     m_fluxJacobian[RIGHT][iSol].resize(m_nbrEqs);
+    m_gradientFluxJacobian[LEFT][iSol].resize(m_nbrEqs);
+    m_gradientFluxJacobian[RIGHT][iSol].resize(m_nbrEqs);
+    m_gradientStateJacobian[LEFT][iSol].resize(2);
+    m_gradientStateJacobian[RIGHT][iSol].resize(2);
+    
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      m_gradientStateJacobian[LEFT][iSol][iSide].resize(m_nbrSolPnts);
+      m_gradientStateJacobian[RIGHT][iSol][iSide].resize(m_nbrSolPnts);
+      
+      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+      {
+        m_gradientStateJacobian[LEFT][iSol][iSide][jSol].resize(m_dim);
+        m_gradientStateJacobian[RIGHT][iSol][iSide][jSol].resize(m_dim);
+      }
+    }
+  
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       m_fluxJacobian[LEFT][iSol][iVar].resize(m_dim);
       m_fluxJacobian[RIGHT][iSol][iVar].resize(m_dim);
+      m_gradientFluxJacobian[LEFT][iSol][iVar].resize(m_dim);
+      m_gradientFluxJacobian[RIGHT][iSol][iVar].resize(m_dim);
         
       for (CFuint iDim = 0; iDim < m_dim; ++iDim)
       {
         m_fluxJacobian[LEFT][iSol][iVar][iDim].resize(m_nbrEqs);
         m_fluxJacobian[RIGHT][iSol][iVar][iDim].resize(m_nbrEqs);
+        m_gradientFluxJacobian[LEFT][iSol][iVar][iDim].resize(m_dim);
+        m_gradientFluxJacobian[RIGHT][iSol][iVar][iDim].resize(m_dim);
+        
+        for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+        {
+          m_gradientFluxJacobian[LEFT][iSol][iVar][iDim][jDim].resize(m_nbrEqs);
+          m_gradientFluxJacobian[RIGHT][iSol][iVar][iDim][jDim].resize(m_nbrEqs); 
+        }
       }
     }
   }
@@ -2448,4 +2696,3 @@ void ConvDiffLLAVJacobFluxReconstruction::unsetup()
 
   }  // namespace FluxReconstructionMethod
 }  // namespace COOLFluiD
-
