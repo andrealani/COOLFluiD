@@ -327,7 +327,7 @@ protected: //data
   /// flags for each cell to tell whether its inner -divFD has been computed 
   std::vector< bool > m_cellFlags;
   
-   /// builder of cells
+  /// builder of cells
   std::vector< Common::SafePtr< Framework::GeometricEntityPool<CellToFaceGEBuilder> > > m_cellBuilders;
   
   /// builder of cells

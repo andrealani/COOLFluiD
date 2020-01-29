@@ -4,8 +4,8 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_FluxReconstructionMethod_ConvDiffLLAVJacobFluxReconstruction_hh
-#define COOLFluiD_FluxReconstructionMethod_ConvDiffLLAVJacobFluxReconstruction_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_ConvJacobAnaFluxReconstruction_hh
+#define COOLFluiD_FluxReconstructionMethod_ConvJacobAnaFluxReconstruction_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,18 +24,18 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the convective, diffusive 
-/// and artificial viscosity part of the system using a FluxReconstruction solver for an implicit scheme
+/// This is a standard command to assemble the convective 
+///  part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Ray Vandenhoeck
-class ConvDiffLLAVJacobFluxReconstruction : public DiffRHSJacobFluxReconstruction {
+class ConvJacobAnaFluxReconstruction : public DiffRHSJacobFluxReconstruction {
 
 public: // functions
 
   /// Constructor
-  explicit ConvDiffLLAVJacobFluxReconstruction(const std::string& name);
+  explicit ConvJacobAnaFluxReconstruction(const std::string& name);
 
   /// Destructor
-  virtual ~ConvDiffLLAVJacobFluxReconstruction() {}
+  virtual ~ConvJacobAnaFluxReconstruction() {}
 
   /// Execute processing actions
   virtual void execute();
@@ -100,20 +100,6 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-  
-  /**
-   * recompute the cell gradients from the current cell solutions,
-   * after perturbation
-   */
-  virtual void computePerturbedGradientsAnalytical(const CFuint side);
-
-  /**
-   * compute the perturbed cell diffusive residuals for one cell
-   * @pre m_faceTermComputer->computeDiffFaceTerm
-   * @pre backupAndReconstructOtherFacesAndCellPhysVars(
-   * @pre reconstructOtherFacesAndCellGradients()
-   */
-  virtual void computePertCellDiffResiduals(const CFuint side);
 
   /**
    * compute the contribution of the diffusive face term to both Jacobians
@@ -125,83 +111,6 @@ protected: //functions
    */
   void computeOneJacobDiffFaceTerm(const CFuint side);
   
-  /**
-   * compute the data needed for the computation of the perturbed gradients
-   */
-  void computePertGradData(const CFuint side);
-  
-  /**
-   * store values that will be overwritten
-   */
-  void storeBackups();
-  
-  /**
-   * restore values that were overwritten
-   */
-  void restoreFromBackups();
-  
-  /// compute the divergence of the discontinuous flux (-divFD+divhFD) of a neighbor cell
-  virtual void computeDivDiscontFlxNeighb(RealVector& residuals, const CFuint side);
-  
-  /**
-   * Compute the projected states on order P-1
-   */
-  void computeProjStates(std::vector< RealVector >& projStates);
-  
-  /**
-   * Compute the projected states on order P-1 on a side of the current face
-   */
-  void computeProjStates(std::vector< RealVector >& projStates, const CFuint side);
-  
-  /**
-   * Compute the artificial viscosity
-   */
-  virtual void computeEpsilon();
-  
-  /**
-   * Compute the reference artificial viscosity
-   */
-  virtual void computeEpsilon0();
-  
-  /**
-   * Compute the reference artificial viscosity
-   */
-  virtual void computeEpsilon0(const CFuint side);
-  
-  /**
-   * Compute the smoothness indicator
-   */
-  virtual void computeSmoothness();
-  
-  /**
-   * Compute the smoothness indicator
-   */
-  virtual void computeSmoothness(const CFuint side);
-  
-  /**
-   * Store the computed artificial viscosity
-   */
-  virtual void storeEpsilon();
-  
-  /**
-   * compute the artificial diffusive flux
-   */
-  virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
-  
-  /**
-   * command to compute the peclet number based on user input
-   */
-  virtual CFreal computePeclet(); 
-  
-  /// compute the volume term contribution to the gradients
-  virtual void computeGradients();
-  
-  /// compute the face correction to the corrected gradients
-  virtual void computeGradientFaceCorrections();
-  
-  /// set face data for gradient computation
-  void setFaceDataForGradients(const CFuint faceID);
-  
   /// initialize the data needed for the jacobian
   void initJacobianComputation();
   
@@ -210,15 +119,6 @@ protected: //functions
   
   /// compute the Riemann flux jacobian numerically
   virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
-  
-  /// compute the flux to gradient jacobian numerically
-  void computeFluxToGradJacobianNum(const CFreal resFactor);
-  
-  /// compute the gradient to state jacobian analytically
-  void computeGradToStateJacobianAna();
-  
-  /// compute the Riemann flux to gradient jacobian numerically
-  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
   
 protected: //data
     
@@ -413,7 +313,7 @@ protected: //data
   /// Physical data temporary vector
   RealVector m_pData;
 
-}; // class ConvDiffLLAVJacobFluxReconstruction
+}; // class ConvJacobAnaFluxReconstruction
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -422,4 +322,4 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_ConvDiffLLAVJacobFluxReconstruction_hh
+#endif // COOLFluiD_FluxReconstructionMethod_ConvJacobAnaFluxReconstruction_hh

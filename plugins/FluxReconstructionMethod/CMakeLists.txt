@@ -105,6 +105,8 @@ ConvDiffLLAVJacobFluxReconstruction.cxx
 ConvDiffLLAVJacobFluxReconstruction.hh
 ConvDiffLLAVFluxReconstruction.cxx
 ConvDiffLLAVFluxReconstruction.hh
+ConvJacobAnaFluxReconstruction.cxx
+ConvJacobAnaFluxReconstruction.hh
 FluxReconstructionGeometricEntities.cxx
 FluxReconstructionBaseFunctionQuadP0.hh
 FluxReconstructionBaseFunctionQuadP0.cxx

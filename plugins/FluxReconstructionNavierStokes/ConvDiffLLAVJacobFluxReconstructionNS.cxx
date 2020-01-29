@@ -149,15 +149,15 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     prepareFluxComputation();
      
     // compute the diff flux
-    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxConv[iFlxPnt]);
+    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxDiff[iFlxPnt]);
+    
+    m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxDiff[iFlxPnt];
     
     // compute the convective riemann flux
-    m_flxPntRiemannFluxConv[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+    m_flxPntRiemannFlux[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
 									    *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									    m_unitNormalFlxPnts[iFlxPnt]);
-    
-    m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxConv[iFlxPnt];
-    
+     
     // compute artificial part
     // get epsilon
     const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
@@ -180,6 +180,8 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
 
 void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const CFreal resFactor)
 {
+  CFLog(VERBOSE, "NS computeRiemannFluxJacobianNum\n");
+      
   // loop over the face flux points to compute the Riemann flux jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
@@ -243,32 +245,99 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const 
         prepareFluxComputation();
      
         // compute diffusive flux
-        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxConvPert[iFlxPnt]);
+        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxPert[iFlxPnt]);
         
         if (m_pertSide == LEFT)
         {
           // compute the convective riemann flux
-          m_flxPntRiemannFluxConvPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(pertState,
+          m_flxPntRiemannFluxPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(pertState,
 									              *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									              m_unitNormalFlxPnts[iFlxPnt]);
         }
         else
         {
           // compute the convective riemann flux
-          m_flxPntRiemannFluxConvPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+          m_flxPntRiemannFluxPert[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
                                                                                       pertState,
 									              m_unitNormalFlxPnts[iFlxPnt]);
         }
        
         // compute the flux current jacobian term
         // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
-        m_numJacob->computeDerivative(m_flxPntRiemannFluxConvPert[iFlxPnt],m_flxPntRiemannFluxConv[iFlxPnt],m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]);
+        m_numJacob->computeDerivative(m_flxPntRiemannFluxPert[iFlxPnt],m_flxPntRiemannFlux[iFlxPnt],m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]);
 
         // multiply residual update derivatives with residual factor so it is taken into the final jacobian
         m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar] *= resFactor;
 
         // restore physical variable in state
         m_numJacob->restore(pertState[m_pertVar]);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxToGradJacobianNum(const CFreal resFactor)
+{  
+  CFLog(VERBOSE, "NS computeRiemannFluxToGradJacobianNum\n");
+  
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_tempStatesL[iFlx] = m_cellStatesFlxPnt[LEFT][iFlx]->getData();
+    m_tempStatesR[iFlx] = m_cellStatesFlxPnt[RIGHT][iFlx]->getData();
+  }
+  
+  m_diffusiveVarSetNS->setGradientVars(m_tempStatesL,m_tempGradTermL,m_nbrFaceFlxPnts);
+  m_diffusiveVarSetNS->setGradientVars(m_tempStatesR,m_tempGradTermR,m_nbrFaceFlxPnts); 
+
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {   
+    // damping factor
+    const CFreal dampFactor = m_dampCoeffDiff*m_faceInvCharLengths[iFlxPnt]; 
+    
+    // compute the average grad to use the BR2 scheme
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;            
+    }
+
+    // compute the average sol
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {        
+      m_avgSol[iVar] = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iVar])/2.0; 
+    }
+  
+    // loop over the variables in the state
+    for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+    {
+      for (CFuint pertDir = 0; pertDir < m_dim; ++pertDir)
+      {
+        // perturb physical variable in state
+        m_numJacob->perturb(m_pertVar,(*(m_avgGrad[m_pertVar]))[pertDir]);
+
+        // compute averaged (damped) gradients
+        for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+        {
+          // compute damping term
+          const RealVector dGradVarXNormal = (m_tempGradTermL(iGrad,iFlxPnt) - m_tempGradTermR(iGrad,iFlxPnt))*m_unitNormalFlxPnts[iFlxPnt];
+          *m_tempGrad[iGrad] = *(m_avgGrad[iGrad]) - dampFactor*dGradVarXNormal;
+        }
+
+        prepareFluxComputation();
+
+        // compute diffusive flux
+        computeFlux(m_avgSol,m_tempGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxPert[iFlxPnt]);
+
+        // compute the flux current jacobian term
+        // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
+        m_numJacob->computeDerivative(m_flxPntRiemannFluxPert[iFlxPnt],m_flxPntRiemannFluxDiff[iFlxPnt],m_riemannFluxGradJacobian[iFlxPnt][m_pertVar][pertDir]);
+
+        // multiply residual update derivatives with residual factor so it is taken into the final jacobian
+        m_riemannFluxGradJacobian[iFlxPnt][m_pertVar][pertDir] *= resFactor;
+
+        // restore physical variable in state
+        m_numJacob->restore((*(m_avgGrad[m_pertVar]))[pertDir]);
       }
     }
   }

@@ -123,6 +123,9 @@ protected: //functions
   /// compute the Riemann flux jacobian numerically
   virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
   
+  /// compute the Riemann flux to gradient jacobian numerically
+  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
+  
 protected: // data
     
   /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
