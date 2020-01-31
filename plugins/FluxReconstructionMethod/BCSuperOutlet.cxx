@@ -26,6 +26,11 @@ BCSuperOutlet::BCSuperOutlet(const std::string& name) :
   BCStateComputer(name)
 {
   CFAUTOTRACE;
+  
+  addConfigOptionsTo(this);
+
+  m_zeroGrad = false;
+  setParameter("ZeroGrad",&m_zeroGrad);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -33,6 +38,13 @@ BCSuperOutlet::BCSuperOutlet(const std::string& name) :
 BCSuperOutlet::~BCSuperOutlet()
 {
   CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSuperOutlet::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("ZeroGrad","Boolean telling whether the normal gradients should be put to zero (default false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,10 +90,17 @@ void BCSuperOutlet::computeGhostGradients(const std::vector< std::vector< RealVe
 
     for (CFuint iGradVar = 0; iGradVar < nbrGradVars; ++iGradVar)
     {
-      const RealVector& varGradI =  *intGrads[iState][iGradVar];
-      RealVector& varGradG =  *ghostGrads[iState][iGradVar];
-      const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
-      varGradG = varGradI - 2.0*nVarGrad*normal;
+      if (m_zeroGrad)
+      {
+        const RealVector& varGradI =  *intGrads[iState][iGradVar];
+        RealVector& varGradG =  *ghostGrads[iState][iGradVar];
+        const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
+        varGradG = varGradI - 2.0*nVarGrad*normal;
+      }
+      else
+      {
+        *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar]; 
+      }
 
 //      *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar]; //0;//
     }

@@ -41,6 +41,17 @@ public:  // methods
   
   /// Unset up private data
   void unsetup();
+  
+  /**
+   * Defines the Config Option's of this class
+   * @param options a OptionList where to add the Option's
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+  
+  /**
+   * Configures the command.
+   */
+  void configure ( Config::ConfigArgs& args );
 
   /**
    * Sets the ghost states in all the boundary points (depends on the boundary condition type)
@@ -57,6 +68,11 @@ public:  // methods
                              std::vector< std::vector< RealVector* > >& ghostGrads,
                              const std::vector< RealVector >& normals,
                              const std::vector< RealVector >& coords);
+  
+  protected: // data
+      
+  // boolean telling whether to put the normal gradients to zero
+  bool m_zeroGrad;
 
 }; // class BCSuperOutlet
 
