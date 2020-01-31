@@ -820,6 +820,163 @@ void ConvJacobAnaFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
 void ConvJacobAnaFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint side)
 {
+  CFLog(VERBOSE, "computeOneJacobsDiffFaceTerm\n");
+    
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  // dereference accumulator
+  BlockAccumulator& acc = *m_acc;
+  
+  CFuint solIdx = 0;
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, ++solIdx)
+    {
+      acc.setRowColIndex(solIdx,(*m_states[m_pertSide])[iSol]->getLocalID());
+    }
+  }
+
+  //// compute the needed flux jacobians
+  
+  initJacobianComputation();
+  
+  computeCellFluxJacobianNum(resFactor);
+  
+  computeRiemannFluxJacobianNum(resFactor);
+  
+  //// add the total jacobians to the system jacobian
+  
+  // loop over left and right cell to add the discontinuous part to the jacobian
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    if (!m_cellFlags[m_cells[m_pertSide]->getID()]) 
+    {
+      // variable for the other side
+      const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+    
+      // cell ID of the cell at the non-perturbed side
+      const CFuint otherCellID = m_cells[iOtherSide]->getID();
+    
+      // term depending on iSide
+      const CFuint pertSideTerm = m_pertSide*m_nbrSolPnts;
+
+      // term depending on iOtherSide
+      const CFuint otherSideTerm = iOtherSide*m_nbrSolPnts;
+
+      // loop over the states to perturb the states
+      for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+      {
+        // loop over the variables in the state
+        for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+        { 
+          // add the discontinuous part of the jacobian
+          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
+          {
+            const CFuint jSolIdx = (*m_solSolDep)[m_pertSol][jSolPnt];
+            
+            m_tempFlux = 0.;
+
+            for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+            {
+              const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][m_pertSol]; 
+          
+              m_tempFlux += m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim] * polyCoef;
+            }
+            
+            acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+          }
+          
+          for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+          {
+            const CFuint flxIdx = (*m_solFlxDep)[m_pertSol][iFlxPnt];
+            
+            const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
+            
+            // add the second part of the discontinuous part of the jacobian
+            for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
+            {
+              const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
+
+              // get the divergence of the correction function
+              const CFreal divh = m_corrFctDiv[jSolIdx][flxIdx];
+                           
+              m_tempFlux = -m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][m_pertSol] * divh;
+              
+              acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // loop over left and right cell to add the riemann flux part to the jacobian
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    // variable for the other side
+    const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+    
+    // cell ID of the cell at the non-perturbed side
+    const CFuint otherCellID = m_cells[iOtherSide]->getID();
+    
+    // term depending on iSide
+    const CFuint pertSideTerm = m_pertSide*m_nbrSolPnts;
+
+    // term depending on iOtherSide
+    const CFuint otherSideTerm = iOtherSide*m_nbrSolPnts;
+    
+    // loop over the variables in the state
+    for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+    { 
+      // loop over face flx pnts
+      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+      {
+        // local flux point indices in the left and right cell
+        const CFuint flxPntIdxThis = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlxPnt];
+        const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlxPnt];
+        
+        // loop over the states to perturb the states
+        for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+        {
+          const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
+            
+          // add the second part of the discontinuous part of the jacobian
+          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
+          {
+            const CFuint jSolIdxThis = (*m_flxSolDep)[flxPntIdxThis][jSolPnt];
+            const CFuint jSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][jSolPnt];
+
+            // get the divergence of the correction function
+            CFreal divh = m_corrFctDiv[jSolIdxThis][flxPntIdxThis];
+              
+            m_tempFlux = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide] 
+                    * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] * divh;
+              
+            acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+          
+            divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
+          
+            m_tempFlux = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide] 
+                    * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] * divh; 
+              
+            acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+          }
+        }
+      }
+    }
+  }
+  
+   //acc.printToScreen();
+
+  if (getMethodData().doComputeJacobian())
+  {
+    // add the values to the jacobian matrix
+    m_lss->getMatrix()->addValues(acc);
+  }
+
+  // reset to zero the entries in the block accumulator
+  acc.reset();
 }
 
 //////////////////////////////////////////////////////////////////////////////

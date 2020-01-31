@@ -295,19 +295,15 @@ void ConvDiffLLAVFluxReconstruction::execute()
       m_states[LEFT ] = m_cells[LEFT ]->getStates();
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
       
-      // if one of the neighbouring cells is parallel updatable, compute the correction flux
-      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
-      { 
-        // set the needed data
-        setFaceDataForGradients(m_face->getID());
+      // set the needed data
+      setFaceDataForGradients(m_face->getID());
         
-        // compute the face correction term of the corrected gradients
-        computeGradientFaceCorrections();
+      // compute the face correction term of the corrected gradients
+      computeGradientFaceCorrections();
 
-        // release the cells
-        m_cellBuilders[LEFT ]->releaseGE();
-        m_cellBuilders[RIGHT]->releaseGE();
-      }
+      // release the cells
+      m_cellBuilders[LEFT ]->releaseGE();
+      m_cellBuilders[RIGHT]->releaseGE();
       
       // release the GeometricEntity
       m_faceBuilder->releaseGE();
@@ -424,9 +420,6 @@ void ConvDiffLLAVFluxReconstruction::execute()
       cf_assert(m_cellVolume[LEFT] > 0.0);
       cf_assert(m_cellVolume[RIGHT] > 0.0);
       
-      // if one of the neighbouring cells is parallel updatable, compute the correction flux
-      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
-      {
 	// build the neighbouring cells
         const CFuint cellIDL = m_face->getNeighborGeo(LEFT)->getID();
         geoDataCBL.idx = cellIDL;
@@ -463,7 +456,7 @@ void ConvDiffLLAVFluxReconstruction::execute()
 	updateRHS();
         
         // compute needed cell contributions: what used to be cell loop is incorporated here!!
-        if (!m_cellFlags[cellIDL] && (*m_states[LEFT ])[0]->isParUpdatable())
+        if (!m_cellFlags[cellIDL])
         {
           computeUnpertCellDiffResiduals(LEFT);
 
@@ -484,7 +477,7 @@ void ConvDiffLLAVFluxReconstruction::execute()
             }
           }
         }
-        if (!m_cellFlags[cellIDR] && (*m_states[RIGHT])[0]->isParUpdatable())
+        if (!m_cellFlags[cellIDR])
         {
           computeUnpertCellDiffResiduals(RIGHT);
 
@@ -512,7 +505,6 @@ void ConvDiffLLAVFluxReconstruction::execute()
         
         m_cellFlags[cellIDL] = true;
         m_cellFlags[cellIDR] = true;
-      }
       
       // release the GeometricEntity
       m_faceBuilder->releaseGE();
@@ -1584,4 +1576,3 @@ void ConvDiffLLAVFluxReconstruction::unsetup()
 
   }  // namespace FluxReconstructionMethod
 }  // namespace COOLFluiD
-

@@ -12,7 +12,7 @@
 
 #include "MathTools/MathFunctions.hh"
 
-#include "FluxReconstructionNavierStokes/ConvDiffLLAVJacobFluxReconstructionNS.hh"
+#include "FluxReconstructionNavierStokes/ConvDiffJacobFluxReconstructionNS.hh"
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "NavierStokes/NavierStokesVarSet.hh"
@@ -39,15 +39,15 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider< ConvDiffLLAVJacobFluxReconstructionNS,
+MethodCommandProvider< ConvDiffJacobFluxReconstructionNS,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
-convDiffLLAVRHSJacobNSFluxReconstructionProvider("ConvDiffLLAVRHSJacobNS");
+convDiffRHSJacobNSFluxReconstructionProvider("ConvDiffRHSJacobNS");
   
 //////////////////////////////////////////////////////////////////////////////
   
-ConvDiffLLAVJacobFluxReconstructionNS::ConvDiffLLAVJacobFluxReconstructionNS(const std::string& name) :
-  ConvDiffLLAVJacobFluxReconstruction(name),
+ConvDiffJacobFluxReconstructionNS::ConvDiffJacobFluxReconstructionNS(const std::string& name) :
+  ConvDiffJacobFluxReconstruction(name),
   m_tempGradTerm(),
   m_tempGradTermL(),
   m_tempGradTermR(),
@@ -75,20 +75,20 @@ ConvDiffLLAVJacobFluxReconstructionNS::ConvDiffLLAVJacobFluxReconstructionNS(con
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::configure ( Config::ConfigArgs& args )
+void ConvDiffJacobFluxReconstructionNS::configure ( Config::ConfigArgs& args )
 {
-  ConvDiffLLAVJacobFluxReconstruction::configure(args);
+  ConvDiffJacobFluxReconstruction::configure(args);
 } 
   
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& waveSpeedUpd)
+void ConvDiffJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& waveSpeedUpd)
 {
   // compute the wave speed updates for the neighbouring cells
   cf_assert(waveSpeedUpd.size() == 2);
   
   // here convective and artificial parts are added!
-  ConvDiffLLAVJacobFluxReconstruction::computeWaveSpeedUpdates(waveSpeedUpd);
+  ConvDiffJacobFluxReconstruction::computeWaveSpeedUpdates(waveSpeedUpd);
           
   // now add diffusive part
   CFreal visc = 1.0;
@@ -114,7 +114,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFre
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
+void ConvDiffJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
 {
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -132,7 +132,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
-      *(m_avgGradAV[iVar]) = (*(m_cellGradFlxPntAV[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPntAV[RIGHT][iFlxPnt][iVar]))/2.0;
        
       m_avgSol[iVar] = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iVar])/2.0; 
     }
@@ -146,10 +145,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
       // compute damping term
       const RealVector dGradVarXNormal = (m_tempGradTermL(iGrad,iFlxPnt) - m_tempGradTermR(iGrad,iFlxPnt))*m_unitNormalFlxPnts[iFlxPnt];
       *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
-      
-      // compute damping term for LLAV
-      const RealVector dGradVarXNormalAV = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iGrad] - (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
-      *m_avgGradAV[iGrad] -= dampFactor*dGradVarXNormalAV;
     }
     
     prepareFluxComputation();
@@ -164,18 +159,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
 									    *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									    m_unitNormalFlxPnts[iFlxPnt]);
      
-    // compute artificial part
-    // get epsilon
-    const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
-    
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-    {
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGradAV[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
-      }
-    }
-     
     // compute FI in the mapped coord frame
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
     m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
@@ -184,7 +167,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const CFreal resFactor)
+void ConvDiffJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const CFreal resFactor)
 {
   CFLog(VERBOSE, "NS computeRiemannFluxJacobianNum\n");
   
@@ -292,7 +275,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const 
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxToGradJacobianNum(const CFreal resFactor)
+void ConvDiffJacobFluxReconstructionNS::computeRiemannFluxToGradJacobianNum(const CFreal resFactor)
 {  
   CFLog(VERBOSE, "NS computeRiemannFluxToGradJacobianNum\n");
   
@@ -359,7 +342,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxToGradJacobianNum(
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeGradVarsToStateJacobianNum()
+void ConvDiffJacobFluxReconstructionNS::computeGradVarsToStateJacobianNum()
 {
   CFLog(VERBOSE, "NS computeGradVarsToStateJacobianNum\n");
 
@@ -404,47 +387,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradVarsToStateJacobianNum()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm)
-{ 
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    m_tempStatesL2[iFlx] = m_cellStatesFlxPnt[0][iFlx]->getData();
-    m_tempStatesR2[iFlx] = m_flxPntGhostSol[iFlx]->getData();
-  }
-  
-  m_diffusiveVarSetNS->setGradientVars(m_tempStatesL2,gradTerm,m_nbrFaceFlxPnts);
-  m_diffusiveVarSetNS->setGradientVars(m_tempStatesR2,ghostGradTerm,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::computeCellGradTerm(RealMatrix& gradTerm)
-{   
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    m_tempStatesCell[iSol] = (*m_cellStates)[iSol]->getData();
-  }
-  
-  m_diffusiveVarSetNS->setGradientVars(m_tempStatesCell,gradTerm,m_nbrSolPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR)
-{
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    m_tempStatesL2[iFlx] = m_cellStatesFlxPnt[LEFT][iFlx]->getData();
-    m_tempStatesR2[iFlx] = m_cellStatesFlxPnt[RIGHT][iFlx]->getData();
-  }
-  
-  m_diffusiveVarSetNS->setGradientVars(m_tempStatesL2,gradTermL,m_nbrFaceFlxPnts);
-  m_diffusiveVarSetNS->setGradientVars(m_tempStatesR2,gradTermR,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::prepareFluxComputation()
+void ConvDiffJacobFluxReconstructionNS::prepareFluxComputation()
 {
   const bool isPerturb = this->getMethodData().isPerturb();
   const CFuint iPerturbVar = this->getMethodData().iPerturbVar();
@@ -454,7 +397,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::prepareFluxComputation()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeGradients()
+void ConvDiffJacobFluxReconstructionNS::computeGradients()
 {
   // get the sol pnt normals
   DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
@@ -521,70 +464,11 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradients()
       gradients[solID][iGrad] *= invJacobDet;
     }
   }
-  
-  // compute the gradients for the artificial viscosity
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        //set the grad updates to 0 
-        m_gradUpdates[0][iSol][iEq] = 0.0;
-      }
-    }
-
-    // Loop over solution pnts to calculate the grad updates
-    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-    {
-      const CFuint solID = (*m_cellStates)[iSolPnt]->getLocalID();
-        
-      // Loop over  variables
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        // Loop over gradient directions
-        for (CFuint iDir = 0; iDir < m_dim; ++iDir)
-        {
-          for (CFuint jDir = 0; jDir < m_dim; ++jDir)
-          {
-	    // project the state on a normal and reuse a RealVector variable of the class to store
-	    m_projectedCorrL[jDir] = (*((*m_cellStates)[iSolPnt]))[iEq] * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
-          }
-
-          // Loop over solution pnts to count factor of all sol pnt polys
-          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
-          {
-            const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
-	  
-            // compute the grad updates
-            m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*m_projectedCorrL;
-	  }
-        }
-      }
-    }
-    
-  
-    // get the gradientsAV
-    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
-
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      // get state ID
-      const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-
-      // inverse Jacobian determinant
-      const CFreal invJacobDet = 1.0/volumes[solID];
-
-      // update gradientsAV
-      for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
-      {
-        gradientsAV[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
-        gradientsAV[solID][iGrad] *= invJacobDet;
-      }
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeGradientFaceCorrections()
+void ConvDiffJacobFluxReconstructionNS::computeGradientFaceCorrections()
 {
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
@@ -662,330 +546,16 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradientFaceCorrections()
       }
     }
   }
-  
-  // compute the gradients for the artificial viscosity
-    // Loop over solution pnts to reset the grad updates
-    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-    {
-      // Loop over  variables
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        //set the grad updates to 0 
-        m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
-        m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
-      }
-    }
-
-    // Loop over  variables
-    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-    {
-      const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
-      const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
-
-      // compute the face corrections to the gradients
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        const CFreal avgSol = ((*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq]+(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])/2.0;
-	m_projectedCorrL = (avgSol-(*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-	m_projectedCorrR = (avgSol-(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
-
-        // Loop over solution pnts to calculate the grad updates
-        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
-        {
-          const CFuint iSolIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
-          const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
-
-	  /// @todo Check if this is also OK for triangles!!
-	  m_gradUpdates[LEFT][iSolIdxL][iEq] += m_projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
-	  m_gradUpdates[RIGHT][iSolIdxR][iEq] += m_projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
-        }
-      }
-    }
-  
-    // get the gradientsAV
-    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
-
-    for (CFuint iSide = 0; iSide < 2; ++iSide)
-    {
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-      {
-        // get state ID
-        const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
-
-        // update gradientsAV
-        for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
-        {
-          gradientsAV[solID][iGrad] += m_gradUpdates[iSide][iSol][iGrad];
-        }
-      }
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ConvDiffLLAVJacobFluxReconstructionNS::computeSmoothness()
-{ 
-  CFreal sNum = 0.0;
-  
-  CFreal sDenom = 0.0;
-  
-  // get datahandle
-  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
-  
-  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
-  
-  if (RhoivtTv && m_monitoredPhysVar < m_pData.size())
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
-      m_eulerVarSet2->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
-
-      stateP = m_pData[m_monitoredPhysVar];
-      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-  else if (!RhoivtTv && m_monitoredPhysVar < m_pData.size())
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
-      m_eulerVarSet->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
-
-      stateP = m_pData[m_monitoredPhysVar];
-      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-  else
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
-      diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-      
-  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
-  {
-    m_s = -100.0;
-  }
-  else
-  {
-    m_s = log10(sNum/sDenom);
-  }
-  
-  // get datahandle
-  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
-  
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
-  }
-  
-  if (m_s > m_Smax)
-  {
-    m_Smax = m_s;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::computeSmoothness(const CFuint side)
-{ 
-  CFreal sNum = 0.0;
-  
-  CFreal sDenom = 0.0;
-  
-  // get datahandle
-  DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
-  
-  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
-  
-  if (RhoivtTv && m_monitoredPhysVar < m_pData.size())
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      m_eulerVarSet2->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
-      m_eulerVarSet2->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
-
-      stateP = m_pData[m_monitoredPhysVar];
-      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-  else if (!RhoivtTv && m_monitoredPhysVar < m_pData.size())
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      m_eulerVarSet->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
-      m_eulerVarSet->computePhysicalData(m_statesPMinOne[iSol],m_pData2);
-
-      stateP = m_pData[m_monitoredPhysVar];
-      diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-  else
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal stateP = 0.0;
-      CFreal diffStatesPPMinOne = 0.0;
-
-      stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
-      diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
-
-      sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-      sDenom += stateP*stateP;
-    }
-  }
-  
-  if (sNum <= MathTools::MathConsts::CFrealEps() || sDenom <= MathTools::MathConsts::CFrealEps())
-  {
-    m_s = -100.0;
-  }
-  else
-  {
-    m_s = log10(sNum/sDenom);
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsilon0()
-{ 
-  // compute a cell average characteristic flow speed. Note that a straight average is used, not a weighted one, maybe change this
-  CFreal wavespeed = 0.0;
-  
-  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
-  
-  if (RhoivtTv)
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      m_eulerVarSet2->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
-      
-      wavespeed += m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
-      cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
-    }
-  }
-  else
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]),m_pData);
-
-      wavespeed += m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
-      cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
-    }
-  }
-  
-  cf_assert(wavespeed > 0.0);
-  
-  wavespeed /= m_nbrSolPnts;
-    
-  const CFreal peclet = computePeclet();
-  
-  const CFreal oneOverDim = 1./m_dim;
-  
-  // get the cell volumes
-  DataHandle< CFreal > cellVolumes = socket_cellVolumes.getDataHandle();
-  
-  const CFreal h = pow(cellVolumes[m_cell->getID()],oneOverDim);
-  
-  m_epsilon0 = max(h*wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsilon0(const CFuint side)
-{ 
-  // compute a cell average characteristic flow speed. Note that a straight average is used, not a weighted one, maybe change this
-  CFreal wavespeed = 0.0;
-  
-  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
-  
-  if (RhoivtTv)
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      m_eulerVarSet2->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
-      
-      wavespeed += m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
-      cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
-    }
-  }
-  else
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      m_eulerVarSet->computePhysicalData(*((*m_states[side])[iSol]),m_pData);
-
-      wavespeed += m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
-      cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
-    }
-  }
-  
-  cf_assert(wavespeed > 0.0);
-  
-  wavespeed /= m_nbrSolPnts;
-    
-  const CFreal peclet = computePeclet();
-  
-  const CFreal oneOverDim = 1./m_dim;
-  
-  // get the cell volumes
-  DataHandle< CFreal > cellVolumes = socket_cellVolumes.getDataHandle();
-  
-  const CFreal h = pow(cellVolumes[m_cells[side]->getID()],oneOverDim);
-  
-  m_epsilon0 = max(h*wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvDiffLLAVJacobFluxReconstructionNS::setup()
+void ConvDiffJacobFluxReconstructionNS::setup()
 {
   CFAUTOTRACE;
   
   // setup parent class
-  ConvDiffLLAVJacobFluxReconstruction::setup();
+  ConvDiffJacobFluxReconstruction::setup();
   
   // get damping coeff
   m_dampCoeffDiff = getMethodData().getDiffDampCoefficient();
