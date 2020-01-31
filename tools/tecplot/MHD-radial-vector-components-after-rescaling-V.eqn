@@ -1,0 +1,9 @@
+#!MC 1200
+# Created by Tecplot 360 build 12.2.0.9077
+  $!ALTERDATA 
+ EQUATION = '{Vr}={x}/{r}*{uDim}+{y}/{r}*{vDim}+{z}/{r}*{wDim}'
+$!ALTERDATA 
+ EQUATION = '{VTheta}={x}*{z}/({rXY}*{r})*{uDim} + {y}*{z}/({rXY}*{r})*{vDim} - {rXY}/{r}*{wDim}'
+$!ALTERDATA 
+ EQUATION = '{VPhi}=-{y}/{rXY}*{uDim} + {x}/{rXY}*{vDim}'
+ 

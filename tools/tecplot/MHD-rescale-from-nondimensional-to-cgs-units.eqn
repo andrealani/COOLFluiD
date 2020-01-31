@@ -1,0 +1,29 @@
+#!MC 1200
+# Created by Tecplot 360 build 12.2.0.9077
+$!ALTERDATA 
+ EQUATION = '{x}={x0}*6.95509927e8'
+$!ALTERDATA 
+ EQUATION = '{y}={x1}*6.95509927e8'
+$!ALTERDATA 
+ EQUATION = '{z}={x2}*6.95509927e8'
+$!ALTERDATA 
+ EQUATION = '{rhoDim}={rho}*1.67e-16'
+$!ALTERDATA 
+ EQUATION = '{uDim}={u}*480.24838996122737'
+$!ALTERDATA 
+ EQUATION = '{vDim}={v}*480.24838996122737'
+$!ALTERDATA 
+ EQUATION = '{wDim}={w}*480.24838996122737'
+$!ALTERDATA 
+ EQUATION = '{BxDim}={Bx}*2.2'
+$!ALTERDATA 
+ EQUATION = '{ByDim}={By}*2.2'
+$!ALTERDATA 
+ EQUATION = '{BzDim}={Bz}*2.2'
+$!ALTERDATA 
+ EQUATION = '{pDim}={p}*0.3851'
+ $!ALTERDATA 
+ EQUATION = '{r}=sqrt({x}*{x}+{y}*{y}+{z}*{z})'
+ $!ALTERDATA 
+ EQUATION = '{rXY}=sqrt({x}*{x}+{y}*{y})+1.0e-20'
+ 

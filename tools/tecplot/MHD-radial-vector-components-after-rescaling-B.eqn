@@ -1,0 +1,8 @@
+#!MC 1200
+# Created by Tecplot 360 build 12.2.0.9077
+ $!ALTERDATA 
+ EQUATION = '{Br}={x}/{r}*{BxDim}+{y}/{r}*{ByDim}+{z}/{r}*{BzDim}'
+$!ALTERDATA 
+ EQUATION='{BTheta}={x}*{z}/({rXY}*{r})*{BxDim}+{y}*{z}/({rXY}*{r})*{ByDim}-{rXY}/{r}*{BzDim}'
+$!ALTERDATA 
+ EQUATION = '{BPhi}=-{y}/{rXY}*{BxDim} + {x}/{rXY}*{ByDim}'
