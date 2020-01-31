@@ -49,6 +49,13 @@ void BCSuperOutlet::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSuperOutlet::configure ( Config::ConfigArgs& args )
+{
+  BCStateComputer::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSuperOutlet::computeGhostStates(const vector< State* >& intStates,
                                        vector< State* >& ghostStates,
                                        const std::vector< RealVector >& normals,
