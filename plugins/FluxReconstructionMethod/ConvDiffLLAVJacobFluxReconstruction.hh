@@ -100,20 +100,6 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-  
-  /**
-   * recompute the cell gradients from the current cell solutions,
-   * after perturbation
-   */
-  virtual void computePerturbedGradientsAnalytical(const CFuint side);
-
-  /**
-   * compute the perturbed cell diffusive residuals for one cell
-   * @pre m_faceTermComputer->computeDiffFaceTerm
-   * @pre backupAndReconstructOtherFacesAndCellPhysVars(
-   * @pre reconstructOtherFacesAndCellGradients()
-   */
-  virtual void computePertCellDiffResiduals(const CFuint side);
 
   /**
    * compute the contribution of the diffusive face term to both Jacobians
@@ -124,24 +110,6 @@ protected: //functions
    * compute the contribution of the diffusive face term to one Jacobians
    */
   void computeOneJacobDiffFaceTerm(const CFuint side);
-  
-  /**
-   * compute the data needed for the computation of the perturbed gradients
-   */
-  void computePertGradData(const CFuint side);
-  
-  /**
-   * store values that will be overwritten
-   */
-  void storeBackups();
-  
-  /**
-   * restore values that were overwritten
-   */
-  void restoreFromBackups();
-  
-  /// compute the divergence of the discontinuous flux (-divFD+divhFD) of a neighbor cell
-  virtual void computeDivDiscontFlxNeighb(RealVector& residuals, const CFuint side);
   
   /**
    * Compute the projected states on order P-1
@@ -215,10 +183,13 @@ protected: //functions
   void computeFluxToGradJacobianNum(const CFreal resFactor);
   
   /// compute the gradient to state jacobian analytically
-  void computeGradToStateJacobianAna();
+  virtual void computeGradToStateJacobianAna();
   
   /// compute the Riemann flux to gradient jacobian numerically
   virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
+  
+  /// compute the gradient variables to state jacobians numerically
+  virtual void computeGradVarsToStateJacobianNum();
   
 protected: //data
     
@@ -401,6 +372,9 @@ protected: //data
   
   /// stores the flux jacobian to the gradients for each side, in each sol pnt, for each variable, for each gradient direction for each flux direction
   std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > m_gradientFluxJacobian;
+  
+  /// stores the gradient variables jacobian to the states for each side, in each sol pnt, for each depending state variable, for each grad vars variable
+  std::vector< std::vector< std::vector< RealVector > > > m_gradVarsToStateJacobian;
   
   /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
   std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_gradientStateJacobian;

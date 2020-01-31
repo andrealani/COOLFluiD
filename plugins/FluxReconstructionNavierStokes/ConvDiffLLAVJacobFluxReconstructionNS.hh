@@ -126,6 +126,9 @@ protected: //functions
   /// compute the Riemann flux to gradient jacobian numerically
   virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
   
+  /// compute the gradient variables to state jacobians numerically
+  virtual void computeGradVarsToStateJacobianNum();
+  
 protected: // data
     
   /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
@@ -172,6 +175,24 @@ protected: // data
   
   /// physical model (in conservative variables)
   Common::SafePtr< Physics::NavierStokes::MultiScalarVarSet< Physics::NavierStokes::Euler2DVarSet > > m_eulerVarSet2;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element for the jacobian computation
+  RealMatrix m_tempGradTermJacob;
+  
+  /// element states of the left neighbor in the correct format for the jacobian computation
+  std::vector< RealVector* > m_tempStatesJacob;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element for the jacobian computation
+  RealMatrix m_tempGradTermJacob2;
+  
+  /// element states of the left neighbor in the correct format for the jacobian computation
+  std::vector< RealVector* > m_tempStatesJacob2;
+  
+  /// unperturbed grad vars
+  RealVector m_unpertGradVars;
+  
+  /// perturbed grad vars
+  RealVector m_pertGradVars;
   
   private:
 
