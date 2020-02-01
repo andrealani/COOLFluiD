@@ -83,7 +83,7 @@ Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFR2DTest.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 10
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.ParWriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.ParWriteSol = ParWriteSolution
 
 Simulator.SubSystem.ParaView.FileName    = AcylinderNSFR2DTest.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons

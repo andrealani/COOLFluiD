@@ -74,7 +74,7 @@ Simulator.SubSystem.CFmesh.FileName     = cylinderEuler-FR-sol.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate = 300
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
-Simulator.SubSystem.CFmesh.WriteSol = WriteSolution
+Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 
 Simulator.SubSystem.ParaView.FileName    = cylinderEuler-FR-sol.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
