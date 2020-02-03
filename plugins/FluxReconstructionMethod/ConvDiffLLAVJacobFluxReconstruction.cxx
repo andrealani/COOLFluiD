@@ -1479,7 +1479,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             {
               const CFuint kSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][kSolPnt];
               
-              const CFreal divh_lOther = divh * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
+              const CFreal divh_lOther = -divh * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
               
               for (CFuint jDim = 0; jDim < m_dim; ++jDim)
               {

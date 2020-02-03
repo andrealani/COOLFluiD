@@ -1018,7 +1018,7 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
     {
       // variable for the other side
       const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
-    
+
       // cell ID of the cell at the non-perturbed side
       const CFuint otherCellID = m_cells[iOtherSide]->getID();
     
@@ -1208,7 +1208,8 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
             
             const CFreal divh_halfFaceJacobOther = 0.5 * divh * m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide];
-          
+            
+            /////with these 2 parts problem at bnd!!!
             // add cross-cell part 
             m_tempFlux = dFIduJLOther * divh;
                
@@ -1246,7 +1247,7 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             {
               const CFuint kSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][kSolPnt];
               
-              const CFreal divh_lOther = divh * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
+              const CFreal divh_lOther = -divh * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
               
               for (CFuint jDim = 0; jDim < m_dim; ++jDim)
               {
@@ -1281,7 +1282,11 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
     }
   }
   
-   //acc.printToScreen();
+//  if (m_cells[LEFT]->getID() == 1 || m_cells[RIGHT]->getID() == 1) 
+//  {
+//      CFLog(INFO, "ACC:\n");
+//      acc.printToScreen();
+//  }
 
   if (getMethodData().doComputeJacobian())
   {
