@@ -105,13 +105,13 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = Inlet Outlet1 Outlet2 Cylind
 ###################################
 
 Simulator.SubSystem.StopCondition = Norm #RelativeNormAndMaxIter
-Simulator.SubSystem.Norm.valueNorm = -6
+Simulator.SubSystem.Norm.valueNorm = -4
 #Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter =  10000000 #
 #Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100000,0.1,0.15) #
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<10000,0.1,0.15) #
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP1.plt
 Simulator.SubSystem.FwdEuler.ShowRate        = 500
 Simulator.SubSystem.FwdEuler.ConvRate        = 500
@@ -153,7 +153,7 @@ Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSNS.MonitoredPhysVar = 1
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSNS.ShowRate = 500
 
 Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = false
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-5 
