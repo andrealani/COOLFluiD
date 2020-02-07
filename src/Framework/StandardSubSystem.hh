@@ -165,6 +165,9 @@ protected: // functions
   /// configuration string for the StopCondition
   std::string m_stopConditionStr;
 
+  /// subsystem status to be used for stop condition  
+  std::string m_stopConditionSSS;
+
   /// Creator of the MeshData
   MultiMethodTuple<MeshCreator> m_meshCreator;
 

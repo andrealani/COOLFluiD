@@ -94,6 +94,7 @@ void StandardSubSystem::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< CFuint >("InitialIter","Initial Iteration Number.");
    options.addConfigOption< CFreal >("InitialTime","Initial Physical Time of the SubSystem.");
    options.addConfigOption< int, Config::DynamicOption<> >("StopSimulation","Flag to force an immediate stop of the simulation.");
+   options.addConfigOption< string >("StopConditionSubSystemStatus","Subsystem status corresponding to the stop condition to apply."); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -109,6 +110,9 @@ StandardSubSystem::StandardSubSystem(const std::string& name)
 
   m_stopConditionStr = "MaxNumberSteps";
   setParameter("StopCondition",&m_stopConditionStr);
+
+  m_stopConditionSSS = "";
+  setParameter("StopConditionSubSystemStatus", &m_stopConditionSSS);
 
   // MeshCreator-related configuration options
   setParameter("MeshCreator",&m_meshCreator.mKeys);
@@ -633,7 +637,9 @@ void StandardSubSystem::run()
   }
   
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
+  string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
+  if (m_stopConditionSSS != "") {sssName = m_stopConditionSSS;}
+
   SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
   cf_assert(currSSS.isNotNull());
   
