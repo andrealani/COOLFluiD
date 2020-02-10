@@ -120,11 +120,11 @@ public:
     const CFreal eta = mappedCoord[ETA];
 
     // ksi factors
-    for (CFuint iSol = 0; iSol < 7; ++iSol)
+    for (CFuint iSol = 0; iSol < 8; ++iSol)
     {
       const CFreal ksiSol = m_solPnts1D[iSol];
       m_ksiFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 7; ++iFac)
+      for (CFuint iFac = 0; iFac < 8; ++iFac)
       {
         if (iFac != iSol)
         {
@@ -135,11 +135,11 @@ public:
     }
 
     // eta factors
-    for (CFuint iSol = 0; iSol < 7; ++iSol)
+    for (CFuint iSol = 0; iSol < 8; ++iSol)
     {
       const CFreal etaSol = m_solPnts1D[iSol];
       m_etaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 7; ++iFac)
+      for (CFuint iFac = 0; iFac < 8; ++iFac)
       {
         if (iFac != iSol)
         {
@@ -151,10 +151,10 @@ public:
 
     // compute shapefunctions
     CFuint iFunc = 0;
-    for (CFuint iKsi = 0; iKsi < 7; ++iKsi)
+    for (CFuint iKsi = 0; iKsi < 8; ++iKsi)
     {
       const CFreal ksiFac = m_ksiFac[iKsi];
-      for (CFuint iEta = 0; iEta < 7; ++iEta, ++iFunc)
+      for (CFuint iEta = 0; iEta < 8; ++iEta, ++iFunc)
       {
         shapeFunc[iFunc] = ksiFac*m_etaFac[iEta];
       }
