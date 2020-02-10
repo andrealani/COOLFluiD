@@ -364,6 +364,9 @@ protected: //data
   /// convective Riemann flux
   std::vector < RealVector > m_flxPntRiemannFluxDiff;
   
+  /// convective and diffusive Riemann flux (no LLAV)
+  std::vector < RealVector > m_flxPntRiemannFluxDiffConv;
+  
   /// perturbed convective Riemann Flux
   std::vector < RealVector > m_flxPntRiemannFluxPert;
   

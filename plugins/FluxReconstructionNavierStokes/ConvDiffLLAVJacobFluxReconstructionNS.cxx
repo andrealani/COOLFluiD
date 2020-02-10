@@ -157,12 +157,14 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeInterfaceFlxCorrection()
     // compute the diff flux
     computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxDiff[iFlxPnt]);
     
-    m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxDiff[iFlxPnt];
+    m_flxPntRiemannFluxDiffConv[iFlxPnt] = m_flxPntRiemannFluxDiff[iFlxPnt];
     
     // compute the convective riemann flux
-    m_flxPntRiemannFlux[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
+    m_flxPntRiemannFluxDiffConv[iFlxPnt] -= m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),
 									    *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),
 									    m_unitNormalFlxPnts[iFlxPnt]);
+    
+    m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxDiffConv[iFlxPnt];
      
     // compute artificial part
     // get epsilon
@@ -268,7 +270,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const 
        
         // compute the flux current jacobian term
         // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
-        m_numJacob->computeDerivative(m_flxPntRiemannFluxPert[iFlxPnt],m_flxPntRiemannFlux[iFlxPnt],m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]);
+        m_numJacob->computeDerivative(m_flxPntRiemannFluxPert[iFlxPnt],m_flxPntRiemannFluxDiffConv[iFlxPnt],m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]);
 
         // multiply residual update derivatives with residual factor so it is taken into the final jacobian
         m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar] *= resFactor;
