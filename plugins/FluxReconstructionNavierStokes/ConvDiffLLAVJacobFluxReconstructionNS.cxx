@@ -402,6 +402,67 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradVarsToStateJacobianNum()
       }
     }
   }
+  ////@TODO find a better way to to this
+  
+  // get current iteration
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  // get the face start indexes
+  vector< CFuint >& innerFacesStartIdxs = getMethodData().getInnerFacesStartIdxs();
+  
+  if (iter == 1 && m_faceID == innerFacesStartIdxs[0])
+  {
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        (*(*m_states[0])[0])[iEq] += 0.1;
+      }
+      
+      m_tempStatesJacob[0] = (*m_states[0])[0];
+    
+      m_diffusiveVarSetNS->setGradientVars(m_tempStatesJacob,m_tempGradTermJacob,1);
+      
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        m_unpertGradVars[iEq] = m_tempGradTermJacob(iEq,0);
+      }
+
+      // dereference state
+      State& pertState = *(*m_states[0])[0];
+
+      for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+      {
+        // perturb physical variable in state
+        m_numJacob->perturb(m_pertVar,pertState[m_pertVar]);
+        
+        m_tempStatesJacob2[0] = &pertState;
+  
+        m_diffusiveVarSetNS->setGradientVars(m_tempStatesJacob2,m_tempGradTermJacob2,1);
+        
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          m_pertGradVars[iEq] = m_tempGradTermJacob2(iEq,0);
+        }
+        
+        m_numJacob->computeDerivative(m_unpertGradVars,m_pertGradVars,m_tempFlux);
+        
+        m_varToGradVarDep[m_pertVar].resize(0);
+      
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          if (m_tempFlux[iEq] != 0.0) m_varToGradVarDep[m_pertVar].push_back(iEq);
+        }
+        
+        m_nbrVarToGradVarDep[m_pertVar] = m_varToGradVarDep[m_pertVar].size();       
+
+        // restore physical variable in state
+        m_numJacob->restore(pertState[m_pertVar]);
+      }
+        
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        (*(*m_states[0])[0])[iEq] -= 0.1;
+      }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

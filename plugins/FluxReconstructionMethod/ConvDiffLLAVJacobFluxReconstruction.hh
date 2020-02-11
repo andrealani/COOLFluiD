@@ -388,6 +388,31 @@ protected: //data
   /// Continuous diffusive flux at the solution points backup for both neighbor cells
   std::vector< std::vector< std::vector< RealVector > > > m_contFlxBackupDiff;
   
+  /// variable to gradient variable dependency
+  std::vector< std::vector< CFuint > > m_varToGradVarDep;
+  
+  /// number of gradient variable that depend on each variable
+  std::vector< CFuint > m_nbrVarToGradVarDep;
+  
+  /// vector of booleans telling whether the current solution point needs to be added
+  std::vector< bool > m_needToAddSolPnt;
+  
+  /// current faceID
+  CFuint m_faceID;
+  
+  /// temporary state or state vector
+  RealVector m_temp;
+  
+  /// temporary state or state vector for the other side
+  RealVector m_tempOther;
+
+  /// temporary state or state vector
+  RealVector m_temp2;
+  
+  /// temporary state or state vector for the other side
+  RealVector m_tempOther2;
+  
+  
   private:
 
   /// Physical data temporary vector
