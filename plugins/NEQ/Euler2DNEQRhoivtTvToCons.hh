@@ -63,10 +63,16 @@ protected:
   
   /// array with all different vibrational dimensional temperatures
   RealVector _tvDim;
+ 
+  /// array with all different temperature
+  RealVector _tDim;
   
   /// array with all different vibrational dimensional energies
   RealVector _evDim;
-  
+
+  /// array with partial densities 
+  RealVector _rhoi; 
+
 }; // end of class Euler2DNEQRhoivtTvToCons
 
 //////////////////////////////////////////////////////////////////////////////

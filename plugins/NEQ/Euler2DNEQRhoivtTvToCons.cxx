@@ -32,7 +32,9 @@ Euler2DNEQRhoivtTvToCons::Euler2DNEQRhoivtTvToCons
   _ye(),
   _dhe(),
   _tvDim(),
-  _evDim()
+  _tDim(),
+  _evDim(), 
+  _rhoi()	
 {
 }
 
@@ -70,8 +72,16 @@ void Euler2DNEQRhoivtTvToCons::transform(const State& state, State& result)
   // Set the species
   const CFreal ovRho = 1./rho;
   _ye.resize(nbSpecies);
+  const CFuint nbTv = _model->getNbScalarVars(1);
+  _dhe.resize(3 + nbTv);
+  _tvDim.resize(nbTv);
+  _tDim.resize(nbTv+1);
+  _evDim.resize(nbTv);
+  _rhoi.resize(nbSpecies);
+
   for (CFuint ie = 0; ie < nbSpecies; ++ie) {
     _ye[ie] = state[ie]*ovRho;
+    _rhoi[ie] = state[ie];
   }
 
   // set the current species fractions in the thermodynamic library
@@ -86,16 +96,14 @@ void Euler2DNEQRhoivtTvToCons::transform(const State& state, State& result)
   const CFreal u = state[nbSpecies];
   const CFreal v = state[nbSpecies + 1];
   const CFreal V2 = u*u + v*v;
-  // set the vibrational temperature
-  const CFuint nbTv = _model->getNbScalarVars(1);
-  _dhe.resize(3 + nbTv);
-  _tvDim.resize(nbTv);
-  _evDim.resize(nbTv);
-
   const CFuint startTv = nbSpecies + 3;
+  _tDim[0] = Tdim;
   for (CFuint ie = 0; ie < nbTv; ++ie) {
     _tvDim[ie] = state[startTv + ie]*refData[EulerTerm::T];
+    _tDim[ie+1] = _tvDim[ie];
   }
+
+  library->setState(&_rhoi[0], &_tDim[0]);
 
   CFreal pdim = library->pressure(rhoDim, Tdim, &_tvDim[0]);
   const CFreal ovHref = 1./refData[EulerTerm::H];
