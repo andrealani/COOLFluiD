@@ -32,13 +32,6 @@ using namespace COOLFluiD::Common;
 
 namespace COOLFluiD {
   namespace FluxReconstructionMethod {
-    
-//////////////////////////////////////////////////////////////////////////////
-
-MethodCommandProvider< ConvDiffLLAVJacobFluxReconstruction,
-		       FluxReconstructionSolverData,
-		       FluxReconstructionModule >
-convDiffLLAVRHSJacobFluxReconstructionProvider("ConvDiffLLAVRHSJacob");
 
 //////////////////////////////////////////////////////////////////////////////
   
@@ -110,7 +103,8 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
   m_temp(),
   m_tempOther(),
   m_temp2(),
-  m_tempOther2()
+  m_tempOther2(),
+  m_epsJacobian()
   {
     addConfigOptionsTo(this);
     
@@ -1029,9 +1023,6 @@ void ConvDiffLLAVJacobFluxReconstruction::computeFluxToGradJacobianNum(const CFr
   {
     // variable for the other side
     const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
-    
-    // cell ID of the cell at the non-perturbed side
-    const CFuint otherCellID = m_cells[iOtherSide]->getID();
 
     // loop over the states to perturb the states
     for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
@@ -1337,6 +1328,20 @@ void ConvDiffLLAVJacobFluxReconstruction::computeGradVarsToStateJacobianNum()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvDiffLLAVJacobFluxReconstruction::computeLLAVCellFluxJacobianAna(const CFreal resFactor)
+{
+    
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstruction::computeLLAVRiemannFluxJacobianAna(const CFreal resFactor)
+{
+    
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 {
   CFLog(VERBOSE, "computeBothJacobsDiffFaceTerm\n");
@@ -1371,6 +1376,12 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
   computeGradToStateJacobianAna();
   
   computeGradVarsToStateJacobianNum();
+  
+  computeEpsToStateJacobianAna();
+  
+  computeLLAVCellFluxJacobianAna(resFactor);
+  
+  computeLLAVRiemannFluxJacobianAna(resFactor);
   
   //// add the total jacobians to the system jacobian
   
@@ -1412,7 +1423,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
           
-          // add the discontinuous gradient part of the jacobian (m) ////actually only need to loop over the depending which are also altered
+          // add the discontinuous gradient part of the jacobian (m)
           for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolSolDep; ++kSolPnt)
           {
             const CFuint kSolIdx = (*m_solSolDep)[m_pertSol][kSolPnt];
@@ -1446,7 +1457,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
                   
                   CFreal llavPart = m_solEpsilons[m_pertSide][kSolIdx] * m_neighbCellFluxProjVects[m_pertSide][iDim][kSolIdx][jDim];
                   llavPart *= dl_dqdu;
-                  
+                  //if(m_cells[0]->getID()==1) CFLog(INFO, "pertSol: " << m_pertSol << ", pertVar: " << m_pertVar << ", llavJC: " << llavPart << "\n");
                   // add part of analytical LLAV jacobian
                   m_tempFlux[m_pertVar] += llavPart;
                 }
@@ -1520,7 +1531,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
                   CFreal llavPart = divh_l_dqdu * m_solEpsilons[m_pertSide][kSolIdx];
                   
                   llavPart *= m_neighbCellFluxProjVects[m_pertSide][dim][kSolIdx][jDim];
-                  
+                  //if(m_cells[0]->getID()==1) CFLog(INFO, "pertSol: " << m_pertSol << ", pertVar: " << m_pertVar << ", llavJF: " << llavPart << "\n");
                   // add part of analytical LLAV Jacobian
                   m_tempFlux[m_pertVar] += llavPart;
                 }
@@ -2990,6 +3001,7 @@ void ConvDiffLLAVJacobFluxReconstruction::storeEpsilon()
       const CFreal newEps = (1.0-m_dampingCoeff)*m_cellEpsilons[m_cell->getID()] + m_dampingCoeff*m_epsilon;
       m_nodeEpsilons[nodeID] += newEps;
       m_cellEpsilons[m_cell->getID()] = newEps;
+      //if(m_cell->getID()==1) CFLog(INFO, "eps: " << newEps << ", eps0: " << m_epsilon0 << ", S: " << m_s << "\n");
       m_totalEps += newEps;
     }
     else
@@ -3153,11 +3165,16 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   m_tempOther.resize(m_nbrEqs);
   m_temp2.resize(m_nbrEqs);
   m_tempOther2.resize(m_nbrEqs);
+  m_epsJacobian.resize(2);
+  m_epsJacobian[LEFT].resize(m_nbrSolPnts);
+  m_epsJacobian[RIGHT].resize(m_nbrSolPnts);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
     m_contFlxBackupDiff[LEFT][iSolPnt].resize(m_dim);
     m_contFlxBackupDiff[RIGHT][iSolPnt].resize(m_dim);
+    m_epsJacobian[LEFT][iSolPnt].resize(m_nbrEqs);
+    m_epsJacobian[RIGHT][iSolPnt].resize(m_nbrEqs);
     
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {

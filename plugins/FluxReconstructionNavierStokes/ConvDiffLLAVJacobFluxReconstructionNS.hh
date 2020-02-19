@@ -129,6 +129,9 @@ protected: //functions
   /// compute the gradient variables to state jacobians numerically
   virtual void computeGradVarsToStateJacobianNum();
   
+  /// compute the AV to state Jacobian
+  virtual void computeEpsToStateJacobianAna();
+  
 protected: // data
     
   /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element

@@ -191,6 +191,15 @@ protected: //functions
   /// compute the gradient variables to state jacobians numerically
   virtual void computeGradVarsToStateJacobianNum();
   
+  /// compute the AV to state Jacobian
+  virtual void computeEpsToStateJacobianAna() = 0;
+  
+  /// compute the cell LLAV Jacobian (to state) analytically
+  virtual void computeLLAVCellFluxJacobianAna(const CFreal resFactor);
+  
+  /// compute the Riemann LLAV Jacobian (to state) analytically
+  virtual void computeLLAVRiemannFluxJacobianAna(const CFreal resFactor);
+  
 protected: //data
     
   /// update variable set
@@ -411,6 +420,9 @@ protected: //data
   
   /// temporary state or state vector for the other side
   RealVector m_tempOther2;
+  
+  /// stores the AV jacobian to the state for each side, in each sol pnt, for each variable
+  std::vector< std::vector< RealVector > > m_epsJacobian;
   
   
   private:

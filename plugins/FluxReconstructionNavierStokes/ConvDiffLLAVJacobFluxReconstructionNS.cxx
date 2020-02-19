@@ -898,8 +898,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeSmoothness(const CFuint side)
 
       stateP = m_pData[m_monitoredPhysVar];
       diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
 
       sNum += diffStatesPPMinOne*diffStatesPPMinOne;
       sDenom += stateP*stateP;
@@ -917,8 +915,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeSmoothness(const CFuint side)
 
       stateP = m_pData[m_monitoredPhysVar];
       diffStatesPPMinOne = stateP - m_pData2[m_monitoredPhysVar];
-    
-      monPhysVar[(((*m_cellStates)[iSol]))->getLocalID()] = stateP;
 
       sNum += diffStatesPPMinOne*diffStatesPPMinOne;
       sDenom += stateP*stateP;
@@ -991,7 +987,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsilon0()
   DataHandle< CFreal > cellVolumes = socket_cellVolumes.getDataHandle();
   
   const CFreal h = pow(cellVolumes[m_cell->getID()],oneOverDim);
-  
+  //if(m_cell->getID()==1) CFLog(INFO, "wvspd: " << h*wavespeed << ", P: " << peclet << ", dx: " << m_subcellRes << "\n");
   m_epsilon0 = max(h*wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
 }
 
@@ -1039,6 +1035,129 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsilon0(const CFuint side)
   const CFreal h = pow(cellVolumes[m_cells[side]->getID()],oneOverDim);
   
   m_epsilon0 = max(h*wavespeed*(2.0/peclet - m_subcellRes/peclet),0.0);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsToStateJacobianAna()
+{
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  {
+    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+    {
+      m_epsJacobian[m_pertSide][m_pertSol] = 0.0;
+    }
+  }
+  
+  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  
+  // get the cell volumes
+  DataHandle< CFreal > cellVolumes = socket_cellVolumes.getDataHandle();
+  
+  const CFreal oneOverDim = 1./m_dim;
+  
+  const CFreal peclet = computePeclet();
+  
+  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+  { 
+    CFreal h_f_S;
+    
+    const CFreal h = pow(cellVolumes[m_cells[m_pertSide]->getID()],oneOverDim);
+    
+    const CFreal h_f = h*(2.0/peclet - m_subcellRes/peclet);
+    
+    computeProjStates(m_statesPMinOne, m_pertSide);
+    
+    computeSmoothness(m_pertSide);
+    
+    CFreal sBefore;
+    
+    if (m_s < m_s0 - m_kappa)
+    {
+      h_f_S = 0.0;
+      
+      sBefore = 0.0;
+    }
+    else if (m_s > m_s0 + m_kappa)
+    { 
+      h_f_S = h_f/m_nbrSolPnts;
+      
+      sBefore = 1.0;
+    }
+    else
+    {   
+      sBefore = 0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
+              
+      h_f_S = h_f/m_nbrSolPnts*sBefore;
+    }
+      
+    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+    {
+      // dereference state
+      State& pertState = *(*m_states[m_pertSide])[m_pertSol];
+      
+      for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
+      {
+        if (RhoivtTv)
+        {
+          m_eulerVarSet2->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+        }
+        else
+        {
+          m_eulerVarSet->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+        }
+        
+        const CFreal lambda = m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
+        cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
+          
+        const CFreal h_f_lambda = h_f * lambda;
+        
+        const CFreal uBefore = pertState[m_pertVar];
+        
+        // perturb physical variable in state
+        m_numJacob->perturb(m_pertVar,pertState[m_pertVar]);
+        
+        const CFreal eps = pertState[m_pertVar] - uBefore;
+        
+        if (RhoivtTv)
+        {
+          m_eulerVarSet2->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+        }
+        else
+        {
+          m_eulerVarSet->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+        }
+        
+        const CFreal lambdaPert = m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
+          
+        computeProjStates(m_statesPMinOne, m_pertSide);
+    
+        computeSmoothness(m_pertSide);
+        
+        CFreal sPert;
+        
+        if (m_s < m_s0 - m_kappa)
+        { 
+          sPert = 0.0;
+        }
+        else if (m_s > m_s0 + m_kappa)
+        { 
+          sPert = 1.0;
+        }
+        else
+        {   
+          sPert = 0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
+        }
+
+        // restore physical variable in state
+        m_numJacob->restore(pertState[m_pertVar]);  
+          
+        m_epsJacobian[m_pertSide][m_pertSol][m_pertVar] += h_f_S*(lambdaPert - lambda)/eps;
+          
+        m_epsJacobian[m_pertSide][m_pertSol][m_pertVar] += h_f_lambda*(sPert - sBefore)/eps;
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
