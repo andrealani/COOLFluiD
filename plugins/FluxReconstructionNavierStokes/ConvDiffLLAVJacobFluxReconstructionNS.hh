@@ -161,9 +161,6 @@ protected: // data
   /// extra element states of the cell in the correct format
   std::vector< RealVector* > m_tempStatesCell;
   
-  /// damping coefficient
-  CFreal m_dampCoeffDiff;
-  
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
   

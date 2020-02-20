@@ -254,7 +254,7 @@ protected: //data
   RealVector m_cellEpsilons;
   
   /// vector containing pointers to the nodes in a cell
-  std::vector< Framework::Node*  >* m_cellNodes;
+  std::vector< std::vector< Framework::Node*  >* > m_cellNodes;
   
   /// number of corner nodes for current element type
   CFuint m_nbrCornerNodes;
@@ -423,6 +423,15 @@ protected: //data
   
   /// stores the AV jacobian to the state for each side, in each sol pnt, for each variable
   std::vector< std::vector< RealVector > > m_epsJacobian;
+  
+  /// stores the LLAV jacobian to the states for each side, in each sol pnt, for each variable to each side, to each sol pnt, to each flux direction
+  std::vector< std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > > m_llavFluxJacobian;
+  
+  /// stores the LLAV Riemann flux jacobian for each side, in each sol pnt, for each variable, for each flux point
+  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_llavRiemannFluxJacobian;
+  
+  /// damping coefficient
+  CFreal m_dampCoeffDiff;
   
   
   private:

@@ -57,7 +57,6 @@ ConvDiffLLAVJacobFluxReconstructionNS::ConvDiffLLAVJacobFluxReconstructionNS(con
   m_tempStatesL2(),
   m_tempStatesR2(),
   m_tempStatesCell(),
-  m_dampCoeffDiff(),
   m_eulerVarSet(CFNULL),
   m_msEulerTerm(CFNULL),
   m_nbrSpecies(),
@@ -1041,6 +1040,8 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsilon0(const CFuint side)
 
 void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsToStateJacobianAna()
 {
+  CFLog(VERBOSE, "NS computeEpsToStateJacobianAna\n");
+    
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
   {
     for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
@@ -1096,22 +1097,22 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsToStateJacobianAna()
       // dereference state
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
       
+      if (RhoivtTv)
+      {
+        m_eulerVarSet2->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+      }
+      else
+      {
+        m_eulerVarSet->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
+      }
+        
+      const CFreal lambda = m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
+      cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
+          
+      const CFreal h_f_lambda = h_f * lambda;
+      
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
       {
-        if (RhoivtTv)
-        {
-          m_eulerVarSet2->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
-        }
-        else
-        {
-          m_eulerVarSet->computePhysicalData(*((*m_states[m_pertSide])[m_pertSol]),m_pData);
-        }
-        
-        const CFreal lambda = m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
-        cf_assert(m_pData[EulerTerm::V] > 0.0 && m_pData[EulerTerm::A] > 0.0);
-          
-        const CFreal h_f_lambda = h_f * lambda;
-        
         const CFreal uBefore = pertState[m_pertVar];
         
         // perturb physical variable in state
@@ -1168,9 +1169,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::setup()
   
   // setup parent class
   ConvDiffLLAVJacobFluxReconstruction::setup();
-  
-  // get damping coeff
-  m_dampCoeffDiff = getMethodData().getDiffDampCoefficient();
   
   // get the diffusive varset
   m_diffusiveVarSetNS = (getMethodData().getDiffusiveVar()).d_castTo< NavierStokesVarSet >();
