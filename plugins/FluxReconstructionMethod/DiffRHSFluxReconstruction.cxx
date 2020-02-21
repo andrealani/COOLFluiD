@@ -91,7 +91,6 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_cellVolume(),
   m_cflConvDiffRatio(),
   m_faceFlxPntCellMappedCoords(CFNULL),
-  m_freezeGrads(),
   m_extrapolatedFluxes(),
   m_flxPntFlxDim(CFNULL),
   m_avgSol(),
@@ -763,9 +762,6 @@ void DiffRHSFluxReconstruction::setup()
   
   // get face flux point cell mapped coordinates
   m_faceFlxPntCellMappedCoords = frLocalData[0]->getFaceFlxPntCellMappedCoordsPerOrient();
-  
-  // get the flag telling whether the gradients are frozen during jacobian computation
-  m_freezeGrads = getMethodData().getFreezeGrads();
   
   // get the dimension on which to project the flux in a flux point
   m_flxPntFlxDim = frLocalData[0]->getFluxPntFluxDim();

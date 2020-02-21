@@ -92,13 +92,23 @@ void StdSourceTerm::setup()
   
   m_nbrSolPnts = maxNbrSolPnts;
   
-  if (m_addJacob)
-  { 
-    // get the linear system solver
-    m_lss = getMethodData().getLinearSystemSolver()[0];
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+  const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+  const CFuint interval = iter - iterFreeze;
+      
+  if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+  {
+        
+    if (m_addJacob)
+    { 
+      // get the linear system solver
+      m_lss = getMethodData().getLinearSystemSolver()[0];
 
-    // get the numerical Jacobian computer
-    m_numJacob = getMethodData().getNumericalJacobian();
+      // get the numerical Jacobian computer
+      m_numJacob = getMethodData().getNumericalJacobian();
+    }
   }
   
   const CFuint resSize = m_nbrSolPnts*m_nbrEqs;

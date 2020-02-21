@@ -161,12 +161,6 @@ public: // functions
     cf_assert(m_correctionFunction.isNotNull());
     return m_correctionFunction.getPtr();
   }
-  
-  /// Gets the correction function computation strategy
-  bool getFreezeGrads()
-  {;
-    return m_freezeGrads;
-  }
     
   /// @return reference to m_frLocalData
   std::vector< FluxReconstructionElementData* >& getFRLocalData()
@@ -302,6 +296,24 @@ public: // functions
   CFreal getDiffDampCoefficient()
   {
     return m_diffDampCoeff;
+  }
+  
+  /// Returns a boolean telling whether to freeze the Jacobian
+  bool freezeJacob()
+  {
+    return m_freezeJacob;
+  }
+  
+  /// Returns a the iteration after which to freeze the Jacobian
+  CFuint getFreezeJacobIter()
+  {
+    return m_freezeJacobIter;
+  }
+  
+  /// Returns a the amount of iterations to freeze the Jacobian before recalculation
+  CFuint getFreezeJacobInterval()
+  {
+    return m_freezeJacobInterval;
   }
   
   /// @return the GeometricEntity cell builder
@@ -452,14 +464,20 @@ private:  // data
   /// starting from update variables
   Common::SelfRegistPtr<Framework::VarSetMatrixTransformer> m_solToUpdateInUpdateMatTrans;
   
-  /// Flag telling whether to freeze the gradients in the Jacobian computation
-  bool m_freezeGrads;
+  /// Flag telling whether to freeze the Jacobian
+  bool m_freezeJacob;
   
   /// Flag telling whether to add artificial viscosity
   bool m_addAV;
 
   /// boolean telling wheter the socket containing the volume for each state (!= cell) has to be created
   bool m_createVolumesSocketBool;
+  
+  /// iteration after which to freeze the Jacobian
+  CFuint m_freezeJacobIter;
+  
+  /// amount of iterations to freeze the Jacobian before recalculation
+  CFuint m_freezeJacobInterval;
 
 };  // end of class FluxReconstructionSolverData
 

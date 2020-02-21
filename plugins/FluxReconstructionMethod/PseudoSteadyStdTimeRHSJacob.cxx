@@ -276,6 +276,15 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
     {      
       rhs(stateID, iEq, m_nbrEqs) -= (m_tempState[iEq] - (*tPastState)[iEq])*m_diagValues[iSol];
     }
+    
+    const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+    const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+    const CFuint interval = iter - iterFreeze;
+      
+    if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+    {
 
     // add contribution to jacobian
     if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
@@ -313,6 +322,8 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
       // reset to zero the entries in the block accumulator
       m_acc->reset();
+    }
+    
     }
 
     //m_jacobMatrix->addValue(globalID, globalID, m_diagValues[iSol]);

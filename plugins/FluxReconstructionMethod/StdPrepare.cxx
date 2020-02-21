@@ -78,10 +78,19 @@ void StdPrepare::execute()
   // reset the jacobian
   if (getMethodData().getLinearSystemSolver().size() > 0)
   {
-    SafePtr<LSSMatrix> jacobMatrix = getMethodData().getLinearSystemSolver()[0]->getMatrix();
-    if (jacobMatrix.isNotNull())
+    const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+    const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+    const CFuint interval = iter - iterFreeze;
+      
+    if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
     {
-      jacobMatrix->resetToZeroEntries();
+      SafePtr<LSSMatrix> jacobMatrix = getMethodData().getLinearSystemSolver()[0]->getMatrix();
+      if (jacobMatrix.isNotNull())
+      {
+        jacobMatrix->resetToZeroEntries();
+      }
     }
   }
 }

@@ -387,7 +387,65 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         m_numJacob->perturb(m_pertVar,pertState[m_pertVar]);
 
         // compute the perturbed gradients in the current cell
-        computePerturbedGradientsAnalytical(m_pertSide);        
+        computePerturbedGradientsAnalytical(m_pertSide); 
+        
+//            for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+//    {
+//        RealVector temp(m_nbrEqs);
+//        RealVector temp2(m_nbrEqs);
+//        RealVector dq(m_nbrEqs);
+//        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp[iEq] =m_cellGradsBackUp[LEFT][iSol][iEq][XX];
+//        }
+//        
+//        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp2[iEq] = (*(m_cellGrads[LEFT][iSol]))[iEq][XX];
+//        }
+//        
+// m_numJacob->computeDerivative(temp,temp2,dq);
+// if(m_cells[LEFT]->getID()==1&&m_pertVar==3) CFLog(INFO,"side: " << m_pertSide << ", sol: " << m_pertSol << ", to side: 0, sol: " << iSol << ": " << dq[3]/0.0013935);
+// 
+// for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp[iEq] =m_cellGradsBackUp[LEFT][iSol][iEq][YY];
+//        }
+//        
+//        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp2[iEq] = (*(m_cellGrads[LEFT][iSol]))[iEq][YY];
+//        }
+//        
+// m_numJacob->computeDerivative(temp,temp2,dq);
+// if(m_cells[LEFT]->getID()==1&&m_pertVar==3) CFLog(INFO," " << dq[3]/0.0013935 << "\n");
+// 
+// for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp[iEq] =m_cellGradsBackUp[RIGHT][iSol][iEq][XX];
+//        }
+//        
+//        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp2[iEq] = (*(m_cellGrads[RIGHT][iSol]))[iEq][XX];
+//        }
+//        
+// m_numJacob->computeDerivative(temp,temp2,dq);
+// if(m_cells[LEFT]->getID()==1&&m_pertVar==3) CFLog(INFO,"side: " << m_pertSide << ", sol: " << m_pertSol << ", to side: 1, sol: " << iSol << ": " << dq[3]/0.0013935);
+// 
+// for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp[iEq] =m_cellGradsBackUp[RIGHT][iSol][iEq][YY];
+//        }
+//        
+//        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//      {
+//temp2[iEq] = (*(m_cellGrads[RIGHT][iSol]))[iEq][YY];
+//        }
+        
+// m_numJacob->computeDerivative(temp,temp2,dq);
+// if(m_cells[LEFT]->getID()==1&&m_pertVar==3) CFLog(INFO," " << dq[3]/0.0013935 << "\n");
+//        }
 
 	// compute the perturbed left and right states in the flx pnts
 	computeFlxPntStatesAndGrads();
@@ -430,7 +488,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         {
           acc.addValues(iSol+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[resUpdIdx]);
         }
-//if (m_cells[m_pertSide]->getID() == 1) acc.printToScreen();
+        
         // compute the perturbed diffusive residual in the other cell
         computePertCellDiffResiduals(iOtherSide);
         
@@ -442,7 +500,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
         // multiply residual update derivatives with residual factor
         m_derivCellDiffRes *= resFactor;
-	if (m_cells[iOtherSide]->getID() == 94) CFLog(VERBOSE, "deriv2: " << m_derivCellDiffRes << "\n");
+	//if (m_cells[0]->getID() == 1) CFLog(INFO, "pertSol: " << m_pertSol << ", pertVar: " << m_pertVar << ", Jllav: " << m_derivCellDiffRes << "\n");
 
         // add the derivative of the residual updates to the accumulator
         resUpdIdx = 0;
@@ -469,6 +527,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
           for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol, resUpdIdx += m_nbrEqs)
           {
             acc.addValues(iSol+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivCellDiffRes[resUpdIdx]);
+//            if (m_cells[LEFT]->getID() == 1 && iSol+pertSideTerm==0 && m_pertSol+pertSideTerm==0 && m_pertVar==3) CFLog(INFO, "adding: " << m_derivCellDiffRes << "\n"); 
           }
         }
 
@@ -499,7 +558,17 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       }
     }
   }
-   //acc.printToScreen();
+  
+  if (m_cells[LEFT]->getID() == 1) 
+  {
+      //CFLog(INFO, "ACCDiff: " << acc.getValue(0,4,3,3) << "\n");
+      //acc.printToScreen();
+  }
+  if (m_cells[RIGHT]->getID() == 1) 
+  {
+      //CFLog(INFO, "ACCDiff: " << acc.getValue(4,4,3,3) << "\n");
+      //acc.printToScreen();
+  }
 
   if (getMethodData().doComputeJacobian())
   {

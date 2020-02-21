@@ -523,18 +523,29 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
         // set the local indexes of the other faces than the current faces
         setOtherFacesLocalIdxs();
         
-        // compute the diffusive face term contribution to the jacobian
-        if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+        const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+        const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+        const CFuint interval = iter - iterFreeze;
+      
+        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
         {
-          computeBothJacobsDiffFaceTerm();
-        }
-        else if ((*m_states[LEFT])[0]->isParUpdatable())
-        {
-          computeOneJacobDiffFaceTerm(LEFT );
-        }
-        else if ((*m_states[RIGHT])[0]->isParUpdatable())
-        {
-          computeOneJacobDiffFaceTerm(RIGHT);
+        
+          // compute the diffusive face term contribution to the jacobian
+          if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+          {
+            computeBothJacobsDiffFaceTerm();
+          }
+          else if ((*m_states[LEFT])[0]->isParUpdatable())
+          {
+            computeOneJacobDiffFaceTerm(LEFT );
+          }
+          else if ((*m_states[RIGHT])[0]->isParUpdatable())
+          {
+            computeOneJacobDiffFaceTerm(RIGHT);
+          }
+        
         }
 
         // release the cells
@@ -1777,7 +1788,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
           m_temp2 = m_llavRiemannFluxJacobian[m_pertSide][m_pertSol][m_pertVar][iFlxPnt] * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
           m_tempOther2 = m_llavRiemannFluxJacobian[m_pertSide][m_pertSol][m_pertVar][iFlxPnt] * m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide];
           
-          // add the second part of the discontinuous part of the jacobian (i)
+          // add the LLAV interface part of the jacobian (i)
           for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
           {
             const CFuint jSolIdxThis = (*m_flxSolDep)[flxPntIdxThis][jSolPnt];
@@ -2190,6 +2201,12 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
   
   computeGradVarsToStateJacobianNum();
   
+  computeEpsToStateJacobianAna();
+  
+  computeLLAVCellFluxJacobianAna(resFactor);
+  
+  computeLLAVRiemannFluxJacobianAna(resFactor);
+  
   //// add the total jacobians to the system jacobian
   
   // loop over left and right cell to add the discontinuous (cell) part to the jacobian
@@ -2198,9 +2215,6 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
     // make sure this is only done once per cell
     if (!m_cellFlags[m_cells[m_pertSide]->getID()]) 
     {
-      // variable for the other side
-      const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
-    
       // term depending on iSide
       const CFuint pertSideTerm = m_pertSide*m_nbrSolPnts;
 
@@ -2230,7 +2244,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
             acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
           
-          // add the discontinuous gradient part of the jacobian (m) ////actually only need to loop over the depending which are also altered
+          // add the discontinuous gradient part of the jacobian (m)
           for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolSolDep; ++kSolPnt)
           {
             const CFuint kSolIdx = (*m_solSolDep)[m_pertSol][kSolPnt];
@@ -2246,6 +2260,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
               {
                 const CFreal dl = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][kSolIdx];
+                
+                /// llav jacob to state part //// should actually be added for all jSol
+                m_tempFlux += m_llavFluxJacobian[m_pertSide][m_pertSol][m_pertVar][m_pertSide][jSolIdx][iDim] * dl;
                 
                 // (b)
                 for (CFuint jDim = 0; jDim < m_dim; ++jDim)
@@ -2264,7 +2281,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
                   
                   CFreal llavPart = m_solEpsilons[m_pertSide][kSolIdx] * m_neighbCellFluxProjVects[m_pertSide][iDim][kSolIdx][jDim];
                   llavPart *= dl_dqdu;
-                  
+                  //if(m_cells[0]->getID()==1) CFLog(INFO, "pertSol: " << m_pertSol << ", pertVar: " << m_pertVar << ", llavJC: " << llavPart << "\n");
                   // add part of analytical LLAV jacobian
                   m_tempFlux[m_pertVar] += llavPart;
                 }
@@ -2312,6 +2329,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               
               const CFreal l = (*m_solPolyValsAtFlxPnts)[flxIdx][kSolIdx];            
               
+              // (i)
               for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
               {
                 const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -2319,6 +2337,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
                 m_tempFlux = 0.0;
 
                 const CFreal divh_l = -m_corrFctDiv[jSolIdx][flxIdx] * l;
+                
+                /// llav jacob to state part //// actually should loop over all kSol
+                m_tempFlux += m_llavFluxJacobian[m_pertSide][m_pertSol][m_pertVar][m_pertSide][jSolIdx][dim] * divh_l;
               
                 // (b)
                 for (CFuint jDim = 0; jDim < m_dim; ++jDim)
@@ -2338,7 +2359,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
                   CFreal llavPart = divh_l_dqdu * m_solEpsilons[m_pertSide][kSolIdx];
                   
                   llavPart *= m_neighbCellFluxProjVects[m_pertSide][dim][kSolIdx][jDim];
-                  
+                  //if(m_cells[0]->getID()==1) CFLog(INFO, "pertSol: " << m_pertSol << ", pertVar: " << m_pertVar << ", llavJF: " << llavPart << "\n");
                   // add part of analytical LLAV Jacobian
                   m_tempFlux[m_pertVar] += llavPart;
                 }
@@ -2377,7 +2398,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
         const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlxPnt];
         
         m_temp = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
-        m_tempOther = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide] ;
+        m_tempOther = m_riemannFluxJacobian[m_pertSide][iFlxPnt][m_pertVar]*m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide];
         
         const CFreal halfFaceJacob = 0.5 * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
         
@@ -2410,6 +2431,36 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
             m_tempFlux = m_tempOther2 * divh;   
               
             acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+          }
+        }
+        
+        // loop over the states to perturb the states (l) for LLAV to state part
+        for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+        { 
+          m_temp2 = m_llavRiemannFluxJacobian[m_pertSide][m_pertSol][m_pertVar][iFlxPnt] * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
+          m_tempOther2 = m_llavRiemannFluxJacobian[m_pertSide][m_pertSol][m_pertVar][iFlxPnt] * m_faceJacobVecSizeFlxPnts[iFlxPnt][iOtherSide];
+          
+          // add the LLAV interface part of the jacobian (i)
+          for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
+          {
+            const CFuint jSolIdxThis = (*m_flxSolDep)[flxPntIdxThis][jSolPnt];
+            const CFuint jSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][jSolPnt];
+
+            // get the divergence of the correction function on this side
+            CFreal divh = m_corrFctDiv[jSolIdxThis][flxPntIdxThis];
+                          
+            // add part on this side of face
+            m_tempFlux = m_temp2 * divh;
+              
+            acc.addValues(jSolIdxThis+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+          
+            // get the divergence of the correction function on other side
+            divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
+                        
+            // add cross-cell part 
+            m_tempFlux = m_tempOther2 * divh;   
+              
+            acc.addValues(jSolIdxOther+otherSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
         }
         
@@ -2447,6 +2498,10 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               
               const CFreal divh_halfFaceJacob_l = divh_halfFaceJacob * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][kSolIdx];
               const CFreal divh_halfFaceJacob_lOther = divh_halfFaceJacob * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
+              
+              /// llav jacob to state part
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacob_l;
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacob_lOther;
                 
               // (b)
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
@@ -2494,6 +2549,10 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               
               const CFreal divh_halfFaceJacobOther_lThis = divh_halfFaceJacobOther * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][kSolIdx];
               const CFreal divh_halfFaceJacobOther_lOther = divh_halfFaceJacobOther * (*m_solPolyValsAtFlxPnts)[flxPntIdxOther][kSolIdxOther];
+              
+              /// llav jacob to state part
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacobOther_lThis;
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacobOther_lOther;
                 
               // (b)
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
@@ -2554,6 +2613,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               }
   
               const CFreal divh_halfFaceJacob_l = divh_halfFaceJacob * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][dependingKSol];
+              
+              /// llav jacob to state part
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacob_l;
                 
               // (b)
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
@@ -2592,6 +2654,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               
               const CFreal divh_halfFaceJacobOther_lThis = divh_halfFaceJacobOther * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][dependingKSol];
                 
+              /// llav jacob to state part
+              //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacobOther_lThis;
+              
               // (b)
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
               {
@@ -2649,6 +2714,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
                   
                 // get the divergence of the correction function on this side
                 const CFreal divh_lOther = -m_corrFctDiv[jSolIdx][iInfluencedFlxIdx] * lOther; 
+                
+                /// llav jacob to state part //// actually should go over all kSol
+                m_tempFlux += m_llavFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iOtherSide][jSolIdx][dimOther] * divh_lOther;
               
                 for (CFuint jDim = 0; jDim < m_dim; ++jDim)
                 {
@@ -2695,6 +2763,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
               {
                 const CFreal lOther = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][kSolIdxOther];
+                
+                /// llav jacob to state part //// actually should go over all jSol
+                m_tempFlux += m_llavFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iOtherSide][jSolIdx][iDim] * lOther;
                   
                 for (CFuint jDim = 0; jDim < m_dim; ++jDim)
                 { 

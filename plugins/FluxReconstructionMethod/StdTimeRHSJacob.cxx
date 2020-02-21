@@ -69,6 +69,15 @@ void StdTimeRHSJacob::setup()
 void StdTimeRHSJacob::execute()
 {
   CFAUTOTRACE;
+  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+  const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+   
+  const CFuint interval = iter - iterFreeze;
+      
+  if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+  {
 
   SafePtr<LSSMatrix> jacobMatrix = m_lss->getMatrix();
 
@@ -137,6 +146,8 @@ void StdTimeRHSJacob::execute()
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
+  }
+  
   }
 }
 

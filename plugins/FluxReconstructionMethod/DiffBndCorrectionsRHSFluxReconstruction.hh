@@ -242,9 +242,6 @@ protected: // data
   /// coefs to extrapolate the states to the flx pnts
   Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
   
-  /// flag telling whether to freeze the gradients
-  bool m_freezeGrads;
-  
   /// average solution in a flux point
   RealVector m_avgSol;
   

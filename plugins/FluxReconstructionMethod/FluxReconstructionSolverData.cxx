@@ -46,7 +46,9 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< std::string >("LinearVar","Name of the linear variable set.");
   options.addConfigOption< std::string >("FluxPointDistribution","Name of the flux point distribution");
   options.addConfigOption< std::string >("RiemannFlux","Name of the Riemann flux.");
-  options.addConfigOption< bool >("FreezeGradients","Flag telling whether to freeze the gradients for the Jacobian computation.");
+  options.addConfigOption< bool >("FreezeJacob","Flag telling whether to freeze the Jacobian.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobIter","Iteration after which to freeze the Jacobian.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobInterval","Amount of iterations to freeze the Jacobian before recalculation.");
   options.addConfigOption< CFreal >("DiffFluxDamping","Damping coefficient of diffusive flux scheme.");
   options.addConfigOption< bool >("AddArtificialViscosity","Flag telling whether to add artificial viscosity.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
@@ -105,8 +107,8 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_correctionFunctionStr = "Null";
   setParameter( "CorrectionFunctionComputer", &m_correctionFunctionStr );
   
-  m_freezeGrads = false;
-  setParameter( "FreezeGradients", &m_freezeGrads );
+  m_freezeJacob = false;
+  setParameter( "FreezeJacob", &m_freezeJacob );
   
   m_addAV = false;
   setParameter( "AddArtificialViscosity", &m_addAV );
@@ -120,6 +122,12 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
 
   m_bcNameStr = vector<std::string>();
   setParameter("BcNames",&m_bcNameStr);
+  
+  m_freezeJacobIter = MathTools::MathConsts::CFuintMax();
+  setParameter( "FreezeJacobIter", &m_freezeJacobIter );
+  
+  m_freezeJacobInterval = 1;
+  setParameter( "FreezeJacobInterval", &m_freezeJacobInterval );
 }
 
 //////////////////////////////////////////////////////////////////////////////

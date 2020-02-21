@@ -74,7 +74,6 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_faceJacobVecSizeFlxPnts(),
   m_diffusiveVarSet(CFNULL),
   m_solPolyValsAtFlxPnts(CFNULL),
-  m_freezeGrads(),
   m_avgSol(),
   m_avgGrad(),
   m_flxLocalCoords(CFNULL),
@@ -523,9 +522,6 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
 
   m_nbrSolDep = ((*m_flxSolDep)[0]).size();
-  
-  // get the flag telling whether to freeze the gradients
-  m_freezeGrads = getMethodData().getFreezeGrads(); 
 
   // create internal and ghost states
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

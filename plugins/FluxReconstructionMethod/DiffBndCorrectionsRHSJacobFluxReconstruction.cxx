@@ -214,9 +214,20 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 
 	  // compute solution points Jacobian determinants
           m_solJacobDet = m_intCell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+          
+          const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+          const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+          const CFuint interval = iter - iterFreeze;
+      
+          if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+          {
 
-	  // compute the contribution to the jacobian
-          computeJacobDiffBndContribution();
+	    // compute the contribution to the jacobian
+            computeJacobDiffBndContribution();
+          
+          }
 
 	  // release the cell
           m_cellBuilder->releaseGE();

@@ -166,12 +166,22 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
         {
           computeGradientBndFaceCorrections();
         }
+        
+        const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+        const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+        const CFuint interval = iter - iterFreeze;
+      
+        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+        {
 	
-	// if the cell is parallel updatable, compute the contribution to the numerical jacobian
-	if ((*m_cellStates)[0]->isParUpdatable())
-	{
-	  // compute the convective boundary flux correction contribution to the jacobian
-	  computeJacobConvBndCorrection();
+	  // if the cell is parallel updatable, compute the contribution to the numerical jacobian
+	  if ((*m_cellStates)[0]->isParUpdatable())
+	  {
+	    // compute the convective boundary flux correction contribution to the jacobian
+	    computeJacobConvBndCorrection();
+          }
         }
         
         // release the face
