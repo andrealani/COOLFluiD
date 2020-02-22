@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.58134
+### Residual = -13.705
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -71,7 +71,7 @@ Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ###################################
 Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
-Simulator.SubSystem.NavierStokes2D.refValues = 0.0005515 1.4962195 1.4962195 2086.48606
+Simulator.SubSystem.NavierStokes2D.refValues = 0.00065469 1.74395 1.74395 2412.946 #00.0005515 1.4962195 1.4962195 2086.48606
 Simulator.SubSystem.NavierStokes2D.refLength = 1.0
 Simulator.SubSystem.NavierStokes2D.ConvTerm.RDim = 296.9285714
 Simulator.SubSystem.NavierStokes2D.ConvTerm.gamma = 1.4
@@ -105,9 +105,8 @@ Simulator.SubSystem.Tecplot.AppendIter = true
 #Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = artVisc outputPP monPhysVar smoothness
 
 ###################################
-Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1000000000000000000
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+Simulator.SubSystem.StopCondition = Norm #
+Simulator.SubSystem.Norm.valueNorm = -12
 
 #Simulator.SubSystem.ConvergenceMethod = BwdEuler
 #Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Interactive
@@ -148,7 +147,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet Mirror Wall
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = roundedConeUpgraded.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = roundedConeP0Impl.CFmesh #roundedConeUpgraded.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
@@ -166,6 +165,10 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #LaxFriedrichsFlux #
+
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 10
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 10
 
 Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
 
@@ -197,12 +200,12 @@ Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
 Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.33 #1.7e-3 #0.33
 
 ###################################
-Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
+Simulator.SubSystem.FluxReconstruction.InitComds = Null #StdInitState #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def =  0.0005515 1.4962195 0.0 2086.48606
+Simulator.SubSystem.FluxReconstruction.InField.Def =  0.00065469 1.74395 0.0 2412.946 #0.0005515 1.4962195 0.0 2086.48606
 
 Simulator.SubSystem.FluxReconstruction.BcNames = Inlet Outlet Wall Mirror
 Simulator.SubSystem.FluxReconstruction.Inlet.applyTRS = Inlet
@@ -220,13 +223,11 @@ Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Dirichlet  SuperOutlet  No
 Simulator.SubSystem.FluxReconstruction.Data.BcNames = Inlet      Outlet       Wall                   Mirror
 
 Simulator.SubSystem.FluxReconstruction.Data.Wall.HeatFlux = true
-Simulator.SubSystem.FluxReconstruction.Data.Wall.T = 296.1
+Simulator.SubSystem.FluxReconstruction.Data.Wall.T = 293.3 #296.1
 Simulator.SubSystem.FluxReconstruction.Data.Wall.ChangeToIsoT = 0 #10000000000
 
 Simulator.SubSystem.FluxReconstruction.Data.Inlet.Vars = x y
-Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  =  0.0005515 1.4962195 0.0 2086.48606
-#Simulator.SubSystem.FluxReconstruction.Data.Mirror.Vars = x y
-#Simulator.SubSystem.FluxReconstruction.Data.Mirror.Def  =  0.0005515 1.4962195 0.0 2086.48606
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  =  0.00065469 1.74395 0.0 2412.946 #0.0005515 1.4962195 0.0 2086.48606
 
 
 ###################################
@@ -241,10 +242,10 @@ Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
 Simulator.SubSystem.DataProcessing2.ProcessRate = 100
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Wall
-Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.0005515
-Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 138.9
-Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 2713
-Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 22.7457
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.00065469 #0.0005515 #
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 185.6 #138.9 #
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 2663.7754 #2713 #
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 36.08 #22.7457 #
 Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = true
 #Simulator.SubSystem.DataProcessing2.SkinFriction.AppendTime = true
 #Simulator.SubSystem.DataProcessing2.SkipFirstIteration = true
