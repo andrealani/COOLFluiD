@@ -108,7 +108,8 @@ ConvDiffLLAVFluxReconstruction::ConvDiffLLAVFluxReconstruction(const std::string
   m_unpertCellDiffRes(),
   m_gradUpdates(),
   m_projectedCorrL(),
-  m_projectedCorrR()
+  m_projectedCorrR(),
+  m_contFlxWoLLAV()
   {
     addConfigOptionsTo(this);
     
@@ -144,6 +145,9 @@ ConvDiffLLAVFluxReconstruction::ConvDiffLLAVFluxReconstruction(const std::string
     
     m_printLLAV = true;
     setParameter( "printLLAV", &m_printLLAV);
+    
+    m_LLAVBCZero = true;
+    setParameter( "LLAVBCZero", &m_LLAVBCZero);
   }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -176,6 +180,8 @@ void ConvDiffLLAVFluxReconstruction::defineConfigOptions(Config::OptionList& opt
   options.addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
   
   options.addConfigOption< bool >("printLLAV","Boolean telling whether to print the output of LLAV (default true).");
+  
+  options.addConfigOption< bool >("LLAVBCZero","Boolean telling whether to set LLAV to zero on the bnd.");
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
 }
@@ -864,10 +870,12 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
       // add diffusive part 
-      computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlxWoLLAV[iSolPnt][iDim]);
       
       // add convective part
-      m_contFlx[iSolPnt][iDim] -= m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][iSolPnt]);
+      m_contFlxWoLLAV[iSolPnt][iDim] -= m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][iSolPnt]);
+      
+      m_contFlx[iSolPnt][iDim] = m_contFlxWoLLAV[iSolPnt][iDim];
       
       // add artificial part
       for (CFuint iDim2 = 0; iDim2 < m_dim; ++iDim2)
@@ -879,12 +887,49 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
       }
     }
 
-    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
-    {
-      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
-      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
+//    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+//    {
+//      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+//      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
+//
+//      m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+//    }
+  }
+  
+  // add the contribution of the faces
+  const CFuint nbrFaces = m_cells[side]->nbNeighborGeos();
 
-      m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+  for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
+  {
+    if (!((*m_isFaceOnBoundaryCell)[iFace]) || m_LLAVBCZero)
+    {
+      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+      {
+        const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
+
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+        {
+          const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
+          const CFuint dim = (*m_flxPntFlxDim)[currFlxIdx];
+
+           m_extrapolatedFluxes[currFlxIdx] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(m_contFlx[solIdx][dim]);
+        }
+      }
+    }
+    else
+    {
+      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+      {
+        const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
+
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+        {
+          const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
+          const CFuint dim = (*m_flxPntFlxDim)[currFlxIdx];
+
+           m_extrapolatedFluxes[currFlxIdx] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(m_contFlxWoLLAV[solIdx][dim]);
+        }
+      } 
     }
   }
 
@@ -1432,12 +1477,19 @@ void ConvDiffLLAVFluxReconstruction::setup()
   m_unpertCellDiffRes[RIGHT].resize(m_nbrSolPnts*m_nbrEqs);
   m_projectedCorrL.resize(m_dim);
   m_projectedCorrR.resize(m_dim);
+  m_contFlxWoLLAV.resize(m_nbrSolPnts);
   
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     RealVector temp(m_nbrEqs);
     temp = 0.0;
     m_statesPMinOne.push_back(temp);
+    
+    m_contFlxWoLLAV[iSol].resize(m_dim);
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      m_contFlxWoLLAV[iSol][iDim].resize(m_nbrEqs);
+    }
   }
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

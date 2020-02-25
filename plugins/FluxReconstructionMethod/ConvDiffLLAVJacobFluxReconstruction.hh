@@ -355,6 +355,9 @@ protected: //data
   /// boolean telling whether to print the LLAV output
   bool m_printLLAV;
   
+  /// boolean telling whether to set LLAV to zero at the bnd
+  bool m_LLAVBCZero;
+  
   /// the gradients in the neighbouring cell
   std::vector< std::vector< std::vector< RealVector >* > > m_cellGradsAV;
   
@@ -432,6 +435,9 @@ protected: //data
   
   /// damping coefficient
   CFreal m_dampCoeffDiff;
+  
+  /// Continuous flux at the solution points wothout LLAV
+  std::vector< std::vector< RealVector> > m_contFlxWoLLAV;
   
   
   private:
