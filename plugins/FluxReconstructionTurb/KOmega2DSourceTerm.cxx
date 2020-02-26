@@ -101,7 +101,11 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
   
-  KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)+(duy+dvx)*(duy+dvx))))
+  // this Pk from FV seems wrong!
+  //KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)+(duy+dvx)*(duy+dvx))))
+  //                           -twoThirdRhoK*(dux+dvy);
+  
+  KProdTerm = coeffTauMu*(MUT*((4./3.)*(dux*dux + dvy*dvy - dux*dvy) + duy*duy + dvx*dvx + 2*duy*dvx))
                              -twoThirdRhoK*(dux+dvy);
   
   ///Production term: Omega

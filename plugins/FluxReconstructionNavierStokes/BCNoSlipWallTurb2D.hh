@@ -109,6 +109,9 @@ protected: // data
   
   /// turb intensity at the wall
   CFreal m_wallK;
+  
+  /// distance of the first sol pnt to the wall
+  CFreal m_wallDist;
 
 }; // class BCNoSlipWallTurb2D
 

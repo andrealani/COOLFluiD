@@ -86,7 +86,7 @@ void BCSubOutletTurb2D::computeGhostStates(const vector< State* >& intStates,
     
     const CFreal pInner = m_intSolPhysData[EulerTerm::P];
     
-    const CFreal pGhost = max(2.0*m_pressure - pInner,1e-10);
+    const CFreal pGhost = m_pressure; //max(2.0*m_pressure - pInner,1e-10);
 
     //set the physical data for the ghost state
     m_ghostSolPhysData[EulerTerm::P]   = pGhost;

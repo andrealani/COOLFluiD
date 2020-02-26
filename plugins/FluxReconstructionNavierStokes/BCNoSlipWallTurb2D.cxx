@@ -38,6 +38,8 @@ void BCNoSlipWallTurb2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly zero), default true.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+    options.addConfigOption< CFreal >("WallDist","Characteristic distance of first sol pnt from the wall.");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -73,6 +75,9 @@ BCNoSlipWallTurb2D::BCNoSlipWallTurb2D(const std::string& name) :
   
   m_wallK = 1.e-8;
    setParameter("KWall",&m_wallK);
+   
+   m_wallDist = 1.0e-5;
+   setParameter("WallDist",&m_wallDist);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -123,8 +128,8 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
     {
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
-      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_xWallVelocity-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_yWallVelocity-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VX]  = m_xWallVelocity;//2.0*m_xWallVelocity-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = m_yWallVelocity;//2.0*m_yWallVelocity-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
       m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
       m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P];
       m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
@@ -145,8 +150,8 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
 
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::P]/(R*ghostT); //m_intSolPhysData[EulerTerm::RHO];
-      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_xWallVelocity-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_yWallVelocity-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VX]  = m_xWallVelocity;//2.0*m_xWallVelocity-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = m_yWallVelocity;//2.0*m_yWallVelocity-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
       m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
       m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P]; //ghostP;
       m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
@@ -165,7 +170,7 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
     if(nbTurbVars == 2)
     {
       //Compute distance to innerstate
-      CFreal y0 = 1.e-2;//1.e-9;
+      CFreal y0 = m_wallDist;//1.e-9;
     
       //avoid too small distances
       //y0 = std::max(y0, 10.e-10);
@@ -235,7 +240,13 @@ void BCNoSlipWallTurb2D::computeGhostGradients
       RealVector& tempGradI = *intGrads  [iState][3];
       RealVector& tempGradG = *ghostGrads[iState][3];
       const CFreal nTempGrad = tempGradI[XX]*normal[XX] + tempGradI[YY]*normal[YY];
-      tempGradG = tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
+      tempGradG = tempGradI - nTempGrad*normal + m_wallQ*normal; //tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
+      
+      // pressure
+      RealVector& pGradI = *intGrads  [iState][0];
+      RealVector& pGradG = *ghostGrads[iState][0];
+      const CFreal nPGrad = pGradI[XX]*normal[XX] + pGradI[YY]*normal[YY];
+      pGradG = pGradI - nPGrad*normal;
     }
   }
 }

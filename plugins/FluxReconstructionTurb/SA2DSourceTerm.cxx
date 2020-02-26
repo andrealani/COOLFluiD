@@ -185,15 +185,20 @@ void SA2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal sixth = 1./6.;
     const CFreal fw = g * pow( (1. + Cw3_6) / (g6 + Cw3_6) ,sixth);
     
+    ///// In fully turbulent flow, ft2 doesn't need to be taken into account
+    const CFreal ct3 = 1.2;
+    const CFreal ct4 = 0.5;
+    const CFreal ft2 = 0.0;//ct3*exp(-ct4*Qsi*Qsi);
+    
     const CFreal adimCoef = m_diffVarSet->getModel().getCoeffTau();
     
     const CFreal nonConsDiffTerm = adimCoef * ( Cb2 / sigma ) * (dKdX*dKdX + dKdY*dKdY);
-    const CFreal P = Cb1 * Stilda * NIUtilda; // production term
+    const CFreal P = Cb1 * Stilda * NIUtilda * (1-ft2); // production term
     
     // correction for the introduction of rho in the convective flux : G
     const CFreal G = ( 1. / sigma ) * (NIU + NIUtilda) * ( dKdX + dKdY ) * ( dRhodX + dRhodY );
     
-    CFreal D =  adimCoef * ( Cw1 * fw ) * ((NIUtilda*NIUtilda) / (m_currWallDist[iSol]*m_currWallDist[iSol]));
+    CFreal D =  adimCoef * ( Cw1 * fw - Cb1 * ft2/(kappa*kappa)) * ((NIUtilda*NIUtilda) / (m_currWallDist[iSol]*m_currWallDist[iSol]));
     
     // tranform the model into SA - noft2 - comp by adding the extra destruction term
     // It improves the performance of the model in compressible mixing layers

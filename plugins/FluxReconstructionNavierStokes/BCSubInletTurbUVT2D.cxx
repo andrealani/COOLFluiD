@@ -101,8 +101,8 @@ void BCSubInletTurbUVT2D::computeGhostStates(const vector< State* >& intStates,
     //set the physical data for the ghost state
     m_ghostSolPhysData[EulerTerm::P]   = pInner;
     m_ghostSolPhysData[EulerTerm::RHO] = pInner/(R*m_temperature);
-    m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_uinf - m_intSolPhysData[EulerTerm::VX];
-    m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_vinf - m_intSolPhysData[EulerTerm::VY];
+    m_ghostSolPhysData[EulerTerm::VX]  = m_uinf; //2.0*m_uinf - m_intSolPhysData[EulerTerm::VX];
+    m_ghostSolPhysData[EulerTerm::VY]  = m_vinf; //2.0*m_vinf - m_intSolPhysData[EulerTerm::VY];
     m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*
 				       m_ghostSolPhysData[EulerTerm::VX] +
 				       m_ghostSolPhysData[EulerTerm::VY]*
@@ -121,7 +121,7 @@ void BCSubInletTurbUVT2D::computeGhostStates(const vector< State* >& intStates,
     const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
     for(CFuint iTurb = 0; iTurb < nbTurbVars; iTurb++)
     {
-      m_ghostSolPhysData[iK + iTurb] = 2.0*m_turbVars[iTurb] - m_intSolPhysData[iK + iTurb];
+      m_ghostSolPhysData[iK + iTurb] = m_turbVars[iTurb]; //2.0*m_turbVars[iTurb] - m_intSolPhysData[iK + iTurb];
     }
 
     // set the ghost state from its physical data

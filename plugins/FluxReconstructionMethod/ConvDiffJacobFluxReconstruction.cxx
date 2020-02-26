@@ -336,6 +336,15 @@ void ConvDiffJacobFluxReconstruction::execute()
             m_solJacobDet[iSide][iSol] = volumes[(*(m_states[iSide]))[iSol]->getLocalID()];
           }
 	}
+        
+        const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+        const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+        const CFuint interval = iter - iterFreeze;
+        
+        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+        {
 
         // compute the diffusive face term contribution to the jacobian
         if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
@@ -349,6 +358,8 @@ void ConvDiffJacobFluxReconstruction::execute()
         else if ((*m_states[RIGHT])[0]->isParUpdatable())
         {
           computeOneJacobDiffFaceTerm(RIGHT);
+        }
+        
         }
 
         // release the cells
