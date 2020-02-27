@@ -43,4 +43,17 @@ CF_ADD_PLUGIN_LIBRARY ( MeshToolsFVM )
 
 ##################################################################
 
+LIST ( APPEND MeshToolsFR_files
+MeshToolsFR.hh
+ComputeWallDistanceVectorFRMPI.cxx
+ComputeWallDistanceVectorFRMPI.hh
+)
+
+LIST ( APPEND MeshToolsFR_requires_mods FluxReconstructionMethod )
+LIST ( APPEND MeshToolsFR_cflibs MeshTools FluxReconstructionMethod )
+
+CF_ADD_PLUGIN_LIBRARY ( MeshToolsFR )
+
+##################################################################
+
 CF_WARN_ORPHAN_FILES()
