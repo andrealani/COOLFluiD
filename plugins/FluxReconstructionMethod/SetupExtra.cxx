@@ -256,19 +256,12 @@ void SetupExtra::createNormalSockets()
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
-      const CFuint leftCellID = m_face->getNeighborGeo(LEFT)->getID();
-      const CFuint rightCellID = m_face->getNeighborGeo(RIGHT)->getID();
-
       // compute face Jacobian vectors
       m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
       // Loop over flux points to set the normal vectors
       for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
       {
-        // local flux point indices in the left and right cell
-        const CFuint flxPntIdxL = (*m_faceFlxPntConnPerOrient)[orient][LEFT][iFlxPnt];
-        const CFuint flxPntIdxR = (*m_faceFlxPntConnPerOrient)[orient][RIGHT][iFlxPnt];
-
         for (CFuint iDim = 0; iDim < dim; ++iDim)
         {
           // set unit normal vector
@@ -278,6 +271,76 @@ void SetupExtra::createNormalSockets()
       
       m_faceBuilder->releaseGE();
     }
+  }
+  
+  /// add the bnd face normals in socket flxPntNormals
+  
+  // get bndFacesStartIdxs from FluxReconstructionMethodData
+  map< std::string , vector< vector< CFuint > > >&
+      bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
+  
+  // get bc TRS names variable from the method data
+  SafePtr< std::vector< std::vector< std::string > > > bcTRSNames = getMethodData().getBCTRSNameStr();
+  
+  // loop over all wall boundary TRSs
+  for(CFuint iBc = 0; iBc < bcTRSNames->size(); ++iBc) 
+  {
+  for(CFuint iTRS = 0; iTRS < (*bcTRSNames)[iBc].size(); ++iTRS) 
+  {
+    SafePtr<TopologicalRegionSet> faceTrs = MeshDataStack::getActive()->getTrs((*bcTRSNames)[iBc][iTRS]);
+  
+    vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[faceTrs->getName()];
+
+    // number of face orientations (should be the same for all TRs)
+    cf_assert(bndFacesStartIdxs.size() != 0);
+    const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+
+    // number of TRs
+    const CFuint nbTRs = faceTrs->getNbTRs();
+    cf_assert(bndFacesStartIdxs.size() == nbTRs);
+
+    // get the geodata of the face builder and set the TRSs
+    FaceToCellGEBuilder::GeoData& geoData = m_faceBuilder->getDataGE();
+    geoData.cellsTRS = cells;
+    geoData.facesTRS = faceTrs;
+    geoData.isBoundary = true;
+  
+    // loop over TRs
+    for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
+    {
+      // loop over different orientations
+      for (CFuint orient = 0; orient < nbOrients; ++orient)
+      {   
+        // start and stop index of the faces with this orientation
+        const CFuint startFaceIdx = bndFacesStartIdxs[iTR][orient  ];
+        const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][orient+1];
+
+        // loop over faces with this orientation
+        for (CFuint faceID = startFaceIdx; faceID < stopFaceIdx; ++faceID)
+        {
+          // build the face GeometricEntity
+          geoData.idx = faceID;
+          m_face = m_faceBuilder->buildGE();
+        
+          // compute face Jacobian vectors
+          m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+        
+          // Loop over flux points to set the normal vectors
+          for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
+          {
+            for (CFuint iDim = 0; iDim < dim; ++iDim)
+            {
+              // set unit normal vector
+              flxPntNormals[m_face->getID()*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
+            }
+          }
+        
+          // release the face
+          m_faceBuilder->releaseGE();
+        }
+      }
+    }
+  }
   }
 }
 
