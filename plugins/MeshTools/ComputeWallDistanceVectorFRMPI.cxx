@@ -195,7 +195,7 @@ void ComputeWallDistanceVectorFRMPI::execute()
 	  cf_assert(nbNodesInTrs > 0);
 	  nodeSize = nbNodesInTrs*dim;
 	  // connectivity size overestimated to allow for memory preallocation in 3D
-	  connSize = (dim == DIM_2D) ? nbLocalTrsFaces*2 : nbLocalTrsFaces*4;
+	  connSize = (dim == DIM_2D) ? nbLocalTrsFaces*3 : nbLocalTrsFaces*8;
 
 	  // unidimensional node coordinates storage (each node is unique)
 	  // coordinate x,y(,z) of the TRS nodes
@@ -224,8 +224,8 @@ void ComputeWallDistanceVectorFRMPI::execute()
 	  trsData.faceCenters.reserve(nbLocalTrsFaces*dim);
 	  for (CFuint iFace = 0; iFace < nbLocalTrsFaces; ++iFace) {
 	    const CFuint nbNodesInGeo = faces->getNbNodesInGeo(iFace);
-	    cf_assert((nbNodesInGeo == 2 && dim == DIM_2D) || 
-		      ((nbNodesInGeo == 3 || nbNodesInGeo == 4) && dim == DIM_3D)); 
+	    //cf_assert((nbNodesInGeo == 2 && dim == DIM_2D) || 
+            //      ((nbNodesInGeo == 3 || nbNodesInGeo == 4) && dim == DIM_3D)); 
 	    trsData.trsNbNodesInFace.push_back(nbNodesInGeo);
 	    
 	    // compute the face centroid
