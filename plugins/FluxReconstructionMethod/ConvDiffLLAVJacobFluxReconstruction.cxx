@@ -79,6 +79,7 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
   socket_flxPntNormals("flxPntNormals"),
   socket_cellVolumes("cellVolumes"),
   socket_volumes("volumes"),
+  socket_wallDistance("wallDistance"),
   m_epsBackUp(),
   m_tempSolPntVec(),
   m_tempSolPntVec2(),
@@ -147,6 +148,12 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
     
     m_LLAVBCZero = true;
     setParameter( "LLAVBCZero", &m_LLAVBCZero);
+    
+    m_wallCutOff = 0.0;
+    setParameter( "WallCutOffDistance", &m_wallCutOff);
+    
+    m_useWallCutOff = false;
+    setParameter( "UseWallCutOff", &m_useWallCutOff);
   }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -183,6 +190,10 @@ void ConvDiffLLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList
   options.addConfigOption< bool >("LLAVBCZero","Boolean telling whether to set LLAV to zero on the bnd.");
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
+  
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("WallCutOffDistance","Distance from wall at which to cut off LLAV.");
+  
+  options.addConfigOption< bool >("UseWallCutOff","Boolean telling whether to use wall distance cut off of LLAV.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -207,6 +218,7 @@ ConvDiffLLAVJacobFluxReconstruction::needsSockets()
   result.push_back(&socket_flxPntNormals);
   result.push_back(&socket_cellVolumes);
   result.push_back(&socket_volumes);
+  if (m_useWallCutOff) result.push_back(&socket_wallDistance);
 
   return result;
 }
@@ -3234,6 +3246,34 @@ void ConvDiffLLAVJacobFluxReconstruction::computeEpsilon()
   else
   {
     m_epsilon = m_epsilon0*0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
+  }
+
+  if (m_useWallCutOff)
+  {
+    // Get the wall distance
+    DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
+  
+    CFreal centroidDistance = 0.0;
+      
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+      centroidDistance += wallDist[stateID];
+    }
+    
+    centroidDistance /= m_nbrSolPnts;
+    
+    if (centroidDistance < m_wallCutOff) 
+    {
+      if (centroidDistance < 0.5*m_wallCutOff)
+      {
+        m_epsilon = 0.0; 
+      }
+      else
+      {
+        m_epsilon *= 0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(centroidDistance-0.75*m_wallCutOff)/(0.25*m_wallCutOff)));
+      }
+    }
   }
   
   if (m_epsilon < 0.0 || m_epsilon != m_epsilon) 

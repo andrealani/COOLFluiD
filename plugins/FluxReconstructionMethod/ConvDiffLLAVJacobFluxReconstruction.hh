@@ -343,6 +343,9 @@ protected: //data
   /// storage of the geometrical jacobians in the states
   Framework::DataSocketSink<CFreal> socket_volumes;
   
+  /// handle to the wall distance
+  Framework::DataSocketSink<CFreal> socket_wallDistance;
+  
   /// backup for epsilon
   CFreal m_epsBackUp;
   
@@ -438,6 +441,12 @@ protected: //data
   
   /// Continuous flux at the solution points wothout LLAV
   std::vector< std::vector< RealVector> > m_contFlxWoLLAV;
+  
+  // distance from wall to cut off AV
+  CFreal m_wallCutOff;
+  
+  // Boolean telling whether to use wall distance cut off of LLAV
+  bool m_useWallCutOff;
   
   
   private:

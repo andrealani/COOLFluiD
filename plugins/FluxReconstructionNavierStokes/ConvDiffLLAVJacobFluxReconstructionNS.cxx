@@ -1091,6 +1091,38 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsToStateJacobianAna()
               
       h_f_S = h_f/m_nbrSolPnts*sBefore;
     }
+    
+    CFreal wallFactor = 1.0;
+    
+    if (m_useWallCutOff)
+    {
+      // Get the wall distance
+      DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
+  
+      CFreal centroidDistance = 0.0;
+      
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        const CFuint stateID = (*m_states[m_pertSide])[iSol]->getLocalID();
+        centroidDistance += wallDist[stateID];
+      }
+    
+      centroidDistance /= m_nbrSolPnts;
+    
+      if (centroidDistance < m_wallCutOff) 
+      {
+        if (centroidDistance < 0.5*m_wallCutOff)
+        {
+          wallFactor = 0.0; 
+        }
+        else
+        {
+          wallFactor = 0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(centroidDistance-0.75*m_wallCutOff)/(0.25*m_wallCutOff)));
+        }
+      }
+    }
+    
+    sBefore *= wallFactor;
       
     for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
     {
@@ -1149,6 +1181,8 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeEpsToStateJacobianAna()
         {   
           sPert = 0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(m_s-m_s0)/m_kappa));
         }
+        
+        sPert *= wallFactor;
 
         // restore physical variable in state
         m_numJacob->restore(pertState[m_pertVar]);  
