@@ -93,6 +93,8 @@ void LLAVDiffFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wav
   CFreal visc = 1.0;
 
   const CFreal dynVisc = m_diffusiveVarSet->getCurrDynViscosity();
+  const CFreal factorPr = min(m_diffusiveVarSet->getModel().getPrandtl(),1.0); 
+  cf_assert(factorPr>0.0);
   
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
@@ -104,7 +106,7 @@ void LLAVDiffFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wav
                                    (*m_faceIntegrationCoefs)[iFlx]*
                                    m_cflConvDiffRatio;
       const CFreal rho = m_diffusiveVarSet->getDensity(*(m_cellStatesFlxPnt[iSide][iFlx]));
-      visc = dynVisc/rho;
+      visc = dynVisc/rho/factorPr;
       
       if (m_addUpdCoeff)
       {

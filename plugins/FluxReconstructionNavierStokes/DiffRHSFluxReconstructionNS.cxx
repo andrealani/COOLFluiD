@@ -62,6 +62,9 @@ void DiffRHSFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wave
 
   const CFreal dynVisc = m_diffusiveVarSet->getCurrDynViscosity();
   
+  const CFreal factorPr = min(m_diffusiveVarSet->getModel().getPrandtl(),1.0);
+  cf_assert(factorPr>0.0);
+  
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
@@ -72,7 +75,7 @@ void DiffRHSFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wave
                                    (*m_faceIntegrationCoefs)[iFlx]*
                                    m_cflConvDiffRatio;
       const CFreal rho = m_diffusiveVarSet->getDensity(*(m_cellStatesFlxPnt[iSide][iFlx]));
-      visc = dynVisc/rho;
+      visc = dynVisc/rho/factorPr;
       
       // transform update states to physical data to calculate eigenvalues
       waveSpeedUpd[iSide] += visc*jacobXJacobXIntCoef/m_cellVolume[iSide];

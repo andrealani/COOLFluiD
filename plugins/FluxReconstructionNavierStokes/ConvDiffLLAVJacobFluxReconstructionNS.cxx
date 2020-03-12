@@ -94,6 +94,9 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFre
 
   const CFreal dynVisc = m_diffusiveVarSetNS->getCurrDynViscosity();
   
+  const CFreal factorPr = min(m_diffusiveVarSetNS->getModel().getPrandtl(),1.0);
+  cf_assert(factorPr>0.0);
+  
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
@@ -103,7 +106,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFre
                                    (*m_faceIntegrationCoefs)[iFlx]*
                                    m_cflConvDiffRatio;
       const CFreal rho = m_diffusiveVarSetNS->getDensity(*(m_cellStatesFlxPnt[iSide][iFlx]));
-      visc = dynVisc/rho;
+      visc = dynVisc/rho/factorPr;
       
       // transform update states to physical data to calculate eigenvalues
       waveSpeedUpd[iSide] += visc*jacobXJacobXIntCoef/m_cellVolume[iSide];
