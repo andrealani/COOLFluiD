@@ -319,6 +319,9 @@ protected: //data
   /// vector of arrays with jacobian determinants for the sol pnts
   std::vector< std::valarray<CFreal> > m_jacobDets;
   
+  /// FR order
+  CFuint m_order;
+  
   private:
 
   /// Physical data temporary vector

@@ -862,47 +862,47 @@ void QuadFluxReconstructionElementData::setCFLConvDiffRatio()
   {
     case CFPolyOrder::ORDER0:
     {
-      m_cflConvDiffRatio = 4.0; //2.0; // check this!
+      m_cflConvDiffRatio = 4.0;//2.0;//4.0; //2.0; // check this!  2/2
     } break;
     case CFPolyOrder::ORDER1:
     {
-      m_cflConvDiffRatio = 6.5; //100.0; //200.0; // check this!
+      m_cflConvDiffRatio = 6.5; //6.0;//4.0;//6.5; //100.0; //200.0; // check this! 4/6
     } break;
     case CFPolyOrder::ORDER2:
     {
-      m_cflConvDiffRatio = 17.0; //6.0; // check this!
+      m_cflConvDiffRatio = 17.0; //10.0;//6.0;//17.0; //6.0; // check this! 6/10
     } break;
     case CFPolyOrder::ORDER3:
     {
-      m_cflConvDiffRatio = 25.0; //500.0; //8.0; // check this!
+      m_cflConvDiffRatio = 25.0; //14.0;//8.0;//25.0; //500.0; //8.0; // check this! 8/14
     } break;
     case CFPolyOrder::ORDER4:
     {
-      m_cflConvDiffRatio = 50.0; //10.0; // check this!
+      m_cflConvDiffRatio = 50.0; //18.0;//10.0;//50.0; //10.0; // check this! 10/18
     } break;
     case CFPolyOrder::ORDER5:
     {
-      m_cflConvDiffRatio = 100.0; //1200.0; // check this!
+      m_cflConvDiffRatio = 100.0; //22.0;//12.0;//100.0; //1200.0; // check this! 12/22
     } break;
     case CFPolyOrder::ORDER6:
     {
-      m_cflConvDiffRatio = 200.0; //14.0; // check this!
+      m_cflConvDiffRatio = 200.0; //26.0;//14.0;//200.0; //14.0; // check this! 14/26
     } break;
     case CFPolyOrder::ORDER7:
     {
-      m_cflConvDiffRatio = 2500.0; //16.0; // check this!
+      m_cflConvDiffRatio = 2500.0; //30.0;//16.0;//2500.0; //16.0; // check this! 16/30
     } break;
     case CFPolyOrder::ORDER8:
     {
-      m_cflConvDiffRatio = 800.0; //18.0; // check this!
+      m_cflConvDiffRatio = 800.0; //34.0;//18.0;//800.0; //18.0; // check this! 18/34
     } break;
     case CFPolyOrder::ORDER9:
     {
-      m_cflConvDiffRatio = 5500.0; //20.0; // check this!
+      m_cflConvDiffRatio = 5500.0; //38.0;//20.0;//5500.0; //20.0; // check this! 20/38
     } break;
     case CFPolyOrder::ORDER10:
     {
-      m_cflConvDiffRatio = 3200.0; //22.0; // check this!
+      m_cflConvDiffRatio = 42.0;//22.0;//3200.0; //22.0; // check this! 22/42
     } break;
     default:
     {

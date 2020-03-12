@@ -262,6 +262,9 @@ protected: // data
 
   /// Physical data temporary vector
   RealVector m_pData;
+  
+  /// FR order
+  CFuint m_order;
 
 }; // end of class DiffBndCorrectionsRHSFluxReconstruction
 

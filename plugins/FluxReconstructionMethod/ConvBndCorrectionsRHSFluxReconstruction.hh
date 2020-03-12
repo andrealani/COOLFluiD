@@ -239,6 +239,9 @@ protected: // data
   /// correction term projected to a normal
   RealVector m_projectedCorr;
   
+  /// FR order
+  CFuint m_order;
+  
   private:
 
   /// Physical data temporary vector

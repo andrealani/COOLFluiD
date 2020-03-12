@@ -106,7 +106,8 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_tempGrad(),
   m_nbrTotalFlxPnts(),
   m_faceJacobVecs(),
-  m_jacobDets()
+  m_jacobDets(),
+  m_order()
   {
     addConfigOptionsTo(this);
   }
@@ -566,7 +567,7 @@ void DiffRHSFluxReconstruction::updateWaveSpeed()
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
-      updateCoeff[solID] += m_waveSpeedUpd[iSide];
+      updateCoeff[solID] += m_waveSpeedUpd[iSide];//*(2.0*m_order+1);
       CFLog(DEBUG_MIN, "updateCoeff = " << updateCoeff[solID] << "\n");
     }
   }
@@ -713,6 +714,10 @@ void DiffRHSFluxReconstruction::setup()
   cf_assert(frLocalData.size() > 0);
   // for now, there should be only one type of element
   cf_assert(frLocalData.size() == 1);
+  
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_order = static_cast<CFuint>(order);
   
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();

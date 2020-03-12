@@ -79,7 +79,8 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_flxLocalCoords(CFNULL),
   m_flxSolDep(CFNULL),
   m_nbrSolDep(),
-  m_faceJacobVecs()
+  m_faceJacobVecs(),
+  m_order()
 {
 }
 
@@ -430,7 +431,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateWaveSpeed()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-    updateCoeff[solID] += m_waveSpeedUpd;
+    updateCoeff[solID] += m_waveSpeedUpd;//*(2.0*m_order+1);
   }
 }
 
@@ -488,6 +489,10 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = flxLocalCoords->size();
+  
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_order = static_cast<CFuint>(order);
   
   // number of sol points
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();

@@ -101,12 +101,12 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
   
-  // this Pk from FV seems wrong!
-  //KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)+(duy+dvx)*(duy+dvx))))
-  //                           -twoThirdRhoK*(dux+dvy);
-  
-  KProdTerm = coeffTauMu*(MUT*((4./3.)*(dux*dux + dvy*dvy - dux*dvy) + duy*duy + dvx*dvx + 2*duy*dvx))
+  KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
+			       +(duy+dvx)*(duy+dvx)))
                              -twoThirdRhoK*(dux+dvy);
+ 
+//  KProdTerm = coeffTauMu*(MUT*((4./3.)*(dux*dux + dvy*dvy - dux*dvy) + duy*duy + dvx*dvx + 2*duy*dvx))
+//                             -twoThirdRhoK*(dux+dvy);
   
   ///Production term: Omega
   const CFreal avOmega = m_solPhysData[iK+1];
@@ -198,7 +198,7 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     // Get the wall distance
     DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
 
-    m_currWallDist[iState] = wallDist[stateID];
+    m_currWallDist[iState] = wallDist[stateID];//((*m_cellStates)[iState]->getCoordinates())[YY];
   }
   
   const EquationSubSysDescriptor& eqData = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();

@@ -304,6 +304,9 @@ protected: //data
   /// Divergence of the continuous flux at the solution points of the right neighbour
   std::vector< RealVector> m_divContFlxR;
   
+  /// FR order
+  CFuint m_order;
+  
 }; // class Solve
 
 //////////////////////////////////////////////////////////////////////////////
