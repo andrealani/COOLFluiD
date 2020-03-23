@@ -294,6 +294,7 @@ void DiffRHSFluxReconstruction::execute()
           {
             CFLog(VERBOSE, "" << rhs[resID+iVar] << " ");
           }
+          //if (abs(rhs[resID+1])>1e-3) CFLog(INFO, "state: " << (*m_cellStates)[iState]->getLocalID() << ", resU: " << rhs[resID+1] << "\n");
           CFLog(VERBOSE,"\n");
           DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
           CFLog(VERBOSE, "UpdateCoeff: " << updateCoeff[(*m_cellStates)[iState]->getLocalID()] << "\n");
@@ -323,7 +324,7 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
-       
+             
       m_avgSol[iVar] = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iVar])/2.0; 
     }
     
@@ -455,6 +456,12 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     {
 //       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
        computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
+//       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+//        {
+//       if (m_cell->getID() == 11) CFLog(INFO,"iSol: " << iSolPnt << ", iDir: " << iDim << ", iEq: " << iEq << ", state: " << m_avgSol[iEq] << 
+//               ", grad: " << (*(m_tempGrad[iEq]))[iDim] << ", n: " << m_cellFluxProjVects[iDim][iSolPnt] << ", flx: " << m_contFlx[iSolPnt][iDim][iEq] << "\n");  
+//       }
+
     }
 
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
@@ -567,7 +574,7 @@ void DiffRHSFluxReconstruction::updateWaveSpeed()
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
-      updateCoeff[solID] += m_waveSpeedUpd[iSide];//*(2.0*m_order+1);
+      updateCoeff[solID] += m_waveSpeedUpd[iSide]*(2.0*m_order+1);
       CFLog(DEBUG_MIN, "updateCoeff = " << updateCoeff[solID] << "\n");
     }
   }

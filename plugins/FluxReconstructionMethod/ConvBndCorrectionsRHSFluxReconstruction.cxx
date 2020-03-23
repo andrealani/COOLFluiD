@@ -407,7 +407,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::updateWaveSpeed()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-    updateCoeff[solID] += m_waveSpeedUpd;//*(2.0*m_order+1);
+    updateCoeff[solID] += m_waveSpeedUpd*(2.0*m_order+1);
   }
 }
 

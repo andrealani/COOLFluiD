@@ -113,6 +113,15 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
     cf_assert(intState.size() == 4);
     cf_assert(ghostState.size() == 4);
+    
+//    if (coords[iState][XX] < 0.001)
+//    {
+//      m_wallU = 1344.76*(0.5*(1.0 - sin(MathTools::MathConsts::CFrealPi()*(coords[iState][XX]-0.0005)/0.001)));
+//    }
+//    else
+//    {
+//      m_wallU = 0.0;
+//    }
 
     // set the physical data starting from the inner state
     m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
@@ -163,6 +172,19 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       const CFreal R = m_eulerVarSet->getModel()->getR();
       const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
+        
+        
+      // for linT
+//      CFreal ghostT = 500.0*(0.4+2.85*coords[iState][XX]);
+//
+//      if (coords[iState][XX] < 0.001) ghostT = 298.575*(0.5*(1.0 - sin(MathTools::MathConsts::CFrealPi()*(coords[iState][XX]-0.0005)/0.001))) + 201.425;//m_wallT;
+      
+      //for cons T
+//      CFreal ghostT = 200.0;
+//
+//      if (coords[iState][XX] < 0.001) ghostT = 300.0*(0.5*(1.0 - sin(MathTools::MathConsts::CFrealPi()*(coords[iState][XX]-0.0005)/0.001))) + 200.0;//m_wallT;
+      
+      
       CFreal ghostT;
       
       if (m_strongT)
@@ -186,8 +208,8 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
 
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::P]/(R*ghostT); //m_intSolPhysData[EulerTerm::RHO];
-      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_wallU-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
-      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_wallV-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VX]  = m_wallU; //2.0*m_wallU-m_intSolPhysData[EulerTerm::VX];// negate velocity )-- average = 0
+      m_ghostSolPhysData[EulerTerm::VY]  = m_wallV; //2.0*m_wallV-m_intSolPhysData[EulerTerm::VY];// negate velocity )-- average = 0
       m_ghostSolPhysData[EulerTerm::V] = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX]+m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
       m_ghostSolPhysData[EulerTerm::P]   = m_intSolPhysData[EulerTerm::P]; //ghostP;
       m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*m_ghostSolPhysData[EulerTerm::P]
@@ -266,7 +288,7 @@ void BCNoSlipWallHeatFluxNS2D::setup()
   BCStateComputer::setup();
 
   // no flux point coordinates required
-  m_needsSpatCoord = false;
+  m_needsSpatCoord = false; //true; //
 
   // get Euler 2D varset
   m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();

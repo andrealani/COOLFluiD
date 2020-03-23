@@ -560,7 +560,7 @@ void ConvRHSFluxReconstruction::updateWaveSpeed()
       const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
  
       // add the wave speed update previously computed
-      updateCoeff[solID] += m_waveSpeedUpd[iSide];//*(2.0*m_order+1);
+      updateCoeff[solID] += m_waveSpeedUpd[iSide]*(2.0*m_order+1);
     }
   }
 }

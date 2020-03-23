@@ -289,7 +289,6 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
 
       m_avgSol[iVar] = ((*(m_flxPntGhostSol[iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[iFlxPnt]))[iVar])/2.0; 
     }
-    
     // prepare the flux computation
     prepareFluxComputation();
 
@@ -416,6 +415,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateRHS()
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       rhs[resID+iVar] += resFactor*m_corrections[iState][iVar];
+      //CFLog(INFO, "upres " << resID+iVar << ": " << resFactor*m_corrections[iState][iVar] << "\n");
     }
   }
 }
@@ -431,7 +431,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::updateWaveSpeed()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-    updateCoeff[solID] += m_waveSpeedUpd;//*(2.0*m_order+1);
+    updateCoeff[solID] += m_waveSpeedUpd*(2.0*m_order+1);
   }
 }
 
