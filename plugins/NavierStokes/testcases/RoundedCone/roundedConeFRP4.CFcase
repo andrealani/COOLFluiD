@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00001
+### Residual = -8.00001
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false #true
@@ -110,8 +110,7 @@ Simulator.SubSystem.Norm.valueNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function #Interactive
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.15
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<6000,0.06,0.08)
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 0.7 #if(i<6000,0.06,0.08)
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceRoundedConeP4.plt #
 Simulator.SubSystem.FwdEuler.ShowRate        = 10
 Simulator.SubSystem.FwdEuler.ConvRate        = 10

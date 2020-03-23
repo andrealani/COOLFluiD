@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.27098
+### Residual = -8.27293
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -128,7 +128,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceRoundedConeImplP1.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,0.3,0.6) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,0.9,if(i<310,1.5,1.7)) #if(i<10,0.9,1.8) #
 Simulator.SubSystem.NewtonIterator.ShowRate        = 1
 Simulator.SubSystem.NewtonIterator.ConvRate        = 1
 
@@ -168,16 +168,16 @@ Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #LaxFriedrichsFlux #
 Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 10
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 100
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 11
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 10
 
 Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
 
 Simulator.SubSystem.FluxReconstruction.SrcTermNames = NS2DAxiSourceTerm
 Simulator.SubSystem.FluxReconstruction.SrcTermComds = NS2DAxiSourceTerm
 
-Simulator.SubSystem.FluxReconstruction.NS2DAxiSourceTerm.AddJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.NS2DAxiSourceTerm.AddJacob = true #
 
 Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = true
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.Kappa = 1.0

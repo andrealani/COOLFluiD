@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00004 
+### Residual = -8.00021
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false #true
@@ -110,8 +110,7 @@ Simulator.SubSystem.Norm.valueNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function #Interactive
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.15
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100,0.1,0.2)
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 1.5
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceRoundedConeP1.plt #
 Simulator.SubSystem.FwdEuler.ShowRate        = 100
 Simulator.SubSystem.FwdEuler.ConvRate        = 100
@@ -161,8 +160,8 @@ Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-6 #5.0e-3 #0.5 #100.0 #0.1 #0.1
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-6 #1.0e-6 #0.00001 #0.00001 #
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-6 #
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-6 #
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 100
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre

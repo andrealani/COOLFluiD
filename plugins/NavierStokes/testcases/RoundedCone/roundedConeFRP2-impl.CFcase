@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.15832
+### Residual = -7.98664
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -128,7 +128,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceRoundedConeImplP2.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<50,0.2,0.3) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 0.8 #if(i<5000,0.8,1.0) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
 Simulator.SubSystem.NewtonIterator.ShowRate        = 1
 Simulator.SubSystem.NewtonIterator.ConvRate        = 1
 
@@ -170,7 +170,7 @@ Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 5
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 200
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 100
 
 Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
 

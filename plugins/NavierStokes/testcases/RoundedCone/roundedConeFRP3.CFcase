@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -5.58134
+### Residual = -8.00004
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false #true
@@ -110,8 +110,7 @@ Simulator.SubSystem.Norm.valueNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function #Interactive
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.15
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<2000,0.08,0.15)
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 0.9 #if(i<2000,0.08,0.15)
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceRoundedConeP3.plt #
 Simulator.SubSystem.FwdEuler.ShowRate        = 10
 Simulator.SubSystem.FwdEuler.ConvRate        = 10
@@ -123,7 +122,7 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet Mirror Wall
 
 #######To start from P2, change to roundedConeUpgraded.CFmesh#################
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = roundedConeUpgraded.CFmesh #roundedConeP3.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = roundedConeP3.CFmesh #roundedConeUpgraded.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 

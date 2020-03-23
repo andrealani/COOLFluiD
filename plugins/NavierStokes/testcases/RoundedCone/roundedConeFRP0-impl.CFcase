@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -13.705
+### Residual = -12.9105
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -128,7 +128,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceRoundedConeImplP0.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5,0.1,if(i<10,0.5,if(i<20,1.0,if(i<400,2.0,3.0)))) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5,0.5,if(i<10,1.0,if(i<200,2.0,if(i<400,3.0,5.0)))) #
 Simulator.SubSystem.NewtonIterator.ShowRate        = 10
 Simulator.SubSystem.NewtonIterator.ConvRate        = 1
 
@@ -137,6 +137,7 @@ Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 10
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
 Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
@@ -166,7 +167,7 @@ Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #LaxFriedrichsFlux #
 
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true #false #
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 10
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 10
 
@@ -189,8 +190,8 @@ Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-8 #0.5 #100.0 #0.1 #0.1
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-8 #0.00001 #0.00001 #
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-8 #
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-8 #
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 10
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
