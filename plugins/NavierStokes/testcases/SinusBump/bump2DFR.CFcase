@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -4.0708
+### Residual = -4.90909
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -74,20 +74,20 @@ Simulator.SubSystem.Euler2D.ConvTerm.machInf = 0.5
 
 Simulator.SubSystem.OutputFormat        = ParaView CFmesh Tecplot 
 
-Simulator.SubSystem.CFmesh.FileName     = AMeshUpTest.CFmesh
+Simulator.SubSystem.CFmesh.FileName     = bump.CFmesh
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 Simulator.SubSystem.CFmesh.SaveRate = 20000
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName = AMeshUpTest.plt
+Simulator.SubSystem.Tecplot.FileName = bump.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate = 20000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
-Simulator.SubSystem.ParaView.FileName    = AMeshUpTest.vtu
+Simulator.SubSystem.ParaView.FileName    = bump.vtu
 Simulator.SubSystem.ParaView.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.SaveRate = 20000
@@ -95,10 +95,10 @@ Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 200000
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 300000
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.2
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
 Simulator.SubSystem.FwdEuler.ShowRate        = 1000
 Simulator.SubSystem.FwdEuler.ConvRate        = 1000
 
@@ -116,7 +116,7 @@ Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux #RoeFlux #
 
 #Simulator.SubSystem.FluxReconstruction.ComputeErrorCom = ComputeErrorEuler
 
@@ -124,7 +124,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLeg
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.03
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.03 
 
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
 Simulator.SubSystem.FluxReconstruction.InitNames = InField
