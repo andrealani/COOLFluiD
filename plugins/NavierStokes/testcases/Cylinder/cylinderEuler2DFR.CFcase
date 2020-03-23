@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-# Residual = -1.32335
+# Residual = -3.92339
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -70,33 +70,36 @@ Simulator.SubSystem.Euler2D.refLength = 1.0
 
 ###################################
 Simulator.SubSystem.OutputFormat        = ParaView Tecplot CFmesh
-Simulator.SubSystem.CFmesh.FileName     = cylinderEuler-FR-sol.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 300
+Simulator.SubSystem.CFmesh.FileName     = cylinderEuler.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100000
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol = ParWriteSolution
 
-Simulator.SubSystem.ParaView.FileName    = cylinderEuler-FR-sol.vtu
+Simulator.SubSystem.ParaView.FileName    = cylinderEuler.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.ParaView.SaveRate = 300
+Simulator.SubSystem.ParaView.SaveRate = 100000
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = cylinderEuler-FR-sol.plt
+Simulator.SubSystem.Tecplot.FileName    = cylinderEuler.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 300
+Simulator.SubSystem.Tecplot.SaveRate = 100000
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 20000
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 200000
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
-Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.5
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.9
+Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceCylEuler.plt
+Simulator.SubSystem.FwdEuler.ShowRate        = 1000
+Simulator.SubSystem.FwdEuler.ConvRate        = 1000
 
 ###################################
 Simulator.SubSystem.SpaceMethod = FluxReconstruction
@@ -116,13 +119,13 @@ Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
-Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = RoeFlux
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux #RoeFlux
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.015 #4.0/135.0 #3.0/3150.0 #8.0/496125.0 #5.0/29469825
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.03
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState
@@ -142,29 +145,3 @@ Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall            FarField
 
 Simulator.SubSystem.FluxReconstruction.Data.FarField.Vars = x y
 Simulator.SubSystem.FluxReconstruction.Data.FarField.Def  = 1.0 0.449622064 0.0 2.60108
-
-
-###################################
-#
-# DataProcessing to get the aerodynamic coeficients
-#
-#Simulator.SubSystem.DataPostProcessing = DataProcessing
-#Simulator.SubSystem.DataProcessing.Data.updateVar = Cons
-#Simulator.SubSystem.DataProcessing.Comds = NavierStokesConsComputeAeroSpectralFD
-#Simulator.SubSystem.DataProcessing.Names = AeroCoef
-#Simulator.SubSystem.DataProcessing.ProcessRate = 1
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.applyTRS = Cylinder
-#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateAero = 1
-#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileAero = AeroCoefCyl.plt
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.OutputFileWall = WallCyl.plt
-#Simulator.SubSystem.DataProcessing.AeroCoef.SaveRateWall = 1
-
-#Simulator.SubSystem.DataProcessing.AeroCoef.uInf = 0.1774823934930
-#Simulator.SubSystem.DataProcessing.AeroCoef.rhoInf = 1.0
-#Simulator.SubSystem.DataProcessing.AeroCoef.pInf = 1.0
-#Simulator.SubSystem.DataProcessing.AeroCoef.FlowDir = 1.0 0.0
-
-###################################
-#CFEnv.RegistSignalHandlers = false

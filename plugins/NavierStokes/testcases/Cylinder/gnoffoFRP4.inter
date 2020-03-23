@@ -1,8 +1,0 @@
-Simulator.SubSystem.FwdEuler.Data.CFL.Interactive.CFL = 0.05
-Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.Kappa = 3.0 
-Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.Peclet = 2.0
-Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.S0 = -2.5
-Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.FreezeLimiterIter = 10000000000000
-Simulator.SubSystem.FluxReconstruction.LLAVDiffNS.MonitoredPhysVar = 1
-Simulator.SubSystem.FluxReconstruction.Data.Wall.ChangeToIsoT = 0
-Simulator.SubSystem.FluxReconstruction.Data.Wall.T = 500.0

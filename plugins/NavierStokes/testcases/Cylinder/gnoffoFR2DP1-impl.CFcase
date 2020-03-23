@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00
+### Residual = -8.74944
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -110,15 +110,15 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceGnoffoImplP1.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10000,0.3,0.3) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
-Simulator.SubSystem.NewtonIterator.ShowRate        = 20
-Simulator.SubSystem.NewtonIterator.ConvRate        = 20
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10000,0.6,0.7) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
+Simulator.SubSystem.NewtonIterator.ShowRate        = 50
+Simulator.SubSystem.NewtonIterator.ConvRate        = 50
 
 # Linear System for implicit
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
-Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 20
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 50
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
@@ -132,7 +132,7 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 
 #######To start from P0, change to gnoffoP1ImplStart.CFmesh#################
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP1Impl.CFmesh #gnoffoP1ImplStart.CFmesh #gnoffoUpgraded.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP1.CFmesh #gnoffoP1ImplStart.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
@@ -166,7 +166,7 @@ Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.S0 = -0.7
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.AddUpdateCoeff = true
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.FreezeLimiterIter = 100000000
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.MonitoredPhysVar = 1
-Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.ShowRate = 20
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.ShowRate = 50
 
 Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = false
@@ -174,7 +174,7 @@ Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = tru
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-5 
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-5
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 20
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 50
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre #Equidistant #Lobatto # 
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Equidistant #Lobatto #

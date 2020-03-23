@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00
+### Residual = -6
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -54,7 +54,7 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffoP0.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffoP0.CFmesh #gnoffo1920.CFmesh #
 #Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 #Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
@@ -111,7 +111,7 @@ Simulator.SubSystem.Norm.valueNorm = -4
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<10000,0.1,0.15) #
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 0.4 #if(i<10000,0.1,0.15) #
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP1.plt
 Simulator.SubSystem.FwdEuler.ShowRate        = 500
 Simulator.SubSystem.FwdEuler.ConvRate        = 500
@@ -122,7 +122,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 
-#######To start from P0, change to gnoffoUpgraded.CFmesh#################
+#######To start from converged solution, change to gnoffoUpgraded.CFmesh#################
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP1.CFmesh #gnoffoUpgraded.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
@@ -204,7 +204,7 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
-Simulator.SubSystem.DataProcessing2.ProcessRate = 10000
+Simulator.SubSystem.DataProcessing2.ProcessRate = 5000
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Cylinder
 Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.00100335
 Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 200.0

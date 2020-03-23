@@ -6,7 +6,7 @@
 # FR, VCJH, NS3D, Backward Euler, mesh with curved hexas, 
 # Lax-Friedrichs scheme, wall BCs and Dirichlet BC, Mirror BC 
 #
-# Residual = -8.70003
+# Residual = -6.88462
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false
@@ -66,7 +66,7 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -109,11 +109,11 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
 Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e4,0.5*1.5^max(i-5,0)) #if(i<10,0.7,min(1e4,1.5*1.1^max(i-100,0))) #min(1e4,0.1*1.5^max(i-20,0))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e5,0.5*1.2^max(i-1,0)) #min(1e4,0.5*1.5^max(i-5,0)) #if(i<10,0.7,min(1e4,1.5*1.1^max(i-100,0))) #min(1e4,0.1*1.5^max(i-20,0))
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImpl3DNSCyl1652P4.plt
 Simulator.SubSystem.BwdEuler.ShowRate        = 1
 Simulator.SubSystem.BwdEuler.ConvRate        = 1
@@ -140,23 +140,24 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS
-Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacobNS
-Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobNS
 Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.SetupCom = SetupExtra
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
-Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 0.0
+Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.03
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 9.5e-4
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState

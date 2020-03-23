@@ -105,11 +105,11 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = Inlet Outlet1 Outlet2 Cylind
 ###################################
 
 Simulator.SubSystem.StopCondition = Norm #RelativeNormAndMaxIter
-Simulator.SubSystem.Norm.valueNorm = -6
+Simulator.SubSystem.Norm.valueNorm = -4
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100000,0.04,0.05) #
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 0.4 #if(i<100000,0.04,0.05) #
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP4.plt
 Simulator.SubSystem.FwdEuler.ShowRate        = 100
 Simulator.SubSystem.FwdEuler.ConvRate        = 100
@@ -121,7 +121,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP4.CFmesh #gnoffoUpgraded.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP4.CFmesh #gnoffoUpgraded.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 

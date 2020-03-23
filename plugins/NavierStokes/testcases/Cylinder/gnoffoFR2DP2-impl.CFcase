@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00
+### Residual = -8.86299
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -110,7 +110,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceGnoffoImplP2.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<4000,0.3,0.3) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 0.8 #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
 Simulator.SubSystem.NewtonIterator.ShowRate        = 20
 Simulator.SubSystem.NewtonIterator.ConvRate        = 20
 
@@ -132,7 +132,7 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 
 #######To start from P0, change to gnoffoUpgraded.CFmesh#################
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP2Impl.CFmesh #gnoffoUpgraded.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP2.CFmesh #gnoffoUpgraded.CFmesh #gnoffoP2Impl.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 

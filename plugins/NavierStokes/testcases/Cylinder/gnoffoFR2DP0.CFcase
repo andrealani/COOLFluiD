@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -8.00002
+### Residual = -8.00014
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -111,7 +111,7 @@ Simulator.SubSystem.Norm.valueNorm = -8
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<10000,0.5,0.8) #
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 4.0 #if(i<10000,0.5,0.8) #
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP0.plt
 Simulator.SubSystem.FwdEuler.ShowRate        = 500
 Simulator.SubSystem.FwdEuler.ConvRate        = 500
@@ -195,7 +195,7 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
-Simulator.SubSystem.DataProcessing2.ProcessRate = 10000
+Simulator.SubSystem.DataProcessing2.ProcessRate = 1000
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Cylinder
 Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.00100335
 Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 200.0

@@ -103,13 +103,13 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = Inlet Outlet1 Outlet2 Cylind
 ###################################
 
 Simulator.SubSystem.StopCondition = Norm #RelativeNormAndMaxIter
-Simulator.SubSystem.Norm.valueNorm = -6
+Simulator.SubSystem.Norm.valueNorm = -4
 #Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter =  10000000000000000000
 #Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
 
 Simulator.SubSystem.ConvergenceMethod = FwdEuler
 Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = if(i<100000,0.05,0.07) #
+Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = 0.5 #if(i<100000,0.05,0.07) #
 Simulator.SubSystem.FwdEuler.ConvergenceFile = convergenceGnoffoP3.plt
 Simulator.SubSystem.FwdEuler.ShowRate        = 100
 Simulator.SubSystem.FwdEuler.ConvRate        = 100
@@ -202,7 +202,7 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
-Simulator.SubSystem.DataProcessing2.ProcessRate = 10000
+Simulator.SubSystem.DataProcessing2.ProcessRate = 5000
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Cylinder
 Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.00100335
 Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 200.0

@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.57119
+### Residual = -9.11701
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = false
@@ -59,7 +59,8 @@ Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
+#Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ##################################
@@ -79,35 +80,35 @@ Simulator.SubSystem.NavierStokes2D.DiffTerm.FixedKinematicViscosity.KinVisc = 0.
 
 ###################################
 Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
-Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFR2DTest.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 10
+Simulator.SubSystem.CFmesh.FileName     = AcylinderNSFR2D.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 100
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.ParWriteSol = ParWriteSolution
 
-Simulator.SubSystem.ParaView.FileName    = AcylinderNSFR2DTest.vtu
+Simulator.SubSystem.ParaView.FileName    = AcylinderNSFR2D.vtu
 Simulator.SubSystem.ParaView.Data.updateVar = Cons
 Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.ParaView.SaveRate = 10
+Simulator.SubSystem.ParaView.SaveRate = 100
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 
-Simulator.SubSystem.Tecplot.FileName    = AcylinderNSFR2DTest.plt
+Simulator.SubSystem.Tecplot.FileName    = AcylinderNSFR2D.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 10
+Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 150
-Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -6
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 70
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -8
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(8000,0.5*2.0^max(i-1,0)) #min(1e4,0.1*1.5^max(i-20,0))
-Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceImplCylDiff2DP5.plt
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e5,0.5*1.2^max(i-1,0))
+Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceCylNS.plt
 Simulator.SubSystem.BwdEuler.ShowRate        = 1
 Simulator.SubSystem.BwdEuler.ConvRate        = 1
 
@@ -132,23 +133,28 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS
-Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacobNS
-Simulator.SubSystem.FluxReconstruction.DiffSolveCom = DiffRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobNS #ConvRHSJacobNS #
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobNS #
 Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = StdTimeRHSJacob
 Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+Simulator.SubSystem.FluxReconstruction.SetupCom = SetupExtra
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Cons
 Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= Cons
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = LaxFriedrichsFlux
-Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 0.0
+Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  0.0296296296 
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  9.5e-4
+
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = false #true #
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 2
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 2
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #

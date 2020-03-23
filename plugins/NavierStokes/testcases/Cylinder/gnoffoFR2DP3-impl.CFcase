@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00
+### Residual = -9.44965
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -110,7 +110,7 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceGnoffoImplP3.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<5000,0.1,0.1) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = 0.3 #if(i<5000,0.1,0.1) #if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<300,0.25,0.5)))) #
 Simulator.SubSystem.NewtonIterator.ShowRate        = 10
 Simulator.SubSystem.NewtonIterator.ConvRate        = 10
 
@@ -132,7 +132,7 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 
 #######To start from P0, change to gnoffoUpgraded.CFmesh#################
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoUpgraded.CFmesh #gnoffoP1ImplStart.CFmesh #gnoffoP1.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = gnoffoP3.CFmesh #gnoffoUpgraded.CFmesh #gnoffoP3Impl.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
@@ -154,8 +154,8 @@ Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusFlux2D #LaxFri
 Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 105
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 200 #50
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 105 #105
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 100 #200 #50
 
 Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
 
