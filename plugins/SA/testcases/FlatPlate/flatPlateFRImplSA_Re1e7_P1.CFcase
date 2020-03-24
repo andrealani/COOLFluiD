@@ -107,8 +107,8 @@ Simulator.SubSystem.ParaView.SaveRate = 100
 Simulator.SubSystem.ParaView.AppendTime = false
 Simulator.SubSystem.ParaView.AppendIter = false
 Simulator.SubSystem.ParaView.Data.printExtraValues = false #true
-Simulator.SubSystem.ParaView.Data.DataHandleOutput.SocketNames = wallDistance
-Simulator.SubSystem.ParaView.Data.DataHandleOutput.VariableNames = wallDistance
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.SocketNames = wallDistance wallShearStressVelocity
+Simulator.SubSystem.ParaView.Data.DataHandleOutput.VariableNames = wallDistance wallShearStressVelocity
 
 Simulator.SubSystem.Tecplot.FileName    = flatPlateSA.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
@@ -117,8 +117,8 @@ Simulator.SubSystem.Tecplot.SaveRate = 100
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = wallDistance
-Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = wallDistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = wallDistance wallShearStressVelocity
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = wallDistance wallShearStressVelocity
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
@@ -158,7 +158,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerFaces Mirror Wall Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateSAUpgraded.CFmesh #tempP1.CFmesh #flatPlateSA-iter_340.CFmesh #P1Inter.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateSAUpgraded.CFmesh #tempP1.CFmesh #flatPlateSA-iter_340.CFmesh #P1Inter.CFmesh #1e7P1.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
 ###################################

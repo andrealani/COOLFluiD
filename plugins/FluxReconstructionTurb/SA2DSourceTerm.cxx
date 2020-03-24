@@ -44,6 +44,7 @@ SA2DSourceTerm::SA2DSourceTerm(const std::string& name) :
     StdSourceTerm(name),
     socket_gradients("gradients"),
     socket_wallDistance("wallDistance"),
+    socket_wallShearStressVelocity("wallShearStressVelocity"),
     m_dim(),
     m_eulerVarSet(CFNULL),
     m_diffVarSet(CFNULL),
@@ -69,6 +70,16 @@ SA2DSourceTerm::~SA2DSourceTerm()
 void SA2DSourceTerm::getSourceTermData()
 {
   StdSourceTerm::getSourceTermData();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+  SA2DSourceTerm::providesSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  result.push_back(&socket_wallShearStressVelocity);
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -222,6 +233,15 @@ void SA2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       
     /// Compute the rhs contribution
     resUpdates[m_nbrEqs*iSol + 4] = positivePart + negativePart;
+    
+    if (!m_isPerturbed)
+    {
+      DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
+    
+      const CFreal niuTot = NIU + NIUtilda*fv1;
+      
+      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(niuTot*fabs(dUdY));
+    }
   }
 }
 
@@ -271,6 +291,14 @@ void SA2DSourceTerm::setup()
       m_cellGrads[iState][iEq] = new RealVector(m_dim);
     }
   }
+  
+  DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
+  
+  DataHandle< CFreal > wallDistance = socket_wallDistance.getDataHandle();
+  
+  // resize socket
+  wallShearStressVelocity.resize(wallDistance.size());
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
