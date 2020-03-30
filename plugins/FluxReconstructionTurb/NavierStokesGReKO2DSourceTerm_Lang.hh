@@ -50,40 +50,41 @@ public:
   static void defineConfigOptions(Config::OptionList& options);
 
   /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
+   * Set up the member data
    */
   virtual void setup();
+
+  /**
+   * UnSet up private data and data of the aggregated classes
+   * in this command after processing phase
+   */
+  virtual void unsetup();
   
   /**
-   * Compute the source term
+   * add the source term
    */
-  void computeSource(Framework::GeometricEntity *const element,
-  		     RealVector& source,
-		     RealMatrix& jacobian);
+  void addSourceTerm(RealVector& resUpdates);
   
 private: // helper functions
   
   /// corresponding diffusive variable set
-  CFreal GetVorticity();
+  void getVorticity(const CFuint iState);
 
-  CFreal GetStrain(CFreal& VoverRadius);
+  void getStrain(const CFreal VoverRadius, const CFuint iState);
 
-  CFreal GetRethetac(CFreal& Retheta);
+  void getRethetac(const CFreal Retheta);
 
-  CFreal GetFlength(CFreal& Retheta);
+  void getFlength(const CFreal Retheta);
 
-  CFreal GetRethetat(const CFreal& Tu);  
+  void getRethetat(const CFreal Tu);  
   
-  CFreal GetLambda(CFreal& Lambda, CFreal& Theta, CFreal& Viscosity);
+  void getLambda(CFreal& Lambda, const CFreal Theta, const CFreal Viscosity, const CFuint iState);
 
-  CFreal GetFlambda(CFreal& Lambda,const CFreal& Tu, CFreal& Flambda, CFreal& Theta, bool Prime );
-  CFreal GetRethetatwithPressureGradient(CFreal& Viscosity,const CFreal& Tu);
+  void getFlambda(const CFreal Lambda, const CFreal Tu, CFreal& Flambda, const CFreal Theta, bool Prime );
+  
+  void getRethetatwithPressureGradient(const CFreal Viscosity,const CFreal Tu, const CFuint iState);
 
 private: // data
-
-  /// average State
-  RealVector m_avState;
   
   ///K the Farfield
   CFreal m_kamb;
@@ -102,8 +103,8 @@ private: // data
   CFreal   m_Rethetat; 
   CFreal   m_Rethetac; 
   CFreal   m_Flength; 
-  CFreal   m_Vorticity;
-  CFreal  m_Strain;
+  CFreal   m_vorticity;
+  CFreal  m_strain;
   bool     m_PGrad; 
 
 }; // end of class NavierStokesGReKO2DSourceTerm_Lang

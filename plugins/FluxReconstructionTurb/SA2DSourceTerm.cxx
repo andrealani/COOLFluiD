@@ -240,6 +240,7 @@ void SA2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
       const CFreal niuTot = NIU + NIUtilda*fv1;
       
+      // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
       wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(niuTot*fabs(dUdY));
     }
   }

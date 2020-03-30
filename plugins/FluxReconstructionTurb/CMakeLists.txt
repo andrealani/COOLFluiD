@@ -11,6 +11,8 @@ LIST ( APPEND FluxReconstructionKOmega_files
 FluxReconstructionKOmega.hh
 KOmega2DSourceTerm.hh
 KOmega2DSourceTerm.cxx
+NavierStokesGReKO2DSourceTerm_Lang.hh
+NavierStokesGReKO2DSourceTerm_Lang.cxx
 )
 
 LIST ( APPEND FluxReconstructionKOmega_cflibs FluxReconstructionMethod FluxReconstructionNavierStokes NavierStokes KOmega )
