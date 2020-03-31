@@ -90,9 +90,9 @@ $priority = 0;
 my %packages = (  #  version   default install priority      function
     "coreutils"  => [ "6.7",    'off',  'off', $priority++,  sub { install_gnu("coreutils") } ],
     "make"       => [ "3.81",   'off',  'off', $priority++,  sub { install_gnu("make") } ],
-#    "cmake"      => [ "2.8.3",  'on' ,  'off', $priority++,  \&install_cmake ],
 #    "cmake"      => [ "2.8.11.2",  'on' ,  'off', $priority++,  \&install_cmake ],
-    "cmake"      => [ "3.10.0",  'on' ,  'off', $priority++,  \&install_cmake ],
+#    "cmake"      => [ "3.10.0",  'on' ,  'off', $priority++,  \&install_cmake ],
+     "cmake"      => [ "3.17.0",  'on' ,  'off', $priority++,  \&install_cmake ],
     "wget"       => [ "1.11.4", 'off',  'off', $priority++,  \&install_wgetprog],
     "binutils"   => [ "2.16.1", 'off',  'off', $priority++,  sub { install_gnu("binutils") } ],
     "m4"         => [ "1.4.4",  'off',  'off', $priority++,  sub { install_gnu("m4") } ],
@@ -115,12 +115,14 @@ my %packages = (  #  version   default install priority      function
 #     "boost"      => [ "1_42_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_59_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_54_0", 'on' ,  'off', $priority++,  \&install_boost ],
-    "boost"      => [ "1_66_0", 'on' ,  'off', $priority++,  \&install_boost ],
+#    "boost"      => [ "1_66_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_70_0", 'on' ,  'off', $priority++,  \&install_boost ],
+    "boost"      => [ "1_72_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
-    "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
+#    "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "openmpi"    => [ "1.10.0",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "openmpi"    => [ "3.0.0",  'off',  'off', $priority++,  \&install_openmpi ],
+     "openmpi"    => [ "4.0.3",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "mpich"      => [ "3.1b1",'off',  'off', $priority++,  \&install_mpich ],    	
     "mpich"      => [ "3.1.3",'off',  'off', $priority++,  \&install_mpich ], 
     "mpich2"     => [ "1.4.1p1",  'off',  'off', $priority++,  \&install_mpich2 ],
@@ -136,8 +138,8 @@ my %packages = (  #  version   default install priority      function
 #    "petsc"      => [ "3.6.3-dev",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
 #     "petsc"      => [ "3.9.0",'on',  'off', $priority++,  \&install_petsc ],
-    "petsc"      => [ "3.9.3",'on',  'off', $priority++,  \&install_petsc ],
-#    "petsc"      => [ "3.12.3",'on',  'off', $priority++,  \&install_petsc ],
+#    "petsc"      => [ "3.9.3",'on',  'off', $priority++,  \&install_petsc ],
+    "petsc"      => [ "3.12.3",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.6",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3a",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3-next",'on',  'off', $priority++,  \&install_petsc ],
@@ -1646,7 +1648,7 @@ sub install_boost()
       }    
     
     my $boostmpiopt=" --without-mpi ";
-    unless ($opt_nompi or $version  eq "1_59_0" or $version eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" )  {
+    unless ($opt_nompi or $version  eq "1_59_0" or $version eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" or $version eq "1_72_0" )  {
       $boostmpiopt=" --with-mpi cxxflags=-DBOOST_MPI_HOMOGENEOUS ";
       open  (USERCONFIGJAM, ">>./tools/build/v2/user-config.jam") || die("Cannot Open File ./tools/build/v2/user-config.jam") ;
       print  USERCONFIGJAM <<ZZZ;
@@ -1671,7 +1673,7 @@ ZZZ
     {
        $static_link = " link=static";
     }
-    if ($version  eq "1_54_0" or $version  eq "1_59_0" or $version  eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" ) 
+    if ($version  eq "1_54_0" or $version  eq "1_59_0" or $version  eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" or $version eq "1_72_0") 
       {
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
 	run_command_or_die("./b2 $static_link install");

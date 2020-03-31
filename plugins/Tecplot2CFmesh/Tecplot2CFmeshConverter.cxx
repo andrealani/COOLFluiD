@@ -1219,7 +1219,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   }
   fout << "'\n";
 
-#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 ||defined CF_HAVE_BOOST_1_72 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
   fout << "$!READDATASET  '\"|MFBD|/" << meshFile.filename().string() << "\" '\n";
 #else
   CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.53 for this!\n");
@@ -1255,7 +1255,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  SOURCEZONE = 2\n";
   fout << "  REMOVEBLANKEDSURFACES = NO\n";
 
-#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_72 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
   fout << "$!WRITEDATASET  \"|MFBD|/" << meshFile.filename().string() << "\"\n";
 #else
   CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.53 for this!\n");
@@ -1274,7 +1274,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
 
   path allSurfFile = change_extension(filepath, "allsurf.plt");
  
-#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
+#if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_72 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
   fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";
 #else
   CFLog(ERROR, "Tecplot2CFmeshConverter::interpolateTecplotSolution() => you need BOOST version >= 1.53 for this!\n");
