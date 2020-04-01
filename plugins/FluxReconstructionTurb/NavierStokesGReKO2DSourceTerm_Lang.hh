@@ -78,11 +78,11 @@ private: // helper functions
 
   void getRethetat(const CFreal Tu);  
   
-  void getLambda(CFreal& Lambda, const CFreal Theta, const CFreal Viscosity, const CFuint iState);
+  void getLambda(CFreal& lambda, const CFreal theta, const CFreal viscosity, const CFuint iState);
 
-  void getFlambda(const CFreal Lambda, const CFreal Tu, CFreal& Flambda, const CFreal Theta, bool Prime );
+  void getFlambda(const CFreal lambda, const CFreal Tu, CFreal& Flambda, const CFreal theta, bool Prime );
   
-  void getRethetatwithPressureGradient(const CFreal Viscosity,const CFreal Tu, const CFuint iState);
+  void getRethetatwithPressureGradient(const CFreal viscosity,const CFreal Tu, const CFuint iState);
 
 private: // data
   

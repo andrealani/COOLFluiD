@@ -61,7 +61,7 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   setParameter("Kinf",&m_kamb);
   m_omegaamb = 0.1;
   setParameter("Omegainf",&m_omegaamb);
-  m_PGrad = false;
+  m_PGrad = true;
   setParameter("PGrad",&m_PGrad);
 }
 
@@ -93,8 +93,8 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getStrain(const CFreal VoverRadius, co
   const CFreal gradU_Y = (*(m_cellGrads[iState][1]))[YY];
   const CFreal gradV_X = (*(m_cellGrads[iState][2]))[XX];
   const CFreal gradV_Y = (*(m_cellGrads[iState][2]))[YY];
-  const CFreal gradSum = (gradU_Y+ gradV_X);
-  const CFreal strain = std::pow(gradU_X,2.)+ 0.5*std::pow(gradSum,2.)+ std::pow(gradV_Y,2.) + VoverRadius ;
+  const CFreal gradSum = (gradU_Y + gradV_X);
+  const CFreal strain = gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y + VoverRadius ;
   m_strain = std::sqrt(2.*strain);
 }
 
@@ -103,8 +103,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getStrain(const CFreal VoverRadius, co
 void  NavierStokesGReKO2DSourceTerm_Lang::getVorticity(const CFuint iState)
 {
   const CFreal Vorticity1 = (*(m_cellGrads[iState][2]))[XX] - (*(m_cellGrads[iState][1]))[YY];
-  const CFreal Vorticity2 = 0.5*Vorticity1*Vorticity1;
-  m_vorticity =  std::sqrt(2*Vorticity2);
+  m_vorticity = fabs(Vorticity1);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -175,22 +174,22 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal  Fwake       = exp(-Fwake1);
     const CFreal  thetaBL     = (avRe*mu)/(rho*avV);
     const CFreal  deltaBL     = (0.5*15*thetaBL);
-    const CFreal  delta       = (50 * m_vorticity * m_currWallDist[iSol] * deltaBL)/(avV);
+    const CFreal  delta       = (50.0 * m_vorticity * m_currWallDist[iSol] * deltaBL)/(avV);
     const CFreal  coefFtheta0 = (m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta);
     const CFreal  coefFtheta1 = exp(-coefFtheta0);
     const CFreal  Ftheta1     = Fwake * coefFtheta1;
-    const CFreal  ce2         = 50;
+    const CFreal  ce2         = 50.0;
     //const CFreal  overce2     = 1/50;
     //const CFreal  Ftheta2     = (avGa-overce2)/(1.0-overce2);
     const CFreal  Ftheta3     = 1-(((ce2*avGa-1.0)/(ce2-1.0))*((ce2*avGa-1.0)/(ce2-1.0)));
     const CFreal  Ftheta4     = std::max(Ftheta1,Ftheta3);
-    const CFreal   Fthetat     = std::min(Ftheta4,1.0);
+    const CFreal  Fthetat     = std::min(Ftheta4,1.0);
 
     //The variables needed for the  production term of Re
     const CFreal cthetat   = 0.03;
-    const CFreal t         = (500 * mu )/(rho * avV * avV);
-    cf_assert(avV >0.);   
-    CFreal Tu = 100 * (std::sqrt(2*avK/3))/(avV);
+    const CFreal t         = (500.0 * mu )/(rho * avV * avV);
+    cf_assert(avV > 0.);   
+    const CFreal Tu = 100.0 * (std::sqrt(2*avK/3))/(avV);
 
     if (!m_PGrad)
     {
@@ -212,10 +211,13 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     
     //compute Gasep
     const CFreal Rt         = (rho*avK)/(mu*avOmega);
-    const CFreal Freattach0 = exp(-Rt/20);
-    const CFreal Freattach  = std::pow(Freattach0,4);
+    
+    // error in FV!!
+    const CFreal Freattach0 = std::pow(Rt/20.0,4);//exp(-Rt/20);
+    const CFreal Freattach  = exp(-Freattach0);//std::pow(Freattach0,4);
+    
     const CFreal Rev        = (rho*m_currWallDist[iSol]*m_currWallDist[iSol]*m_strain)/(mu);
-    const CFreal Gasep1     = ((Rev)/((3.235 *  m_Rethetac)))-1;
+    const CFreal Gasep1     = ((Rev)/((3.235 *  m_Rethetac)))-1.0;
     const CFreal Gasep2     = std::max(0.,Gasep1);
     const CFreal Gasep3     = 2.0*Gasep2*Freattach;
     const CFreal Gasep4     = std::min(Gasep3,2.0);
@@ -225,24 +227,27 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal gammaEff  = std::max(avGa,Gasep);
 
     // The Onset function of the  production term of the intermittency Ga
-    const CFreal  Fonset1 = (Rev )/(2.93*m_Rethetac);
+    
+    // error in FV!!
+    const CFreal  Fonset1 = (Rev )/(2.193*m_Rethetac);//(Rev )/(2.93*m_Rethetac);
+    
     const CFreal  Fonset2 = std::pow(Fonset1,4);
     const CFreal  Fonset3 = std::max(Fonset1,Fonset2);
     const CFreal  Fonset4 = std::min(Fonset3,2.0);
     const CFreal  Fonset6 = 1-((Rt/2.5)*(Rt/2.5)*(Rt/2.5)) ;
     const CFreal  Fonset7 = std::max(Fonset6,0.);
-    const CFreal  Fonset8 = (Fonset4 -Fonset7);
+    const CFreal  Fonset8 = (Fonset4 - Fonset7);
     const CFreal  Fonset  = std::max(Fonset8,0.);
     
     ///The Modified Production  term: k
     ///gammaEff This coefficient is used in the destruction term related to k: 
-    computeProductionTerm(iSol, gammaEff,mut, m_prodTerm_k,m_prodTerm_Omega);
+    computeProductionTerm(iSol, gammaEff, mut, m_prodTerm_k, m_prodTerm_Omega);
     
     ///The Modified Destruction term: k
     ///CoeffDk This coefficient is used in the destruction term related to k: 
     const CFreal coeffDk1  = std::max(gammaEff,0.1);
     const CFreal coeffDk   = std::min(coeffDk1,1.0);
-    computeDestructionTerm(iSol, coeffDk,m_destructionTerm_k, m_destructionTerm_Omega);
+    computeDestructionTerm(iSol, coeffDk, m_destructionTerm_k, m_destructionTerm_Omega);
      
     //Limit the production terms
     m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
@@ -253,19 +258,25 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal ce1       = 1.0;
     const CFreal ca2 =  0.06;
     const CFreal GaFonset1 = avGa * Fonset;
-    const CFreal GaFonset  = std::pow(GaFonset1,0.5);
+    const CFreal GaFonset  = sqrt(GaFonset1);
+    
+    // This is missing in FV wrt Flength!!!
+    const CFreal FSubLayer0 = Rew/200.0 * Rew/200.0;
+    const CFreal FSubLayer = exp(-FSubLayer0);
+    const CFreal FlengthTot = m_Flength * (1.0 - FSubLayer) + 40.0*FSubLayer;
 
-    CFreal prodTerm_Ga = m_Flength * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
+    CFreal prodTerm_Ga = FlengthTot * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
   
     // The production term of  Re
     CFreal prodTerm_Re = cthetat * (rho/t) * (m_Rethetat - avRe) * (1.0 - Fthetat);
 
     //The variables needed for the  Destruction term of Ga   
-    const CFreal  Fturb1 =  exp(-Rt/4); 
-    const CFreal  Fturb =  std::pow(Fturb1,4); 
+    // error in FV!!!
+    const CFreal  Fturb1 =  pow(Rt/4.0,4);//exp(-Rt/4); 
+    const CFreal  Fturb =  exp(-Fturb1);//std::pow(Fturb1,4); 
     
     //Destruction term of the intermittency Ga
-    CFreal  destructionTerm_Ga  = (-1.0) *ca2 * rho *  m_vorticity * avGa * Fturb * (ce2*avGa - 1);
+    CFreal  destructionTerm_Ga  = (-1.0) *ca2 * rho *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
   
     //destructionTerm_Ga *= m_Radius;
     
@@ -277,10 +288,6 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     prodTerm_Re        = max(0., prodTerm_Re);
     destructionTerm_Ga = min(0., destructionTerm_Ga);
     destructionTerm_Re = min(0., prodTerm_Re);
- 
-    //Compute Reynolds stress tensor 
-    computeProductionTerm(iSol, 1., mut, m_prodTerm_k, m_prodTerm_Omega);
-    computeDestructionTerm(iSol, 1., m_destructionTerm_k, m_destructionTerm_Omega);
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
@@ -295,151 +302,209 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
 
 void NavierStokesGReKO2DSourceTerm_Lang::getRethetac(const CFreal Retheta)
 {	
-        if (Retheta <= 1860){
-            m_Rethetac  = Retheta - (396.035*1e-2 -120.656*1e-4*Retheta)+(868.230*1e-6)*Retheta*Retheta 
-                          - 696.506*1e-9*Retheta*Retheta*Retheta + 174.105*1e-12*Retheta*Retheta*Retheta*Retheta;
-           }
-        else {
-            m_Rethetac = Retheta - 593.11 + (Retheta - 1870.0)*0.482;
-              }
+/// errors here in FV!
+//  if (Retheta <= 1860)
+//  {
+//    m_Rethetac  = Retheta - (396.035*1e-2 -120.656*1e-4*Retheta)+(868.230*1e-6)*Retheta*Retheta 
+//                          - 696.506*1e-9*Retheta*Retheta*Retheta + 174.105*1e-12*Retheta*Retheta*Retheta*Retheta;
+//  }
+//  else 
+//  {
+//    m_Rethetac = Retheta - 593.11 + (Retheta - 1870.0)*0.482;
+//  }
+  
+  if (Retheta <= 1860)
+  {
+    m_Rethetac  = -396.035e-2 + 10120.656e-4*Retheta - 868.23e-6*Retheta*Retheta 
+                          + 696.506e-9*Retheta*Retheta*Retheta - 174.105e-12*Retheta*Retheta*Retheta*Retheta;
+  }
+  else 
+  {
+    m_Rethetac = Retheta - (593.11 + (Retheta - 1870.0)*0.482);
+  }
 }           
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesGReKO2DSourceTerm_Lang::getFlength(const CFreal Retheta)
 {
-       if (Retheta <=400){  
-            m_Flength = 398.189*1e-1 -119.270*1e-4*Retheta -132.567*1e-6*Retheta*Retheta;   
-          }
-      else if ((Retheta>=400 ) && (Retheta < 596)) {
-            m_Flength = 263.404 - 123.939*1e-2*Retheta + 194.548*1.e-5*Retheta*Retheta - 101.695*1e-8*Retheta*Retheta*Retheta;
-              }
-        else if ((Retheta>=596 ) && (Retheta < 1200)) {
-            m_Flength = 0.5-(Retheta - 596.0)*3.0*1e-4;
-              }
-        else {
-            m_Flength = 0.3188;
-          }
+  if (Retheta < 400)
+  {  
+    m_Flength = 39.8189 - 119.27e-4*Retheta - 132.567e-6*Retheta*Retheta;   
+  }
+  else if ((Retheta >= 400 ) && (Retheta < 596)) 
+  {
+    m_Flength = 263.404 - 123.939e-2*Retheta + 194.548e-5*Retheta*Retheta - 101.695e-8*Retheta*Retheta*Retheta;
+  }
+  else if ((Retheta >= 596 ) && (Retheta < 1200)) 
+  {
+    m_Flength = 0.5 - (Retheta - 596.0)*3.0e-4;
+  }
+  else 
+  {
+    m_Flength = 0.3188;
+  }
 }
  
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesGReKO2DSourceTerm_Lang::getRethetat(const CFreal Tu) 
 {
-   cf_assert(Tu > 0);   
-  const CFreal overTu    = 1/Tu;
-           if (Tu<=1.3) {
-                m_Rethetat = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
-		 }
-    	  else {
-  		const CFreal lamco5   = Tu - 0.5658;
-  	 	const CFreal pwtu   = -0.671;
-  	 	m_Rethetat = 331.5*std::pow(lamco5,pwtu);
-         	 }
+  cf_assert(Tu > 0.0);   
+  
+  const CFreal overTu = 1.0/Tu;
+           
+  if (Tu<=1.3) 
+  {
+    m_Rethetat = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
+  }
+  else 
+  {
+    const CFreal lamco5   = Tu - 0.5658;
+    const CFreal pwtu   = -0.671;
+    
+    m_Rethetat = 331.5*std::pow(lamco5,pwtu);
+  }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void NavierStokesGReKO2DSourceTerm_Lang::getLambda(CFreal& Lambda, const CFreal Theta, const CFreal Viscosity, const CFuint iState)
+void NavierStokesGReKO2DSourceTerm_Lang::getLambda(CFreal& lambda, const CFreal theta, const CFreal viscosity, const CFuint iState)
 {
-      SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
 
-      
-        const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;   
-        const CFreal mu = Viscosity;
-        const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState])); 
-        const CFreal rhoovermu = rho /mu;   
-        const CFreal avu     = m_solPhysData[EulerTerm::VX];
-        const CFreal avv     = m_solPhysData[EulerTerm::VY];        
-  	const CFreal overU     = 1./avV;
-  	const CFreal dUdx   	 = avV * (avu* (*(m_cellGrads[iState][1]))[XX]  + avv * (*(m_cellGrads[iState][2]))[XX]);
-  	const CFreal dUdy      = avV * (avu* (*(m_cellGrads[iState][1]))[YY]  + avv * (*(m_cellGrads[iState][2]))[YY]);
-  	const CFreal dUds      =  overU * (avu * dUdx + avv *dUdy);
-        const CFreal theta_sq  = Theta * Theta;
-        const CFreal lambda0 =  rhoovermu * theta_sq * dUds;
+  const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;   
+  const CFreal mu = viscosity;
+  const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState])); 
+  const CFreal rhoovermu = rho/mu;   
+  const CFreal avu = m_solPhysData[EulerTerm::VX];
+  const CFreal avv = m_solPhysData[EulerTerm::VY];        
+  const CFreal overU2 = 1./(avV*avV);//1./avV;
+  
+  // error in FV!!
+  const CFreal dUdsTerm = avu*avu*(*(m_cellGrads[iState][1]))[XX] + avv*avv*(*(m_cellGrads[iState][2]))[YY] + avu*avv*((*(m_cellGrads[iState][1]))[YY] + (*(m_cellGrads[iState][2]))[XX]);//avV * (avu* (*(m_cellGrads[iState][1]))[XX]  + avv * (*(m_cellGrads[iState][2]))[XX]);
+  //const CFreal dUdyTerm = avV * (avu* (*(m_cellGrads[iState][1]))[YY]  + avv * (*(m_cellGrads[iState][2]))[YY]);
+  const CFreal dUds = overU2 * dUdsTerm;
+        
+  const CFreal theta_sq = theta * theta;
+  const CFreal lambda0 =  rhoovermu * theta_sq * dUds;
 
-   	CFreal lambda1 = std::max(lambda0,-0.1);
-   	Lambda =  std::min(lambda1,0.1);
+  CFreal lambda1 = std::max(lambda0,-0.1);
+  lambda = std::min(lambda1,0.1);
 }        
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void NavierStokesGReKO2DSourceTerm_Lang::getFlambda(const CFreal Lambda,const CFreal Tu, CFreal& Flambda, const CFreal Theta,bool Prime )
+void NavierStokesGReKO2DSourceTerm_Lang::getFlambda(const CFreal lambda, const CFreal Tu, CFreal& Flambda, const CFreal theta, bool Prime )
 {
-       const  CFreal lambdaprime         = Lambda*Theta;
-  if (Lambda > 0) {
-   	const CFreal lamco1        = (Tu/1.5);
-   	const CFreal lamco2        = -1.0*std::pow(lamco1,1.5);
-   	const CFreal Flamb        =  -12.986 * Lambda - 123.66 * Lambda*Lambda - 405.689 * Lambda*Lambda*Lambda;
-   	const CFreal Flambprime   =  -12.986 * lambdaprime  - 2 * 123.66 * Lambda*lambdaprime - 3 * 405.689 * Lambda*Lambda*lambdaprime;
-   	             Flambda      = (Prime)? 1 - (Flamb * std::exp(lamco2)): -1.0*Flambprime * std::exp(lamco2);
+  // error in FV!!
+  const CFreal lambdaprime = lambda*2.0/theta;
+  
+  // error in FV!!!
+  if (lambda <= 0.0) 
+  {
+    const CFreal lamco1  = (Tu/1.5);
+    const CFreal lamco2  = -1.0*std::pow(lamco1,1.5);
+    const CFreal Flamb = 12.986 * lambda + 123.66 * lambda*lambda + 405.689 * lambda*lambda*lambda;
+    const CFreal Flambprime = 12.986 + 2 * 123.66 * lambda + 3 * 405.689 * lambda*lambda;
+    
+    Flambda = (!Prime)? 1 + (Flamb * std::exp(lamco2)): Flambprime * std::exp(lamco2) * lambdaprime;
   }
- else {
-       	const CFreal lamco3   = -1.0*(Tu/0.5);
-   	const CFreal lamco4   = -35.0*Lambda;
-   	const CFreal FlambP   = 0.275*(1-std::exp(lamco4))*std::exp(lamco3);
-   	const CFreal FlambprimeP   = 0.275*(1-((-35.0*lambdaprime)*std::exp(lamco4)))*std::exp(lamco3); 
-    	            Flambda        = (Prime)? 1 + FlambP : FlambprimeP;
+  else 
+  {
+    const CFreal lamco3 = -1.0*(Tu/0.5);
+    const CFreal lamco4   = -35.0*lambda;
+    const CFreal FlambP   = 0.275*(1-std::exp(lamco4))*std::exp(lamco3);
+    
+    // error in FV!!
+    const CFreal FlambprimeP = 0.275*35.0*std::exp(lamco4)*std::exp(lamco3); 
+    
+    Flambda = (!Prime)? 1 + FlambP : FlambprimeP*lambdaprime;
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const CFreal Viscosity, const CFreal Tu, const CFuint iState)
+void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const CFreal viscosity, const CFreal Tu, const CFuint iState)
 {
-      SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
 
+  const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;     
+  const CFreal mu = viscosity;                                          
+  const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState]));                 
+  const CFreal overTu = 1./Tu; 
+  
+  // get start value by assuming Flambda = 1
+  getRethetat(Tu);
+  CFreal theta0 = (mu/(rho*avV))*m_Rethetat;
+  CFreal theta1 = 0.0;
+  
+  CFreal thetaLimitFactor = 0.0;
+  getLambda(thetaLimitFactor, 1., viscosity, iState);
+  
+  const CFreal thetaLimit = sqrt(0.1/fabs(thetaLimitFactor));
+  
+//        vector<CFreal> Theta(2);
+  CFreal lambda = 0;
+  CFreal Flambda = 0;
+  CFreal FlambdaPrime = 0;
+        
+//         if(Tu <=1.3){
+//    	     Theta[0] = (mu/(rho*avV))*(1173.51-589.428*Tu + 0.2196*overTu*overTu);
+//  	   }
+//  	else {
+//   	     const CFreal lamco5   = Tu - 0.5658;
+//   	     const CFreal pwtu     = -0.671;
+//    	     Theta[0]            = (mu/(rho*avV))*331.5*std::pow(lamco5,pwtu);
+//   	   }
 
-        const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;     
-        const CFreal mu = Viscosity;                                          
-        const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState]));                 
-  	const CFreal overTu   = 1./Tu; 
-        vector<CFreal> Theta(2);
-        CFreal Lambda = 0;
-        CFreal Flambda = 0;
-        CFreal FlambdaPrime = 0;
-         if(Tu <=1.3){
-    	     Theta[0] = (mu/(rho*avV))*(1173.51-589.428*Tu + 0.2196*overTu*overTu);
-  	   }
-  	else {
-   	     const CFreal lamco5   = Tu - 0.5658;
-   	     const CFreal pwtu     = -0.671;
-    	     Theta[0]            = (mu/(rho*avV))*331.5*std::pow(lamco5,pwtu);
-   	   }
+  const CFuint MAXITER   = 10;
+  const CFreal TOL       = 1e-6;
+  
+  for (CFuint iter = 0; iter < MAXITER; ++iter)
+  {
+    CFreal restheta = std::abs(theta0*TOL);
 
-
-  	const CFuint MAXITER   = 10;
-  	const CFreal TOL       = 1e-6;
- 	for (CFuint iter = 0; iter < MAXITER; ++iter)
- 	{
-  	CFreal Restheta        =  std::abs(Theta[0]*TOL);
-	  //cout << "ITER" << i  << endl;
- 	 //The variables needed for the calculation of Re_thetat
-  	getLambda(Lambda, Theta[0], Viscosity, iState);
-        getFlambda(Lambda,Tu,Flambda,Theta[0],true);  
-        getFlambda(Lambda,Tu,FlambdaPrime,Theta[0],false);  
-          
-         if (Tu<=1.3) {
-         	 CFreal Rethetat0 = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
-                 m_Rethetat = Rethetat0 * Flambda;
-         }
-   	else {
-     	      const CFreal lamco5   = Tu - 0.5658;
-   	      const CFreal pwtu   = -0.671;
-              const CFreal Rethetat0 = 331.5*std::pow(lamco5,pwtu);
-              m_Rethetat = Rethetat0 * Flambda;
- 	 }
-
-   	const CFreal Rethetatprime =  (m_Rethetat* FlambdaPrime)/Flambda;
-
-     
-   	const CFreal MainF = m_Rethetat -(rho*avV)*Theta[0]/mu;
-   	const CFreal MainFprime = Rethetatprime -(rho*avV)/mu;
+    //The variables needed for the calculation of Re_thetat
+    // compute new lambda
+    getLambda(lambda, theta0, viscosity, iState);
     
-    	Theta[1] = Theta[0] - MainF/MainFprime;
+    // compute new Flambda
+    getFlambda(lambda,Tu,Flambda,theta0,false);  
+    
+    getFlambda(lambda,Tu,FlambdaPrime,theta0,true);  
+          
+//         if (Tu<=1.3) {
+//         	 CFreal Rethetat0 = (1173.51-589.428*Tu + 0.2196*overTu*overTu);
+//                 m_Rethetat = Rethetat0 * Flambda;
+//         }
+//   	else {
+//     	      const CFreal lamco5   = Tu - 0.5658;
+//   	      const CFreal pwtu   = -0.671;
+//              const CFreal Rethetat0 = 331.5*std::pow(lamco5,pwtu);
+//              m_Rethetat = Rethetat0 * Flambda;
+// 	 }
+
+    const CFreal Rethetatprime = m_Rethetat*FlambdaPrime;
+     
+    const CFreal mainF = m_Rethetat*Flambda - (rho*avV)*theta0/mu;
+    const CFreal mainFprime = Rethetatprime - (rho*avV)/mu;
+    
+    theta1 = theta0 - mainF/mainFprime;
+    
+    if (fabs(theta1) > thetaLimit)
+    {
+      (theta1 >= 0.0) ? theta1 = thetaLimit : theta1 = -thetaLimit;
+    }
+    
    	//cout.precision(20); cout << "diff   " << Theta[1]/Theta[0] << endl;
-  	if ( std::abs(Theta[0]-Theta[1]) <= Restheta ) break;
-    	Theta[0]= Theta[1];
-  	}
+    if ( fabs(theta0-theta1) <= restheta || iter == MAXITER-1) 
+    {
+      m_Rethetat *= Flambda;
+      break;
+    }
+    
+    theta0 = theta1;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
