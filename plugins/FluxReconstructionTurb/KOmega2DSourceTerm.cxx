@@ -16,6 +16,7 @@
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Physics::NavierStokes;
 using namespace COOLFluiD::Physics::KOmega;
 
@@ -42,6 +43,7 @@ KOmega2DSourceTerm::KOmega2DSourceTerm(const std::string& name) :
     StdSourceTerm(name),
     socket_gradients("gradients"),
     socket_wallDistance("wallDistance"),
+    socket_wallShearStressVelocity("wallShearStressVelocity"),
     m_dim(),
     m_eulerVarSet(CFNULL),
     m_diffVarSet(CFNULL),
@@ -78,13 +80,7 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
 						const CFreal& MUT,
 						CFreal& KProdTerm,  
 						CFreal& OmegaProdTerm)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
-  using namespace COOLFluiD::Physics::NavierStokes;
-  
+{ 
   SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
   
   const CFuint uID = 1;//getStateVelocityIDs()[XX];
@@ -158,6 +154,11 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
   // Destruction term: Omega
   Omega_desterm = (-1.) * rho * avOmega * avOmega * navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
   
+//  if (m_currWallDist[iState] < 3.0e-3 && m_currWallDist[iState] > 2.8e-3 && !m_isPerturbed)
+//  { 
+//      CFLog(INFO, "WkB: " << Omega_desterm << ", beta: " << navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState])) << ", rho: " << rho << ", fact: " << DcoFactor << "\n");
+//  }
+  
   // Make sure negative values dont propagate...
   K_desterm     = std::min(0., K_desterm );
   Omega_desterm = std::min(0., Omega_desterm);
@@ -166,13 +167,7 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
-{
-  using namespace std;
-  using namespace COOLFluiD::Framework;
-  using namespace COOLFluiD::Common;
-  using namespace COOLFluiD::MathTools;
-  using namespace COOLFluiD::Physics::NavierStokes; 
-  
+{ 
   const CFuint kID = (*m_cellStates)[0]->size() - 2;
   const CFuint omegaID = kID + 1;
   
@@ -227,6 +222,29 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     // and Store the unperturbed source terms
     resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
     resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
+    
+    if (!m_isPerturbed)
+    {
+      DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
+      
+      const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iSol]));
+      
+      const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
+    
+      const CFreal nuTot = (mu + mut)/rho;
+      
+      const CFreal dUdY = (*(m_cellGrads[iSol][1]))[YY];
+      
+      // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
+      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));
+      
+      
+      
+//      if (m_currWallDist[iSol] < 3.0e-3 && m_currWallDist[iSol] > 2.8e-3)
+//  { 
+//      CFLog(INFO, "Pk: " << m_prodTerm_k << ", Dk: " << m_destructionTerm_k << ", Pw: " << m_prodTerm_Omega << ", Dw: " << m_destructionTerm_Omega << ", d: " << m_currWallDist[iSol] <<"\n");
+//  }
+    }
   }
 }
 
@@ -277,6 +295,13 @@ void KOmega2DSourceTerm::setup()
       m_cellGrads[iState][iEq] = new RealVector(m_dim);
     }
   }
+  
+  DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
+  
+  DataHandle< CFreal > wallDistance = socket_wallDistance.getDataHandle();
+  
+  // resize socket
+  wallShearStressVelocity.resize(wallDistance.size());
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -309,6 +334,16 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
   result.push_back(&socket_gradients);
   result.push_back(&socket_wallDistance);
 
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+  KOmega2DSourceTerm::providesSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  result.push_back(&socket_wallShearStressVelocity);
   return result;
 }
 

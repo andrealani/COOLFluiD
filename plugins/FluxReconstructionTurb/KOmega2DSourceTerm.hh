@@ -60,6 +60,11 @@ public:
    */
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
       needsSockets();
+  
+  /// Returns the DataSocket's that this command provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
 
 protected:
 
@@ -103,6 +108,9 @@ protected: // data
   
   /// handle to the wall distance
   Framework::DataSocketSink<CFreal> socket_wallDistance;
+  
+  /// storage for the wall shear stress velocity
+  Framework::DataSocketSource<CFreal> socket_wallShearStressVelocity;
 
   /// the source term for one state
   RealVector m_srcTerm;

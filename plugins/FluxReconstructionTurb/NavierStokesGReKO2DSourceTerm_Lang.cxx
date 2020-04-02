@@ -499,6 +499,12 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const C
    	//cout.precision(20); cout << "diff   " << Theta[1]/Theta[0] << endl;
     if ( fabs(theta0-theta1) <= restheta || iter == MAXITER-1) 
     {
+      // compute new lambda
+      getLambda(lambda, theta1, viscosity, iState);
+    
+      // compute new Flambda
+      getFlambda(lambda,Tu,Flambda,theta1,false);  
+    
       m_Rethetat *= Flambda;
       break;
     }
