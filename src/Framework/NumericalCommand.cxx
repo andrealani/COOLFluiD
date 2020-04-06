@@ -30,6 +30,8 @@ void NumericalCommand::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("ComGroup","Name of the CommandGroup to which this Command belongs.");
   options.addConfigOption< std::vector<std::string> >("applyTRS","Names of the TRS's to which this Command applies.");
+  options.addConfigOption< CFuint >
+    ("ProcessRate", "Rate at which the processing has to be executed.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,6 +49,9 @@ NumericalCommand::NumericalCommand(const std::string& name)
 
   m_groupName = "";
   setParameter("ComGroup",&m_groupName);
+
+  m_processRate = 1000000000;
+  setParameter("ProcessRate", &m_processRate);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -129,9 +129,12 @@ protected: // functions
   /// Get the ID of the current trs to work on
   CFuint getCurrentTrsID() const { return m_iTrs; }
 
+  /// Get the process rate
+  CFuint getProcessRate() const { return m_processRate; }
+  
   /// Get the TRS list
   std::vector< Common::SafePtr<TopologicalRegionSet> >& getTrsList();
-
+  
   /// Get the TRS name
   const std::string getTrsName(const CFuint iTrs);
 
@@ -152,6 +155,9 @@ private: // data
   /// pointer to the CommandGroup to which this command belongs
   Common::SafePtr<CommandGroup>              m_group;
 
+  /// rate at which the processing has to be done
+  CFuint m_processRate;
+  
 }; // class NumericalCommand
 
 //////////////////////////////////////////////////////////////////////////////
