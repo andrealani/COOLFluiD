@@ -73,8 +73,12 @@ MACRO( CF_ADD_PLUGIN_APP APPNAME )
         TARGET_LINK_LIBRARIES ( ${APPNAME} ${${APPNAME}_cflibs} )
       ENDIF()
     ELSE()
-      TARGET_LINK_LIBRARIES ( ${APPNAME} ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} ${CF_Boost_LIBRARIES} )
+	    #      TARGET_LINK_LIBRARIES ( ${APPNAME} ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} ${CF_Boost_LIBRARIES} )
+      TARGET_LINK_LIBRARIES ( ${APPNAME} ${CF_KERNEL_LIBS} ${CF_KERNEL_STATIC_LIBS} )
     ENDIF()
+
+    # Boost is always needed!! 
+    TARGET_LINK_LIBRARIES ( ${APPNAME} ${CF_Boost_LIBRARIES} )
 
   ENDIF()
 
@@ -90,7 +94,6 @@ MACRO( CF_ADD_PLUGIN_APP APPNAME )
   LOGFILE("${APPNAME}_requires_mods   : [${${APPNAME}_requires_mods}]")
   LOGFILE("${APPNAME}_sources         : [${${APPNAME}_sources}]")
   LOGFILE("${APPNAME}_LINK_LIBRARIES  : [${${APPNAME}_LINK_LIBRARIES}]")
-
 
 ENDMACRO( CF_ADD_PLUGIN_APP )
 ##############################################################################
