@@ -1038,7 +1038,8 @@ sub run_configuration() # run configuration
   my $gen = '';
   my $genopt = get_option('cmake_generator');
   if ($genopt eq 'make')  { $gen = 'Unix Makefiles'; }
-  if ($genopt eq 'kdev')  { $gen = 'KDevelop3'; }
+# not supported on Fedora anymore  
+#if ($genopt eq 'kdev')  { $gen = 'KDevelop3'; }
   if ($genopt eq 'xcode') { $gen = 'Xcode'; }
   if ($genopt eq 'cb')    { $gen = 'CodeBlocks - Unix Makefiles'; }
   if ($genopt eq 'vs8')   { $gen = 'Visual Studio 8 2005'; }
