@@ -63,6 +63,10 @@ Simulator.SubSystem.CFmeshFileReader.THOR2CFmesh.SolutionOrder = P0
 #Simulator.SubSystem.CFmeshFileReader.Data.TranslationVector = -0.5 -0.5 
 #Simulator.SubSystem.CFmeshFileReader.Data.TranslateMesh = true
 
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.Gmsh2CFmesh.SolutionOrder = P0
+
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPCG #KSPGMRES

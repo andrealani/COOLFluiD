@@ -102,13 +102,8 @@ Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -1.6
 #Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 0.1
 Simulator.SubSystem.CellCenterFVM.Data.Limiter = BarthJesp2D
 
-Simulator.SubSystem.CellCenterFVM.InitComds = InitState \
-          MirrorEuler2DFVMCC \
-          FarFieldEuler2DFVMCC
-
-Simulator.SubSystem.CellCenterFVM.InitNames = InField \
-          InMirror \
-          InFar
+Simulator.SubSystem.CellCenterFVM.InitComds = InitState
+Simulator.SubSystem.CellCenterFVM.InitNames = InField
 
 Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
 Simulator.SubSystem.CellCenterFVM.InField.Vars = x y
@@ -116,14 +111,6 @@ Simulator.SubSystem.CellCenterFVM.InField.Def = 1. \
           256.8982996572 \
           0.0 \
           239745.993183375
-
-Simulator.SubSystem.CellCenterFVM.InMirror.applyTRS = Airfoil
-
-Simulator.SubSystem.CellCenterFVM.InFar.applyTRS = FarField
-Simulator.SubSystem.CellCenterFVM.InFar.Tinf = 288.15
-Simulator.SubSystem.CellCenterFVM.InFar.Pinf = 82699.05
-Simulator.SubSystem.CellCenterFVM.InFar.Uinf = 256.8982996572
-Simulator.SubSystem.CellCenterFVM.InFar.Vinf = 0.0
 
 Simulator.SubSystem.CellCenterFVM.BcComds = MirrorEuler2DFVMCC \
           FarFieldEuler2DFVMCC
