@@ -436,9 +436,15 @@ void ComputeFieldFromPotential::execute()
     }
 
     // AL: this has to be changed when doing unsteady cases!!!!!!
-    // We need to implement a generic logic to aply the processing only when Poisson is solved
+    // We need to implement a generic logic to apply the processing only when Poisson is solved
     m_applyProcessing = false;
+    if (SubSystemStatusStack::getActive()->getNbIter()%this->getProcessRate()==0) {
+      m_applyProcessing = true;
+    }
 
+    
+    CFLog(INFO, "State[20415] after B field =  " << (*(states[20415]))[4] << " " << (*(states[20415]))[5] << " " << (*(states[20415]))[6] << ", [x y z] = "<< states[20415]->getCoordinates() << "\n");
+    
     // update the pastStates
     DataHandle<State*> pastStates  = socket_pastStates.getDataHandle();
     // Set Initial States to current states
