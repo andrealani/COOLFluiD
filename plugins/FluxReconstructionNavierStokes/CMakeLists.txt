@@ -64,6 +64,8 @@ NSJacobBndGradientComputer.cxx
 NSJacobBndGradientComputer.hh
 ConvDiffLLAVJacobFluxReconstructionNS.hh
 ConvDiffLLAVJacobFluxReconstructionNS.cxx
+ConvLLAVJacobFluxReconstructionNS.hh
+ConvLLAVJacobFluxReconstructionNS.cxx
 ConvDiffJacobFluxReconstructionNS.hh
 ConvDiffJacobFluxReconstructionNS.cxx
 ConvDiffLLAVFluxReconstructionNS.hh

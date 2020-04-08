@@ -1181,7 +1181,7 @@ void LLAVFluxReconstruction::setup()
   DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
   DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
   
-  const CFuint nbStates = nbrCells*m_nbrSolPnts;;
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;
 
   // resize socket
   artVisc.resize(nbStates);

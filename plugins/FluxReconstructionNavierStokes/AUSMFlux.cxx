@@ -59,6 +59,18 @@ Framework::MethodStrategyProvider<AUSMPlusFlux <MultiScalarVarSet<Euler3DPvt<Eul
                        RiemannFlux,
 		       FluxReconstructionNavierStokesModule>
 AUSMPlusFluxTurb3DProvider("AUSMPlusFluxTurb3D");
+
+Framework::MethodStrategyProvider<AUSMPlusUpFlux <MultiScalarVarSet<Euler2DPuvt> >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusUpFluxTurb2DProvider("AUSMPlusUpFluxTurb2D");
+
+Framework::MethodStrategyProvider<AUSMPlusUpFlux <MultiScalarVarSet<Euler3DPvt<Euler3DVarSet> > >,
+		       FluxReconstructionSolverData,
+                       RiemannFlux,
+		       FluxReconstructionNavierStokesModule>
+AUSMPlusUpFluxTurb3DProvider("AUSMPlusUpFluxTurb3D");
 				   
 // AUSM+Up
 Framework::MethodStrategyProvider< AUSMPlusUpFlux<Euler2DVarSet>,

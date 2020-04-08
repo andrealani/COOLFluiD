@@ -35,6 +35,8 @@ ConvRHSFluxReconstruction.cxx
 ConvRHSFluxReconstruction.hh
 ConvRHSJacobFluxReconstruction.cxx
 ConvRHSJacobFluxReconstruction.hh
+ConvLLAVJacobFluxReconstruction.cxx
+ConvLLAVJacobFluxReconstruction.hh
 DiffRHSFluxReconstruction.cxx
 DiffRHSFluxReconstruction.hh
 DiffRHSJacobFluxReconstruction.cxx

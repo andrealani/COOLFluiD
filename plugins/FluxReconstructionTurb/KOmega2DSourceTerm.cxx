@@ -115,8 +115,8 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   
   ///This is used in (BSL,SST), not for normal kOmega
   const CFreal overOmega = 1./avOmega;
-  OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2*
-    MathFunctions::innerProd(*(m_cellGrads[iState][kID]), *(m_cellGrads[iState][omegaID]));
+  OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iState][kID]))[XX]*(*(m_cellGrads[iState][omegaID]))[XX] + (*(m_cellGrads[iState][kID]))[YY]*(*(m_cellGrads[iState][omegaID]))[YY]);
+    //MathFunctions::innerProd(*(m_cellGrads[iState][kID]), *(m_cellGrads[iState][omegaID]));
 //  OmegaProdTerm *= _Radius; 
   KProdTerm *=CoFactor;
   
@@ -216,15 +216,16 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     computeDestructionTerm(iSol, 1., m_destructionTerm_k, m_destructionTerm_Omega);
     
     m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
-    //m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_Omega), m_prodTerm_Omega);
+    m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_Omega);
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
-    resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
-    resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
+    resUpdates[m_nbrEqs*iSol + kID] = 1.0*m_prodTerm_k + m_destructionTerm_k;
+    resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + 1.0*m_destructionTerm_Omega;
     
     if (!m_isPerturbed)
     {
+      // store the shear stress velocity
       DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
       
       const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iSol]));
