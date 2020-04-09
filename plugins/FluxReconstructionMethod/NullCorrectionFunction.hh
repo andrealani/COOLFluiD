@@ -42,6 +42,12 @@ public:  // methods
   /// Compute the divergence of the Null correction function of an instance of FluxReconstructionElementData
   void computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts);
   
+  /**
+   * Compute the a specified polynomial order VCJH correction function of an instance of FluxReconstructionElementData, used for LLAV. 
+   * corrfcts contains for each solution point the contrbution of each flux point (being a realvector with the dimensionality of the test case)
+   */
+  void computeCorrectionFunction(const CFPolyOrder::Type solOrder, const CFreal factor, Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts);
+  
   /// Set up private data and data
   void setup();
   

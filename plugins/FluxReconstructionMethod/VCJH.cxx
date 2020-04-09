@@ -129,6 +129,84 @@ void VCJH::computeCorrectionFunction(Common::SafePtr< FluxReconstructionElementD
       }
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+      
+void VCJH::computeCorrectionFunction(const CFPolyOrder::Type solOrder, const CFreal factor, Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrfct)
+{
+    CFAUTOTRACE;
+    
+    // get the element shape and order
+    const CFGeoShape::Type elemShape = frElemData->getShape();
+    
+    // compute corr fct for correct element shape
+    switch(elemShape)
+    {
+      case CFGeoShape::QUAD:
+      {
+        CFuint iSol = 0;
+        const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
+        const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+        const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
+        const CFuint dim = frElemData->getDimensionality();
+        std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+	cf_assert(corrfct.size() == nbrSolPnts);
+	
+	// loop over sol pnt coordinates in the standard domain
+        for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+        {
+            for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta, ++iSol)
+            {
+	      cf_assert(corrfct[iSol].size() == nbrFlxPnts);
+              
+              // add the contriubutions of the flx pnts related to the current sol pnt
+              corrfct[iSol][4*iEta] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][0], factor);
+              corrfct[iSol][1+4*iEta] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][0], factor);
+              corrfct[iSol][2+4*iKsi] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][1], factor);
+              corrfct[iSol][3+4*iKsi] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][1], factor);
+            }
+        }
+        break;
+      }
+      case CFGeoShape::HEXA:
+      {
+        CFuint iSol = 0;
+        const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
+        const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+        const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
+        const CFuint dim = frElemData->getDimensionality();
+        std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+        cf_assert(corrfct.size() == nbrSolPnts);
+	
+	// loop over sol pnt coordinates in the standard domain
+        for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+        {
+          CFuint iSolPlane = 0;
+          for (CFuint iEta = 0; iEta < nbrSolPnts1D; ++iEta)
+          {
+            for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++iSol, ++iSolPlane)
+            {
+              cf_assert(corrfct[iSol].size() == nbrFlxPnts);
+              
+              // add the contriubutions of the flx pnts related to the current sol pnt
+              corrfct[iSol][2*nbrSolPnts1D*nbrSolPnts1D+iSolPlane] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][KSI], factor);
+              corrfct[iSol][3*nbrSolPnts1D*nbrSolPnts1D+iSolPlane] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][KSI], factor);
+              corrfct[iSol][4*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ETA], factor);
+              corrfct[iSol][5*nbrSolPnts1D*nbrSolPnts1D+nbrSolPnts1D*iEta+iKsi] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ETA], factor);
+              corrfct[iSol][iZta+nbrSolPnts1D*iKsi] = computeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ZTA], factor);
+              corrfct[iSol][iZta+nbrSolPnts1D*iKsi+nbrSolPnts1D*nbrSolPnts1D] = computeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ZTA], factor);        
+            }
+          }
+        }
+        break;
+      }
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"VCJH Correction Functions not implemented for elements of type "
+                                               + StringOps::to_str(elemShape) + ".");
+      }
+    }
+}
       
 //////////////////////////////////////////////////////////////////////////////
 

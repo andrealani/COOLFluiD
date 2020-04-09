@@ -52,7 +52,14 @@ void NullCorrectionFunction::computeDivCorrectionFunction(Common::SafePtr< FluxR
 {
   CFAUTOTRACE;
 }
-      
+
+//////////////////////////////////////////////////////////////////////////////
+
+void NullCorrectionFunction::computeCorrectionFunction(const CFPolyOrder::Type solOrder, const CFreal factor, Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrcts)
+{
+  CFAUTOTRACE;
+}
+
 //////////////////////////////////////////////////////////////////////////////
       
 void NullCorrectionFunction::setup()
