@@ -215,13 +215,14 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     computeProductionTerm(iSol, 1., mut, m_prodTerm_k, m_prodTerm_Omega);
     computeDestructionTerm(iSol, 1., m_destructionTerm_k, m_destructionTerm_Omega);
     
-    m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
-    m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_Omega);
+    // for now no limiting of P-terms
+    //m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
+    //m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_Omega), m_prodTerm_Omega);
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
-    resUpdates[m_nbrEqs*iSol + kID] = 1.0*m_prodTerm_k + m_destructionTerm_k;
-    resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + 1.0*m_destructionTerm_Omega;
+    resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
+    resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
     
     if (!m_isPerturbed)
     {
@@ -235,9 +236,9 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       const CFreal nuTot = (mu + mut)/rho;
       
       const CFreal dUdY = (*(m_cellGrads[iSol][1]))[YY];
-      
+            
       // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
-      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));
+      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
       
       
       
