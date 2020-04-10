@@ -1,6 +1,5 @@
 #include "Common/PE.hh"
 #include "Common/EventHandler.hh"
-#include "MathTools/LeastSquaresSolver.hh"
 #include "MathTools/MathFunctions.hh"
 #include "MathTools/MathConsts.hh"
 
@@ -13,7 +12,6 @@
 #include "Framework/BaseTerm.hh"
 #include "Framework/TRSDistributeData.hh"
 #include "Framework/State.hh"
-
 #include "Framework/LSSData.hh"
 
 #include <boost/accumulators/accumulators.hpp>
@@ -28,14 +26,9 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh" 
-
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-
 #include "FluxReconstructionMethod/MeshFittingAlgorithmFR.hh"
-
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-
-
 
 #include "Common/CFMultiMap.hh"
 #include <math.h>
