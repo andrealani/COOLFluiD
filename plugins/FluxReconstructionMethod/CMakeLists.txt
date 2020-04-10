@@ -333,7 +333,10 @@ StdMeshFittingUpdateFR.cxx
 StdMeshFittingUpdateFR.hh
 SimpleEdgeGraphFR.cxx
 SimpleEdgeGraphFR.hh
-
+MeshFittingAlgorithmFRQ2.hh
+MeshFittingAlgorithmFRQ2.cxx
+SimpleEdgeGraphFRQ2.cxx
+SimpleEdgeGraphFRQ2.hh
 )
 
 IF (NOT CF_HAVE_CUDA)
