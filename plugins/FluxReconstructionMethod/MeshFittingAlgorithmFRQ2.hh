@@ -43,7 +43,8 @@ struct SpringTrucationData{
  * This class implements a r-refinement mesh algorithm to
  * redistribute mesh points close to shocks for FR
  *
- * @author Firas Ben Ameur
+ * @authors Firas Ben Ameur
+ *          Joachim Balis
  *
  */
 class MeshFittingAlgorithmFRQ2 : public Framework::DataProcessingCom {
@@ -386,6 +387,10 @@ private: //data
   std::vector< CFuint > m_nbOfNeighborCellsToaNode;
 
   std::vector< CFuint > nbOfConnectedFaces;
+
+  std::vector< RealVector > m_vecNodeCoords;
+
+  RealVector m_NodeCoords;
 }; // end of class MeshFittingAlgorithm
       
 //////////////////////////////////////////////////////////////////////////////

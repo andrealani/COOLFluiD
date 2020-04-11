@@ -4,8 +4,6 @@
 #include "MathTools/MathConsts.hh"
 //#include "MathTools/LeastSquaresSolver.hh"
 
-
-
 #include "Framework/DataProcessing.hh"
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MeshData.hh"
@@ -93,11 +91,7 @@ MeshFittingAlgorithmFRQ2::MeshFittingAlgorithmFRQ2(const std::string& name) :
   m_solPolyValsAtNodes(CFNULL),
   m_nbrNodesElem(),
   m_nbrSolPnts()
-  //m_nbOfNeighborCellsToaNode(CFNULL)
-  //m_boundaryNodes(CFNULL),
-  //m_CenterNodes(CFNULL)
-  
-  //m_faceTRSBuilder()
+
 {
   this->addConfigOptionsTo(this);
   
@@ -203,7 +197,7 @@ void MeshFittingAlgorithmFRQ2::setup()
   
   Common::SafePtr<Framework::SpaceMethod> spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
 
-  Common::SafePtr<FluxReconstructionSolver> frsolver = spaceMethod.d_castTo<FluxReconstructionSolver>(); //# Change here
+  Common::SafePtr<FluxReconstructionSolver> frsolver = spaceMethod.d_castTo<FluxReconstructionSolver>(); 
   cf_assert(frsolver.isNotNull());
   m_frData = frsolver->getData();
   
@@ -254,45 +248,49 @@ void MeshFittingAlgorithmFRQ2::setup()
 
 
 
-  // get the coefs for extrapolation of the states to the flx pnts
-  //m_solPolyValsAtNodes = frLocalData[0]->getCoefSolPolyInNodes(); // OLD only 4 corners
 
-  /*Common::SafePtr<Framework::TopologicalRegionSet> cells = 
-    Framework::MeshDataStack::getActive()->getTrs("InnerCells");
-  const CFuint nbCells = cells->getLocalNbGeoEnts();
-  CellToFaceGEBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
-  geoData.trs = cells;
-  CFuint i=0;
+  m_vecNodeCoords.resize(9);
+  
+  m_vecNodeCoords[0].resize(2);
+  m_vecNodeCoords[0][0] =-1.;
+  m_vecNodeCoords[0][1] =-1.;
 
-  for (CFuint iCell=0; iCell<nbCells; ++iCell){
-    geoData.idx = iCell;
-    Framework::GeometricEntity *const currCell = m_cellBuilder->buildGE();
+  m_vecNodeCoords[1].resize(2);
+  m_vecNodeCoords[1][0] = 1.;
+  m_vecNodeCoords[1][1] = -1.;
     
-    std::vector< Framework::Node*  >* m_cellNodes = currCell->getNodes();
-    
-    const CFuint nbNodes = m_cellNodes->size(); 
-    for(CFuint iNode=0; iNode<nbNodes; ++iNode){
-      Framework::Node * currNode = (*m_cellNodes)[iNode];
+  m_vecNodeCoords[2].resize(2);
+  m_vecNodeCoords[2][0] = 1.;
+  m_vecNodeCoords[2][1] = 1.;
+
+  m_vecNodeCoords[3].resize(2);
+  m_vecNodeCoords[3][0] = -1.;
+  m_vecNodeCoords[3][1] = 1.;
+
+  m_vecNodeCoords[4].resize(2);
+  m_vecNodeCoords[4][0] = 0.;
+  m_vecNodeCoords[4][1] =-1.;
+
+  m_vecNodeCoords[5].resize(2);
+  m_vecNodeCoords[5][0] = 1.;
+  m_vecNodeCoords[5][1] = 0.;
+
+  m_vecNodeCoords[6].resize(2);
+  m_vecNodeCoords[6][0] = 0.;
+  m_vecNodeCoords[6][1] = 1.;
+
+  m_vecNodeCoords[7].resize(2);
+  m_vecNodeCoords[7][0] =-1.;
+  m_vecNodeCoords[7][1] = 0.;
+
+  m_vecNodeCoords[8].resize(2);
+  m_vecNodeCoords[8][0] = 0.;
+  m_vecNodeCoords[8][1] = 0.;
 
 
-      i=i+1;
-    }
-    m_cellBuilder->releaseGE();
-  }*/
-    std::vector< RealVector > vec_cor_ALL; 
+  m_solPolyValsAtNodes = frLocalData[0]->getSolPolyValsAtNode(m_vecNodeCoords);
 
-  for (CFuint iNode=0; iNode<nbNodes; ++iNode){
-    Framework::Node * currNode = nodes[iNode];
-    RealVector vec_cor; vec_cor.resize(nbDims);
-
-    for(CFuint iDim=0; iDim<nbDims; ++iDim ){
-      vec_cor[iDim] = (*currNode)[XX+iDim];
-    }
-    vec_cor_ALL.push_back(vec_cor);
-  }
-    m_solPolyValsAtNodes = frLocalData[0]->getNodePolyValsAtPnt(vec_cor_ALL);
-    m_nbrNodesElem = m_solPolyValsAtNodes.size();
-
+  m_nbrNodesElem = m_solPolyValsAtNodes.size();
 
 }
 
@@ -326,7 +324,7 @@ void MeshFittingAlgorithmFRQ2::unsetup()
   
   std::multimap<CFuint, CFuint>  mapNodeNode;
   std::vector< bool > nodeDone; nodeDone.resize(nodes.size());
-  std::vector< CFuint > BCnodeDone; BCnodeDone.resize(nodes.size());  // ount conectivity to each node 
+  std::vector< CFuint > BCnodeDone; BCnodeDone.resize(nodes.size());  
 
 
   for(CFuint i=0; i<BCnodeDone.size(); ++i){
@@ -766,7 +764,7 @@ void MeshFittingAlgorithmFRQ2::computeNodeStates()
         ////cout<< "iNode  "<< iNode << "   iSol  " << iSol << "   iVar  "<< iVar<<endl;
         ////cout<<" (m_solPolyValsAtNodes)[nodes[iNode]->getLocalID()][iSol]   "  << (m_solPolyValsAtNodes)[(*m_cellNodes)[iNode]->getLocalID()][iSol] << endl;
         ////cout<<" (*(*m_cellStates)[iSol])[iVar]   "  << (*(*m_cellStates)[iSol])[iVar] << endl;
-	      nodalStates[(*m_cellNodes)[iNode]->getLocalID()][iVar] += (m_solPolyValsAtNodes)[(*m_cellNodes)[iNode]->getLocalID()][iSol]*(*(*m_cellStates)[iSol])[iVar];
+	      nodalStates[(*m_cellNodes)[iNode]->getLocalID()][iVar] += (m_solPolyValsAtNodes)[iNode][iSol]*(*(*m_cellStates)[iSol])[iVar];
 	      //nodalStates[(*m_cellNodes)[iNode]->getLocalID()][iVar] += (*m_solPolyValsAtNodes)[iNode][iSol]*(*(*m_cellStates)[iSol])[iVar];
         ////cout<<" nodalStates   "  << nodalStates[(*m_cellNodes)[iNode]->getLocalID()][iVar] << endl;
         ////cout<<"  "<<endl;
@@ -792,10 +790,10 @@ void MeshFittingAlgorithmFRQ2::computeNodeStates()
 }*/
   for (CFuint iNode=0 ; iNode<nodalStates.size() ; ++iNode){
 
-
-    nodalStates[(nodes)[iNode]->getLocalID()] = nodalStates[(nodes)[iNode]->getLocalID()]/(m_nbOfNeighborCellsToaNode[(nodes)[iNode]->getLocalID()]*m_order);//counter[(nodes)[iNode]->getLocalID()];
+    //cout<<" nodalStates BEFORE   "  << nodalStates[(nodes)[iNode]->getLocalID()][0] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][1]  << "    " << nodalStates[(nodes)[iNode]->getLocalID()][2] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][3]<<endl;
+    nodalStates[(nodes)[iNode]->getLocalID()] = nodalStates[(nodes)[iNode]->getLocalID()]/(m_nbOfNeighborCellsToaNode[(nodes)[iNode]->getLocalID()]);//counter[(nodes)[iNode]->getLocalID()];
     //cout << "x dim" << (*nodes[iNode])[0] << "ydim" << (*nodes[iNode])[1] << endl;
-    //cout<<" nodalStates   "  << nodalStates[(nodes)[iNode]->getLocalID()][0] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][1]  << "    " << nodalStates[(nodes)[iNode]->getLocalID()][2] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][3]<<endl;
+    //cout<<" nodalStates AFTER  "  << nodalStates[(nodes)[iNode]->getLocalID()][0] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][1]  << "    " << nodalStates[(nodes)[iNode]->getLocalID()][2] <<"   " << nodalStates[(nodes)[iNode]->getLocalID()][3]<<endl;
     //cout<<" counter " << m_nbOfNeighborCellsToaNode[(nodes)[iNode]->getLocalID()]<< endl;
     //cout<<"   " << endl;    
 ////cout<<" nodalStates   "  << nodalStates[i][0] <<"   " << nodalStates[i][1]  << "    " << nodalStates[i][2] <<"   " << nodalStates[i][3]<<endl;
