@@ -167,7 +167,8 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
 
     m_ghostSolPhysData[iK] = m_wallK;
     
-    if(nbTurbVars == 2)
+    // check if it is k-omega and not SA
+    if(nbTurbVars == 2 || nbTurbVars == 4)
     {
       //Compute distance to innerstate
       CFreal y0 = m_wallDist;//1.e-9;
@@ -194,6 +195,28 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
       const CFuint omegaID = iK+1; 
 
       m_ghostSolPhysData[omegaID] = omegaWall;
+    }
+    
+    // check if LCTM is active
+    if (nbTurbVars == 4)
+    {
+      m_ghostSolPhysData[EulerTerm::GAMMA] = m_intSolPhysData[EulerTerm::GAMMA];
+
+      // gamma
+      m_ghostSolPhysData[iK+2] = m_intSolPhysData[iK+2];
+      
+      // Re
+      m_ghostSolPhysData[iK+3] = m_intSolPhysData[iK+3];
+    }
+    else if (nbTurbVars == 3)
+    {
+      m_ghostSolPhysData[EulerTerm::GAMMA] = m_intSolPhysData[EulerTerm::GAMMA];
+
+      // gamma
+      m_ghostSolPhysData[iK+1] = m_intSolPhysData[iK+1];
+      
+      // Re
+      m_ghostSolPhysData[iK+2] = m_intSolPhysData[iK+2]; 
     }
 
     // set the ghost state from its physical data
@@ -247,6 +270,28 @@ void BCNoSlipWallTurb2D::computeGhostGradients
       RealVector& pGradG = *ghostGrads[iState][0];
       const CFreal nPGrad = pGradI[XX]*normal[XX] + pGradI[YY]*normal[YY];
       pGradG = pGradI - nPGrad*normal;
+    }
+  }
+  
+  // check if LCTM is active
+  if (nbrGradVars > 6)
+  {
+    for (CFuint iState = 0; iState < nbrStateGrads; ++iState)
+    {
+      // normal
+      const RealVector& normal = normals[iState];
+    
+      // gamma
+      RealVector& gammaGradI = *intGrads  [iState][nbrStateGrads-2];
+      RealVector& gammaGradG = *ghostGrads[iState][nbrStateGrads-2];
+      const CFreal nGammaGrad = gammaGradI[XX]*normal[XX] + gammaGradI[YY]*normal[YY];
+      gammaGradG = gammaGradI - nGammaGrad*normal; //tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
+      
+      // Ret
+      RealVector& RetGradI = *intGrads  [iState][nbrStateGrads-1];
+      RealVector& RetGradG = *ghostGrads[iState][nbrStateGrads-1];
+      const CFreal nRetGrad = RetGradI[XX]*normal[XX] + RetGradI[YY]*normal[YY];
+      RetGradG = RetGradI - nRetGrad*normal;
     }
   }
 }

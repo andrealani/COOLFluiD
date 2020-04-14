@@ -206,8 +206,8 @@ void SA2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal nonConsDiffTerm = adimCoef * ( Cb2 / sigma ) * (dKdX*dKdX + dKdY*dKdY);
     const CFreal P = Cb1 * Stilda * NIUtilda * (1-ft2); // production term
     
-    // correction for the introduction of rho in the convective flux : G
-    const CFreal G = ( 1. / sigma ) * (NIU + NIUtilda) * ( dKdX + dKdY ) * ( dRhodX + dRhodY );
+    // correction for the introduction of rho in the convective flux : G should be grad(k)/dot grad(rho)!!!!
+    const CFreal G = ( 1. / sigma ) * (NIU + NIUtilda) * ( dKdX*dRhodX + dKdY*dRhodY );//( dKdX + dKdY ) * ( dRhodX + dRhodY ); //
     
     CFreal D =  adimCoef * ( Cw1 * fw - Cb1 * ft2/(kappa*kappa)) * ((NIUtilda*NIUtilda) / (m_currWallDist[iSol]*m_currWallDist[iSol]));
     
