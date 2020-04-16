@@ -150,6 +150,9 @@ protected: // data
   
   // boolean telling whether the case is axisymmetric
   bool m_isAxisymmetric;
+  
+  // boolean telling whether the source terms need to be limited for stability
+  bool m_limitP;
 
   
 }; // class KOmega2DSourceTerm

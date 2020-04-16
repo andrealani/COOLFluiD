@@ -35,6 +35,7 @@ KOmega2DSourceTermProvider("KOmega2DSourceTerm");
 
 void KOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< bool >("LimitProductionTerm","Limit the production terms for stability (Default = True)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -58,6 +59,9 @@ KOmega2DSourceTerm::KOmega2DSourceTerm(const std::string& name) :
     m_isAxisymmetric()
 {
   addConfigOptionsTo(this);
+  
+  m_limitP = true;
+  setParameter("LimitProductionTerm",&m_limitP);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -215,9 +219,11 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     computeProductionTerm(iSol, 1., mut, m_prodTerm_k, m_prodTerm_Omega);
     computeDestructionTerm(iSol, 1., m_destructionTerm_k, m_destructionTerm_Omega);
     
-    // for now no limiting of P-terms
-    //m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
-    //m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_Omega), m_prodTerm_Omega);
+    if (m_limitP)
+    {
+      m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
+      m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_Omega);
+    }
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
