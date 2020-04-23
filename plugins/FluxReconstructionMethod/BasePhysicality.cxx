@@ -258,7 +258,7 @@ void BasePhysicality::setup()
 
   // resize socket
   output.resize(nbStates);
-  posPrev.resize(nbrCells);
+  //posPrev.resize(nbrCells);
 }
 
 //////////////////////////////////////////////////////////////////////////////

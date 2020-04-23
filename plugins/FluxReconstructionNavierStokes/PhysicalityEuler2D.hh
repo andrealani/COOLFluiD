@@ -91,6 +91,9 @@ protected: // data
   /// minimum allowable value for temperature
   CFreal m_minTemperature;
   
+  /// Turbulent Variables K, Omega...
+  std::vector<CFreal> m_minTurbVars;
+  
   /// boolean telling whether to also check the internal solution for physicality
   bool m_checkInternal;
   
