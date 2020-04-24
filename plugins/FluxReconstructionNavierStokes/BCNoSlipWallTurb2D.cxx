@@ -38,8 +38,9 @@ void BCNoSlipWallTurb2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly zero), default true.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
-    options.addConfigOption< CFreal >("WallDist","Characteristic distance of first sol pnt from the wall.");
-
+  options.addConfigOption< CFreal >("WallDist","Characteristic distance of first sol pnt from the wall.");
+  options.addConfigOption< CFreal >("OmegaWallFactor","Factor by which to multiply omegaWall each iteration until it is the theoretical value (Default 2.0).");
+  options.addConfigOption< CFuint >("ImposeOmegaWallIter","Iteration at which to impose theoretical omegaWall value.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -49,7 +50,8 @@ BCNoSlipWallTurb2D::BCNoSlipWallTurb2D(const std::string& name) :
   m_varSetTurb(CFNULL),
   m_diffVarTurb(CFNULL),
   m_ghostSolPhysData(),
-  m_intSolPhysData()
+  m_intSolPhysData(),
+  m_prevIter(0)
 {
   CFAUTOTRACE;
 
@@ -78,6 +80,12 @@ BCNoSlipWallTurb2D::BCNoSlipWallTurb2D(const std::string& name) :
    
    m_wallDist = 1.0e-5;
    setParameter("WallDist",&m_wallDist);
+   
+   m_imposeOmegaWallIter = MathTools::MathConsts::CFuintMax();
+   setParameter("ImposeOmegaWallIter",&m_imposeOmegaWallIter);
+   
+   m_omegaWallFactor = 2.0;
+   setParameter("OmegaWallFactor",&m_omegaWallFactor);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -186,15 +194,27 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
       //would have to dynamic cast to the KOmega varset to get the beta1
       const CFreal beta1 = 0.075;
       
+      const CFuint omegaID = iK+1; 
+      
       ///@todo here should this be adimensionalized (by the distance)???
       //Menter's definition
-      const CFreal omegaWall = (10. * 6. * nu) / (beta1 * y0 * y0);
+      // for stability, gradually increase w_wall
+      const CFreal omegaWallTh = (10. * 6. * nu) / (beta1 * y0 * y0);
+      const CFreal omegaWall = iter < m_imposeOmegaWallIter ? min(omegaWallTh,m_omegaWallFactor*m_intSolPhysData[omegaID]): omegaWallTh;
+      
+      if (m_prevIter < iter) 
+      {
+        CFLog(INFO, "OmegaWall log difference (-inf -> 0): " << log10(fabs(1+(omegaWall-omegaWallTh)/omegaWallTh)) << "\n");
+        
+        m_prevIter = iter;
+      }
       
       cf_assert(omegaWall>0.0);
-    
-      const CFuint omegaID = iK+1; 
 
       m_ghostSolPhysData[omegaID] = omegaWall;
+      
+      m_ghostSolPhysData[EulerTerm::E] += m_ghostSolPhysData[iK];
+      m_ghostSolPhysData[EulerTerm::H] += m_ghostSolPhysData[iK];
     }
     
     // check if LCTM is active
@@ -266,10 +286,10 @@ void BCNoSlipWallTurb2D::computeGhostGradients
       tempGradG = tempGradI - nTempGrad*normal + m_wallQ*normal; //tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
       
       // pressure
-      RealVector& pGradI = *intGrads  [iState][0];
-      RealVector& pGradG = *ghostGrads[iState][0];
-      const CFreal nPGrad = pGradI[XX]*normal[XX] + pGradI[YY]*normal[YY];
-      pGradG = pGradI - nPGrad*normal;
+//      RealVector& pGradI = *intGrads  [iState][0];
+//      RealVector& pGradG = *ghostGrads[iState][0];
+//      const CFreal nPGrad = pGradI[XX]*normal[XX] + pGradI[YY]*normal[YY];
+//      pGradG = pGradI - nPGrad*normal;
     }
   }
   

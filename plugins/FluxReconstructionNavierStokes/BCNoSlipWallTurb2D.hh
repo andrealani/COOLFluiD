@@ -112,6 +112,15 @@ protected: // data
   
   /// distance of the first sol pnt to the wall
   CFreal m_wallDist;
+  
+  /// omega wall multiplication factor
+  CFreal m_omegaWallFactor;
+  
+  /// iteration at which to impose theoretical omegaWall
+  CFuint m_imposeOmegaWallIter;
+  
+  /// previous iteration
+  CFuint m_prevIter;
 
 }; // class BCNoSlipWallTurb2D
 

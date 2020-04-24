@@ -123,6 +123,13 @@ void BCSubInletTurbUVT2D::computeGhostStates(const vector< State* >& intStates,
     {
       m_ghostSolPhysData[iK + iTurb] = m_turbVars[iTurb]; //2.0*m_turbVars[iTurb] - m_intSolPhysData[iK + iTurb];
     }
+    
+    // check if it is k-omega and not SA
+    if(nbTurbVars == 2 || nbTurbVars == 4)
+    {
+      m_ghostSolPhysData[EulerTerm::E] += m_ghostSolPhysData[iK];
+      m_ghostSolPhysData[EulerTerm::H] += m_ghostSolPhysData[iK];
+    }
 
     // set the ghost state from its physical data
     m_varSetTurb->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
