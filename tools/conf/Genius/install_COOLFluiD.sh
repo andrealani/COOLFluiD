@@ -76,5 +76,5 @@ cd ${COOLFLUID_TOP_DIR}
 fi
 
 cd ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE}
-make -j 10
+make -j 4
 make install
