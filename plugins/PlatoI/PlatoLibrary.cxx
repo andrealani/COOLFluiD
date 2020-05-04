@@ -131,17 +131,19 @@ void PlatoLibrary::setLibrarySequentially()
 { 
   const char* solver = "COOLFluiD";
   
-  const size_t lsolver   = strlen(solver);
-  const size_t lmixture  = strlen(_mixtureName.c_str());
-  const size_t lreaction = strlen(_reactionName.c_str());
-  const size_t ltransfer = strlen(_transfName.c_str());
+  const int lsolver   = strlen(solver);
+  const int lmixture  = strlen(_mixtureName.c_str());
+  const int lreaction = strlen(_reactionName.c_str());
+  const int ltransfer = strlen(_transfName.c_str());
   
   string envPlato = _path;
-  const char*  env_p = getenv("PLATO_INC");
-  if (env_p != "") {
-    envPlato = string(env_p) + "/../../" + _path;
-  }
-  const size_t lpath = strlen(envPlato.c_str());
+  const int lpath = strlen(_path.c_str());
+
+  //const char*  env_p = getenv("PLATO_DIR");
+ // if (env_p != "") {
+ //   envPlato = string(env_p) + "/../../" + _path;
+ // }
+ // const int lpath = strlen(envPlato.c_str());
   CFLog(ERROR, "PlatoLibrary::setLibrarySequentially() => lpath is: " << envPlato << '\n'); 
   
   /*Initialize the PLATO library*/
@@ -225,6 +227,18 @@ void PlatoLibrary::setLibrarySequentially()
 
   /*Set tolerance on mole fractions (for transport properties)*/
   set_Xtol(&_Xtol);
+  
+  // add here xc di set composition loop fino a get components 
+  for (CFint i=0; i<get_nb_comp();++i){
+   _Xc[i]=1;
+  }
+
+  double press = 100000;
+  double temp = 350;
+  CFint flag =0;
+  get_eq_composition_mole(&press, &temp, &_Xc[0], &_Xi[0], &flag);
+
+  
 }
  
 //////////////////////////////////////////////////////////////////////////////     
@@ -509,7 +523,7 @@ CFdouble PlatoLibrary::soundSpeed(CFdouble& temp, CFdouble& pressure)
  */
 void PlatoLibrary::setComposition(CFdouble& temp, CFdouble& pressure, RealVector* x)
 {
-  const size_t flag = 0;
+  const int flag = 0;
 
   /*Temperature fix*/
   CFdouble T = temp;
@@ -722,7 +736,11 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
     _Yi[is] = ys[is];
     /*Fix application*/
     if (_Yi[is] < 0.0) _Yi[is] = 0.0;
+   // std::cout << is << "\n";
+   // std::cout << ys << "\n";
+   // std::cout <<_Yi;
        cf_assert(_Yi[is] < 1.1);
+      
   }
 
   /*Set mass fractions of chemical components*/
@@ -790,7 +808,7 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
   /*Compute source term and the related Jacobian with respect to natural variables*/
   if (flagJac) {
 
-    source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+    //get_source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
 
     /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
     for (CFint i = 0; i < _nEqs; ++i) {
@@ -802,7 +820,7 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
   /*Compute source term only*/  
   } else {
 
-    source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]); 
+    get_source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]); 
 
   }
 
@@ -838,7 +856,7 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
   /*Compute source term and the related Jacobian with respect to natural variables*/ 
   if (flagJac) {
 
-    source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+    //get_source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
 
     /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
     for (CFint i = 0; i < _nEqs; ++i) {
@@ -850,7 +868,7 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
   /*Compute source term only*/ 
   } else {
 
-    source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
+    get_source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
 
   }
 
