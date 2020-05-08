@@ -15,8 +15,8 @@
 #CFEnv.AssertThrows         = true
 #CFEnv.AssertDumps          = true
 ##CFEnv.ExceptionAborts     = true
-CFEnv.ExceptionDumps       = true
-CFEnv.ExceptionOutputs     = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
 #CFEnv.RegistSignalHandlers = false
 #CFEnv.TraceToStdOut        = true
 #CFEnv.TraceActive          = true
@@ -30,7 +30,7 @@ Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWrit
 
 #SubSystem Parameters
 Simulator.Paths.WorkingDir = ./
-Simulator.Paths.ResultsDir = ./RESULTS_RESTART_S1
+Simulator.Paths.ResultsDir = ./RESULTS_1SS
 
 Simulator.Maestro = SimpleMaestro
 Simulator.SubSystems = SubSystem
@@ -135,12 +135,12 @@ Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
 # Time Marching
 
 # Stop Condition
-#Simulator.SubSystem.StopCondition       = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 1
 #Simulator.SubSystem.StopCondition   = MaxTime
 #Simulator.SubSystem.MaxTime.maxTime = 0.295
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -12.0
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -12.0
 Simulator.SubSystem.StopConditionSubSystemStatus = FlowSubSystemStatus 
 
 ###############################################################################
@@ -231,7 +231,7 @@ Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
 Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona3D_60_tet_full.CFmesh
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ../meshes/corona-structured-250000.CFmesh
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona.CFmesh.1st
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = corona-structured-250000.CFmesh #corona.CFmesh.1st
 #corona-structured-250000.CFmesh
 Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1. 
 #0.000000001437794 #1.
@@ -274,7 +274,7 @@ Simulator.SubSystem.Flow.UnSetupNames = UnSetup1
 Simulator.SubSystem.Flow.Data.PolyRec = LinearLS3D
 Simulator.SubSystem.Flow.Data.LinearLS3D.limitRes = -4.0
 Simulator.SubSystem.Flow.Data.LinearLS3D.limitIter = 10000
-Simulator.SubSystem.Flow.Data.LinearLS3D.gradientFactor = 1.
+Simulator.SubSystem.Flow.Data.LinearLS3D.gradientFactor = 0.
 Simulator.SubSystem.Flow.Data.Limiter = Venktn3D
 Simulator.SubSystem.Flow.Data.Venktn3D.coeffEps = 1.
 #Simulator.SubSystem.Flow.Data.Venktn3D.isMFMHD = true
@@ -286,6 +286,7 @@ Simulator.SubSystem.Flow.Data.FluxSplitter = LaxFried
 Simulator.SubSystem.Flow.Data.UpdateVar  = Prim
 Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 Simulator.SubSystem.Flow.Data.LinearVar   = Cons
+# AL: test
 Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAST
 Simulator.SubSystem.Flow.Data.MHDConsACAST.gravity = 1
 Simulator.SubSystem.Flow.Data.MHDConsACAST.PevtsovHeating = 0
@@ -322,7 +323,7 @@ Simulator.SubSystem.Flow.Restart = true
 ###############################################################################
 
 # Boundary Conditions
-Simulator.SubSystem.Flow.BcComds =  SuperInletProjectionFVMCC SuperOutletMHD3DProjectionFVMCC
+Simulator.SubSystem.Flow.BcComds = SuperInletProjectionFVMCC SuperOutletMHD3DProjectionFVMCC
 #InletCoronaFVMCC OutletCoronaFVMCC #
 Simulator.SubSystem.Flow.BcNames = Jet1 Jet2
 
@@ -387,6 +388,7 @@ Simulator.SubSystem.Flow.PreProcess1.VariableIDs = 4 5 6
 Simulator.SubSystem.Flow.PreProcess1.OtherNamespace = EMNamespace
 Simulator.SubSystem.Flow.PreProcess1.InterRadius = -1. # 15e9 #2.5 # -1
 Simulator.SubSystem.Flow.PreProcess1.DeltaSelection = 1000. #1e-4
+Simulator.SubSystem.Flow.PreProcess1.ProcessRate = 1
 
 ###############################################################################
 ###############################################################################
