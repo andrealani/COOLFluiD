@@ -1,0 +1,586 @@
+#include "Common/NotImplementedException.hh"
+#include "NavierStokes/EulerTerm.hh"
+//#include "Euler2DKLogOmegaLinearRoe.hh"
+#include "NavierStokes/Euler2DPuvt.hh"
+#include "NavierStokes/NSTurbTerm.hh"
+#include "Framework/MeshData.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+using namespace COOLFluiD::Framework;
+using namespace COOLFluiD::Common;
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+EulerKLogOmegaConsVarSet<BASE, SGROUP>::EulerKLogOmegaConsVarSet(Common::SafePtr<Framework::BaseTerm> term) :
+  BASE(term),
+  _rightEv(),
+  _leftEv(),
+  m_startK(0.),
+  m_tmpResult(),
+  m_pdatak()
+{
+  this->addVarName("rhoK");
+  this->addVarName("rhoOmega");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+EulerKLogOmegaConsVarSet<BASE, SGROUP>::~EulerKLogOmegaConsVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::computeEigenValuesVectors(RealMatrix& rightEv,
+								    RealMatrix& leftEv,
+								    RealVector& eValues,
+								    const RealVector& normal)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  //BASE::computeEigenValuesVectors(rightEv, leftEv, eValues, normal);
+ 
+  const RealVector& linearData = this->getModel()->getPhysicalData();
+  const CFuint iK = this->getModel()->getFirstScalarVar(0);  
+
+  const CFreal avK     = linearData[iK];
+  const CFreal avOmega = linearData[iK+1]; 
+  
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFreal avU   = linearData[EulerTerm::VX];
+  const CFreal avV   = linearData[EulerTerm::VY];
+  const CFreal avH   = linearData[EulerTerm::H];
+  const CFreal avA   = linearData[EulerTerm::A];
+  const CFreal over2AvA = 1/(2.*avA);
+  const CFreal AvA2 = avA*avA;
+  const CFreal gamma = this->getModel()->getGamma();
+  const CFreal gammaMinus1 = gamma - 1.;
+  const CFreal GA = gammaMinus1/AvA2;
+  const CFreal Ubar = avU*nx + avV*ny;
+  const CFreal Vbar = avU*ny - avV*nx;
+  const CFreal q2 = (avU*avU + avV*avV);
+  const CFreal q2over4 = q2/4;
+
+  //throw Common::NotImplementedException (FromHere(),"EulerKLogOmegaConsVarSet::computeEigenValuesVectors()");
+
+  rightEv(0,0) = 1.;
+  rightEv(0,1) = 0.;
+  rightEv(0,2) = 1.;
+  rightEv(0,3) = 1.;
+  rightEv(0,4) = 0.;
+  rightEv(0,5) = 0.;
+
+  rightEv(1,0) = avU;
+  rightEv(1,1) = ny;
+  rightEv(1,2) = (avU + avA*nx);
+  rightEv(1,3) = (avU - avA*nx);
+  rightEv(1,4) = 0.;
+  rightEv(1,5) = 0.;
+  
+  rightEv(2,0) = avV;
+  rightEv(2,1) = -nx;;
+  rightEv(2,2) = (avV + avA*ny);
+  rightEv(2,3) = (avV - avA*ny);
+  rightEv(2,4) = 0.;
+  rightEv(2,5) = 0.;
+  
+  rightEv(3,0) = (0.5*q2)+avK;
+  rightEv(3,1) = Vbar; 
+  rightEv(3,2) = (avH + avA*Ubar);
+  rightEv(3,3) = (avH - avA*Ubar);
+  rightEv(3,4) = 1.;
+  rightEv(3,5) = 0.;
+  
+  rightEv(4,0) = avK;
+  rightEv(4,1) = 0.;
+  rightEv(4,2) = avK;
+  rightEv(4,3) = avK;
+  rightEv(4,4) = 1.;
+  rightEv(4,5) = 0.;
+  
+  rightEv(5,0) = avOmega;
+  rightEv(5,1) = 0.;
+  rightEv(5,2) = avOmega;
+  rightEv(5,3) = avOmega;
+  rightEv(5,4) = 0.;
+  rightEv(5,5) = 1.;
+
+
+  leftEv(0,0) = 1.-(0.5*GA*q2);
+  leftEv(0,1) = GA*avU;
+  leftEv(0,2) = GA*avV;
+  leftEv(0,3) = -GA;
+  leftEv(0,4) = GA;
+  leftEv(0,5) = 0;
+
+  leftEv(1,0) = -Vbar;
+  leftEv(1,1) = ny;
+  leftEv(1,2) = -nx;
+  leftEv(1,3) = 0.0;
+  leftEv(1,4) = 0.0;
+  leftEv(1,5) = 0.0;
+
+  leftEv(2,0) = GA*q2over4 - (Ubar*over2AvA);
+  leftEv(2,1) = (nx*over2AvA) - (0.5*GA*avU);
+  leftEv(2,2) = (ny*over2AvA) - (0.5*GA*avV);
+  leftEv(2,3) = 0.5*GA;
+  leftEv(2,4) = -0.5*GA;
+  leftEv(2,5) = 0.;
+
+  leftEv(3,0) = GA*q2over4 + (Ubar*over2AvA); 
+  leftEv(3,1) = (-1.0*nx*over2AvA) - (0.5*GA*avU);
+  leftEv(3,2) = (-1.0*ny*over2AvA) - (0.5*GA*avV);
+  leftEv(3,3) = 0.5*GA;
+  leftEv(3,4) = -0.5*GA;
+  leftEv(3,5) = 0.0;
+ 
+  leftEv(4,0) = -avK; 
+  leftEv(4,1) = 0.0; 
+  leftEv(4,2) = 0.0; 
+  leftEv(4,3) = 0.0;
+  leftEv(4,4) = 1.0;
+  leftEv(4,5) = 0.0;
+
+
+  leftEv(5,0) = -avOmega; 
+  leftEv(5,1) = 0.0; 
+  leftEv(5,2) = 0.0; 
+  leftEv(5,3) = 0.0;
+  leftEv(5,4) = 0.0;
+  leftEv(5,5) = 1.0;
+
+ 
+  eValues[0] = Ubar;
+  eValues[1] = Ubar;
+  eValues[2] = Ubar + avA;
+  eValues[3] = Ubar - avA;
+  eValues[4] = Ubar;
+  eValues[5] = Ubar;
+
+
+  //degugging infos
+  CFLogDebugMax( "RightEigenvectors @Euler2DChar::computeEigenValuesVectors" << "\n"
+  << rightEv << "\n");
+  CFLogDebugMax( "LeftEigenvectors @Euler2DChar::computeEigenValuesVectors" << "\n"
+  << leftEv << "\n");
+  CFLogDebugMax( "EigenValues @Euler2DChar::computeEigenValuesVectors" << "\n"
+  << eValues << "\n" << "\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE, CFuint SGROUP>
+CFuint EulerKLogOmegaConsVarSet<BASE, SGROUP>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::splitJacobian(RealMatrix& jacobPlus,
+						    RealMatrix& jacobMin,
+						    RealVector& eValues,
+						    const RealVector& normal)
+{
+
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  //BASE::computeEigenValuesVectors(rightEv, leftEv, eValues, normal);
+ 
+  const RealVector& linearData = this->getModel()->getPhysicalData();
+  const CFuint iK = this->getModel()->getFirstScalarVar(0);  
+
+  const CFreal avK     = linearData[iK];
+  const CFreal avOmega = linearData[iK+1]; 
+  
+  const CFreal nx = normal[XX];
+  const CFreal ny = normal[YY];
+  const CFreal avU   = linearData[EulerTerm::VX];
+  const CFreal avV   = linearData[EulerTerm::VY];
+  const CFreal avH   = linearData[EulerTerm::H];
+  const CFreal avA   = linearData[EulerTerm::A];
+  const CFreal over2AvA = 1/(2.*avA);
+  const CFreal AvA2 = avA*avA;
+  const CFreal gamma = this->getModel()->getGamma();
+  const CFreal gammaMinus1 = gamma - 1.;
+  const CFreal GA = gammaMinus1/AvA2;
+  const CFreal Ubar = avU*nx + avV*ny;
+  const CFreal Vbar = avU*ny - avV*nx;
+  const CFreal q2 = (avU*avU + avV*avV);
+  const CFreal q2over4 = q2/4;
+  
+  cf_assert(Framework::PhysicalModelStack::getActive()->getNbEq() == 6);
+  cf_assert(_rightEv.size() >= 36);
+  cf_assert(_leftEv.size() >= 36);
+  
+  _rightEv(0,0) = 1.;
+  _rightEv(0,1) = 0.;
+  _rightEv(0,2) = 1.;
+  _rightEv(0,3) = 1.;
+  _rightEv(0,4) = 0.;
+  _rightEv(0,5) = 0.;
+
+  _rightEv(1,0) = avU;
+  _rightEv(1,1) = ny;
+  _rightEv(1,2) = (avU + avA*nx);
+  _rightEv(1,3) = (avU - avA*nx);
+  _rightEv(1,4) = 0.;
+  _rightEv(1,5) = 0.;
+  
+  _rightEv(2,0) = avV;
+  _rightEv(2,1) = -nx;;
+  _rightEv(2,2) = (avV + avA*ny);
+  _rightEv(2,3) = (avV - avA*ny);
+  _rightEv(2,4) = 0.;
+  _rightEv(2,5) = 0.;
+  
+  _rightEv(3,0) = (0.5*q2)+avK;
+  _rightEv(3,1) = Vbar; 
+  _rightEv(3,2) = (avH + avA*Ubar);
+  _rightEv(3,3) = (avH - avA*Ubar);
+  _rightEv(3,4) = 1.;
+  _rightEv(3,5) = 0.;
+  
+  _rightEv(4,0) = avK;
+  _rightEv(4,1) = 0.;
+  _rightEv(4,2) = avK;
+  _rightEv(4,3) = avK;
+  _rightEv(4,4) = 1.;
+  _rightEv(4,5) = 0.;
+  
+  _rightEv(5,0) = avOmega;
+  _rightEv(5,1) = 0.;
+  _rightEv(5,2) = avOmega;
+  _rightEv(5,3) = avOmega;
+  _rightEv(5,4) = 0.;
+  _rightEv(5,5) = 1.;
+
+
+  _leftEv(0,0) = 1.-(0.5*GA*q2);
+  _leftEv(0,1) = GA*avU;
+  _leftEv(0,2) = GA*avV;
+  _leftEv(0,3) = -GA;
+  _leftEv(0,4) = GA;
+  _leftEv(0,5) = 0;
+
+  _leftEv(1,0) = -Vbar;
+  _leftEv(1,1) = ny;
+  _leftEv(1,2) = -nx;
+  _leftEv(1,3) = 0.0;
+  _leftEv(1,4) = 0.0;
+  _leftEv(1,5) = 0.0;
+
+  _leftEv(2,0) = GA*q2over4 - (Ubar*over2AvA);
+  _leftEv(2,1) = (nx*over2AvA) - (0.5*GA*avU);
+  _leftEv(2,2) = (ny*over2AvA) - (0.5*GA*avV);
+  _leftEv(2,3) = 0.5*GA;
+  _leftEv(2,4) = -0.5*GA;
+  _leftEv(2,5) = 0.;
+
+  _leftEv(3,0) = GA*q2over4 + (Ubar*over2AvA); 
+  _leftEv(3,1) = (-1.0*nx*over2AvA) - (0.5*GA*avU);
+  _leftEv(3,2) = (-1.0*ny*over2AvA) - (0.5*GA*avV);
+  _leftEv(3,3) = 0.5*GA;
+  _leftEv(3,4) = -0.5*GA;
+  _leftEv(3,5) = 0.0;
+ 
+  _leftEv(4,0) = -avK; 
+  _leftEv(4,1) = 0.0; 
+  _leftEv(4,2) = 0.0; 
+  _leftEv(4,3) = 0.0;
+  _leftEv(4,4) = 1.0;
+  _leftEv(4,5) = 0.0;
+
+
+  _leftEv(5,0) = -avOmega; 
+  _leftEv(5,1) = 0.0; 
+  _leftEv(5,2) = 0.0; 
+  _leftEv(5,3) = 0.0;
+  _leftEv(5,4) = 0.0;
+  _leftEv(5,5) = 1.0;
+
+ 
+  eValues[0] = Ubar;
+  eValues[1] = Ubar;
+  eValues[2] = Ubar + avA;
+  eValues[3] = Ubar - avA;
+  eValues[4] = Ubar;
+  eValues[5] = Ubar;
+  
+  cf_assert(this->_eValuesP.size() >= 6);
+  cf_assert(this->_eValuesM.size() >= 6);
+  
+  for (CFuint iEq = 0; iEq < eValues.size(); ++iEq) {
+    this->_eValuesP[iEq] = max(0.,eValues[iEq]);
+    this->_eValuesM[iEq] = min(0.,eValues[iEq]);
+  }
+
+  jacobPlus = _rightEv*(this->_eValuesP*_leftEv);
+  jacobMin  = _rightEv*(this->_eValuesM*_leftEv);
+  
+  //degugging infos
+  CFLogDebugMax( "Negative Jacobians @Euler2DChar::splitJacobian" << "\n"
+		 << jacobPlus << "\n");
+  CFLogDebugMax( "Minimum Jacobians @Euler2DChar::splitJacobian" << "\n"
+		 << jacobMin << "\n");
+  CFLogDebugMax( "EigenValues @Euler2DChar::splitJacobian" << "\n"
+		 << eValues << "\n" << "\n");
+  
+  //   BASE::splitJacobian(jacobPlus, jacobMin, eValues, normal);
+  //   throw Common::NotImplementedException (FromHere(),"EulerKLogOmegaConsVarSet::splitJacobian()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::computePhysicalData(const Framework::State& state,
+							      RealVector& data)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+    
+  // THIS HAS TO BE GENERALIZED
+  // BASE::computePhysicalData(state, data);
+  
+  const CFreal rho  = state[0];
+  const CFreal rhoU = state[1];
+  const CFreal rhoV = state[2];
+  const CFreal rhoE = state[3];
+  const CFreal rhoK = state[4];
+  const CFreal rhoOmega = state[5];
+  const CFreal overRho  = 1./rho;
+
+  const CFreal V2 = (rhoU*rhoU + rhoV*rhoV)*overRho*overRho;
+  const CFreal R = this->getModel()->getR();
+  const CFreal gamma = this->getModel()->getGamma();
+  const CFreal gammaMinus1 = gamma - 1.;
+  
+  data[EulerTerm::VX] = rhoU*overRho;
+  data[EulerTerm::VY] = rhoV*overRho;
+  data[EulerTerm::RHO] = rho;
+  data[EulerTerm::V] = sqrt(V2);
+  data[EulerTerm::P] = gammaMinus1*(rhoE - 0.5*rho*V2 - rhoK);
+  data[EulerTerm::T] = data[EulerTerm::P]/(R*rho);
+  data[EulerTerm::H] = (rhoE + data[EulerTerm::P])*overRho;
+  data[EulerTerm::E] = rhoE/rho;
+  
+  //  data[EulerTerm::A] = sqrt(gammaMinus1*(data[EulerTerm::H] - 0.5*V2) + (gammaMinus1*K);
+  data[EulerTerm::A] = sqrt(gamma*data[EulerTerm::P]*overRho);
+  data[EulerTerm::GAMMA] = gamma;
+  
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  data[iK]   = rhoK*overRho;
+  data[iK+1] = rhoOmega*overRho;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::computeStateFromPhysicalData(const RealVector& data,
+								       Framework::State& state)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  BASE::computeStateFromPhysicalData(data,state);
+  
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  state[m_startK] = data[iK]*data[EulerTerm::RHO];
+  state[m_startK + 1] = data[iK+1]*data[EulerTerm::RHO];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+CFreal EulerKLogOmegaConsVarSet<BASE, SGROUP>::getSpeed(const Framework::State& state) const 
+{
+  return BASE::getSpeed(state);
+}
+  
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::setDimensionalValues(const Framework::State& state,
+							       RealVector& result)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  BASE::setDimensionalValues(state, result);
+  
+  const RealVector& refData = this->getModel()->getReferencePhysicalData();
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startK]   = state[m_startK]*refData[EulerTerm::RHO]*refData[iK];
+  result[m_startK+1] = state[m_startK+1]*refData[EulerTerm::RHO]*refData[iK+1];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::setAdimensionalValues(const Framework::State& state,
+							   RealVector& result)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  BASE::setAdimensionalValues(state, result);
+  
+  const RealVector& refData = this->getModel()->getReferencePhysicalData();
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  result[m_startK]   = state[m_startK]/(refData[EulerTerm::RHO]*refData[iK]);
+  result[m_startK+1] = state[m_startK+1]/(refData[EulerTerm::RHO]*refData[iK+1]);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  BASE::setDimensionalValuesPlusExtraValues(state, result, extra);
+  
+  // back up current array
+  const CFuint oldSize = result.size();
+  for (CFuint i = 0; i < oldSize; ++i) {
+    m_tmpResult[i] = result[i];
+  }
+  
+  result.resize(oldSize+2);
+  for (CFuint i = 0; i < oldSize; ++i) {
+    result[i] = m_tmpResult[i];
+  }
+  
+  computePhysicalData(state, m_pdatak);
+  
+  const RealVector& refData = this->getModel()->getReferencePhysicalData();
+  const CFreal pdim = this->getModel()->getPressureFromState(m_pdatak[EulerTerm::P])*refData[EulerTerm::P];
+  const CFreal Tdim = m_pdatak[EulerTerm::T]*refData[EulerTerm::T];
+  
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  const CFreal Kdim = state[m_startK]*refData[iK]/m_pdatak[EulerTerm::RHO];
+  const CFreal Omegadim = state[m_startK+1]*refData[iK+1]/m_pdatak[EulerTerm::RHO];
+  result[m_startK] = Kdim;
+  result[m_startK+1] = Omegadim;
+  
+  extra.resize(6);
+  
+  SafePtr<NSTurbTerm> nsTurbTerm = PhysicalModelStack::getActive()->getImplementor()->
+    getDiffusiveTerm().d_castTo<NSTurbTerm>();
+  
+  const CFreal rhoDim = m_pdatak[EulerTerm::RHO]*refData[EulerTerm::RHO];
+  const CFreal mu_dim = nsTurbTerm->getDynViscosityDim(pdim,Tdim) * refData[NSTurbTerm::MU];
+  const CFreal mut_dim = rhoDim*Kdim/Omegadim;
+  
+  extra[0] = mu_dim;
+  extra[1] = mut_dim;
+  extra[2] = mut_dim/mu_dim;
+  
+  std::string namespaceName = Framework::MeshDataStack::getActive()->getPrimaryNamespace();
+  std::string dataHandleName = namespaceName + "_nodalWallDistance";
+  if(Framework::MeshDataStack::getActive()->getDataStorage()->checkData(dataHandleName)) {
+    DataHandle< CFreal> wallDistance = MeshDataStack::getActive()->getDataStorage()->
+      getData<CFreal>(dataHandleName);
+    //Output the wall distance
+    extra[3] = wallDistance[state.getLocalID()];
+  }
+  else{
+    extra[3] = 0.;
+  }
+  extra[4] = std::log10(Kdim);
+  extra[5] = std::log10(Omegadim);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+std::vector<std::string> EulerKLogOmegaConsVarSet<BASE, SGROUP>::getExtraVarNames() const
+{
+  std::vector<std::string> names(6);
+  names[0] = "mu";
+  names[1] = "muT";
+  names[2] = "muT/mu";
+  names[3] = "wallDistance";
+  names[4] = "Log10(Kdim)";
+  names[5] = "Log10(Omegadim)";
+
+  return names;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::setup()
+{
+  BASE::setup();
+
+  const CFuint nbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
+  _rightEv.resize(nbEqs,nbEqs);
+  _leftEv.resize(nbEqs,nbEqs);
+  
+  m_startK = 0;
+  for (int i = 0; i < SGROUP; ++i) {
+    m_startK += this->getModel()->getNbScalarVars(i);
+  }
+  
+  // AL: check if this is correct
+  m_startK += BASE::EULERSET::getEqSetData()[0].size();
+  
+  m_tmpResult.resize(nbEqs);
+  assert(m_startK <= nbEqs-2);
+  
+  // AL: EquationSetData is a static object therefore it has to be called only once
+  if (EulerKLogOmegaConsVarSet<BASE, SGROUP>::getEqSetData().size() == 0) {
+    this->addEqSetData(2);
+  }
+  this->getModel()->resizePhysicalData(m_pdatak);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, CFuint SGROUP>
+void EulerKLogOmegaConsVarSet<BASE, SGROUP>::computePerturbedPhysicalData
+(const Framework::State& currState,
+ const RealVector& bData,
+ RealVector& data,
+ CFuint iVar)
+{
+  cf_assert(iVar < PhysicalModelStack::getActive()->getNbEq());
+  
+  using namespace Physics::NavierStokes;
+	
+  BASE::computePerturbedPhysicalData(currState, bData, data, iVar);
+  
+  const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
+  data[iK]= currState[m_startK]/data[EulerTerm::RHO];
+  data[iK+1]= currState[m_startK + 1]/data[EulerTerm::RHO];
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

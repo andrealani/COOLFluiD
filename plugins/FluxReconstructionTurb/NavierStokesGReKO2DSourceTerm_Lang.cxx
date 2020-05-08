@@ -4,12 +4,12 @@
 #include "Framework/MeshData.hh"
 #include "FluxReconstructionTurb/FluxReconstructionKOmega.hh"
 #include "Framework/SubSystemStatus.hh"
-#include "FluxReconstructionTurb/KOmega2DSourceTerm.hh"
+#include "FluxReconstructionTurb/KLogOmega2DSourceTerm.hh"
 
 
 #include "Framework/MethodCommandProvider.hh"
 #include "MathTools/MathConsts.hh"
-#include "KOmega/NavierStokesKOmegaVarSetTypes.hh"
+#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -44,7 +44,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::defineConfigOptions(Config::OptionList&
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std::string& name) :
-  KOmega2DSourceTerm(name),
+  KLogOmega2DSourceTerm(name),
   m_Rethetat(),
   m_Rethetac(),
   m_Flength(),
@@ -75,14 +75,14 @@ NavierStokesGReKO2DSourceTerm_Lang::~NavierStokesGReKO2DSourceTerm_Lang()
 
 void NavierStokesGReKO2DSourceTerm_Lang::setup()
 {
-  KOmega2DSourceTerm::setup();
+  KLogOmega2DSourceTerm::setup();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesGReKO2DSourceTerm_Lang::unsetup()
 {
-  KOmega2DSourceTerm::unsetup();
+  KLogOmega2DSourceTerm::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,7 +119,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
   
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
     
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
    
   // get the gradients datahandle
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
@@ -162,8 +162,8 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     getVorticity(iSol);
 
     const CFreal avV     = m_solPhysData[EulerTerm::V];
-    const CFreal avK     = m_solPhysData[iKPD];
-    const CFreal avOmega = m_solPhysData[iKPD+1];
+    const CFreal avK     = std::max(m_solPhysData[iKPD],0.0);
+    const CFreal avOmega = std::exp(m_solPhysData[iKPD+1]);
     const CFreal avGa    = m_solPhysData[iKPD+2];
     const CFreal avRe    = m_solPhysData[iKPD+3];
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
@@ -239,19 +239,19 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal  Fonset8 = (Fonset4 - Fonset7);
     const CFreal  Fonset  = std::max(Fonset8,0.);
     
-    ///The Modified Production  term: k
-    ///gammaEff This coefficient is used in the destruction term related to k: 
-    computeProductionTerm(iSol, gammaEff, mut, m_prodTerm_k, m_prodTerm_Omega);
-    
     ///The Modified Destruction term: k
     ///CoeffDk This coefficient is used in the destruction term related to k: 
     const CFreal coeffDk1  = std::max(gammaEff,0.1);
     const CFreal coeffDk   = std::min(coeffDk1,1.0);
     computeDestructionTerm(iSol, coeffDk, m_destructionTerm_k, m_destructionTerm_Omega);
+    
+    ///The Modified Production  term: k
+    ///gammaEff This coefficient is used in the destruction term related to k: 
+    computeProductionTerm(iSol, gammaEff, mut, m_prodTerm_k, m_prodTerm_Omega);
      
-    //Limit the production terms
-    m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
-    m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_Omega), m_prodTerm_Omega);
+//    //Limit the production terms
+//    m_prodTerm_k     = std::min(10.*fabs(m_destructionTerm_k), m_prodTerm_k);
+//    m_prodTerm_Omega = std::min(10.*fabs(m_destructionTerm_Omega), m_prodTerm_Omega);
 
     // The production term of the intermittency Ga
     const CFreal ca1       = 2.0;
@@ -295,6 +295,32 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
     resUpdates[m_nbrEqs*iSol + gammaID] = prodTerm_Ga + destructionTerm_Ga;
     resUpdates[m_nbrEqs*iSol + ReTID] = prodTerm_Re + destructionTerm_Re;
+    
+    resUpdates[m_nbrEqs*iSol + 3] = -m_prodTerm_k - m_destructionTerm_k;
+    
+    if (!m_isPerturbed)
+    {
+      // store the shear stress velocity
+      DataHandle< CFreal > wallShearStressVelocity = socket_wallShearStressVelocity.getDataHandle();
+      
+      const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iSol]));
+      
+      const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
+    
+      const CFreal nuTot = (mu + mut)/rho;
+      
+      const CFreal dUdY = (*(m_cellGrads[iSol][1]))[YY];
+            
+      // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
+      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
+      
+      
+      
+//      if (m_currWallDist[iSol] < 3.0e-3 && m_currWallDist[iSol] > 2.8e-3)
+//  { 
+//      CFLog(INFO, "Pk: " << m_prodTerm_k << ", Dk: " << m_destructionTerm_k << ", Pw: " << m_prodTerm_Omega << ", Dw: " << m_destructionTerm_Omega << ", d: " << m_currWallDist[iSol] <<"\n");
+//  }
+    }
   }
 }
 
@@ -370,7 +396,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetat(const CFreal Tu)
 
 void NavierStokesGReKO2DSourceTerm_Lang::getLambda(CFreal& lambda, const CFreal theta, const CFreal viscosity, const CFuint iState)
 {
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
 
   const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;   
   const CFreal mu = viscosity;
@@ -426,7 +452,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::getFlambda(const CFreal lambda, const C
 
 void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const CFreal viscosity, const CFreal Tu, const CFuint iState)
 {
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
 
   const CFreal avV = m_solPhysData[EulerTerm::V];   //AvrageSpeeed;     
   const CFreal mu = viscosity;                                          

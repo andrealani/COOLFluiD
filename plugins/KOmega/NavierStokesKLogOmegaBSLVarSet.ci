@@ -1,0 +1,62 @@
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKLogOmegaBSLVarSet<BASE, SGROUP>::NavierStokesKLogOmegaBSLVarSet
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesKLogOmegaVarSet<BASE, SGROUP>(name, model)
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+NavierStokesKLogOmegaBSLVarSet<BASE, SGROUP>::~NavierStokesKLogOmegaBSLVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE, int SGROUP>
+void NavierStokesKLogOmegaBSLVarSet<BASE, SGROUP>::computeBlendingCoefFromGradientVars
+(const RealVector& state, const RealVector& gradK, const RealVector& gradOmega)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  const CFreal rho = this->getDensity(state);
+  const CFreal K = std::max(0., state[this->_kID]);
+  const CFreal Omega = std::exp(state[this->_kID+1]);
+  const CFreal overOmega = 1./Omega;
+  const CFreal mu = this->getLaminarDynViscosityFromGradientVars(state);
+  const CFreal distance = std::max(this->_wallDistance, 1.e-12);
+  const CFreal CD_kw = std::max(2.*rho*this->_sigmaOmega2*MathFunctions::innerProd(gradK,gradOmega), 1.e-20);//*overOmega
+  
+  // @todo here be careful with the adimensionalization...check this!!!
+  const CFreal arg1_1 = std::sqrt(K)/(0.09*Omega*distance);
+  const CFreal arg1_2 = (500. * mu)/(rho*distance*distance*Omega);
+  const CFreal arg1_3 = (4.*rho*this->_sigmaOmega2*K)/(CD_kw * distance * distance);
+  const CFreal arg1 = std::min(std::max(arg1_1, arg1_2), arg1_3);
+  
+  this->_blendingCoef1 = std::tanh(arg1*arg1*arg1*arg1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

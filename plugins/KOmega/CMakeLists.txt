@@ -1,6 +1,8 @@
 LIST ( APPEND KOmega_files
 Euler2DKOmegaConsToPuvtInPuvt.cxx
 Euler2DKOmegaConsToPuvtInPuvt.hh
+Euler2DKLogOmegaConsToPuvtInPuvt.cxx
+Euler2DKLogOmegaConsToPuvtInPuvt.hh
 Euler2DKOmegaConsToRoe.cxx
 Euler2DKOmegaConsToRoe.hh
 Euler2DKOmegaLinearRoe.cxx
@@ -13,6 +15,8 @@ Euler2DKOmegaMachAlphaPtTtToPuvt.cxx
 Euler2DKOmegaMachAlphaPtTtToPuvt.hh
 Euler2DKOmegaPuvtToCons.cxx
 Euler2DKOmegaPuvtToCons.hh
+Euler2DKLogOmegaPuvtToCons.cxx
+Euler2DKLogOmegaPuvtToCons.hh
 Euler2DKOmegaPuvtToConsInPuvt.cxx
 Euler2DKOmegaPuvtToConsInPuvt.hh
 Euler3DKOmegaConsToPuvtInPuvt.cxx
@@ -28,9 +32,15 @@ Euler3DKOmegaPuvtToConsInPuvt.hh
 EulerKOmegaConsVarSet.ci
 EulerKOmegaConsVarSet.cxx
 EulerKOmegaConsVarSet.hh
+EulerKLogOmegaConsVarSet.ci
+EulerKLogOmegaConsVarSet.cxx
+EulerKLogOmegaConsVarSet.hh
 EulerKOmegaVarSet.ci
 EulerKOmegaVarSet.cxx
 EulerKOmegaVarSet.hh
+EulerKLogOmegaVarSet.ci
+EulerKLogOmegaVarSet.cxx
+EulerKLogOmegaVarSet.hh
 KOmega.hh
 KOmegaReactionTerm.ci
 KOmegaReactionTerm.hh
@@ -49,6 +59,19 @@ NavierStokesKOmegaSSTVarSet.hh
 NavierStokesKOmegaVarSet.ci
 NavierStokesKOmegaVarSet.hh
 NavierStokesKOmegaVarSetTypes.hh
+NavierStokesKLogOmegaPvt.ci
+NavierStokesKLogOmegaPvt.cxx
+NavierStokesKLogOmegaPvt.hh
+NavierStokesKLogOmegaPhysicalModel.ci
+NavierStokesKLogOmegaPhysicalModel.cxx
+NavierStokesKLogOmegaPhysicalModel.hh
+NavierStokesKLogOmegaBSLVarSet.ci
+NavierStokesKLogOmegaBSLVarSet.hh
+NavierStokesKLogOmegaSSTVarSet.ci
+NavierStokesKLogOmegaSSTVarSet.hh
+NavierStokesKLogOmegaVarSet.ci
+NavierStokesKLogOmegaVarSet.hh
+NavierStokesKLogOmegaVarSetTypes.hh
 )
 
 LIST ( APPEND KOmega_cflibs Framework NavierStokes)

@@ -39,7 +39,7 @@ void BCNoSlipWallTurb2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly zero), default true.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
   options.addConfigOption< CFreal >("WallDist","Characteristic distance of first sol pnt from the wall.");
-  options.addConfigOption< CFreal >("OmegaWallFactor","Factor by which to multiply omegaWall each iteration until it is the theoretical value (Default 2.0).");
+  options.addConfigOption< CFreal >("OmegaWallFactor","Factor by which to multiply omegaWall each iteration until it is the theoretical value (Default 1.01).");
   options.addConfigOption< CFuint >("ImposeOmegaWallIter","Iteration at which to impose theoretical omegaWall value.");
 }
 
@@ -75,16 +75,16 @@ BCNoSlipWallTurb2D::BCNoSlipWallTurb2D(const std::string& name) :
   m_yWallVelocity = 0.0;
    setParameter("yWallVelocity",&m_yWallVelocity);
   
-  m_wallK = 1.e-8;
+  m_wallK = 0.0;
    setParameter("KWall",&m_wallK);
    
    m_wallDist = 1.0e-5;
    setParameter("WallDist",&m_wallDist);
    
-   m_imposeOmegaWallIter = MathTools::MathConsts::CFuintMax();
+   m_imposeOmegaWallIter = 0;
    setParameter("ImposeOmegaWallIter",&m_imposeOmegaWallIter);
    
-   m_omegaWallFactor = 2.0;
+   m_omegaWallFactor = 1.01;
    setParameter("OmegaWallFactor",&m_omegaWallFactor);
 }
 
@@ -199,12 +199,13 @@ void BCNoSlipWallTurb2D::computeGhostStates(const vector< State* >& intStates,
       ///@todo here should this be adimensionalized (by the distance)???
       //Menter's definition
       // for stability, gradually increase w_wall
-      const CFreal omegaWallTh = (10. * 6. * nu) / (beta1 * y0 * y0);
-      const CFreal omegaWall = iter < m_imposeOmegaWallIter ? min(omegaWallTh,m_omegaWallFactor*m_intSolPhysData[omegaID]): omegaWallTh;
-      
-      if (m_prevIter < iter) 
+      const CFreal omegaWallTh = log((60. * nu) / (beta1 * y0 * y0));//(10. * 6. * nu) / (beta1 * y0 * y0);
+      //const CFreal omegaWall = iter < m_imposeOmegaWallIter ? min(omegaWallTh,m_omegaWallFactor*m_intSolPhysData[omegaID]): omegaWallTh;
+      const CFreal omegaWall = iter < m_imposeOmegaWallIter ? min(omegaWallTh,log(m_omegaWallFactor)*iter+5.0): omegaWallTh;
+
+      if (m_prevIter < iter && iter < m_imposeOmegaWallIter) 
       {
-        CFLog(INFO, "OmegaWall log difference (-inf -> 0): " << log10(fabs(1+(omegaWall-omegaWallTh)/omegaWallTh)) << "\n");
+        CFLog(INFO, "OmegaWall log difference (-inf -> 0): " << log10(fabs(1+(exp(omegaWall)-exp(omegaWallTh))/exp(omegaWallTh))) << "\n");
         
         m_prevIter = iter;
       }

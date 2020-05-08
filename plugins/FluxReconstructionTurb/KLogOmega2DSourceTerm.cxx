@@ -8,8 +8,8 @@
 #include "NavierStokes/NavierStokes2DVarSet.hh"
 
 #include "FluxReconstructionTurb/FluxReconstructionKOmega.hh"
-#include "FluxReconstructionTurb/KOmega2DSourceTerm.hh"
-#include "KOmega/NavierStokesKOmegaVarSetTypes.hh"
+#include "FluxReconstructionTurb/KLogOmega2DSourceTerm.hh"
+#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,19 +28,19 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<KOmega2DSourceTerm, FluxReconstructionSolverData, FluxReconstructionKOmegaModule>
-KOmega2DSourceTermProvider("KOmega2DSourceTerm");
+MethodCommandProvider<KLogOmega2DSourceTerm, FluxReconstructionSolverData, FluxReconstructionKOmegaModule>
+KLogOmega2DSourceTermProvider("KLogOmega2DSourceTerm");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
+void KLogOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("LimitProductionTerm","Limit the production terms for stability (Default = True)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-KOmega2DSourceTerm::KOmega2DSourceTerm(const std::string& name) :
+KLogOmega2DSourceTerm::KLogOmega2DSourceTerm(const std::string& name) :
     StdSourceTerm(name),
     socket_gradients("gradients"),
     socket_wallDistance("wallDistance"),
@@ -66,26 +66,26 @@ KOmega2DSourceTerm::KOmega2DSourceTerm(const std::string& name) :
 
 //////////////////////////////////////////////////////////////////////////////
 
-KOmega2DSourceTerm::~KOmega2DSourceTerm()
+KLogOmega2DSourceTerm::~KLogOmega2DSourceTerm()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::getSourceTermData()
+void KLogOmega2DSourceTerm::getSourceTermData()
 {
   StdSourceTerm::getSourceTermData();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState, 
+void KLogOmega2DSourceTerm::computeProductionTerm(const CFuint iState, 
 						const CFreal& CoFactor, 
 						const CFreal& MUT,
 						CFreal& KProdTerm,  
 						CFreal& OmegaProdTerm)
 { 
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   const CFuint uID = 1;//getStateVelocityIDs()[XX];
   const CFuint vID = 2;//getStateVelocityIDs()[YY];
@@ -97,7 +97,7 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   const CFuint nbScalarEqsSets = m_eulerVarSet->getModel()->getNbScalarVarSets();
   const CFuint iK = m_eulerVarSet->getModel()->getFirstScalarVar(nbScalarEqsSets-1);
   const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState]));
-  const CFreal avK = m_solPhysData[iK];
+  const CFreal avK = max(m_solPhysData[iK],0.0);
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
   
@@ -109,26 +109,36 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
 //                             -twoThirdRhoK*(dux+dvy);
   
   ///Production term: Omega
-  const CFreal avOmega = m_solPhysData[iK+1];
+  const CFreal avOmega = exp(m_solPhysData[iK+1]);
   const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();
   const CFreal sigmaOmega2 = navierStokesVarSet->getSigmaOmega2();
-  OmegaProdTerm  = (navierStokesVarSet->getGammaCoef()*rho/MUT) * KProdTerm;
   
-  if (m_limitP)
-  {
-    KProdTerm     = std::min(10.*fabs(m_destructionTerm_k), KProdTerm);
-    OmegaProdTerm = std::min(10.*fabs(m_destructionTerm_k)*(navierStokesVarSet->getGammaCoef()*rho/MUT), OmegaProdTerm);
-  }
+  const CFreal overOmega = 1./avOmega;
+  OmegaProdTerm  = (navierStokesVarSet->getGammaCoef()*rho/MUT) * KProdTerm * overOmega;
   
   const CFuint kID = (*((*m_cellStates)[iState])).size() - 2;
   const CFuint omegaID = kID + 1;
   
-  ///This is used in (BSL,SST), not for normal kOmega
-  const CFreal overOmega = 1./avOmega;
+  if (m_limitP)
+  {
+    KProdTerm     = std::min(10.*fabs(m_destructionTerm_k), KProdTerm);
+    OmegaProdTerm = std::min(10.*fabs(m_destructionTerm_k)*overOmega*(navierStokesVarSet->getGammaCoef()*rho/MUT), OmegaProdTerm);
+  }
+  
+  ///This is used in (BSL,SST), not for normal kOmeg
   OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iState][kID]))[XX]*(*(m_cellGrads[iState][omegaID]))[XX] + (*(m_cellGrads[iState][kID]))[YY]*(*(m_cellGrads[iState][omegaID]))[YY]);
+  //OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iState][kID]))[XX]*(*(m_cellGrads[iState][omegaID]))[XX] + (*(m_cellGrads[iState][kID]))[YY]*(*(m_cellGrads[iState][omegaID]))[YY]);
     //MathFunctions::innerProd(*(m_cellGrads[iState][kID]), *(m_cellGrads[iState][omegaID]));
 //  OmegaProdTerm *= _Radius; 
-  KProdTerm *=CoFactor;
+  
+  const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
+   
+  const CFreal coeffTauMu1 = coeffTauMu*mu;
+  const CFreal coeffTauMu3 = coeffTauMu*MUT*navierStokesVarSet->getSigmaOmega();//(blendingCoefF1 * navierStokesVarSet->getSigmaOmega1() + (1.0-blendingCoefF1)*sigmaOmega2);
+  
+  OmegaProdTerm += (coeffTauMu1 + coeffTauMu3)*((*(m_cellGrads[iState][omegaID]))[XX]*(*(m_cellGrads[iState][omegaID]))[XX] + (*(m_cellGrads[iState][omegaID]))[YY]*(*(m_cellGrads[iState][omegaID]))[YY]);
+  
+  KProdTerm *= CoFactor;
   
   //Make sure negative values dont propagate...
   KProdTerm            = std::max(0., KProdTerm);
@@ -137,7 +147,7 @@ void KOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState, 
+void KLogOmega2DSourceTerm::computeDestructionTerm(const CFuint iState, 
 						const CFreal& DcoFactor,
 						CFreal& K_desterm, 
 						CFreal& Omega_desterm)
@@ -148,13 +158,13 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Physics::NavierStokes;
   
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // check the average state
   const CFuint nbScalarEqsSets = m_eulerVarSet->getModel()->getNbScalarVarSets();
   const CFuint iK = m_eulerVarSet->getModel()->getFirstScalarVar(nbScalarEqsSets-1);
-  const CFreal avK     = m_solPhysData[iK];
-  const CFreal avOmega = m_solPhysData[iK+1];
+  const CFreal avK     = std::max(m_solPhysData[iK],0.0);
+  const CFreal avOmega = std::exp(m_solPhysData[iK+1]);
   const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iState]));
   
   // Destruction term: k
@@ -162,7 +172,7 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
   K_desterm *= DcoFactor; 
   
   // Destruction term: Omega
-  Omega_desterm = (-1.) * rho * avOmega * avOmega * navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
+  Omega_desterm = (-1.) * rho * avOmega * navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));//(-1.) * rho * avOmega * avOmega * navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
   
 //  if (m_currWallDist[iState] < 3.0e-3 && m_currWallDist[iState] > 2.8e-3 && !m_isPerturbed)
 //  { 
@@ -176,14 +186,14 @@ void KOmega2DSourceTerm::computeDestructionTerm(const CFuint iState,
       
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
+void KLogOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
 { 
   const CFuint kID = (*m_cellStates)[0]->size() - 2;
   const CFuint omegaID = kID + 1;
   
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
     
-  SafePtr< NavierStokes2DKOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKOmega >();
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
    
   // get the gradients datahandle
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
@@ -223,12 +233,14 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
  
     //Compute Reynolds stress tensor 
     computeDestructionTerm(iSol, 1., m_destructionTerm_k, m_destructionTerm_Omega);
-    computeProductionTerm(iSol, 1., mut, m_prodTerm_k, m_prodTerm_Omega);
+    computeProductionTerm(iSol, 1., mut, m_prodTerm_k, m_prodTerm_Omega); 
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
     resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
     resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
+    
+    resUpdates[m_nbrEqs*iSol + 3] = -m_prodTerm_k - m_destructionTerm_k;
     
     if (!m_isPerturbed)
     {
@@ -258,7 +270,7 @@ void KOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::configure ( Config::ConfigArgs& args )
+void KLogOmega2DSourceTerm::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
 
@@ -269,7 +281,7 @@ void KOmega2DSourceTerm::configure ( Config::ConfigArgs& args )
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::setup()
+void KLogOmega2DSourceTerm::setup()
 {
   CFAUTOTRACE;
   StdSourceTerm::setup();
@@ -282,7 +294,7 @@ void KOmega2DSourceTerm::setup()
   
   if (m_eulerVarSet.isNull())
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in KOmega2DSourceTerm!");
+    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in KLogOmega2DSourceTerm!");
   }
   cf_assert(m_nbrEqs == 6);
   
@@ -314,7 +326,7 @@ void KOmega2DSourceTerm::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void KOmega2DSourceTerm::unsetup()
+void KLogOmega2DSourceTerm::unsetup()
 {
   CFAUTOTRACE;
   StdSourceTerm::unsetup();
@@ -335,7 +347,7 @@ void KOmega2DSourceTerm::unsetup()
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSink > >
-    KOmega2DSourceTerm::needsSockets()
+    KLogOmega2DSourceTerm::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = StdSourceTerm::needsSockets();
 
@@ -348,7 +360,7 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSource > >
-  KOmega2DSourceTerm::providesSockets()
+  KLogOmega2DSourceTerm::providesSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSource > > result;
   result.push_back(&socket_wallShearStressVelocity);

@@ -4,11 +4,11 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/VectorialFunction.hh"
-#include "FluxReconstructionTurb/KOmega2DSourceTerm.hh"
+#include "FluxReconstructionTurb/KLogOmega2DSourceTerm.hh"
 #include "Common/SafePtr.hh"
 #include "NavierStokes/MultiScalarVarSet.hh"
 #include "NavierStokes/Euler2DVarSet.hh"
-#include "KOmega/NavierStokesKOmegaVarSetTypes.hh"
+#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ namespace COOLFluiD {
  *
  */
 class NavierStokesGReKO2DSourceTerm_Lang : 
-	public KOmega2DSourceTerm {
+	public KLogOmega2DSourceTerm {
   
 public:
   

@@ -1,0 +1,191 @@
+#include "Common/ShouldNotBeHereException.hh"
+#include "Common/NotImplementedException.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace KOmega {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE>      
+NavierStokesKLogOmegaPvt<BASE>::NavierStokesKLogOmegaPvt
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASE(name, model)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+NavierStokesKLogOmegaPvt<BASE>::~NavierStokesKLogOmegaPvt()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesKLogOmegaPvt<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+						  RealMatrix& values,
+						  const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      values(i,j) = (*states[j])[i];
+    }
+  }
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesKLogOmegaPvt<BASE>::setGradientVarGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& stateGradients,
+ std::vector< std::vector<RealVector*> >& gradVarGradients,
+ const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      *gradVarGradients[j][i] = *stateGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+void NavierStokesKLogOmegaPvt<BASE>::setStateGradients
+(const std::vector<RealVector*>& states,
+ const std::vector< std::vector<RealVector*> >& gradVarGradients,
+ std::vector< std::vector<RealVector*> >& stateGradients,
+ const CFuint stateSize)
+{
+  cf_assert(stateGradients.size() > 0);
+  const CFuint nbValues = stateGradients[0].size();
+  for (CFuint i = 0; i < nbValues; ++i)
+  {
+    for (CFuint j = 0; j < stateSize; ++j)
+    {
+      *stateGradients[j][i] = *gradVarGradients[j][i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesKLogOmegaPvt<BASE>::getLaminarDynViscosityFromGradientVars(const RealVector& state)
+{
+  const CFreal Tdim = this->_eulerModel->getTempRef()*state[this->_TID];
+  const CFreal pdim = this->_eulerModel->getPressRef()*state[0];
+  return this->getModel().getDynViscosityDim(pdim, Tdim)/
+    (this->getModel().getReferencePhysicalData())[NavierStokes::NSTurbTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesKLogOmegaPvt<BASE>::getDensity(const RealVector& state)
+{
+  return state[0]/(this->_eulerModel->getR()*state[this->_TID]);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+template <typename BASE> 
+void NavierStokesKLogOmegaPvt<BASE>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+  using namespace COOLFluiD::Common;
+  
+  // call  the parent setup()
+  BASE::setup();
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  const CFuint nbTurbEquations = this->_eulerModel->getNbScalarVars(0);
+  vector<std::string> names(dim + 2 + nbTurbEquations);
+  names[0] = "p";
+  names[1] = "u";
+  names[2] = "v";
+  if (dim == DIM_3D) {
+    names[3] = "w";
+  }
+  
+  this->_uID = 1;
+  this->_vID = 2;
+  this->_TID = 3;
+  if (dim == DIM_3D) {
+    this->_wID = 3;
+    this->_TID = 4;
+  }
+  
+  names[this->_TID] = "T";
+  
+  // Names for turbulent variables
+  names[this->_TID+1] = "K";
+  names[this->_TID+2] = "Omega";
+  
+  this->setVarNames(names);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASE> 
+CFreal NavierStokesKLogOmegaPvt<BASE>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  using namespace COOLFluiD::Physics::NavierStokes;
+  
+  /// @todo extremely bad programming here
+  
+  if (iEqSS == 0) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getModel().getPhysicalData())[NSTurbTerm::MUT]);
+  }
+  
+  if (iEqSS == 1) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getSigmaK() * (this->getModel().getPhysicalData())[NSTurbTerm::MUT]));
+  }
+  
+  if (iEqSS == 2) {
+    return ((this->getModel().getPhysicalData())[NSTurbTerm::MU] + (this->getSigmaOmega() * (this->getModel().getPhysicalData())[NSTurbTerm::MUT]));
+  }
+  
+  throw Common::ShouldNotBeHereException (FromHere(),"NavierStokesKLogOmegaPvt::getCurrUpdateDiffCoeff() : iEqSS should not be greater than 2. Some error happened upstream.");
+  
+  return 0.; // this is here not to get a warning in compilation
+}
+
+//////////////////////////////////////////////////////////////////////////////
+  
+template <typename BASE>
+CFreal NavierStokesKLogOmegaPvt<BASE>::getSqSoundSpeed(const RealVector& state)
+{
+  return this->_eulerModel->getGamma()*this->_eulerModel->getR()*state[this->_TID];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+ 
+template <typename BASE>
+void NavierStokesKLogOmegaPvt<BASE>::setGradientState(const RealVector& state)
+{
+  this->_gradState = state; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace KOmega
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
