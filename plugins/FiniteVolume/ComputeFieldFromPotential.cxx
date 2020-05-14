@@ -443,7 +443,7 @@ void ComputeFieldFromPotential::execute()
     }
 
     
-    CFLog(INFO, "State[20415] after B field =  " << (*(states[20415]))[4] << " " << (*(states[20415]))[5] << " " << (*(states[20415]))[6] << ", [x y z] = "<< states[20415]->getCoordinates() << "\n");
+    //CFLog(INFO, "State[20415] after B field =  " << (*(states[20415]))[4] << " " << (*(states[20415]))[5] << " " << (*(states[20415]))[6] << ", [x y z] = "<< states[20415]->getCoordinates() << "\n");
     
     // update the pastStates
     DataHandle<State*> pastStates  = socket_pastStates.getDataHandle();
