@@ -164,8 +164,8 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal avV     = m_solPhysData[EulerTerm::V];
     const CFreal avK     = std::max(m_solPhysData[iKPD],0.0);
     const CFreal avOmega = std::exp(m_solPhysData[iKPD+1]);
-    const CFreal avGa    = m_solPhysData[iKPD+2];
-    const CFreal avRe    = m_solPhysData[iKPD+3];
+    const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.0),1.0);
+    const CFreal avRe    = std::max(m_solPhysData[iKPD+3],20.0);
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
     
     ///Compute the blending function Fthetat
@@ -189,8 +189,8 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     const CFreal cthetat   = 0.03;
     const CFreal t         = (500.0 * mu )/(rho * avV * avV);
     cf_assert(avV > 0.);   
-    const CFreal Tu = 100.0 * (std::sqrt(2*avK/3))/(avV);
-
+    const CFreal Tu = min(max(100.0 * (std::sqrt(2.0*avK/3.0))/(avV),0.027),100.0);
+    
     if (!m_PGrad)
     {
       getRethetat(Tu);
@@ -281,7 +281,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     //destructionTerm_Ga *= m_Radius;
     
     //Destruction term of Re
-    CFreal destructionTerm_Re = 0;
+    CFreal destructionTerm_Re = 0.0;
 
     ///Make sure negative values dont propagate
     prodTerm_Ga        = max(0., prodTerm_Ga);
@@ -376,7 +376,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::getFlength(const CFreal Retheta)
 
 void NavierStokesGReKO2DSourceTerm_Lang::getRethetat(const CFreal Tu) 
 {
-  cf_assert(Tu > 0.0);   
+  cf_assert(Tu >= 0.0);   
   
   const CFreal overTu = 1.0/Tu;
            
@@ -461,14 +461,15 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const C
   
   // get start value by assuming Flambda = 1
   getRethetat(Tu);
-  CFreal theta0 = (mu/(rho*avV))*m_Rethetat;
-  CFreal theta1 = 0.0;
   
   CFreal thetaLimitFactor = 0.0;
   getLambda(thetaLimitFactor, 1., viscosity, iState);
   
   const CFreal thetaLimit = sqrt(0.1/fabs(thetaLimitFactor));
   
+  CFreal theta0 = min(max((mu/(rho*avV))*m_Rethetat,0.0),thetaLimit);//(mu/(rho*avV))*m_Rethetat;
+  CFreal theta1 = 0.0;
+ 
 //        vector<CFreal> Theta(2);
   CFreal lambda = 0;
   CFreal Flambda = 0;
@@ -515,15 +516,15 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const C
     const CFreal mainF = m_Rethetat*Flambda - (rho*avV)*theta0/mu;
     const CFreal mainFprime = Rethetatprime - (rho*avV)/mu;
     
-    theta1 = theta0 - mainF/mainFprime;
+    theta1 = min(max(theta0 - mainF/mainFprime,0.0),thetaLimit);
     
-    if (fabs(theta1) > thetaLimit)
-    {
-      (theta1 >= 0.0) ? theta1 = thetaLimit : theta1 = -thetaLimit;
-    }
+//    if (fabs(theta1) > thetaLimit)
+//    {
+//      theta1 = thetaLimit;
+//    }
     
    	//cout.precision(20); cout << "diff   " << Theta[1]/Theta[0] << endl;
-    if ( fabs(theta0-theta1) <= restheta || iter == MAXITER-1) 
+    if ( fabs(theta0-theta1) < restheta || iter == MAXITER-1) 
     {
       // compute new lambda
       getLambda(lambda, theta1, viscosity, iState);
@@ -532,6 +533,12 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const C
       getFlambda(lambda,Tu,Flambda,theta1,false);  
     
       m_Rethetat *= Flambda;
+      
+      const CFreal RethetaCheck = ((rho*avV)/mu)*theta1;
+      
+      if (iter == MAXITER-1) CFLog(INFO, "Max iter thetat reached!\n");
+      if (fabs((RethetaCheck-m_Rethetat)/m_Rethetat) > 100.0*TOL) CFLog(INFO, "Error of Re_thetat: " << (RethetaCheck-m_Rethetat)/m_Rethetat << "\n");
+          
       break;
     }
     

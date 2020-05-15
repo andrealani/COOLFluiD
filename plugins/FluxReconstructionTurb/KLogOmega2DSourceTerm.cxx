@@ -296,7 +296,7 @@ void KLogOmega2DSourceTerm::setup()
   {
     throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in KLogOmega2DSourceTerm!");
   }
-  cf_assert(m_nbrEqs == 6);
+  cf_assert(m_nbrEqs == 6 || m_nbrEqs == 8);
   
   m_eulerVarSet->getModel()->resizePhysicalData(m_solPhysData);
   

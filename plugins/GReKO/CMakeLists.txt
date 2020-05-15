@@ -31,6 +31,25 @@ NavierStokesGReKOPhysicalModel.cxx
 NavierStokesGReKOPhysicalModel.hh
 #WNavierStokes2DGReKOPuvt.cxx
 #WNavierStokes2DGReKOPuvt.hh
+Euler2DGReKLogOCons.cxx
+Euler2DGReKLogOCons.hh
+Euler2DGReKLogOConsToPuvtInPuvt.cxx
+Euler2DGReKLogOConsToPuvtInPuvt.hh
+Euler2DGReKLogOPuvt.cxx
+Euler2DGReKLogOPuvt.hh
+Euler2DGReKLogOPuvtToCons.cxx
+Euler2DGReKLogOPuvtToCons.hh
+Euler2DGReKLogOPuvtToConsInPuvt.cxx
+Euler2DGReKLogOPuvtToConsInPuvt.hh
+NavierStokes2DGReKLogOBSLPuvt.cxx
+NavierStokes2DGReKLogOBSLPuvt.hh
+NavierStokes2DGReKLogOPuvt.cxx
+NavierStokes2DGReKLogOPuvt.hh
+NavierStokes2DGReKLogOSSTPuvt.cxx
+NavierStokes2DGReKLogOSSTPuvt.hh
+NavierStokesGReKLogOPhysicalModel.ci
+NavierStokesGReKLogOPhysicalModel.cxx
+NavierStokesGReKLogOPhysicalModel.hh
 )
 
 LIST ( APPEND GReKO_cflibs NavierStokes KOmega )

@@ -303,14 +303,14 @@ void BCNoSlipWallTurb2D::computeGhostGradients
       const RealVector& normal = normals[iState];
     
       // gamma
-      RealVector& gammaGradI = *intGrads  [iState][nbrStateGrads-2];
-      RealVector& gammaGradG = *ghostGrads[iState][nbrStateGrads-2];
+      RealVector& gammaGradI = *intGrads  [iState][nbrGradVars-2];
+      RealVector& gammaGradG = *ghostGrads[iState][nbrGradVars-2];
       const CFreal nGammaGrad = gammaGradI[XX]*normal[XX] + gammaGradI[YY]*normal[YY];
       gammaGradG = gammaGradI - nGammaGrad*normal; //tempGradI - 2.0*nTempGrad*normal + m_wallQ*normal;
       
       // Ret
-      RealVector& RetGradI = *intGrads  [iState][nbrStateGrads-1];
-      RealVector& RetGradG = *ghostGrads[iState][nbrStateGrads-1];
+      RealVector& RetGradI = *intGrads  [iState][nbrGradVars-1];
+      RealVector& RetGradG = *ghostGrads[iState][nbrGradVars-1];
       const CFreal nRetGrad = RetGradI[XX]*normal[XX] + RetGradI[YY]*normal[YY];
       RetGradG = RetGradI - nRetGrad*normal;
     }
@@ -328,13 +328,13 @@ void BCNoSlipWallTurb2D::setup()
 
   // no flux point coordinates required
   m_needsSpatCoord = false;
-  
+
   m_varSetTurb = getMethodData().getUpdateVar().d_castTo<ConvTurb2DVarSet>();
+
   m_diffVarTurb = getMethodData().getDiffusiveVar().d_castTo<DiffTurb2DVarSet>();
 
   m_varSetTurb->getModel()->resizePhysicalData(m_intSolPhysData);
   m_varSetTurb->getModel()->resizePhysicalData(m_ghostSolPhysData);
-  
   
   m_xWallVelocity /= m_varSetTurb->getModel()->getVelRef();
   m_yWallVelocity /= m_varSetTurb->getModel()->getVelRef();
