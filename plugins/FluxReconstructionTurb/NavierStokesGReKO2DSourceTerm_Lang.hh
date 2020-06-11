@@ -65,7 +65,24 @@ public:
    */
   void addSourceTerm(RealVector& resUpdates);
   
+  /// Returns the DataSocket's that this command provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
+  
 private: // helper functions
+    
+  /// storage for effective gamma
+  Framework::DataSocketSource<CFreal> socket_gammaEff;
+  
+  /// storage for separation gamma
+  Framework::DataSocketSource<CFreal> socket_gammaSep;
+  
+  /// storage for the onset factor
+  Framework::DataSocketSource<CFreal> socket_fOnset;
+  
+  /// storage for the length factor
+  Framework::DataSocketSource<CFreal> socket_fLength;
   
   /// corresponding diffusive variable set
   void getVorticity(const CFuint iState);
@@ -106,6 +123,8 @@ private: // data
   CFreal   m_vorticity;
   CFreal  m_strain;
   bool     m_PGrad; 
+  CFreal m_FLambda;
+  bool m_decouple;
 
 }; // end of class NavierStokesGReKO2DSourceTerm_Lang
 
