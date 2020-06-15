@@ -391,7 +391,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     prodTerm_Ga        = max(0., prodTerm_Ga);
     prodTerm_Re        = max(0., prodTerm_Re);
     destructionTerm_Ga = min(0., destructionTerm_Ga);
-    destructionTerm_Re = min(0., prodTerm_Re);
+    //destructionTerm_Re = min(0., destructionTerm_Re);
       
     /// Compute the rhs contribution
     // and Store the unperturbed source terms
@@ -427,6 +427,8 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
       wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
       
       gammaEffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = gammaEff;
+      
+      gammaSep[(((*m_cellStates)[iSol]))->getLocalID()] = Gasep;
       
       fOnset[(((*m_cellStates)[iSol]))->getLocalID()] = Fonset;//Rev;//
       

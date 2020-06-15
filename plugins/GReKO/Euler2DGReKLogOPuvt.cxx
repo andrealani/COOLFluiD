@@ -245,7 +245,7 @@ void Euler2DGReKLogOPuvt::setDimensionalValuesPlusExtraValues
   const CFreal V2 = udim*udim + vdim*vdim;
   const CFreal V = std::sqrt(V2);
   // CFreal Tu=  100 * (std::sqrt(2*Kdim/3))/(V);
-  CFreal Tu = min(max( 100 * (std::sqrt(2*Kdim/3))/(V), 0.027),100.0);
+  CFreal Tu = min(max( 100 * (std::sqrt(2.0*max(Kdim,0.0)/3.0))/(V), 0.027),100.0);
   //const CFreal Tu       = 100 * (std::sqrt(2*Kdim/3))/(V);
   //const CFreal Tu1       = 100 * (std::sqrt(2*Kdim/3))/(std::max(V,1e-12));
   //const CFreal Tu1       = 100 * (std::sqrt(2*Kdim/3))/V; 
