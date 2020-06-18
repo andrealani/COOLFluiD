@@ -115,6 +115,9 @@ public:  // methods
                                       std::vector< std::vector< RealVector* > >& ghostGrads,
                                       const std::vector< RealVector >& normals,
                                       const std::vector< RealVector >& coords) = 0;
+   
+   /// set the transition criterion for the current flux point (only used in gamma-alpha)
+   void setTransitionCriterion(const CFuint iFlux, const bool transition) {m_transitionCriterion[iFlux] = transition;};
 
 protected: // methods
 
@@ -149,6 +152,9 @@ protected: // data
   
   /// variable for current face
   Framework::GeometricEntity* m_face;
+  
+  /// vector of bools telling whether the transition criterion is met in any of the flux point (only used in Gamma-Alpha)
+  std::vector< bool > m_transitionCriterion;
 
 }; // class BCStateComputer
 

@@ -608,7 +608,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetatwithPressureGradient(const C
   
   for (CFuint iter = 0; iter < MAXITER; ++iter)
   {
-    CFreal restheta = std::abs(theta0*TOL);
+    CFreal restheta = std::fabs(theta0*TOL);
 
     //The variables needed for the calculation of Re_thetat
     // compute new lambda

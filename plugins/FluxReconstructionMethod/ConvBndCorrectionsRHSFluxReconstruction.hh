@@ -83,7 +83,7 @@ protected: // functions
   virtual void executeOnTrs();
   
   /// compute the states and ghost states in the flx pnts
-  void computeFlxPntStates();
+  virtual void computeFlxPntStates();
   
   /// compute the interface flux
   virtual void computeInterfaceFlxCorrection();

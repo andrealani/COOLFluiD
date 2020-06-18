@@ -4,6 +4,7 @@
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -32,7 +33,8 @@ BCStateComputer::BCStateComputer(const std::string& name) :
   m_needsExtraVars(false),
   m_trsNames(),
   m_extraVars(CFNULL),
-  m_useDomainModel()
+  m_useDomainModel(),
+  m_transitionCriterion()
 {
   CFAUTOTRACE;
 
@@ -74,6 +76,18 @@ void BCStateComputer::setup()
   {
     addCurvatureToBndFaces();
   }
+  
+  // get the local FR data
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  cf_assert(frLocalData.size() > 0);
+  // for now, there should be only one type of element
+  cf_assert(frLocalData.size() == 1);
+  
+  // compute flux point coordinates
+  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  const CFuint nbrFaceFlxPnts = flxLocalCoords->size();
+  
+  m_transitionCriterion.resize(nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
