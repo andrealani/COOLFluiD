@@ -100,6 +100,12 @@ protected:
 
 
   static std::string getModuleName(); 
+  
+  virtual void getSToStateJacobian(const CFuint iState);
+  
+  virtual void getSToGradJacobian(const CFuint iState){};
+  
+  virtual bool isGradDependent(){return true;};
 
 protected: // data
   

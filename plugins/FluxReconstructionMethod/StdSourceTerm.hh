@@ -82,9 +82,20 @@ protected:
   virtual void addSrcTermJacob();
   
   /**
+   * add the src term analytical jacobian
+   */
+  virtual void addSrcTermJacobAna();
+  
+  /**
    * add the src term to the RHS
    */
   void updateRHS();
+  
+  virtual void getSToStateJacobian(const CFuint iState){};
+  
+  virtual void getSToGradJacobian(const CFuint iState){};
+  
+  virtual bool isGradDependent(){return false;};
 
 protected: // data
 
@@ -138,6 +149,12 @@ protected: // data
   
   /// bool telling whether the state is perturbed
   bool m_isPerturbed;
+  
+  /// bool telling whether analytical jacobian should be used.
+  bool m_useAnaJacob;
+  
+  /// jacobian of the ST to the state in a solution point
+  std::vector< RealVector > m_stateJacobian;
 
 }; // class StdSourceTerm
 

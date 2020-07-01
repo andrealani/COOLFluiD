@@ -46,12 +46,17 @@ StdSourceTerm::StdSourceTerm(const std::string& name) :
   m_derivResUpdates(),
   m_nbrSolPnts(),
   m_pertSol(),
-  m_isPerturbed()
+  m_isPerturbed(),
+  m_useAnaJacob(),
+  m_stateJacobian()
 {
   addConfigOptionsTo(this);
   
   m_addJacob = false;
   setParameter("AddJacob",&m_addJacob);
+  
+  m_useAnaJacob = false;
+  setParameter("AnalyticalJacob",&m_useAnaJacob); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -65,6 +70,8 @@ StdSourceTerm::~StdSourceTerm()
 void StdSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
     options.addConfigOption< bool >("AddJacob","Flag telling whether to add the jacobian");
+    
+    options.addConfigOption< bool >("AnalyticalJacob","Flag telling whether to compute the jacobian analytically (not implemented for all ST)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -116,6 +123,13 @@ void StdSourceTerm::setup()
   m_pertResUpdates.resize(resSize);
   m_resUpdates.resize(resSize);
   m_derivResUpdates.resize(resSize);
+  
+  m_stateJacobian.resize(m_nbrEqs);
+  
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+  {
+    m_stateJacobian[iEq].resize(m_nbrEqs);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -189,7 +203,14 @@ void StdSourceTerm::execute()
 	{
           m_isPerturbed = true;
             
-	  addSrcTermJacob();
+          if (!m_useAnaJacob)
+          {
+	    addSrcTermJacob();
+          }
+          else
+          {
+            addSrcTermJacobAna(); 
+          }
           
           m_isPerturbed = false;
 	}
@@ -297,6 +318,72 @@ void StdSourceTerm::addSrcTermJacob()
 
       // restore physical variable in state
       m_numJacob->restore(pertState[iEqPert]);
+    }
+  }
+//   if (m_cell->getID() == 49)
+//   {
+//   CFLog(VERBOSE,"accVol:\n");
+//    acc.printToScreen();
+//   }
+
+  if (getMethodData().doComputeJacobian())
+  {
+    // add the values to the jacobian matrix
+    m_lss->getMatrix()->addValues(acc);
+  }
+
+  // reset to zero the entries in the block accumulator
+  acc.reset();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSourceTerm::addSrcTermJacobAna()
+{
+  // get residual factor
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  // dereference accumulator
+  BlockAccumulator& acc = *m_acc;
+
+  // set block row and column indices
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    acc.setRowColIndex(iSol,(*m_cellStates)[iSol]->getLocalID());
+  }
+
+  // loop over the states/solpnts in this cell to perturb the states
+  for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+  {
+    // dereference state
+    State& pertState = *(*m_cellStates)[m_pertSol];
+    
+    getSToGradJacobian(m_pertSol);
+
+    // loop over the variables in the state
+    for (CFuint iEqPert = 0; iEqPert < m_nbrEqs; ++iEqPert)
+    {
+//      // perturb physical variable in state
+//      m_numJacob->perturb(iEqPert,pertState[iEqPert]);
+//
+//      m_pertResUpdates = 0.;
+//
+//      // compute the perturbed residual updates (-divFD+divhFD)
+//      addSourceTerm(m_pertResUpdates);
+//
+//      // compute the finite difference derivative of the volume term
+//      m_numJacob->computeDerivative(m_pertResUpdates,m_resUpdates,m_derivResUpdates);
+
+      // multiply residual update derivatives with residual factor
+      m_stateJacobian[iEqPert] *= resFactor;
+
+      // add the derivative of the residual updates to the accumulator
+      m_stateJacobian[iEqPert] *= m_solPntJacobDets[m_pertSol];
+          
+      acc.addValues(m_pertSol,m_pertSol,iEqPert,&m_stateJacobian[iEqPert][0]);
+
+//      // restore physical variable in state
+//      m_numJacob->restore(pertState[iEqPert]);
     }
   }
 //   if (m_cell->getID() == 49)

@@ -77,6 +77,97 @@ void KLogOmega2DSourceTerm::getSourceTermData()
   StdSourceTerm::getSourceTermData();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
+{
+  // reset the jacobian
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+  {
+    m_stateJacobian[iEq] = 0.0;
+  }
+  
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
+    
+  /// destruction term of k
+    
+  const CFreal betaStar = navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]));
+  const CFreal avK     = std::max((*((*m_cellStates)[iState]))[4],0.0);
+  const CFreal avOmega = std::exp((*((*m_cellStates)[iState]))[5]);
+  const CFreal T = max(0.0,(*((*m_cellStates)[iState]))[3]);
+  const CFreal p = max(0.0,(*((*m_cellStates)[iState]))[0]);
+  const CFreal rho = max(navierStokesVarSet->getDensity(*((*m_cellStates)[iState])),0.0);
+  const CFreal R = m_eulerVarSet->getModel()->getR();
+  const CFreal overRT = 1.0/(R*T);
+    
+  //p
+  m_stateJacobian[0][4] = -avOmega * avK * betaStar * overRT;
+  
+  //T
+  m_stateJacobian[3][4] = avOmega * avK * betaStar * p/(R*T*T);
+  
+  //k
+  m_stateJacobian[4][4] = -avOmega * betaStar * rho;
+  
+  //logOmega
+  m_stateJacobian[5][4] = -avOmega * avK * betaStar * rho;
+  
+  /// destruction term of logOmega
+  
+  const CFreal beta = navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
+  
+  //p
+  m_stateJacobian[0][5] = -avOmega * beta * overRT;
+  
+  //T
+  m_stateJacobian[3][5] = avOmega * beta * p/(R*T*T);
+  
+  //logOmega
+  m_stateJacobian[5][5] = -avOmega * beta * rho;
+  
+  /// production term of k
+  
+  const CFuint uID = 1;//getStateVelocityIDs()[XX];
+  const CFuint vID = 2;//getStateVelocityIDs()[YY];
+  const CFreal dux = (*(m_cellGrads[iState][uID]))[XX];
+  const CFreal duy = (*(m_cellGrads[iState][uID]))[YY]; 
+  const CFreal dvx = (*(m_cellGrads[iState][vID]))[XX]; 
+  const CFreal dvy = (*(m_cellGrads[iState][vID]))[YY]; 
+
+  const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
+  const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
+  const CFreal mutTerm = coeffTauMu*(4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx);
+  
+  //p
+  m_stateJacobian[0][4] += mutTerm*avK*overRT/avOmega - (2./3.)*avK*(dux+dvy)*coeffTauMu*overRT;
+  
+  //T
+  m_stateJacobian[3][4] += -mutTerm*avK*p/(R*T*T*avOmega) + (2./3.)*avK*(dux+dvy)*coeffTauMu*p/(R*T*T);
+  
+  //k
+  m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy)*coeffTauMu + mutTerm*rho/avOmega;
+  
+  //logOmega
+  m_stateJacobian[5][4] +=  -mutTerm*rho*avK/avOmega;
+  
+  /// production of logOmega
+  
+  //p
+  m_stateJacobian[0][5] += navierStokesVarSet->getGammaCoef()*(mutTerm*overRT/avOmega - (2./3.)*(dux+dvy)*coeffTauMu*overRT);
+  
+  //T
+  m_stateJacobian[3][5] += navierStokesVarSet->getGammaCoef()*(-mutTerm*p/(R*T*T*avOmega) + (2./3.)*(dux+dvy)*coeffTauMu*p/(R*T*T));
+  
+  //k
+  //m_stateJacobian[4][5] += 0.0;
+  
+  //logOmega
+  m_stateJacobian[5][5] +=  -navierStokesVarSet->getGammaCoef()*rho*mutTerm/avOmega;
+  
+  
+  
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 void KLogOmega2DSourceTerm::computeProductionTerm(const CFuint iState, 
