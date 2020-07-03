@@ -104,18 +104,14 @@ void StdSourceTerm::setup()
   const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
     
   const CFuint interval = iter - iterFreeze;
-      
-  if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
-  {
-        
-    if (m_addJacob)
-    { 
-      // get the linear system solver
-      m_lss = getMethodData().getLinearSystemSolver()[0];
+          
+  if (m_addJacob)
+  { 
+    // get the linear system solver
+    m_lss = getMethodData().getLinearSystemSolver()[0];
 
-      // get the numerical Jacobian computer
-      m_numJacob = getMethodData().getNumericalJacobian();
-    }
+    // get the numerical Jacobian computer
+    m_numJacob = getMethodData().getNumericalJacobian();
   }
   
   const CFuint resSize = m_nbrSolPnts*m_nbrEqs;
@@ -159,6 +155,12 @@ void StdSourceTerm::execute()
   StdTrsGeoBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.trs = trs;
   
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+    
+  const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+    
+  const CFuint interval = iter - iterFreeze;
+  
   if (m_addJacob)
   {
     // create blockaccumulator
@@ -199,7 +201,7 @@ void StdSourceTerm::execute()
 	
 	updateRHS();
 	
-	if (m_addJacob)
+	if (m_addJacob && (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0))
 	{
           m_isPerturbed = true;
             
@@ -355,10 +357,8 @@ void StdSourceTerm::addSrcTermJacobAna()
   // loop over the states/solpnts in this cell to perturb the states
   for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
   {
-    // dereference state
-    State& pertState = *(*m_cellStates)[m_pertSol];
-    
-    getSToGradJacobian(m_pertSol);
+    // compute the jacobian to state
+    getSToStateJacobian(m_pertSol);
 
     // loop over the variables in the state
     for (CFuint iEqPert = 0; iEqPert < m_nbrEqs; ++iEqPert)
@@ -386,6 +386,28 @@ void StdSourceTerm::addSrcTermJacobAna()
 //      m_numJacob->restore(pertState[iEqPert]);
     }
   }
+  
+  if (isGradDependent())
+  {
+//    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+//    {
+//      // compute the jacobian to gradient
+//      getSToGradJacobian(m_pertSol);
+//      
+//      // loop over the variables in the state
+//      for (CFuint iEqPert = 0; iEqPert < m_nbrEqs; ++iEqPert)
+//      {
+//        // multiply residual update derivatives with residual factor
+//        m_stateJacobian[iEqPert] *= resFactor;
+//
+//        // add the derivative of the residual updates to the accumulator
+//        m_stateJacobian[iEqPert] *= m_solPntJacobDets[m_pertSol];
+//          
+//        //acc.addValues(m_pertSol,m_pertSol,iEqPert,&m_stateJacobian[iEqPert][0]);
+//      }  
+//    } 
+  }
+  
 //   if (m_cell->getID() == 49)
 //   {
 //   CFLog(VERBOSE,"accVol:\n");

@@ -103,7 +103,7 @@ protected:
   
   virtual void getSToStateJacobian(const CFuint iState);
   
-  virtual void getSToGradJacobian(const CFuint iState){};
+  virtual void getSToGradJacobian(const CFuint iState);
   
   virtual bool isGradDependent(){return true;};
 
