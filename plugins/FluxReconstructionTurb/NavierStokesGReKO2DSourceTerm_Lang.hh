@@ -70,6 +70,12 @@ public:
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
   
+  virtual void getSToStateJacobian(const CFuint iState);
+  
+  virtual void getSToGradJacobian(const CFuint iState){};
+  
+  virtual bool isGradDependent(){return true;};
+  
 private: // helper functions
     
   /// storage for effective gamma
@@ -92,8 +98,12 @@ private: // helper functions
   void getRethetac(const CFreal Retheta);
 
   void getFlength(const CFreal Retheta);
+  
+  CFreal getFlengthDeriv(const CFreal Retheta);
 
   void getRethetat(const CFreal Tu);  
+  
+  CFreal getRethetatDeriv(const CFreal Tu); 
   
   void getLambda(CFreal& lambda, const CFreal theta, const CFreal viscosity, const CFuint iState);
 
@@ -125,6 +135,7 @@ private: // data
   bool     m_PGrad; 
   CFreal m_FLambda;
   bool m_decouple;
+  bool m_limPRe;
 
 }; // end of class NavierStokesGReKO2DSourceTerm_Lang
 

@@ -41,6 +41,8 @@ void NavierStokesGReKO2DSourceTerm_Lang::defineConfigOptions(Config::OptionList&
  options.addConfigOption< CFreal >("Omegainf","Omega at the farfield");
  options.addConfigOption< bool >("PGrad","pressure Gradient");
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
+ options.addConfigOption< bool >("LimPRe","Limit P_Re.");
+ 
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,6 +75,9 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   
   m_decouple = false;
   setParameter("Decouple",&m_decouple);
+  
+  m_limPRe = false;
+  setParameter("LimPRe",&m_limPRe);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,6 +127,294 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   result.push_back(&socket_fOnset);
   result.push_back(&socket_fLength);
   return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iState)
+{
+  // reset the jacobian
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+  {
+    m_stateJacobian[iEq] = 0.0;
+  }
+  
+  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
+    
+  /// destruction term of k
+    
+  const CFreal betaStar = navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]));
+  const CFreal avK     = max((*((*m_cellStates)[iState]))[4],0.0);
+  const CFreal avOmega = exp((*((*m_cellStates)[iState]))[5]);
+  const CFreal T = max(0.0,(*((*m_cellStates)[iState]))[3]);
+  const CFreal p = max(0.0,(*((*m_cellStates)[iState]))[0]);
+  const CFreal rho = max(navierStokesVarSet->getDensity(*((*m_cellStates)[iState])),0.0);
+  const CFreal R = m_eulerVarSet->getModel()->getR();
+  const CFreal overRT = 1.0/(R*T);
+  const CFreal pOverRTT = p/(R*T*T);
+  const CFreal overOmega = 1.0/avOmega;
+  const CFreal avV = sqrt((*((*m_cellStates)[iState]))[1]*(*((*m_cellStates)[iState]))[1]+(*((*m_cellStates)[iState]))[2]*(*((*m_cellStates)[iState]))[2]);
+  
+  const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[6],0.0),1.0);
+  const CFreal avRe    = max((*((*m_cellStates)[iState]))[7],20.0);
+  
+  const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
+  const CFreal mut = navierStokesVarSet->getTurbDynViscosityFromGradientVars(*((*m_cellStates)[iState]), m_cellGrads[iState]);
+  
+  //Compute _Retheta_C
+  getRethetac(avRe);
+  
+  //Compute Flength
+  getFlength(avRe);
+  
+  //Compute Strain 
+  getStrain(0.0,iState);
+  
+  // Get Vorticity
+  getVorticity(iState);
+  
+  ///Compute the blending function Fthetat
+  const CFreal  Rew         = (rho * m_currWallDist[iState] * m_currWallDist[iState] * avOmega)/(mu);   
+  const CFreal  Fwake1      = (1e-5 * Rew)*(1e-5 * Rew);   
+  const CFreal  Fwake       = exp(-Fwake1);
+  const CFreal  thetaBL     = (avRe*mu)/(rho*avV);
+  const CFreal  deltaBL     = (0.5*15*thetaBL);
+  const CFreal  delta       = (50.0 * m_vorticity * m_currWallDist[iState] * deltaBL)/(avV);
+  const CFreal  coefFtheta0 = (m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta);
+  const CFreal  coefFtheta1 = exp(-coefFtheta0);
+  const CFreal  Ftheta1     = Fwake * coefFtheta1;
+  const CFreal  ce2         = 50.0;
+  const CFreal  Ftheta3     = 1-(((ce2*avGa-1.0)/(ce2-1.0))*((ce2*avGa-1.0)/(ce2-1.0)));
+  const CFreal  Ftheta4     = max(Ftheta1,Ftheta3);
+  const CFreal  Fthetat     = min(Ftheta4,1.0);
+  
+  const CFreal Rt         = (rho*avK)/(mu*avOmega);
+    
+  const CFreal Freattach0 = pow(Rt/20.0,4);//exp(-Rt/20);
+  const CFreal Freattach  = exp(-Freattach0);//std::pow(Freattach0,4);
+  
+  const CFreal Rev        = (rho*m_currWallDist[iState]*m_currWallDist[iState]*m_strain)/(mu);
+  const CFreal Gasep1     = ((Rev)/((3.235 *  m_Rethetac)))-1.0;
+  const CFreal Gasep2     = max(0.,Gasep1);
+  const CFreal Gasep3     = 2.0*Gasep2*Freattach;
+  const CFreal Gasep4     = min(Gasep3,2.0);
+  const CFreal Gasep      = Gasep4*Fthetat;
+
+  ///gammaEff
+  const CFreal gammaEff  = max(avGa,Gasep);
+  
+  const CFreal coeffDk1  = std::max(gammaEff,0.1);
+  const CFreal coeffDk   = std::min(coeffDk1,1.0);
+    
+  //p
+  m_stateJacobian[0][4] = -avOmega * avK * betaStar * overRT * coeffDk;
+  
+  //T
+  m_stateJacobian[3][4] = avOmega * avK * betaStar * pOverRTT * coeffDk;
+  
+  //k
+  m_stateJacobian[4][4] = -avOmega * betaStar * rho * coeffDk;
+  
+  //logOmega
+  m_stateJacobian[5][4] = -avOmega * avK * betaStar * rho * coeffDk;
+  
+  //gamma
+  m_stateJacobian[6][4] = -avOmega * avK * betaStar * rho;
+  
+  /// destruction term of logOmega
+  
+  const CFreal beta = navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
+  
+  //p
+  m_stateJacobian[0][5] = -avOmega * beta * overRT;
+  
+  //T
+  m_stateJacobian[3][5] = avOmega * beta * pOverRTT;
+  
+  //logOmega
+  m_stateJacobian[5][5] = -avOmega * beta * rho;
+  
+  /// production term of k
+  
+  const CFuint uID = 1;//getStateVelocityIDs()[XX];
+  const CFuint vID = 2;//getStateVelocityIDs()[YY];
+  const CFreal dux = (*(m_cellGrads[iState][uID]))[XX];
+  const CFreal duy = (*(m_cellGrads[iState][uID]))[YY]; 
+  const CFreal dvx = (*(m_cellGrads[iState][vID]))[XX]; 
+  const CFreal dvy = (*(m_cellGrads[iState][vID]))[YY]; 
+
+  const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
+  const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+  
+  //p
+  m_stateJacobian[0][4] += (mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*coeffTauMu*overRT) * gammaEff;
+  
+  //T
+  m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy)*coeffTauMu)*pOverRTT * gammaEff;
+  
+  //k
+  m_stateJacobian[4][4] += (-(2./3.)*rho*(dux+dvy)*coeffTauMu + mutTerm*rho*overOmega) * gammaEff;
+  
+  //logOmega
+  m_stateJacobian[5][4] +=  -mutTerm*rho*avK*overOmega * gammaEff;
+  
+  //gamma
+  m_stateJacobian[6][4] +=  mutTerm*mut-coeffTauMu*(2./3.)*(avK * rho)*(dux+dvy);
+  
+  /// production of logOmega
+  
+  const CFreal gamma = navierStokesVarSet->getGammaCoef();
+  const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();
+  const CFreal sigmaOmega2 = navierStokesVarSet->getSigmaOmega2();
+  
+  const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
+  
+  //p
+  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*coeffTauMu*overRT) + pOmegaFactor*overRT*overOmega;
+  
+  //T
+  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)*coeffTauMu) - pOmegaFactor*pOverRTT*overOmega;
+  
+  //k
+  //m_stateJacobian[4][5] += 0.0;
+  
+  //logOmega
+  m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
+  
+  
+  // production gamma
+  
+  const CFreal  Fonset1 = (Rev )/(2.193*m_Rethetac);//(Rev )/(2.93*m_Rethetac);
+    
+  const CFreal  Fonset2 = std::pow(Fonset1,4);
+  const CFreal  Fonset3 = std::max(Fonset1,Fonset2);
+  const CFreal  Fonset4 = std::min(Fonset3,2.0);
+  const CFreal  Fonset6 = 1-((Rt/2.5)*(Rt/2.5)*(Rt/2.5)) ;
+  const CFreal  Fonset7 = std::max(Fonset6,0.);
+  const CFreal  Fonset8 = (Fonset4 - Fonset7);
+  const CFreal  Fonset  = std::max(Fonset8,0.);
+  
+  const CFreal ca1       = 2.0;
+  const CFreal ce1       = 1.0;
+  const CFreal ca2 =  0.06;
+  const CFreal GaFonset1 = avGa * Fonset;
+  const CFreal GaFonset  = sqrt(GaFonset1);
+    
+  // This is missing in FV wrt Flength!!!
+  const CFreal FSubLayer0 = Rew/200.0 * Rew/200.0;
+  const CFreal FSubLayer = exp(-FSubLayer0);
+  const CFreal FlengthTot = m_Flength * (1.0 - FSubLayer) + 40.0*FSubLayer;
+  
+  const CFreal PGamma = FlengthTot * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
+  
+  const CFreal FlengthDeriv = getFlengthDeriv(avRe);
+  
+  if (PGamma > 0.0)
+  {
+  //gamma
+  m_stateJacobian[6][6] +=  FlengthTot * ca1 * rho * m_strain * (-GaFonset*ce1 + 0.5*(1.0 - ce1*avGa)*Fonset/max(GaFonset,0.01));
+  
+  //p
+  m_stateJacobian[0][6] +=  FlengthTot * ca1 * overRT * m_strain * GaFonset * (1.0 - ce1*avGa);
+  
+  //T
+  m_stateJacobian[3][6] +=  -FlengthTot * ca1 * pOverRTT * m_strain * GaFonset * (1.0 - ce1*avGa);
+  
+  //Re
+  m_stateJacobian[7][6] +=  FlengthDeriv * (1.0-FSubLayer) * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
+  
+  // sublayer contribution
+  const CFreal SLTerm = FSubLayer*(40.0-m_Flength)*-2.0*Rew/200.0 * m_currWallDist[iState] * m_currWallDist[iState]/(200.0*mu)*avOmega;
+  
+  //logOmega
+  m_stateJacobian[5][6] += SLTerm*rho;
+  
+  //p
+  m_stateJacobian[0][6] += SLTerm*overRT;
+  
+  //T
+  m_stateJacobian[3][6] += -SLTerm*pOverRTT;
+  }
+  
+  
+  
+  // production  Re
+  
+  const CFreal cthetat   = 0.03;
+  const CFreal t         = (500.0 * mu )/(rho * avV * avV);
+  const CFreal tTerm = 2.0*rho*avV*avV/(500.0*mu);
+  const CFreal Tu = min(max(100.0 * (std::sqrt(2.0*avK/3.0))/(avV),0.027),100.0);
+  
+  if (!m_PGrad) getRethetat(Tu);
+  
+  const CFreal PReTheta = cthetat * (rho/t) * (m_Rethetat - avRe) * (1.0 - Fthetat);
+  
+  if (PReTheta > 0.0 || !m_limPRe)
+  {
+  // Re
+  m_stateJacobian[7][7] +=  -cthetat * (rho/t) * (1.0 - Fthetat);
+  
+  // p
+  m_stateJacobian[0][7] +=  cthetat * tTerm * overRT * (m_Rethetat - avRe) * (1.0 - Fthetat);
+  
+  // T
+  m_stateJacobian[3][7] +=  -cthetat * tTerm * pOverRTT * (m_Rethetat - avRe) * (1.0 - Fthetat);
+  
+  // u
+  m_stateJacobian[1][7] +=  cthetat * 2.0*rho*rho*(*((*m_cellStates)[iState]))[1]/(500.0*mu) * (m_Rethetat - avRe) * (1.0 - Fthetat);
+  
+  // v
+  m_stateJacobian[2][7] +=  cthetat * 2.0*rho*rho*(*((*m_cellStates)[iState]))[2]/(500.0*mu) * (m_Rethetat - avRe) * (1.0 - Fthetat);
+  
+  /// contribution ReEq
+  
+  const CFreal ReEqDeriv = getRethetatDeriv(Tu);
+  const CFreal ReEqPTerm = cthetat * (rho/t) * (1.0 - Fthetat);
+  
+  // k
+  m_stateJacobian[4][7] += ReEqPTerm * ReEqDeriv * 50.0*sqrt(2.0/(3.0*max(avK,1.0e-10)))/avV;
+  
+  // u
+  m_stateJacobian[1][7] += -ReEqPTerm * ReEqDeriv * 100.0*sqrt(2.0*avK/3.0)*(*((*m_cellStates)[iState]))[1]/(avV*avV*avV);
+  
+  // v
+  m_stateJacobian[2][7] += -ReEqPTerm * ReEqDeriv * 100.0*sqrt(2.0*avK/3.0)*(*((*m_cellStates)[iState]))[2]/(avV*avV*avV);
+  }
+  
+  // destruction gamma
+  
+  const CFreal  Fturb1 =  pow(Rt/4.0,4);
+  const CFreal  Fturb =  exp(-Fturb1);
+  
+  const CFreal DGamma = -ca2 * rho *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
+  
+  if (DGamma < 0.0)
+  {
+  // gamma
+  m_stateJacobian[6][6] +=  -ca2 * rho *  m_vorticity * Fturb * (ce2*avGa - 1.0) - ce2 * ca2 * rho *  m_vorticity * Fturb * avGa;
+  
+  // p
+  m_stateJacobian[0][6] +=  -ca2 * overRT *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
+  
+  // T
+  m_stateJacobian[3][6] +=  ca2 * pOverRTT *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
+  
+  // Fturb contribution
+  const CFreal FTurbTerm = -DGamma * pow(Rt/4.0,3) / (mu*avOmega);
+  
+  // k
+  m_stateJacobian[4][6] += FTurbTerm*rho;
+  
+  // logOmega
+  m_stateJacobian[5][6] += -FTurbTerm*rho*avK;
+  
+  // p
+  m_stateJacobian[0][6] += FTurbTerm*avK*overRT;
+  
+  // T
+  m_stateJacobian[3][6] += -FTurbTerm*avK*pOverRTT;
+  }
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -389,7 +682,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
 
     ///Make sure negative values dont propagate
     prodTerm_Ga        = max(0., prodTerm_Ga);
-    prodTerm_Re        = max(0., prodTerm_Re);
+    if (m_limPRe) prodTerm_Re = max(0., prodTerm_Re);
     destructionTerm_Ga = min(0., destructionTerm_Ga);
     //destructionTerm_Re = min(0., destructionTerm_Re);
       
@@ -489,6 +782,32 @@ void NavierStokesGReKO2DSourceTerm_Lang::getFlength(const CFreal Retheta)
     m_Flength = 0.3188;
   }
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CFreal NavierStokesGReKO2DSourceTerm_Lang::getFlengthDeriv(const CFreal Retheta)
+{
+  CFreal deriv = 0.0;
+    
+  if (Retheta < 400)
+  {  
+    deriv = -119.27e-4 - 2.0*132.567e-6*Retheta;   
+  }
+  else if ((Retheta >= 400 ) && (Retheta < 596)) 
+  {
+    deriv = -123.939e-2 + 2.0*194.548e-5*Retheta - 3.0*101.695e-8*Retheta*Retheta;
+  }
+  else if ((Retheta >= 596 ) && (Retheta < 1200)) 
+  {
+    deriv = -3.0e-4;
+  }
+  else 
+  {
+    deriv = 0.0;
+  }
+  
+  return deriv;
+}
  
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -510,6 +829,30 @@ void NavierStokesGReKO2DSourceTerm_Lang::getRethetat(const CFreal Tu)
     m_Rethetat = 331.5*std::pow(lamco5,pwtu);
   }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CFreal NavierStokesGReKO2DSourceTerm_Lang::getRethetatDeriv(const CFreal Tu) 
+{
+  cf_assert(Tu >= 0.0);   
+  
+  CFreal deriv = 0.0;
+  
+  const CFreal overTu = 1.0/Tu;
+           
+  if (Tu<=1.3) 
+  {
+    deriv = (-589.428 - 2.0 * 0.2196*overTu*overTu*overTu);
+  }
+  else 
+  {
+    const CFreal lamco5   = Tu - 0.5658;
+    const CFreal pwtu   = -1.671;
+    
+    deriv = -331.5*std::pow(lamco5,pwtu) * 0.671;
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void NavierStokesGReKO2DSourceTerm_Lang::getLambda(CFreal& lambda, const CFreal theta, const CFreal viscosity, const CFuint iState)
