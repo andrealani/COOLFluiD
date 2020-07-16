@@ -322,9 +322,9 @@ void StdSourceTerm::addSrcTermJacob()
       m_numJacob->restore(pertState[iEqPert]);
     }
   }
-//   if (m_cell->getID() == 49)
+//   if (m_cell->getID() == 1)
 //   {
-//   CFLog(VERBOSE,"accVol:\n");
+//   CFLog(VERBOSE,"accST:\n");
 //    acc.printToScreen();
 //   }
 
@@ -343,7 +343,7 @@ void StdSourceTerm::addSrcTermJacob()
 void StdSourceTerm::addSrcTermJacobAna()
 {
   // get residual factor
-  const CFreal resFactor = getMethodData().getResFactor();
+  const CFreal resFactor = -getMethodData().getResFactor();
 
   // dereference accumulator
   BlockAccumulator& acc = *m_acc;
@@ -379,6 +379,8 @@ void StdSourceTerm::addSrcTermJacobAna()
 
       // add the derivative of the residual updates to the accumulator
       m_stateJacobian[iEqPert] *= m_solPntJacobDets[m_pertSol];
+      
+      //if (m_cell->getID() == 1) CFLog(INFO,"solJacob: " << m_solPntJacobDets[m_pertSol] << "\n");
           
       acc.addValues(m_pertSol,m_pertSol,iEqPert,&m_stateJacobian[iEqPert][0]);
 
@@ -391,6 +393,8 @@ void StdSourceTerm::addSrcTermJacobAna()
   {
 //    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
 //    {
+//      computeGradToStateJacobianAna();
+//              
 //      // compute the jacobian to gradient
 //      getSToGradJacobian(m_pertSol);
 //      
@@ -408,9 +412,9 @@ void StdSourceTerm::addSrcTermJacobAna()
 //    } 
   }
   
-//   if (m_cell->getID() == 49)
+//   if (m_cell->getID() == 1)
 //   {
-//   CFLog(VERBOSE,"accVol:\n");
+//   CFLog(VERBOSE, "accST:\n");
 //    acc.printToScreen();
 //   }
 
@@ -434,6 +438,170 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
   result.push_back(&socket_rhs);
 
   return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void StdSourceTerm::computeGradToStateJacobianAna()
+{
+  CFLog(VERBOSE, "computeGradToStateJacobianAna\n");
+  
+//  // reset the jacobian
+//  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+//  { 
+//    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+//    {
+//      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+//      {
+//        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//        { 
+//          m_gradientStateJacobian[m_pertSide][m_pertSol][LEFT][jSol][iDim] = 0.0;
+//          m_gradientStateJacobian[m_pertSide][m_pertSol][RIGHT][jSol][iDim] = 0.0;
+//        }
+//      }
+//    }
+//  }
+//  
+//  // get the face flux point normals
+//  DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
+//    
+//  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+//  {
+//    // variable for the other side
+//    const CFuint iOtherSide = m_pertSide == LEFT ? RIGHT : LEFT;
+//    
+//    // loop over the sol pnts of which the gradients will be derived
+//    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+//    {
+//      // loop over the sol pnts to which to derive
+//      for (CFuint jSol = 0; jSol < m_nbrSolSolDep; ++jSol)
+//      {
+//        const CFuint jSolIdx = (*m_solSolDep)[m_pertSol][jSol];  
+//        
+//        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//        {                    
+//          for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+//          {
+//            m_gradientStateJacobian[m_pertSide][jSolIdx][m_pertSide][m_pertSol][iDim] += m_neighbCellFluxProjVects[m_pertSide][jDim][m_pertSol][iDim] * (*m_solPolyDerivAtSolPnts)[jSolIdx][jDim][m_pertSol];
+//          }
+//        }
+//      }
+//    }
+//    
+//    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+//    {
+//      // local flux point indices in the left and right cell
+//      const CFuint flxPntIdxThis = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlx];
+//      const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlx];
+//      
+//      for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+//      {
+//        const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol]; 
+//    
+//        for (CFuint jSol = 0; jSol < m_nbrSolDep; ++jSol)
+//        {
+//          const CFuint jSolIdx = (*m_flxSolDep)[flxPntIdxThis][jSol];  
+//          const CFuint jSolIdxOther = (*m_flxSolDep)[flxPntIdxOther][jSol];  
+//        
+//          for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//          {
+//            m_gradientStateJacobian[m_pertSide][jSolIdx][m_pertSide][pertSolIdx][iDim] -= 0.5 * m_corrFctDiv[jSolIdx][flxPntIdxThis] * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] *
+//                    (*m_faceMappedCoordDir)[m_orient][m_pertSide]*m_faceJacobVecs[iFlx][iDim];
+//         
+//            m_gradientStateJacobian[iOtherSide][jSolIdxOther][m_pertSide][pertSolIdx][iDim] += 0.5 * m_corrFctDiv[jSolIdxOther][flxPntIdxOther] * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][pertSolIdx] *
+//                    (*m_faceMappedCoordDir)[m_orient][iOtherSide]*m_faceJacobVecs[iFlx][iDim];
+//          }
+//        }   
+//      }
+//    }
+//  
+//    // Add the contribution of the correction to the gradients for each face
+//    // compute other face contributions to the gradients
+//    const CFuint nbrOtherFaces = m_otherFaceLocalIdxs[m_pertSide].size();
+//  
+//    for (CFuint iFace = 0; iFace < nbrOtherFaces; ++iFace)
+//    {
+//      // get local face index
+//      const CFuint faceIdx = m_otherFaceLocalIdxs[m_pertSide][iFace];
+//      
+//      const CFuint faceID = (*m_faces[m_pertSide])[faceIdx]->getID();
+//      
+//      if ((*m_isFaceOnBoundary[m_pertSide])[faceIdx])
+//      {  
+//        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+//        {
+//          const CFuint currFlxIdx = (*m_faceFlxPntConn)[faceIdx][iFlxPnt];
+//          
+//          for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+//          {
+//            const CFuint pertSolIdx = (*m_flxSolDep)[currFlxIdx][m_pertSol];        
+//        
+//            for (CFuint jSol = 0; jSol < m_nbrSolDep; ++jSol)
+//            {
+//              const CFuint jSolIdx = (*m_flxSolDep)[currFlxIdx][jSol]; 
+//    
+//              for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//              {
+//                m_gradientStateJacobian[m_pertSide][jSolIdx][m_pertSide][pertSolIdx][iDim] -= 0.5 * m_corrFctDiv[jSolIdx][currFlxIdx] * (*m_solPolyValsAtFlxPnts)[currFlxIdx][pertSolIdx] *
+//                          (*m_faceLocalDir)[faceIdx]*flxPntNormals[faceID*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+//              }
+//            }
+//          }
+//        }
+//      }
+//      else
+//      {
+//        // Get orientation of face
+//        const CFuint orient = (*m_faceOrients[m_pertSide])[faceIdx];
+//        
+//        // cell side with respect to this face
+//        const CFuint cellSide = (*m_currCellSide[m_pertSide])[faceIdx];
+//      
+//        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+//        {
+//          const CFuint currFlxIdx = (*m_faceFlxPntConnPerOrient)[orient][cellSide][iFlxPnt];
+//          
+//          for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+//          {
+//            const CFuint pertSolIdx = (*m_flxSolDep)[currFlxIdx][m_pertSol];        
+//        
+//            for (CFuint jSol = 0; jSol < m_nbrSolDep; ++jSol)
+//            {
+//              const CFuint jSolIdx = (*m_flxSolDep)[currFlxIdx][jSol]; 
+//    
+//              for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//              {
+//                m_gradientStateJacobian[m_pertSide][jSolIdx][m_pertSide][pertSolIdx][iDim] -= 0.5 * m_corrFctDiv[jSolIdx][currFlxIdx] * (*m_solPolyValsAtFlxPnts)[currFlxIdx][pertSolIdx] *
+//                          ((*m_faceMappedCoordDir)[orient][cellSide])*flxPntNormals[faceID*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+//              }
+//            }
+//          }
+//        } 
+//      }
+//    }
+//  }
+//  
+//  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
+//  { 
+//    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+//    {
+//      
+//      
+//      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+//      {
+//        const CFreal invJacobL = 1./m_solJacobDet[LEFT][jSol];
+//        const CFreal invJacobR = 1./m_solJacobDet[RIGHT][jSol];
+//          
+//        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+//        { 
+//          m_gradientStateJacobian[LEFT][jSol][m_pertSide][m_pertSol][iDim] *= invJacobL;
+//          m_gradientStateJacobian[RIGHT][jSol][m_pertSide][m_pertSol][iDim] *= invJacobR;
+//        }
+////        if (m_cells[LEFT]->getID()==1) CFLog(INFO,"side: " << m_pertSide << ", sol: " << m_pertSol << ", to side: 0, sol: " << jSol << ": " << m_gradientStateJacobian[LEFT][jSol][m_pertSide][m_pertSol] <<"\n");
+////      if (m_cells[LEFT]->getID()==1) CFLog(INFO,"side: " << m_pertSide << ", sol: " << m_pertSol << ", to side: 1, sol: " << jSol << ": " << m_gradientStateJacobian[RIGHT][jSol][m_pertSide][m_pertSol] <<"\n");
+//      }
+//    }
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

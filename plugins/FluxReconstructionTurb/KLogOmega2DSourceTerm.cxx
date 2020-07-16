@@ -140,13 +140,13 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
   
   //p
-  m_stateJacobian[0][4] += mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*coeffTauMu*overRT;
+  m_stateJacobian[0][4] += mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*overRT;
   
   //T
-  m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy)*coeffTauMu)*pOverRTT;
+  m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy))*pOverRTT;
   
   //k
-  m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy)*coeffTauMu + mutTerm*rho*overOmega;
+  m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy) + mutTerm*rho*overOmega;
   
   //logOmega
   m_stateJacobian[5][4] +=  -mutTerm*rho*avK*overOmega;
@@ -160,10 +160,10 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
   
   //p
-  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*coeffTauMu*overRT) + pOmegaFactor*overRT*overOmega;
+  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*overRT) + pOmegaFactor*overRT*overOmega;
   
   //T
-  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)*coeffTauMu) - pOmegaFactor*pOverRTT*overOmega;
+  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)) - pOmegaFactor*pOverRTT*overOmega;
   
   //k
   //m_stateJacobian[4][5] += 0.0;

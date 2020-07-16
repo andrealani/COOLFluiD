@@ -205,34 +205,60 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal coeffDk1  = std::max(gammaEff,0.1);
   const CFreal coeffDk   = std::min(coeffDk1,1.0);
+  
+  const CFreal DkTerm = avOmega * betaStar * coeffDk;
+  
+  const CFreal Dk = -rho * avK * DkTerm;
     
+  if (Dk <= 0.0)
+  {
+  CFreal tempSTTerm = 0.0;
+  
   //p
-  m_stateJacobian[0][4] = -avOmega * avK * betaStar * overRT * coeffDk;
+  tempSTTerm = -avK * overRT * DkTerm;
+  m_stateJacobian[0][4] += tempSTTerm;
+  m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  m_stateJacobian[3][4] = avOmega * avK * betaStar * pOverRTT * coeffDk;
+  tempSTTerm = DkTerm * avK * pOverRTT;
+  m_stateJacobian[3][4] += tempSTTerm;
+  m_stateJacobian[3][3] -= tempSTTerm;
   
   //k
-  m_stateJacobian[4][4] = -avOmega * betaStar * rho * coeffDk;
+  tempSTTerm = -DkTerm * rho;
+  m_stateJacobian[4][4] += tempSTTerm;
+  m_stateJacobian[4][3] -= tempSTTerm;
   
   //logOmega
-  m_stateJacobian[5][4] = -avOmega * avK * betaStar * rho * coeffDk;
+  tempSTTerm = -DkTerm * avK * rho;
+  m_stateJacobian[5][4] += tempSTTerm;
+  m_stateJacobian[5][3] -= tempSTTerm;
   
   //gamma
-  m_stateJacobian[6][4] = -avOmega * avK * betaStar * rho;
+  tempSTTerm = -avOmega * avK * betaStar * rho;
+  m_stateJacobian[6][4] += tempSTTerm;
+  m_stateJacobian[6][3] -= tempSTTerm;
+  }
   
   /// destruction term of logOmega
   
   const CFreal beta = navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
   
+  const CFreal DomegaTerm = avOmega * beta;
+  
+  const CFreal Domega = -DomegaTerm * rho;
+  
+  if (Domega <= 0.0)
+  {
   //p
-  m_stateJacobian[0][5] = -avOmega * beta * overRT;
+  m_stateJacobian[0][5] = -DomegaTerm * overRT;
   
   //T
-  m_stateJacobian[3][5] = avOmega * beta * pOverRTT;
+  m_stateJacobian[3][5] = DomegaTerm * pOverRTT;
   
   //logOmega
-  m_stateJacobian[5][5] = -avOmega * beta * rho;
+  m_stateJacobian[5][5] = -DomegaTerm * rho;
+  }
   
   /// production term of k
   
@@ -246,20 +272,39 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
   
+  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  
+  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
+  
+  if (Pk*gammaEff >= 0.0)
+  {
+  CFreal tempSTTerm = 0.0;
+      
   //p
-  m_stateJacobian[0][4] += (mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*coeffTauMu*overRT) * gammaEff;
+  tempSTTerm = (mutTerm*avK*overRT*overOmega - twoThirdduxduy*avK*overRT) * gammaEff;
+  m_stateJacobian[0][4] += tempSTTerm;
+  m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy)*coeffTauMu)*pOverRTT * gammaEff;
+  tempSTTerm = (-mutTerm*avK*overOmega + twoThirdduxduy*avK)*pOverRTT * gammaEff;
+  m_stateJacobian[3][4] += tempSTTerm;
+  m_stateJacobian[3][3] -= tempSTTerm;
   
   //k
-  m_stateJacobian[4][4] += (-(2./3.)*rho*(dux+dvy)*coeffTauMu + mutTerm*rho*overOmega) * gammaEff;
+  tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega) * gammaEff;
+  m_stateJacobian[4][4] += tempSTTerm;
+  m_stateJacobian[4][3] -= tempSTTerm;
   
   //logOmega
-  m_stateJacobian[5][4] +=  -mutTerm*rho*avK*overOmega * gammaEff;
+  tempSTTerm = -mutTerm*rho*avK*overOmega * gammaEff;
+  m_stateJacobian[5][4] += tempSTTerm;
+  m_stateJacobian[5][3] -= tempSTTerm;
   
   //gamma
-  m_stateJacobian[6][4] +=  mutTerm*mut-coeffTauMu*(2./3.)*(avK * rho)*(dux+dvy);
+  tempSTTerm = mutTerm*mut-twoThirdduxduy * avK * rho;
+  m_stateJacobian[6][4] += tempSTTerm;
+  m_stateJacobian[6][3] -= tempSTTerm;
+  }
   
   /// production of logOmega
   
@@ -267,19 +312,24 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();
   const CFreal sigmaOmega2 = navierStokesVarSet->getSigmaOmega2();
   
-  const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
+  const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2 * ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
   
+  const CFreal Pomega = (gamma*rho/mut) * Pk * overOmega + rho * overOmega * pOmegaFactor;
+  
+  if (Pomega >= 0.0)
+  {
   //p
-  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*coeffTauMu*overRT) + pOmegaFactor*overRT*overOmega;
+  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT) + pOmegaFactor*overRT*overOmega;
   
   //T
-  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)*coeffTauMu) - pOmegaFactor*pOverRTT*overOmega;
+  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy) - pOmegaFactor*pOverRTT*overOmega;
   
   //k
   //m_stateJacobian[4][5] += 0.0;
   
   //logOmega
   m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
+  }
   
   
   // production gamma
@@ -309,7 +359,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal FlengthDeriv = getFlengthDeriv(avRe);
   
-  if (PGamma > 0.0)
+  if (PGamma >= 0.0)
   {
   //gamma
   m_stateJacobian[6][6] +=  FlengthTot * ca1 * rho * m_strain * (-GaFonset*ce1 + 0.5*(1.0 - ce1*avGa)*Fonset/max(GaFonset,0.01));
@@ -349,7 +399,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal PReTheta = cthetat * (rho/t) * (m_Rethetat - avRe) * (1.0 - Fthetat);
   
-  if (PReTheta > 0.0 || !m_limPRe)
+  if (PReTheta >= 0.0 || !m_limPRe)
   {
   // Re
   m_stateJacobian[7][7] +=  -cthetat * (rho/t) * (1.0 - Fthetat);
@@ -388,7 +438,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal DGamma = -ca2 * rho *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
   
-  if (DGamma < 0.0)
+  if (DGamma <= 0.0)
   {
   // gamma
   m_stateJacobian[6][6] +=  -ca2 * rho *  m_vorticity * Fturb * (ce2*avGa - 1.0) - ce2 * ca2 * rho *  m_vorticity * Fturb * avGa;

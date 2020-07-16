@@ -96,6 +96,9 @@ protected:
   virtual void getSToGradJacobian(const CFuint iState){};
   
   virtual bool isGradDependent(){return false;};
+  
+  /// compute the gradient to state jacobian analytically
+  virtual void computeGradToStateJacobianAna();
 
 protected: // data
 
