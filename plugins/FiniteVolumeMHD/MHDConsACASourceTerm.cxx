@@ -314,9 +314,9 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
 	source[1] += (*currState)[0]*gx*volumes[elementID];
 	source[2] += (*currState)[0]*gy*volumes[elementID];
 	source[3] += (*currState)[0]*gz*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz*volumes[elementID];
+	socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx; //*volumes[elementID];
+	socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy; //*volumes[elementID];
+	socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz; //*volumes[elementID];
       }
       
       source[4] = 0.0;
@@ -333,7 +333,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       if (_gravity == 1){
         source[7] += (*currState)[0]*Vdotg*volumes[elementID];
 	
-	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg*volumes[elementID];
+	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg; //*volumes[elementID];
       }
       
       if (_Manchester == 1) {
