@@ -115,6 +115,16 @@ ComputeSourceTermFVMCC::needsSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
+vector<Common::SafePtr<Framework::BaseDataSocketSource> >
+ComputeSourceTermFVMCC::providesSockets()
+{
+  vector<Common::SafePtr<Framework::BaseDataSocketSource> > result =
+    ComputeSourceTerm<CellCenterFVMData>::providesSockets();
+  return result;
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+      
     } // namespace FiniteVolume
 
   } // namespace Numerics

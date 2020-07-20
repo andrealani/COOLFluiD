@@ -113,7 +113,17 @@ public:
 
     return sockets;
   }
-
+  
+  /**
+   * Returns the DataSocket's that this command provides as sources
+   * @return a vector of SafePtr with the DataSockets
+   */
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets()
+  {
+    std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > sockets = _sockets.getAllSourceSockets();
+    return sockets;
+  }
+  
   /// Tells if the source term has an analytical jacobian
   bool useAnalyticalJacob() const
   {

@@ -66,6 +66,10 @@ public:
   virtual void computeSource(Framework::GeometricEntity *const element,
 			     RealVector& source,
 			     RealMatrix& jacobian) = 0;
+
+  /// Returns the DataSocket's that this strategy provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > providesSockets();
   
   /**
    * Returns the DataSocket's that this command needs as sinks
