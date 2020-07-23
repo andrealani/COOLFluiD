@@ -11,6 +11,8 @@
 #include "MathTools/MathConsts.hh"
 #include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
 
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -42,6 +44,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::defineConfigOptions(Config::OptionList&
  options.addConfigOption< bool >("PGrad","pressure Gradient");
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
  options.addConfigOption< bool >("LimPRe","Limit P_Re.");
+ options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
  
 }
 
@@ -53,11 +56,13 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   socket_gammaSep("gammaSep"),
   socket_fOnset("fOnset"),
   socket_fLength("fLength"),
+  socket_updateCoeff("updateCoeff"),
   m_Rethetat(),
   m_Rethetac(),
   m_Flength(),
   m_vorticity(),
-  m_strain()
+  m_strain(),
+  m_order()
 { 
   addConfigOptionsTo(this);
   
@@ -78,6 +83,9 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   
   m_limPRe = false;
   setParameter("LimPRe",&m_limPRe);
+  
+  m_addUpdateCoeff = false;
+  setParameter("AddUpdateCoeff",&m_addUpdateCoeff);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,6 +115,16 @@ void NavierStokesGReKO2DSourceTerm_Lang::setup()
   gammaSep.resize(wallDistance.size());
   fOnset.resize(wallDistance.size());
   fLength.resize(wallDistance.size());
+  
+  // get the local FR data
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  cf_assert(frLocalData.size() > 0);
+  // for now, there should be only one type of element
+  cf_assert(frLocalData.size() == 1);
+  
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  
+  m_order = static_cast<CFuint>(order);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,6 +147,16 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   return result;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< Common::SafePtr< BaseDataSocketSink > >
+NavierStokesGReKO2DSourceTerm_Lang::needsSockets()
+{
+  std::vector< Common::SafePtr< BaseDataSocketSink > > result = KLogOmega2DSourceTerm::needsSockets();
+  result.push_back(&socket_updateCoeff);
+  return result;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iState)
@@ -143,7 +171,6 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
     
   /// destruction term of k
     
-  const CFreal betaStar = navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]));
   const CFreal avK     = max((*((*m_cellStates)[iState]))[4],0.0);
   const CFreal avOmega = exp((*((*m_cellStates)[iState]))[5]);
   const CFreal T = max(0.0,(*((*m_cellStates)[iState]))[3]);
@@ -206,11 +233,13 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   const CFreal coeffDk1  = std::max(gammaEff,0.1);
   const CFreal coeffDk   = std::min(coeffDk1,1.0);
   
+  const CFreal betaStar = navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]));
+  
   const CFreal DkTerm = avOmega * betaStar * coeffDk;
   
   const CFreal Dk = -rho * avK * DkTerm;
     
-  if (Dk <= 0.0)
+  if (Dk < 0.0)
   {
   CFreal tempSTTerm = 0.0;
   
@@ -248,7 +277,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal Domega = -DomegaTerm * rho;
   
-  if (Domega <= 0.0)
+  if (Domega < 0.0)
   {
   //p
   m_stateJacobian[0][5] = -DomegaTerm * overRT;
@@ -276,7 +305,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
   
-  if (Pk*gammaEff >= 0.0)
+  if (Pk*gammaEff > 0.0)
   {
   CFreal tempSTTerm = 0.0;
       
@@ -316,7 +345,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal Pomega = (gamma*rho/mut) * Pk * overOmega + rho * overOmega * pOmegaFactor;
   
-  if (Pomega >= 0.0)
+  if (Pomega > 0.0)
   {
   //p
   m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT) + pOmegaFactor*overRT*overOmega;
@@ -359,7 +388,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal FlengthDeriv = getFlengthDeriv(avRe);
   
-  if (PGamma >= 0.0)
+  if (PGamma > 0.0)
   {
   //gamma
   m_stateJacobian[6][6] +=  FlengthTot * ca1 * rho * m_strain * (-GaFonset*ce1 + 0.5*(1.0 - ce1*avGa)*Fonset/max(GaFonset,0.01));
@@ -399,7 +428,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal PReTheta = cthetat * (rho/t) * (m_Rethetat - avRe) * (1.0 - Fthetat);
   
-  if (PReTheta >= 0.0 || !m_limPRe)
+  if (PReTheta > 0.0 || !m_limPRe)
   {
   // Re
   m_stateJacobian[7][7] +=  -cthetat * (rho/t) * (1.0 - Fthetat);
@@ -438,7 +467,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal DGamma = -ca2 * rho *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
   
-  if (DGamma <= 0.0)
+  if (DGamma < 0.0)
   {
   // gamma
   m_stateJacobian[6][6] +=  -ca2 * rho *  m_vorticity * Fturb * (ce2*avGa - 1.0) - ce2 * ca2 * rho *  m_vorticity * Fturb * avGa;
@@ -463,6 +492,49 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   // T
   m_stateJacobian[3][6] += -FTurbTerm*avK*pOverRTT;
+  }
+  
+  if (m_addUpdateCoeff)
+  {
+  DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
+  
+  CFreal update = 0.0;
+  
+  const CFreal PkUpdate = max(Pk*gammaEff,0.0);
+  
+  const CFreal DkUpdate = min(Dk,0.0);
+  
+  const CFreal G = sqrt(PkUpdate*rho/DkUpdate);
+  
+  const CFreal Gk = pow(G,1.0/gamma);
+  
+  const CFreal kUpdateTerm = (PkUpdate + DkUpdate)/max(avK,0.001)/(Gk-1) + m_stateJacobian[4][4];
+  
+  update = max(0.0,kUpdateTerm);
+  
+  //if (update>1.0e-8) CFLog(INFO,"newK: " << update << "\n");
+  
+  const CFreal logOmega = (*((*m_cellStates)[iState]))[5];
+  
+  const CFreal Gomega = pow(G,1.0/logOmega);
+  
+  const CFreal PomegaUpdate = max(Pomega,0.0);
+  
+  const CFreal DomegaUpdate = min(Domega,0.0);
+  
+  const CFreal omegaUpdateTerm = (PomegaUpdate + DomegaUpdate)/max(logOmega,0.1)/(Gomega-1) + m_stateJacobian[5][5];
+  
+  update = max(update,omegaUpdateTerm);
+  
+  // get the local ID of the current sol pnt
+  const CFuint solID = (*m_cellStates)[iState]->getLocalID();
+  
+  update *= (2.0*m_order+1)*m_solPntJacobDets[iState]*m_solPntJacobDets[iState];
+  
+  //if (update>1.0e-8) CFLog(INFO,"old: " << updateCoeff[solID] << ", new: " << update << ", J: " << m_solPntJacobDets[iState] << "\n\n");
+ 
+  // add the wave speed update previously computed
+  updateCoeff[solID] += update;
   }
   
 }

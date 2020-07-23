@@ -76,6 +76,11 @@ public:
   
   virtual bool isGradDependent(){return true;};
   
+  /// Returns the DataSocket's that this command needs as sinks
+  /// @return a vector of SafePtr with the DataSockets
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+    needsSockets();
+  
 private: // helper functions
     
   /// storage for effective gamma
@@ -89,6 +94,9 @@ private: // helper functions
   
   /// storage for the length factor
   Framework::DataSocketSource<CFreal> socket_fLength;
+  
+  /// denominators of the coefficients for the update
+  Framework::DataSocketSink<CFreal > socket_updateCoeff;
   
   /// corresponding diffusive variable set
   void getVorticity(const CFuint iState);
@@ -136,6 +144,9 @@ private: // data
   CFreal m_FLambda;
   bool m_decouple;
   bool m_limPRe;
+  bool m_addUpdateCoeff;
+  
+  CFuint m_order;
 
 }; // end of class NavierStokesGReKO2DSourceTerm_Lang
 
