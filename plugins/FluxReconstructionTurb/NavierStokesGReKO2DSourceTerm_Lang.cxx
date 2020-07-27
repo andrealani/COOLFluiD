@@ -352,10 +352,10 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   //T
   m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy) - pOmegaFactor*pOverRTT*overOmega;
-  
-  //k
-  //m_stateJacobian[4][5] += 0.0;
-  
+//  
+//  //k
+//  //m_stateJacobian[4][5] += 0.0;
+//  
   //logOmega
   m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
   }
@@ -502,9 +502,9 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   const CFreal PkUpdate = max(Pk*gammaEff,0.0);
   
-  const CFreal DkUpdate = min(Dk,0.0);
+  const CFreal DkUpdate = min(Dk,-1.0e-10);
   
-  const CFreal G = sqrt(PkUpdate*rho/DkUpdate);
+  const CFreal G = sqrt(-PkUpdate*rho/DkUpdate);
   
   const CFreal Gk = pow(G,1.0/gamma);
   
@@ -512,7 +512,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   update = max(0.0,kUpdateTerm);
   
-  //if (update>1.0e-8) CFLog(INFO,"newK: " << update << "\n");
+  //if (update>1000) CFLog(INFO,"kUpdate: " << update << "\n");
   
   const CFreal logOmega = (*((*m_cellStates)[iState]))[5];
   
@@ -529,9 +529,12 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   // get the local ID of the current sol pnt
   const CFuint solID = (*m_cellStates)[iState]->getLocalID();
   
-  update *= (2.0*m_order+1)*m_solPntJacobDets[iState]*m_solPntJacobDets[iState];
+  //if (update>1000) CFLog(INFO,"old: " << updateCoeff[solID] << ", new: " << update << ", J: " << m_solPntJacobDets[iState] << "\n\n");
   
-  //if (update>1.0e-8) CFLog(INFO,"old: " << updateCoeff[solID] << ", new: " << update << ", J: " << m_solPntJacobDets[iState] << "\n\n");
+  update *= (2.0*m_order+1)*m_solPntJacobDets[iState];//*m_solPntJacobDets[iState];
+  
+  if (update>0.5*updateCoeff[solID]) CFLog(INFO,"Large influence ST Dt: oldCoeff: " << updateCoeff[solID] << ", ST addition: " << update << ", J: " << m_solPntJacobDets[iState] << "\n\n");
+
  
   // add the wave speed update previously computed
   updateCoeff[solID] += update;
