@@ -38,9 +38,12 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
 {
   addConfigOptionsTo(this);
 
+  _gravity = 0; 
   setParameter("gravity",&_gravity);
   setParameter("PevtsovHeating",&_PevtsovHeating);
   setParameter("PevtsovHeatingFactor",&_PevtsovHeatingFactor);
+
+  _Manchester = 0;
   setParameter("Manchester",&_Manchester);
   setParameter("ManchesterHeatingAmplitude",&_ManchesterHeatingAmplitude);
   setParameter("ManchesterSigma",&_ManchesterSigma);
@@ -50,6 +53,8 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   setParameter("ViscosityAndResistivity",&_ViscosityAndResistivity);
   setParameter("Viscosity",&_Viscosity);
   setParameter("Resistivity",&_Resistivity);
+  
+  _RadiativeLossTerm = 0;
   setParameter("RadiativeLossTerm",&_RadiativeLossTerm);
 
   
@@ -99,6 +104,8 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
 					 RealVector& source,
 					 RealMatrix& jacobian)
 {
+  CFLog(DEBUG_MAX, "MHDConsACASourceTerm::computeSource() => START\n");
+ 
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
 
   SafePtr<MHDTerm> model = PhysicalModelStack::getActive()->getImplementor()->
@@ -117,7 +124,8 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   const CFreal refSpeedSq = refSpeed*refSpeed;
 
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
-  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
+ 
   for (CFuint i = 0; i < (nbEqs-1); ++i) {
     source[i] = 0.0;
   }
@@ -139,15 +147,14 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   }
 
   //std::cout << "SOURCE TERM" << endl;
-
   //std::cout << "ST activated" << endl;
   CFreal RSun = 6.9551e8; // m
   CFreal x = currState->getCoordinates()[XX]*RSun;
   CFreal y = currState->getCoordinates()[YY]*RSun;
-  CFreal z = currState->getCoordinates()[ZZ]*RSun;
+  CFreal z = (dim==DIM_3D) ? currState->getCoordinates()[ZZ]*RSun : 0.;
   CFreal x_dimless = currState->getCoordinates()[XX];
   CFreal y_dimless = currState->getCoordinates()[YY];
-  CFreal z_dimless = currState->getCoordinates()[ZZ];
+  CFreal z_dimless = (dim==DIM_3D) ? currState->getCoordinates()[ZZ] : 0.;
   CFreal r2_dimless = x_dimless*x_dimless + y_dimless*y_dimless + z_dimless*z_dimless;
   CFreal r_dimless = std::sqrt(r2_dimless);
 
@@ -347,6 +354,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       }
 
       source[8] = 0.0;
+  CFLog(DEBUG_MAX, "MHDConsACASourceTerm::computeSource() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
