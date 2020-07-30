@@ -48,7 +48,8 @@ StdSourceTerm::StdSourceTerm(const std::string& name) :
   m_pertSol(),
   m_isPerturbed(),
   m_useAnaJacob(),
-  m_stateJacobian()
+  m_stateJacobian(),
+  m_gradientStateJacobian()
 {
   addConfigOptionsTo(this);
   
@@ -116,6 +117,8 @@ void StdSourceTerm::setup()
   
   const CFuint resSize = m_nbrSolPnts*m_nbrEqs;
   
+  m_dim = PhysicalModelStack::getActive()->getDim();
+  
   m_pertResUpdates.resize(resSize);
   m_resUpdates.resize(resSize);
   m_derivResUpdates.resize(resSize);
@@ -125,6 +128,26 @@ void StdSourceTerm::setup()
   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
   {
     m_stateJacobian[iEq].resize(m_nbrEqs);
+  }
+  
+  m_gradientStateJacobian.resize(m_nbrSolPnts);
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  { 
+    m_gradientStateJacobian[iSol].resize(2);
+    m_gradientStateJacobian[iSol].resize(2);
+    
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      m_gradientStateJacobian[iSol][iSide].resize(m_nbrSolPnts);
+      m_gradientStateJacobian[iSol][iSide].resize(m_nbrSolPnts);
+      
+      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+      {
+        m_gradientStateJacobian[iSol][iSide][jSol].resize(m_dim);
+        m_gradientStateJacobian[iSol][iSide][jSol].resize(m_dim);
+      }
+    }
   }
 }
 
@@ -446,21 +469,19 @@ void StdSourceTerm::computeGradToStateJacobianAna()
 {
   CFLog(VERBOSE, "computeGradToStateJacobianAna\n");
   
-//  // reset the jacobian
-//  for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
-//  { 
-//    for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
-//    {
-//      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
-//      {
-//        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-//        { 
-//          m_gradientStateJacobian[m_pertSide][m_pertSol][LEFT][jSol][iDim] = 0.0;
-//          m_gradientStateJacobian[m_pertSide][m_pertSol][RIGHT][jSol][iDim] = 0.0;
-//        }
-//      }
-//    }
-//  }
+  // reset the jacobian
+  for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
+  {
+    for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+    {
+      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      { 
+        m_gradientStateJacobian[m_pertSol][LEFT][jSol][iDim] = 0.0;
+        m_gradientStateJacobian[m_pertSol][RIGHT][jSol][iDim] = 0.0;
+      }
+    }
+  }
+
 //  
 //  // get the face flux point normals
 //  DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();

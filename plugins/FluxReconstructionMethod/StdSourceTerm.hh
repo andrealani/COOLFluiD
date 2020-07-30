@@ -158,6 +158,11 @@ protected: // data
   
   /// jacobian of the ST to the state in a solution point
   std::vector< RealVector > m_stateJacobian;
+  
+  /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
+  std::vector< std::vector< std::vector< RealVector > > > m_gradientStateJacobian;
+  
+  CFuint m_dim;
 
 }; // class StdSourceTerm
 

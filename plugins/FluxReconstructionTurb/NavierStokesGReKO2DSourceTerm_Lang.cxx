@@ -45,7 +45,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::defineConfigOptions(Config::OptionList&
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
  options.addConfigOption< bool >("LimPRe","Limit P_Re.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
- 
+ options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,6 +86,9 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   
   m_addUpdateCoeff = false;
   setParameter("AddUpdateCoeff",&m_addUpdateCoeff);
+  
+  m_blockDecoupled = false;
+  setParameter("BlockDecoupledJacob",&m_blockDecoupled);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,6 +246,8 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   {
   CFreal tempSTTerm = 0.0;
   
+  if (!m_blockDecoupled)
+  {
   //p
   tempSTTerm = -avK * overRT * DkTerm;
   m_stateJacobian[0][4] += tempSTTerm;
@@ -253,6 +258,12 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   m_stateJacobian[3][4] += tempSTTerm;
   m_stateJacobian[3][3] -= tempSTTerm;
   
+  //gamma
+  tempSTTerm = -avOmega * avK * betaStar * rho;
+  m_stateJacobian[6][4] += tempSTTerm;
+  m_stateJacobian[6][3] -= tempSTTerm;
+  }
+  
   //k
   tempSTTerm = -DkTerm * rho;
   m_stateJacobian[4][4] += tempSTTerm;
@@ -262,11 +273,6 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   tempSTTerm = -DkTerm * avK * rho;
   m_stateJacobian[5][4] += tempSTTerm;
   m_stateJacobian[5][3] -= tempSTTerm;
-  
-  //gamma
-  tempSTTerm = -avOmega * avK * betaStar * rho;
-  m_stateJacobian[6][4] += tempSTTerm;
-  m_stateJacobian[6][3] -= tempSTTerm;
   }
   
   /// destruction term of logOmega
@@ -279,11 +285,14 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   if (Domega < 0.0)
   {
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][5] = -DomegaTerm * overRT;
   
   //T
   m_stateJacobian[3][5] = DomegaTerm * pOverRTT;
+  }
   
   //logOmega
   m_stateJacobian[5][5] = -DomegaTerm * rho;
@@ -309,6 +318,8 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   {
   CFreal tempSTTerm = 0.0;
       
+  if (!m_blockDecoupled)
+  {
   //p
   tempSTTerm = (mutTerm*avK*overRT*overOmega - twoThirdduxduy*avK*overRT) * gammaEff;
   m_stateJacobian[0][4] += tempSTTerm;
@@ -318,6 +329,12 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   tempSTTerm = (-mutTerm*avK*overOmega + twoThirdduxduy*avK)*pOverRTT * gammaEff;
   m_stateJacobian[3][4] += tempSTTerm;
   m_stateJacobian[3][3] -= tempSTTerm;
+ 
+  //gamma
+  tempSTTerm = mutTerm*mut-twoThirdduxduy * avK * rho;
+  m_stateJacobian[6][4] += tempSTTerm;
+  m_stateJacobian[6][3] -= tempSTTerm;
+  }
   
   //k
   tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega) * gammaEff;
@@ -328,11 +345,6 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   tempSTTerm = -mutTerm*rho*avK*overOmega * gammaEff;
   m_stateJacobian[5][4] += tempSTTerm;
   m_stateJacobian[5][3] -= tempSTTerm;
-  
-  //gamma
-  tempSTTerm = mutTerm*mut-twoThirdduxduy * avK * rho;
-  m_stateJacobian[6][4] += tempSTTerm;
-  m_stateJacobian[6][3] -= tempSTTerm;
   }
   
   /// production of logOmega
@@ -347,15 +359,15 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   if (Pomega > 0.0)
   {
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT) + pOmegaFactor*overRT*overOmega;
   
   //T
   m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy) - pOmegaFactor*pOverRTT*overOmega;
-//  
-//  //k
-//  //m_stateJacobian[4][5] += 0.0;
-//  
+  }
+ 
   //logOmega
   m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
   }
@@ -393,14 +405,16 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   //gamma
   m_stateJacobian[6][6] +=  FlengthTot * ca1 * rho * m_strain * (-GaFonset*ce1 + 0.5*(1.0 - ce1*avGa)*Fonset/max(GaFonset,0.01));
   
+  //Re
+  m_stateJacobian[7][6] +=  FlengthDeriv * (1.0-FSubLayer) * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
+  
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][6] +=  FlengthTot * ca1 * overRT * m_strain * GaFonset * (1.0 - ce1*avGa);
   
   //T
   m_stateJacobian[3][6] +=  -FlengthTot * ca1 * pOverRTT * m_strain * GaFonset * (1.0 - ce1*avGa);
-  
-  //Re
-  m_stateJacobian[7][6] +=  FlengthDeriv * (1.0-FSubLayer) * ca1 * rho * m_strain * GaFonset * (1.0 - ce1*avGa);
   
   // sublayer contribution
   const CFreal SLTerm = FSubLayer*(40.0-m_Flength)*-2.0*Rew/200.0 * m_currWallDist[iState] * m_currWallDist[iState]/(200.0*mu)*avOmega;
@@ -413,6 +427,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   //T
   m_stateJacobian[3][6] += -SLTerm*pOverRTT;
+  }
   }
   
   
@@ -433,6 +448,8 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   // Re
   m_stateJacobian[7][7] +=  -cthetat * (rho/t) * (1.0 - Fthetat);
   
+  if (!m_blockDecoupled)
+  {
   // p
   m_stateJacobian[0][7] +=  cthetat * tTerm * overRT * (m_Rethetat - avRe) * (1.0 - Fthetat);
   
@@ -459,6 +476,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   // v
   m_stateJacobian[2][7] += -ReEqPTerm * ReEqDeriv * 100.0*sqrt(2.0*avK/3.0)*(*((*m_cellStates)[iState]))[2]/(avV*avV*avV);
   }
+  }
   
   // destruction gamma
   
@@ -472,6 +490,8 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   // gamma
   m_stateJacobian[6][6] +=  -ca2 * rho *  m_vorticity * Fturb * (ce2*avGa - 1.0) - ce2 * ca2 * rho *  m_vorticity * Fturb * avGa;
   
+  if (!m_blockDecoupled)
+  {
   // p
   m_stateJacobian[0][6] +=  -ca2 * overRT *  m_vorticity * avGa * Fturb * (ce2*avGa - 1.0);
   
@@ -492,6 +512,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   // T
   m_stateJacobian[3][6] += -FTurbTerm*avK*pOverRTT;
+  }
   }
   
   if (m_addUpdateCoeff)
