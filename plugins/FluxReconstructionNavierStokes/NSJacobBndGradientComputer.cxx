@@ -38,6 +38,11 @@ MethodCommandProvider< NSJacobBndGradientComputer,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
 NSJacobBndGradientComputerProvider("ConvBndCorrectionsRHSJacobNS");
+
+MethodCommandProvider< NSJacobBndGradientComputer,
+		       FluxReconstructionSolverData,
+		       FluxReconstructionNavierStokesModule >
+NSJacobBndGradientComputerTurbProvider("ConvBndCorrectionsRHSJacobTurb");
   
 //////////////////////////////////////////////////////////////////////////////
   

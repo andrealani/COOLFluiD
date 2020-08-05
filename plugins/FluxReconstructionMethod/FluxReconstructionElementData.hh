@@ -166,6 +166,14 @@ public:
   {
     return &m_flxPntsLocalCoords;
   }
+  
+  /**
+   * @return m_flxPntsLocalCoords
+   */
+  Common::SafePtr< std::vector< CFuint > > getClosestSolToFlxIdx()
+  {
+    return &m_closestSolToFlxIdx;
+  }
 
   /**
    * @return m_faceFlxPntsFaceLocalCoords
@@ -953,6 +961,9 @@ protected: // protected data
 
   /// dependency of flx points on solution pnts
   std::vector< std::vector< CFuint > > m_flxSolDep;
+  
+  /// for each flux point idx the closest solution point idx
+  std::vector< CFuint > m_closestSolToFlxIdx;
 
 }; // end of class FluxReconstructionElementData
 

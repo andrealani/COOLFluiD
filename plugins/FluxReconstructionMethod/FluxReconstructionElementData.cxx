@@ -78,7 +78,8 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_subcellRes(),
   m_solSolDep(),
   m_solFlxDep(),
-  m_flxSolDep()
+  m_flxSolDep(),
+  m_closestSolToFlxIdx()
 {
   CFAUTOTRACE;
 }
@@ -214,6 +215,7 @@ void FluxReconstructionElementData::createFlxSolDependencies()
   m_solFlxDep.resize(nbrSolPnts);
   m_solSolDep.resize(nbrSolPnts);
   m_flxSolDep.resize(nbrFlxPnts);
+  //m_closestSolToFlxIdx.resize(nbrFlxPnts);
 
   for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
   {

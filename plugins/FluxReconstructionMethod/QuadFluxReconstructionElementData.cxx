@@ -248,6 +248,7 @@ void QuadFluxReconstructionElementData::createFlxSolDependencies()
   m_solFlxDep.resize(nbrSolPnts);
   m_solSolDep.resize(nbrSolPnts);
   m_flxSolDep.resize(nbrFlxPnts);
+  m_closestSolToFlxIdx.resize(nbrFlxPnts);
 
   CFuint iSol = 0;
 
@@ -271,6 +272,14 @@ void QuadFluxReconstructionElementData::createFlxSolDependencies()
         if (iSol != iEta + jSol*nbrSolPnts1D) m_solSolDep[iSol].push_back(iEta + jSol*nbrSolPnts1D);
       }
     }
+  }
+  
+  for (CFuint i = 0; i < nbrSolPnts1D; ++i)
+  {
+    m_closestSolToFlxIdx[i*4]   = i; 
+    m_closestSolToFlxIdx[i*4+1] = (nbrSolPnts1D-1)*nbrSolPnts1D+i;
+    m_closestSolToFlxIdx[i*4+2] = nbrSolPnts1D*i;
+    m_closestSolToFlxIdx[i*4+3] = nbrSolPnts1D*i+nbrSolPnts1D-1; 
   }
 }
 

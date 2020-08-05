@@ -13,6 +13,10 @@ KOmega2DSourceTerm.hh
 KOmega2DSourceTerm.cxx
 KLogOmega2DSourceTerm.hh
 KLogOmega2DSourceTerm.cxx
+ConvDiffJacobFluxReconstructionTurb.hh
+ConvDiffJacobFluxReconstructionTurb.cxx
+DiffBndCorrectionsRHSJacobFluxReconstructionTurb.hh
+DiffBndCorrectionsRHSJacobFluxReconstructionTurb.cxx
 )
 
 LIST ( APPEND FluxReconstructionKOmega_cflibs FluxReconstructionMethod FluxReconstructionNavierStokes NavierStokes KOmega )

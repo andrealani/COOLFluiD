@@ -126,16 +126,16 @@ protected: //functions
   void setFaceDataForGradients(const CFuint faceID);
   
   /// initialize the data needed for the jacobian
-  void initJacobianComputation();
+  virtual void initJacobianComputation();
   
   /// compute the cell flux jacobian numerically
-  void computeCellFluxJacobianNum(const CFreal resFactor);
+  virtual void computeCellFluxJacobianNum(const CFreal resFactor);
   
   /// compute the Riemann flux jacobian numerically
   virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
   
   /// compute the flux to gradient jacobian numerically
-  void computeFluxToGradJacobianNum(const CFreal resFactor);
+  virtual void computeFluxToGradJacobianNum(const CFreal resFactor);
   
   /// compute the gradient to state jacobian analytically
   virtual void computeGradToStateJacobianAna();
