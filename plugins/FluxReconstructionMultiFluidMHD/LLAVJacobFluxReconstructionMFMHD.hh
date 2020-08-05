@@ -13,7 +13,7 @@
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 
-#include "FluxReconstructionNavierStokes/LLAVJacobFluxReconstructionNS.hh"
+#include "FluxReconstructionMethod/LLAVJacobFluxReconstruction.hh"
 
 #include "Framework/MultiScalarTerm.hh"
 
@@ -43,7 +43,7 @@ namespace COOLFluiD {
  * 
  * @author Ray Vandenhoeck
  */
-class LLAVJacobFluxReconstructionMFMHD : public LLAVJacobFluxReconstructionNS {
+class LLAVJacobFluxReconstructionMFMHD : public LLAVJacobFluxReconstruction {
 
 public: // functions
 
@@ -80,12 +80,23 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness(const CFuint side);
+  
+  /**
+   * Set the data for the current face necessary to calculate FI
+   */
+  virtual void setFaceData(CFuint faceID);
+  
+  /// compute the interface flux
+  virtual void computeInterfaceFlxCorrection();
 
 
 protected: //data
   
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > m_varSet;
+  
+  /// damping coefficient
+  CFreal m_dampCoeff;
   
   private:
 

@@ -54,7 +54,7 @@ LLAVJacobFluxReconstructionMFMHDFluxReconstructionProvider("LLAVJacobMFMHD");
 //////////////////////////////////////////////////////////////////////////////
   
 LLAVJacobFluxReconstructionMFMHD::LLAVJacobFluxReconstructionMFMHD(const std::string& name) :
-  LLAVJacobFluxReconstructionNS(name),
+  LLAVJacobFluxReconstruction(name),
   m_varSet(CFNULL)
   {
   }
@@ -63,7 +63,7 @@ LLAVJacobFluxReconstructionMFMHD::LLAVJacobFluxReconstructionMFMHD(const std::st
 
 void LLAVJacobFluxReconstructionMFMHD::configure ( Config::ConfigArgs& args )
 {
-  LLAVJacobFluxReconstructionNS::configure(args);
+  LLAVJacobFluxReconstruction::configure(args);
 }  
 
 //////////////////////////////////////////////////////////////////////////////
@@ -180,7 +180,10 @@ void LLAVJacobFluxReconstructionMFMHD::setup()
   CFAUTOTRACE;
   
   // setup parent class
-  LLAVJacobFluxReconstructionNS::setup();
+  LLAVJacobFluxReconstruction::setup();
+  
+  // get damping coeff
+  m_dampCoeff = getMethodData().getDiffDampCoefficient();
 
   // get Euler 2D varset
   m_varSet = getMethodData().getUpdateVar().d_castTo< MultiFluidMHDVarSet<Maxwell2DProjectionVarSet> >();
@@ -198,12 +201,76 @@ void LLAVJacobFluxReconstructionMFMHD::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void LLAVJacobFluxReconstructionMFMHD::setFaceData(CFuint faceID)
+{
+  LLAVJacobFluxReconstruction::setFaceData(faceID);
+  
+  if (getMethodData().getUpdateVarStr() != "Puvt" && getMethodData().hasDiffTerm())
+  {
+    // get the gradients datahandle
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+      {
+        const CFuint stateID = (*(m_states[iSide]))[iState]->getLocalID();
+        m_cellGrads[iSide][iState] = &gradientsAV[stateID];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void LLAVJacobFluxReconstructionMFMHD::computeInterfaceFlxCorrection()
+{   
+  // Loop over the flux points to calculate FI
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  { 
+    const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
+    
+    // compute the average sol and grad to use the BR2 scheme
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
+    }
+    
+    // damping factor
+    const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
+
+    // compute averaged (damped) gradients
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      // compute damping term
+      const RealVector dGradVarXNormal = ((*m_cellStatesFlxPnt[LEFT][iFlxPnt])[iGrad] - (*m_cellStatesFlxPnt[RIGHT][iFlxPnt])[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
+    }
+    
+    m_flxPntRiemannFlux[iFlxPnt] = 0.0;
+    
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGrad[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
+      }
+    }
+     
+    // compute FI in the mapped coord frame
+    m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
+    m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void LLAVJacobFluxReconstructionMFMHD::unsetup()
 {
   CFAUTOTRACE;
   
   // unsetup parent class
-  LLAVJacobFluxReconstructionNS::unsetup();
+  LLAVJacobFluxReconstruction::unsetup();
 }
 
 
