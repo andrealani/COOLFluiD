@@ -184,6 +184,11 @@ public:
   CFreal getPressInf() const {return _p0Inf;}
   
   /**
+   * Get the free stream static pressure 
+   */
+  CFreal getStaticPressInf() const {return _pInf;}
+  
+  /**
    * Get the pressure infinity (compressible case)
    */
   CFreal getPressInfComp() const {return _p0InfComp;}
@@ -251,6 +256,9 @@ protected:
 
   /// reference static pressure
   CFreal _pRef;
+  
+  /// free stream static pressure 
+  CFreal _pInf;
 
   /// Mach infinity
   CFreal _machInf;

@@ -1,0 +1,32 @@
+LIST ( APPEND GammaAlpha_files
+GammaAlpha.hh
+GammaAlphaReactionTerm.cxx
+GammaAlphaReactionTerm.hh
+Euler2DGammaAlphaCons.cxx
+Euler2DGammaAlphaCons.hh
+Euler2DGammaAlphaConsToPuvtInPuvt.cxx
+Euler2DGammaAlphaConsToPuvtInPuvt.hh
+Euler2DGammaAlphaPuvt.cxx
+Euler2DGammaAlphaPuvt.hh
+Euler2DGammaAlphaPuvtToCons.cxx
+Euler2DGammaAlphaPuvtToCons.hh
+Euler2DGammaAlphaPuvtToConsInPuvt.cxx
+Euler2DGammaAlphaPuvtToConsInPuvt.hh
+NavierStokes2DGammaAlphaBSLPuvt.cxx
+NavierStokes2DGammaAlphaBSLPuvt.hh
+NavierStokes2DGammaAlphaPuvt.cxx
+NavierStokes2DGammaAlphaPuvt.hh
+NavierStokes2DGammaAlphaSSTPuvt.cxx
+NavierStokes2DGammaAlphaSSTPuvt.hh
+NavierStokesGammaAlphaPhysicalModel.ci
+NavierStokesGammaAlphaPhysicalModel.cxx
+NavierStokesGammaAlphaPhysicalModel.hh
+)
+
+LIST ( APPEND GammaAlpha_cflibs NavierStokes KOmega SA)
+LIST ( APPEND GammaAlpha_requires_mods NavierStokes KOmega SA)
+CF_ADD_PLUGIN_LIBRARY ( GammaAlpha )
+CF_WARN_ORPHAN_FILES()
+
+#ADD_SUBDIRECTORY ( testcases )
+

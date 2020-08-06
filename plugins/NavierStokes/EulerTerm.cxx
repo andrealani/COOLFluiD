@@ -26,6 +26,7 @@ void EulerTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal > ("pRef","static pressure reference value.");
   options.addConfigOption< CFreal > ("machInf","Mach infinity.");
   options.addConfigOption< CFreal > ("uInf","Free stream velocity.");
+  options.addConfigOption< CFreal > ("pInf","Free stream static pressure.");
   options.addConfigOption< CFreal, Config::DynamicOption<> >("p0Inf","Thermodynamic pressure infinity value.");
   
   // @TODO AL: find a better solution to this
@@ -55,6 +56,9 @@ EulerTerm::EulerTerm(const std::string& name) :
   
   _pRef = 0.;
   setParameter("pRef",&_pRef);
+  
+  _pInf = 0.;
+  setParameter("pInf",&_pInf);
 
   _machInf = 0.;
   setParameter("machInf",&_machInf);
