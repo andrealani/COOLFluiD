@@ -31,7 +31,21 @@ NavierStokesGReKO2DSourceTerm_Lang.cxx
 LIST ( APPEND FluxReconstructionGReKO_cflibs NavierStokes GReKO FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega )
 LIST ( APPEND FluxReconstructionGReKO_requires_mods NavierStokes GReKO FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega )
 
+LIST ( APPEND FluxReconstructionGammaAlpha_files
+FluxReconstructionGammaAlpha.hh
+GammaAlpha2DSourceTerm.hh
+GammaAlpha2DSourceTerm.cxx
+DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha.hh
+DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha.cxx
+GammaAlphaJacobBndGradientComputer.hh
+GammaAlphaJacobBndGradientComputer.cxx
+)
+
+LIST ( APPEND FluxReconstructionGammaAlpha_cflibs NavierStokes GammaAlpha FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega FluxReconstructionSA )
+LIST ( APPEND FluxReconstructionGammaAlpha_requires_mods NavierStokes GammaAlpha FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega FluxReconstructionSA )
+
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionSA )
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionKOmega )
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionGReKO )
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionGammaAlpha )
 CF_WARN_ORPHAN_FILES()

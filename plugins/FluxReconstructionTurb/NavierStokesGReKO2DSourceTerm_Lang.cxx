@@ -171,6 +171,9 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   }
   
   SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  
+  // Set the wall distance before computing the turbulent viscosity
+  navierStokesVarSet->setWallDistance(m_currWallDist[iState]);
     
   /// destruction term of k
     
