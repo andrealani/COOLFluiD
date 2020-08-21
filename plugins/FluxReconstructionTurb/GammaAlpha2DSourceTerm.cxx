@@ -42,6 +42,7 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool >("LimPAlpha","Limit P_alpha.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
  options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
+ options.addConfigOption< bool >("AddDGammaDAlpha","Add destruction terms for gamma and alpha.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +78,9 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
   
   m_blockDecoupled = false;
   setParameter("BlockDecoupledJacob",&m_blockDecoupled);
+  
+  m_addDGDA = true;
+  setParameter("AddDGammaDAlpha",&m_addDGDA);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,13 +417,13 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
     const CFreal muGamma = 0.57*pow(-log(1.0-gammaLim),-5.0/6.0*(1.0-gammaLim))*fMuGamma*fMMuGamma*mu;
     
-    const CFreal dudn = 1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));
-    const CFreal dgammadn = 1.0/avV*(-v*dgammax + u*dgammay);
+    const CFreal dudn = -duy; //-1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//
+    const CFreal dgammadn = -dgammay; //1.0/avV*(v*dgammax - u*dgammay);//
     
     CFreal  destructionTerm_Ga  = (-1.0) * cEg * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
     //destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
-    //if (avGa<0.1) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
+    if (avGa<0.1) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.3;
@@ -447,7 +451,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
 
     // compute destruction term of alpha
     const CFreal cna = 0.4;
-    const CFreal dadn = 1.0/avV*(-v*dax + u*day);
+    const CFreal dadn = 1.0/avV*(v*dax - u*day);
     
     CFreal destructionTerm_alpha = -1.0*cna*rho*avV*dadn;
     
@@ -458,7 +462,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     // is this needed and correct??
     if (m_limPRe) prodTerm_alpha     = max(0., prodTerm_alpha);
     
-    destructionTerm_Ga = min(0., destructionTerm_Ga);
+    if (m_limPRe) destructionTerm_Ga = min(0., destructionTerm_Ga);
     
     // is this needed and correct??
     if (m_limPRe) destructionTerm_alpha = min(0., destructionTerm_alpha);
@@ -468,7 +472,13 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     resUpdates[m_nbrEqs*iSol + kID] = m_prodTerm_k + m_destructionTerm_k;
     resUpdates[m_nbrEqs*iSol + omegaID] = m_prodTerm_Omega + m_destructionTerm_Omega;
     resUpdates[m_nbrEqs*iSol + gammaID] = prodTerm_Ga;// + destructionTerm_Ga;
-    resUpdates[m_nbrEqs*iSol + alphaID] = prodTerm_alpha + destructionTerm_alpha;
+    resUpdates[m_nbrEqs*iSol + alphaID] = prodTerm_alpha;// + destructionTerm_alpha;
+    
+    if (m_addDGDA)
+    {
+      resUpdates[m_nbrEqs*iSol + gammaID] += destructionTerm_Ga;
+      resUpdates[m_nbrEqs*iSol + alphaID] += destructionTerm_alpha;
+    }
     
     resUpdates[m_nbrEqs*iSol + 3] = -m_prodTerm_k - m_destructionTerm_k;
     
@@ -504,9 +514,9 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       
       uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = destructionTerm_Ga;//uInfLocal;//dgammadn;//
       
-      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = TInfLocal;//dadn;//prodTerm_alpha;//
+      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = prodTerm_alpha;//TInfLocal;//dadn;//
       
-      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = TuInfLocal;//destructionTerm_Ga;//destructionTerm_alpha;//
+      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = destructionTerm_alpha;//TuInfLocal;//destructionTerm_Ga;//
       
       alphaDiffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = alphac - avAlpha;//muGamma;//
     }
@@ -925,8 +935,8 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
   const CFreal muGamma = 0.57*pow(-log(1.0-gammaLim),-5.0/6.0*(1.0-gammaLim))*fMuGamma*fMMuGamma*mu;
     
-  const CFreal dudn = 1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));
-  const CFreal dgammadn = 1.0/avV*(-v*dgammax + u*dgammay);
+  const CFreal dudn = -duy; //-1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));
+  const CFreal dgammadn = -dgammay; //1.0/avV*(v*dgammax - u*dgammay);
   
   const CFreal dgTerm = -cEg * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
@@ -935,21 +945,21 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
   //if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
   
-  if (destructionTerm_Ga < 0.0)
+  if (destructionTerm_Ga < 0.0 && m_addDGDA)
   {
-//    const CFreal mgdg = muGamma * 5.0/6.0 * (log(-log(1-gammaLim)) + 1.0/log(1-gammaLim));
-//    
-//    // gamma
-//    m_stateJacobian[6][6] +=  dgTerm * mgdg;
-//  
-//    if (!m_blockDecoupled)
-//    {
-//      // u
-//      m_stateJacobian[1][6] +=  destructionTerm_Ga * u/(avV*avV);
-//      
-//      // v
-//      m_stateJacobian[2][6] +=  destructionTerm_Ga * v/(avV*avV);      
-//    }
+    const CFreal mgdg = muGamma * 5.0/6.0 * (log(-log(1-gammaLim)) + 1.0/log(1-gammaLim));
+    
+    // gamma
+    m_stateJacobian[6][6] +=  dgTerm * mgdg;
+  
+    if (!m_blockDecoupled)
+    {
+      // u
+      m_stateJacobian[1][6] +=  destructionTerm_Ga * u/(avV*avV);
+      
+      // v
+      m_stateJacobian[2][6] +=  destructionTerm_Ga * v/(avV*avV);      
+    }
   }
   
   // production  Alpha
@@ -991,7 +1001,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
 
   // compute destruction term of alpha
   const CFreal cna = 0.4;
-  const CFreal dadn = 1.0/avV*(-v*dax + u*day);
+  const CFreal dadn = 1.0/avV*(v*dax - u*day);
     
   CFreal destructionTerm_alpha = -cna*rho*avV*dadn;
   
@@ -1019,7 +1029,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     }
   }
   
-  if (destructionTerm_alpha < 0.0 && !m_blockDecoupled)
+  if (destructionTerm_alpha < 0.0 && !m_blockDecoupled && m_addDGDA)
   {
       const CFreal daTerm = -cna*dadn;
         

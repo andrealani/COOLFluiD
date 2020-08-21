@@ -125,6 +125,7 @@ private: // data
   bool m_limPRe;
   bool m_addUpdateCoeff;
   bool m_blockDecoupled;
+  bool m_addDGDA;
   
   CFuint m_order;
 

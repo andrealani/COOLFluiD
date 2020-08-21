@@ -23,6 +23,8 @@ BCNoSlipWallHeatFluxNS3D.cxx
 BCNoSlipWallHeatFluxNS3D.hh
 BCNoSlipWallTurb2D.cxx
 BCNoSlipWallTurb2D.hh
+BCNoSlipWallGammaAlpha2D.cxx
+BCNoSlipWallGammaAlpha2D.hh
 AUSMFlux.cxx
 AUSMFlux.ci
 AUSMFlux.hh
