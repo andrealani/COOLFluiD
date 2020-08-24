@@ -322,6 +322,12 @@ protected: //data
   /// FR order
   CFuint m_order;
   
+  bool m_addRiemannToGradJacob;
+  
+  bool m_addRiemannToGradCrossCellJacob;
+  
+  bool m_addFluxToGradCrossCellJacob;
+  
   private:
 
   /// Physical data temporary vector

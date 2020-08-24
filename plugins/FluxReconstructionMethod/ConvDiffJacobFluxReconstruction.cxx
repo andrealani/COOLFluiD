@@ -1103,7 +1103,7 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
   
   computeFluxToGradJacobianNum(resFactor);
   
-  computeRiemannFluxToGradJacobianNum(resFactor);
+  if (m_addRiemannToGradJacob || m_addRiemannToGradCrossCellJacob) computeRiemannFluxToGradJacobianNum(resFactor);
   
   computeGradToStateJacobianAna();
   
@@ -1318,6 +1318,8 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         }
             
         // (i)
+        if (m_addRiemannToGradJacob || m_addRiemannToGradCrossCellJacob)
+        {
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
         {
           const CFuint jSolIdxThis = (*m_flxSolDep)[flxPntIdxThis][jSolPnt];
@@ -1330,7 +1332,9 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
           
           // loop over the states to perturb the states (l)
           for (CFuint pertSolIdx = 0; pertSolIdx < m_nbrSolPnts; ++pertSolIdx)
-          {   
+          {
+            if (m_addRiemannToGradJacob)
+            {
             // add part on this side of face
             m_tempFlux = 0.0;
 
@@ -1360,7 +1364,10 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             }
               
             acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+            }
           
+            if (m_addRiemannToGradCrossCellJacob)
+            {
             // get the divergence of the correction function on other side
             divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
             
@@ -1395,9 +1402,13 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             }
             
             acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+            }
           }
         }
+        }
         
+        if (m_addFluxToGradCrossCellJacob)
+        {
         //// add the cross-element gradient part
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         { 
@@ -1458,6 +1469,7 @@ void ConvDiffJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             
             acc.addValues(jSolPnt+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
+        }
         }
       }
     }
@@ -1515,7 +1527,7 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
   
   computeFluxToGradJacobianNum(resFactor);
   
-  computeRiemannFluxToGradJacobianNum(resFactor);
+  if (m_addRiemannToGradJacob || m_addRiemannToGradCrossCellJacob) computeRiemannFluxToGradJacobianNum(resFactor);
   
   computeGradToStateJacobianAna();
   
@@ -1730,6 +1742,8 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
         }
             
         // (i)
+        if (m_addRiemannToGradJacob || m_addRiemannToGradCrossCellJacob)
+        {
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
         {
           const CFuint jSolIdxThis = (*m_flxSolDep)[flxPntIdxThis][jSolPnt];
@@ -1742,7 +1756,9 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
           
           // loop over the states to perturb the states (l)
           for (CFuint pertSolIdx = 0; pertSolIdx < m_nbrSolPnts; ++pertSolIdx)
-          {   
+          {
+            if (m_addRiemannToGradJacob)
+            {
             // add part on this side of face
             m_tempFlux = 0.0;
 
@@ -1772,7 +1788,10 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
             }
               
             acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+            }
           
+            if (m_addRiemannToGradCrossCellJacob)
+            {
             // get the divergence of the correction function on other side
             divh = m_corrFctDiv[jSolIdxOther][flxPntIdxOther];
             
@@ -1807,9 +1826,13 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
             }
             
             acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
+            }
           }
         }
+        }
         
+        if (m_addFluxToGradCrossCellJacob)
+        {
         //// add the cross-element gradient part
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         { 
@@ -1870,6 +1893,7 @@ void ConvDiffJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint s
             
             acc.addValues(jSolPnt+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
+        }
         }
       }
     }

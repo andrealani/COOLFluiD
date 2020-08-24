@@ -110,6 +110,15 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_order()
   {
     addConfigOptionsTo(this);
+    
+    m_addRiemannToGradJacob = true;
+    setParameter( "AddRiemannToGradJacob", &m_addRiemannToGradJacob);
+    
+    m_addRiemannToGradCrossCellJacob = true;
+    setParameter( "AddRiemannToGradCrossCellJacob", &m_addRiemannToGradCrossCellJacob);
+    
+    m_addFluxToGradCrossCellJacob = true;
+    setParameter( "AddFluxToGradCrossCellJacob", &m_addFluxToGradCrossCellJacob);
   }
   
   
@@ -117,6 +126,11 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
 
 void DiffRHSFluxReconstruction::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< bool >("AddRiemannToGradJacob","Boolean telling whether to add Riemann Flux Jacobian to the Gradient.");
+  
+  options.addConfigOption< bool >("AddRiemannToGradCrossCellJacob","Boolean telling whether to add the Riemann Flux Jacobian to the cross-cell gradient.");
+  
+  options.addConfigOption< bool >("AddFluxToGradCrossCellJacob","Boolean telling whether to add the discontinuous flux Jacobian to the cross-cell gradient.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
