@@ -127,7 +127,7 @@ void NavierStokesSkinFrictionHeatFluxFR::setup()
   m_varNames.push_back("Cp");
   m_varNames.push_back("heatF");
   m_varNames.push_back("Stanton");
-  m_varNames.push_back("yplus");
+  m_varNames.push_back("Cfcrit");
   m_varNames.push_back("Cf");
   m_varNames.push_back("muWall"); 
   m_varNames.push_back("heatFRad");
@@ -315,10 +315,10 @@ void NavierStokesSkinFrictionHeatFluxFR::computeWall()
     // Do some extra computation on the face if needed
     computeExtraValues();
 
-    // Compute y+ value
-    if(socket_wallDistance.isConnected())  {
-      computeYplus();
-    }
+//    // Compute y+ value
+//    if(socket_wallDistance.isConnected())  {
+//      computeYplus();
+//    }
   }
 }
     
@@ -358,6 +358,11 @@ void NavierStokesSkinFrictionHeatFluxFR::computeTauWall(CFuint flxIdx)
       // friction coefficient 
       m_Cf = m_tau / (0.5*m_rhoInf*m_uInf*m_uInf);
     } 
+    
+    if (m_cellStatesFlxPnt[flxIdx]->size() == 8)
+    {
+      m_yPlus = (*(m_cellStatesFlxPnt[flxIdx]))[7]*sqrt(m_muWall*m_rhoWall)/(0.5*m_rhoInf*m_uInf*m_uInf);
+    }
     
     m_frictionForces[XX] =  m_Cf*m_unitNormalFlxPnts[flxIdx][YY];
     m_frictionForces[YY] = -m_Cf*m_unitNormalFlxPnts[flxIdx][XX];
