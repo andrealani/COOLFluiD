@@ -56,8 +56,10 @@ void MinMaxFilterState::filter (RealVector& state) const
   {
     // only apply to the equations selected by the mask
     if ( m_maskIDs[iEq] )
+    {
       state[iEq] = max (m_minValues[iEq], state[iEq]);
       state[iEq] = min (m_maxValues[iEq], state[iEq]);
+    }
   }
 }
 
