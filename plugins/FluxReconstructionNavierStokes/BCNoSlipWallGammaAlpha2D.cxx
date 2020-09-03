@@ -42,6 +42,7 @@ void BCNoSlipWallGammaAlpha2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("OmegaWallFactor","Factor by which to multiply omegaWall each iteration until it is the theoretical value (Default 1.01).");
   options.addConfigOption< CFuint >("ImposeOmegaWallIter","Iteration at which to impose theoretical omegaWall value.");
   options.addConfigOption< CFreal,Config::DynamicOption<>  >("GammaThreshold","Threshold beyond which gamma is considered to be transitioning if transition already occurred (Default 0.02).");
+  options.addConfigOption< bool,Config::DynamicOption<>  >("EnforceLaminar","Flag to enforce laminar flow at all times (Default false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -91,6 +92,9 @@ BCNoSlipWallGammaAlpha2D::BCNoSlipWallGammaAlpha2D(const std::string& name) :
    
    m_gammaThreshold = 0.02;
    setParameter("GammaThreshold",&m_gammaThreshold);
+   
+   m_enforceLaminar = false;
+   setParameter("EnforceLaminar",&m_enforceLaminar);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -265,7 +269,7 @@ void BCNoSlipWallGammaAlpha2D::computeGhostStates(const vector< State* >& intSta
         
       m_ghostSolPhysData[EulerTerm::GAMMA] = m_intSolPhysData[EulerTerm::GAMMA];
       //CFLog(INFO, "is turb: " << m_transitionCriterion[iState] << ", transition occurred: " << m_transitionOccurred << "\n");
-      if (m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold))// && m_transitionOccurred))
+      if ((m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold)) && !m_enforceLaminar)// && m_transitionOccurred))
       {
         // gamma
         m_ghostSolPhysData[iK+2] = m_intSolPhysData[iK+2];

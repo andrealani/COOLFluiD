@@ -1,0 +1,292 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, NS2D, Backward Euler, mesh with curved quads, 
+# Lax-Friedrichs scheme, wall BCs and Dirichlet BC 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -2.85559
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libNewtonMethod libPetscI libGmsh2CFmesh libKOmega libFluxReconstructionKOmega libAeroCoefFR libMeshToolsFVM libForwardEuler libMeshToolsFR libGReKO libFluxReconstructionGReKO libGammaAlpha libFluxReconstructionGammaAlpha
+
+###################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/GReKO/testcases/FlatPlate
+Simulator.Paths.ResultsDir = plugins/GReKO/testcases/FlatPlate
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2DGammaAlpha #NavierStokes2DGReKLogO #NavierStokes2DKLogOmega #
+Simulator.SubSysMesh.MeshMeshData.listTRS = InnerFaces Wall Mirror Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = flatPlateGReKLogOUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = GA600T3AP1LamNew.CFmesh #GA600T3AP1.CFmesh #GAT3AP1DGInter.CFmesh #GAT3AP1DG.CFmesh #GAT3AP1NoD.CFmesh #GAT3AP1WODG.CFmesh #GAT3AP1.CFmesh #GReKLogOFlatPlate143.CFmesh #GReKLogOFlatPlate.CFmesh #P0NewMeshStall.CFmesh #SAFlatPlateNew.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+#Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+###################################
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DGammaAlpha #NavierStokes2DGReKLogO #NavierStokes2DKLogOmega #
+Simulator.SubSystem.NavierStokes2DGammaAlpha.refValues  = 1.0e5 5.4 5.4 290.3135154 4.763286e-2 5.42417 1.0 12.544849 #168.7992 #4.763286e-6 -3.7869 #
+Simulator.SubSystem.NavierStokes2DGammaAlpha.refLength  = 1.0
+
+# The following inf values are necessary for gamma-alpha!!!
+Simulator.SubSystem.NavierStokes2DGammaAlpha.ConvTerm.machInf = 0.01580958
+Simulator.SubSystem.NavierStokes2DGammaAlpha.ConvTerm.uInf = 5.4
+Simulator.SubSystem.NavierStokes2DGammaAlpha.ConvTerm.pInf = 1.0e5
+
+# Compute the Wall distance
+Simulator.SubSystem.DataPreProcessing = DataProcessing
+Simulator.SubSystem.DataPreProcessingNames = DataProcessing1
+Simulator.SubSystem.DataProcessing1.Comds = ComputeWallDistanceVectorFRMPI #ComputeWallDistance #ComputeWallDistanceVector2CCMPI
+Simulator.SubSystem.DataProcessing1.Names = WallDistance
+Simulator.SubSystem.DataProcessing1.WallDistance.BoundaryTRS = Wall
+Simulator.SubSystem.DataProcessing1.WallDistance.OutputFile = distances.dat
+Simulator.SubSystem.DataProcessing1.RunAtSetup = true
+Simulator.SubSystem.DataProcessing1.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing1.ProcessRate = 100000000000000
+
+# Post process the data to compute the skin friction and y+
+#Simulator.SubSystem.DataPostProcessing = DataProcessing
+#Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+#Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSATruncateK
+#Simulator.SubSystem.DataProcessing2.Names = SATruncateK
+
+###################################
+Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
+Simulator.SubSystem.CFmesh.FileName     = flatPlateGReKLogOCoarse.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = true
+Simulator.SubSystem.CFmesh.ParWriteSol = ParWriteSolution
+
+Simulator.SubSystem.ParaView.FileName    = flatPlateGReKLogOCoarse.vtu
+Simulator.SubSystem.ParaView.Data.updateVar = Puvt
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.SaveRate = 1000
+Simulator.SubSystem.ParaView.AppendTime = false
+Simulator.SubSystem.ParaView.AppendIter = false #false
+Simulator.SubSystem.ParaView.Data.printExtraValues = false #true
+#Simulator.SubSystem.ParaView.Data.DataHandleOutput.SocketNames = wallDistance wallShearStressVelocity
+#Simulator.SubSystem.ParaView.Data.DataHandleOutput.VariableNames = wallDistance wallShearStressVelocity
+
+Simulator.SubSystem.Tecplot.FileName    = flatPlateGReKLogOCoarse.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate = 500
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+Simulator.SubSystem.Tecplot.Data.printExtraValues = true #false #
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.SocketNames = wallShearStressVelocity MInfLocal uInfLocal TInfLocal TuInfLocal alphaDiff #fOnset fLength #gammaEff gammaSep outputPP wallDistance
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.VariableNames = wallShearStressVelocity MInfLocal uInfLocal TInfLocal TuInfLocal alphaDiff #fOnset fLength #gammaEff gammaSep outputPP wallDistance
+
+###################################
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 10000000 #1000000 #1500
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -7
+
+# name of the file where to put interactive settings
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/GReKO/testcases/FlatPlate/transition.inter
+# how often the interactive file is read
+Simulator.SubSystem.InteractiveParamReader.readRate = 100
+
+#######IMPLICIT#############
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.SaveSystemToFile = false
+Simulator.SubSystem.NewtonIteratorLSS.Data.Output = false
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 1
+Simulator.SubSystem.NewtonIterator.Data.FilterState = MinMax #Max #
+Simulator.SubSystem.NewtonIterator.Data.MinMax.maskIDs = 1 0 0 1 1 1 1 1
+Simulator.SubSystem.NewtonIterator.Data.MinMax.minValues = 0.0 0 0 0.0 0.0 0.0 0.01 0.1
+Simulator.SubSystem.NewtonIterator.Data.MinMax.maxValues = 1.0e10 0 0 1.0e10 1.0e10 1.0e5 0.99 1.0e5
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+#Simulator.SubSystem.NewtonIterator.UpdateSol = TurbUpdateSol
+#Simulator.SubSystem.NewtonIterator.TurbUpdateSol.KInlet = 1.0e-12 #1.0e-7
+#Simulator.SubSystem.NewtonIterator.TurbUpdateSol.OmegaInlet = 1.0 #200.0
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 100.
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,3.0,min(20.0,cfl*1.01)) #if(i<10,1.0,min(10.0,cfl*1.001)) #if(i<10,0.5,min(3.0,cfl*1.0001)) #
+Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceFlatPlateGReKLogOCoarse.plt
+
+#######EXPLICIT############
+
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+Simulator.SubSystem.FwdEuler.ShowRate        = 20
+Simulator.SubSystem.FwdEuler.ConvRate        = 20
+
+###################################
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+
+Simulator.SubSystem.Default.listTRS = InnerFaces Mirror Wall Inlet Outlet
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateGReKLogOUpgraded.CFmesh #GAT3AP2DG.CFmesh #GAT3AP2NoLim.CFmesh #GAT3AP2WODGStartP1.CFmesh #P0NoPCorr.CFmesh #flatPlateGReKLogOTest-iter_23000.CFmesh #flatPlateGReKLogO-iter_1000.CFmesh #flatPlateGReKLogO-iter_15000.CFmesh #flatPlateGReKLogO-iter_500.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+
+###################################
+# choose which builder we use
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobGammaAlpha #RHSJacobNS #RHSNS #
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobTurb #ConvDiffRHSJacobNS #ConvRHSJacobNS #ConvRHSNS #
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobNS #DiffRHSNS #
+Simulator.SubSystem.FluxReconstruction.SetupCom = SetupExtra
+
+Simulator.SubSystem.FluxReconstruction.ConvDiffRHSJacobTurb.AddRiemannToGradJacob = false #true #
+Simulator.SubSystem.FluxReconstruction.ConvDiffRHSJacobTurb.AddRiemannToGradCrossCellJacob = false #true #
+Simulator.SubSystem.FluxReconstruction.ConvDiffRHSJacobTurb.AddFluxToGradCrossCellJacob = false #true #
+
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 10
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 10
+
+#####Comment in explicit#####
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.AddJacob = true
+#############################
+
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = Puvt
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= SSTPuvt #BSLPuvt #Puvt #
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusUpFluxTurb2D #LaxFriedrichsFlux #
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxTurb2D.machInf = 1.0 #0.2 #0.0158
+Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
+
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.033 #0.33 #0.33 #0.0296296296 
+
+Simulator.SubSystem.FluxReconstruction.SrcTermNames = GammaAlpha2DSourceTerm #KLogOmega2DSourceTerm #
+Simulator.SubSystem.FluxReconstruction.SrcTermComds = GammaAlpha2DSourceTerm #KLogOmega2DSourceTerm #
+
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.LimitProductionTerm = true #false #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.PGrad = false #true #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.LimPAlpha = false #true #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.AnalyticalJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.AddUpdateCoeff = false #true #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.BlockDecoupledJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.GammaAlpha2DSourceTerm.AddDGammaDAlpha = true #false #
+
+###################################
+Simulator.SubSystem.FluxReconstruction.InitComds = Null #StdInitState #
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
+Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0e5 5.4 0.0 290.3135154 4.763286e-2 5.42417 0.99 12.544849 #168.7992 #
+
+Simulator.SubSystem.FluxReconstruction.BcNames = Wall Mirror BcInlet BcOutlet
+Simulator.SubSystem.FluxReconstruction.Mirror.applyTRS = Mirror
+Simulator.SubSystem.FluxReconstruction.Wall.applyTRS = Wall
+Simulator.SubSystem.FluxReconstruction.BcInlet.applyTRS = Inlet
+Simulator.SubSystem.FluxReconstruction.BcOutlet.applyTRS = Outlet
+
+Simulator.SubSystem.FluxReconstruction.BcNamesDiff = WallDiff MirrorDiff BcInletDiff BcOutletDiff
+Simulator.SubSystem.FluxReconstruction.MirrorDiff.applyTRS = Mirror
+Simulator.SubSystem.FluxReconstruction.WallDiff.applyTRS = Wall
+Simulator.SubSystem.FluxReconstruction.BcInletDiff.applyTRS = Inlet
+Simulator.SubSystem.FluxReconstruction.BcOutletDiff.applyTRS = Outlet
+
+#Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = true
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0 
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinTemperature = 1.0e-3
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinTurbVars = 1.0e-8 10.0
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 1
+
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = BCNoSlipWallGammaAlpha2D  MirrorVelocity BCSubInletTurbUVT2D BCSubOutletTurb2D #BCNoSlipWallTurb2D
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall Mirror BcInlet BcOutlet
+
+Simulator.SubSystem.FluxReconstruction.Data.Wall.KWall = 0.0 #
+#wallDist greatly influences stability: larger value, more stable (less steep omega), but rougher wall. Theoretically wallDist=0 -> omega_wall = infinity
+Simulator.SubSystem.FluxReconstruction.Data.Wall.WallDist = 4.7e-5 #8.8e-5 #3.5e-5 #7.0e-5 #6.37e-6 #3.19e-6 #6.9e-6 #1.38e-5
+Simulator.SubSystem.FluxReconstruction.Data.Wall.OmegaWallFactor = 1.001 #2.0
+Simulator.SubSystem.FluxReconstruction.Data.Wall.ImposeOmegaWallIter = 0 #1000000000 #1000000000
+Simulator.SubSystem.FluxReconstruction.Data.Wall.GammaThreshold = 0.15 #0.02 #
+Simulator.SubSystem.FluxReconstruction.Data.Wall.EnforceLaminar = true
+
+Simulator.SubSystem.FluxReconstruction.Data.BcInlet.Vx = 5.4
+Simulator.SubSystem.FluxReconstruction.Data.BcInlet.Vy = 0.0
+Simulator.SubSystem.FluxReconstruction.Data.BcInlet.T = 290.3135154
+Simulator.SubSystem.FluxReconstruction.Data.BcInlet.TurbVars = 4.763286e-2 5.42417 0.99 12.544849 #168.7992 #
+
+Simulator.SubSystem.FluxReconstruction.Data.BcOutlet.P = 1.0e5 #9300
+
+###################################
+#DataProcessing
+
+# Post process the data to compute the skin friction
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
+Simulator.SubSystem.DataProcessing2.Names = SkinFriction
+Simulator.SubSystem.DataProcessing2.ProcessRate = 100
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Wall
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 1.2
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 290.3135154
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf = 5.4
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 1.0e5
+Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = true
+#Simulator.SubSystem.DataProcessing2.SkinFriction.AppendTime = true
+#Simulator.SubSystem.DataProcessing2.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileConv = convergence-surfBis.plt

@@ -73,15 +73,22 @@ void NavierStokes2DGammaAlphaBSLPuvt::computeBlendingCoefFromGradientVars(const 
 
 CFreal NavierStokes2DGammaAlphaBSLPuvt::getTurbDynViscosityFromGradientVars(const RealVector& state, const vector<RealVector*>& gradients)
 {
-  CFreal mut = NavierStokes2DGammaAlphaPuvt::getTurbDynViscosityFromGradientVars(state, gradients);
-    
-  const CFreal avGa = std::min(std::max(state[6],0.01),1.0);
+  cf_assert(_wallDistance >= 0.);
+  //cf_assert(gradients.size() > 0);
 
-  // compute effective eddy viscosity
-  const CFreal cmut1 = 0.5;
-  const CFreal cmut2 = 0.25;
-  const CFreal cmut3 = 0.1;
-  mut *= (avGa+avGa*(1.0-avGa)*cmut1*(1.0+tanh((avGa-cmut2)/(cmut3))));
+  CFreal mut = 0.;
+  if((_wallDistance > 0.) && (gradients.size() > 0))
+  {
+    CFreal mut = NavierStokes2DGammaAlphaPuvt::getTurbDynViscosityFromGradientVars(state, gradients);
+    
+    const CFreal avGa = std::min(std::max(state[6],0.01),0.99);
+
+    // compute effective eddy viscosity
+    const CFreal cmut1 = 0.5;
+    const CFreal cmut2 = 0.25;
+    const CFreal cmut3 = 0.1;
+    mut *= (avGa+avGa*(1.0-avGa)*cmut1*(1.0+tanh((avGa-cmut2)/(cmut3))));
+  }
     
   return mut;
 }

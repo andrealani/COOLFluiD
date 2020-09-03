@@ -81,7 +81,8 @@ RealVector& NavierStokes2DGammaAlphaPuvt::getFlux(const RealVector& values,
   const CFreal p = max(values[0],1.0e-5);
   const CFreal avU = values[1];
   const CFreal avV = values[2];
-  const CFreal gamma = min(max(values[6],0.0),1.0);
+  const CFreal gamma = min(max(values[6],0.01),0.99);
+  //const CFreal gamma = min(max(values[6],0.0),1.0);
 
   RealVector& nsData = getModel().getPhysicalData();
   const CFreal nx = normal[XX];
@@ -137,11 +138,13 @@ RealVector& NavierStokes2DGammaAlphaPuvt::getFlux(const RealVector& values,
   
   const CFreal muInfLocal = getLaminarDynViscosityFromGradientVars(copyState);
   
+  //const CFreal distance = std::max(_wallDistance, 1.0e-12);
+  
   const CFreal fMuGamma = 1.0-exp(-256.0*(_wallDistance*uInfLocal*rhoInfLocal/muInfLocal)*(_wallDistance*uInfLocal*rhoInfLocal/muInfLocal));
   const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));
  //if (_wallDistance < 1.0e-4) CFLog(INFO, "wallDist: " << _wallDistance << "\n"); 
-  const CFreal gammaLim = min(max(0.01,gamma),0.99);
-  const CFreal muGamma = 0.57*pow(-log(1-gammaLim),-5.0/6.0*(1.0-gammaLim))*fMuGamma*fMMuGamma*getModel().getCoeffTau()*nsData[NSTurbTerm::MU];
+  //const CFreal gammaLim = min(max(0.01,gamma),0.99);
+  const CFreal muGamma = 0.57*pow(-log(1-gamma),-5.0/6.0*(1.0-gamma))*fMuGamma*fMMuGamma*getModel().getCoeffTau()*nsData[NSTurbTerm::MU];
 
   _flux[6] = (muGamma)*(gradGa[XX]*nx + gradGa[YY]*ny);
   

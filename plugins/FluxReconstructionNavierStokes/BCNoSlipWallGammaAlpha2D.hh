@@ -127,6 +127,9 @@ protected: // data
   
   /// threshold beyond which gamma is considered to be transitioning if transition already occurred
   CFreal m_gammaThreshold;
+  
+  /// Flag to enforce laminar flow at all times (Default false)
+  bool m_enforceLaminar;
 
 }; // class BCNoSlipWallGammaAlpha2D
 

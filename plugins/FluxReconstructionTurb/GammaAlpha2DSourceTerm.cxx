@@ -209,13 +209,6 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
 
     m_currWallDist[iState] = wallDist[stateID];//((*m_cellStates)[iState]->getCoordinates())[YY];
-    
-//    // very dirty limiting procedure
-//    const CFreal ga = (*((*m_cellStates)[iState]))[6];
-//    if (ga < -0.1) (*((*m_cellStates)[iState]))[6] = -0.1;
-//    if (ga > 1.1) (*((*m_cellStates)[iState]))[6] = 1.1;
-//    
-//    cf_assert((*((*m_cellStates)[iState]))[6] > -0.11 && (*((*m_cellStates)[iState]))[6] < 1.11);
   }
   
   const EquationSubSysDescriptor& eqData = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
@@ -237,14 +230,15 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     // Get Vorticity
     getVorticity(iSol);
     
-    //if (m_solPhysData[iKPD+2]<0) CFLog(INFO, "NEGATIVE GAMMA!!!\n");
-    
     // get current state values
     const CFreal avP     = std::max(m_solPhysData[EulerTerm::P],0.0);
     const CFreal avV     = m_solPhysData[EulerTerm::V];
     const CFreal avK     = std::max(m_solPhysData[iKPD],0.0);
     const CFreal avOmega = std::exp(m_solPhysData[iKPD+1]);
-    const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.0),1.0);
+    
+    const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.01),0.99);
+    //const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.0),1.0);
+
     const CFreal avAlpha    = std::max(m_solPhysData[iKPD+3],0.0);
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
     const CFreal u = m_solPhysData[EulerTerm::VX];
@@ -405,8 +399,8 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     const CFreal beta = sqrt(nsigma)*uInfLocal*rhoInfLocal/muInfLocal;
     
-    const CFreal limGa =  std::min(avGa,0.9999);
-    CFreal prodTerm_Ga = fOnset*2.0*fg*(1.0-avGa)*sqrt(-log(1.0-limGa))*beta*rho*avV;
+    //const CFreal limGa =  std::min(avGa,0.9999);
+    CFreal prodTerm_Ga = fOnset*2.0*fg*(1.0-avGa)*sqrt(-log(1.0-avGa))*beta*rho*avV;
     
     // compute dissipation term of gamma
     const CFreal cEg = 20.0;
@@ -414,8 +408,8 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal fMuGamma = 1.0-exp(-256.0*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal));
     const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));
   
-    const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
-    const CFreal muGamma = 0.57*pow(-log(1.0-gammaLim),-5.0/6.0*(1.0-gammaLim))*fMuGamma*fMMuGamma*mu;
+    //const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
+    const CFreal muGamma = 0.57*pow(-log(1.0-avGa),-5.0/6.0*(1.0-avGa))*fMuGamma*fMMuGamma*mu;
     
     const CFreal dudn = -duy; //-1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//
     const CFreal dgammadn = -dgammay; //1.0/avV*(v*dgammax - u*dgammay);//
@@ -423,7 +417,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     CFreal  destructionTerm_Ga  = (-1.0) * cEg * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
     //destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
-    if (avGa<0.1) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
+    //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.3;
@@ -657,7 +651,10 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal overOmega = 1.0/avOmega;
   const CFreal avV = sqrt((*((*m_cellStates)[iState]))[1]*(*((*m_cellStates)[iState]))[1]+(*((*m_cellStates)[iState]))[2]*(*((*m_cellStates)[iState]))[2]);
   
-  const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[6],0.0),1.0);
+  const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[6],0.01),0.99);
+  //const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[6],0.0),1.0);
+
+    
   const CFreal avAlpha    = max((*((*m_cellStates)[iState]))[7],0.0);
   
   const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
@@ -728,8 +725,8 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal dmudg = 0.5*(1-2.0*avGa)*(tanh((avGa-0.25)/0.1)+1) + 0.5/0.1*(1-avGa)*avGa/(pow(cosh((avGa-0.25)/0.1),2)) + 1.0;
 
-  const CFreal limGamma = max(0.01,avGa);
-  const CFreal mutGaMod = (limGamma+limGamma*(1.0-limGamma)*0.5*(1.0+tanh((limGamma-0.25)/(0.1))));
+  //const CFreal limGamma = max(0.01,avGa);
+  const CFreal mutGaMod = (avGa+avGa*(1.0-avGa)*0.5*(1.0+tanh((avGa-0.25)/(0.1))));
     
   if (Dk < 0.0)
   {
@@ -885,9 +882,9 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal betaGA = sqrt(nsigma)*uInfLocal*rhoInfLocal/muInfLocal;
     
-  const CFreal limGa =  std::min(avGa,0.9999);
+  //const CFreal limGa =  std::min(avGa,0.9999);
   
-  const CFreal gTerm = (1-avGa)*sqrt(-log(1.0-limGa));
+  const CFreal gTerm = (1-avGa)*sqrt(-log(1.0-avGa));
   
   const CFreal brc2 = betaGA*rho*avV*2.0;
   
@@ -895,18 +892,18 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   if (prodTerm_Ga > 0.0)
   {
-    const CFreal limLimGa =  std::max(limGa,0.0001);
+    //const CFreal limLimGa =  std::max(limGa,0.0001);
     
-    const CFreal dgTermdg = (2.0*log(1-limLimGa)+1.0)/(2.0*sqrt(-log(1-limLimGa))); 
+    const CFreal dgTermdg = (2.0*log(1-avGa)+1.0)/(2.0*sqrt(-log(1-avGa))); 
     
     CFreal dfgdg = 0.0;
     
-    if (avGa<0.45) dfgdg = cfg1*cfg2/pow(cos(cfg2*limLimGa-cfg3),2) * exp(cfg1*tan(cfg3-cfg2*limLimGa)-cfg4);
+    if (avGa<0.45) dfgdg = cfg1*cfg2/pow(cos(cfg2*avGa-cfg3),2) * exp(cfg1*tan(cfg3-cfg2*avGa)-cfg4);
     
     const CFreal dbdg = 0.5*uInfLocal*rhoInfLocal/muInfLocal/sqrt(nsigma) * 1.25e-11*pow(TuInfLocal,7.0/4.0) * fMnsigma * (PRC-1.0) * dfgdg;
      
     //gamma
-    m_stateJacobian[6][6] += brc2 * fg * dgTermdg + brc2 * gTerm * dfgdg + gTerm * fg * 2.0 * rho * avV * dbdg;
+    //m_stateJacobian[6][6] += brc2 * fg * dgTermdg + brc2 * gTerm * dfgdg + gTerm * fg * 2.0 * rho * avV * dbdg;
    
     if (!m_blockDecoupled)
     {
@@ -932,8 +929,8 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal fMuGamma = 1.0-exp(-256.0*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal));
   const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));
   
-  const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
-  const CFreal muGamma = 0.57*pow(-log(1.0-gammaLim),-5.0/6.0*(1.0-gammaLim))*fMuGamma*fMMuGamma*mu;
+  //const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
+  const CFreal muGamma = 0.57*pow(-log(1.0-avGa),-5.0/6.0*(1.0-avGa))*fMuGamma*fMMuGamma*mu;
     
   const CFreal dudn = -duy; //-1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));
   const CFreal dgammadn = -dgammay; //1.0/avV*(v*dgammax - u*dgammay);
@@ -942,15 +939,15 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     
   CFreal  destructionTerm_Ga  = dgTerm * muGamma;
     
-  destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+  //destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
   //if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
   
   if (destructionTerm_Ga < 0.0 && m_addDGDA)
   {
-    const CFreal mgdg = muGamma * 5.0/6.0 * (log(-log(1-gammaLim)) + 1.0/log(1-gammaLim));
+    const CFreal mgdg = muGamma * 5.0/6.0 * (log(-log(1-avGa)) + 1.0/log(1-avGa));
     
     // gamma
-    m_stateJacobian[6][6] +=  dgTerm * mgdg;
+    //m_stateJacobian[6][6] +=  dgTerm * mgdg;
   
     if (!m_blockDecoupled)
     {

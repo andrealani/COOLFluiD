@@ -74,7 +74,8 @@ CFreal NavierStokes2DGammaAlphaSSTPuvt::getTurbDynViscosityFromGradientVars(cons
     const CFreal Omega = std::exp(state[5]);
     const CFreal vorticity = fabs((*(gradients[2]))[XX] - (*(gradients[1]))[YY]);
     const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
-    const CFreal avGa = std::min(std::max(state[6],0.01),1.0);
+    const CFreal avGa = std::min(std::max(state[6],0.01),0.99);
+    //const CFreal avGa = std::min(std::max(state[6],0.01),1.0);
 
     ///@todo here there should be an adimensionalization coef
     const CFreal arg2_1 = 2. * sqrt(K) / (0.09 * Omega * _wallDistance);
