@@ -51,7 +51,7 @@ void NavierStokes2DGammaAlphaBSLPuvt::computeBlendingCoefFromGradientVars(const 
   const CFreal distance = std::max(_wallDistance, 1.e-12);
 
   //Menet SST model from 2003 : The definition of CD_kw uses 1.e-10 rather than 1.-20
-  const CFreal CD_kw = std::max(2.* rho * _sigmaOmega2 * (gradK[XX]*gradOmega[XX] + gradK[YY]*gradOmega[YY]), 1.e-20);//* overOmega
+  const CFreal CD_kw = std::max(2.* rho * _sigmaOmega2 * (gradK[XX]*gradOmega[XX] + gradK[YY]*gradOmega[YY]), 1.e-10);//* overOmega
 
 ///@todo here be careful with the adimensionalization...check this!!!
   const CFreal arg1_1 = sqrt(K)/(0.09*Omega*distance);

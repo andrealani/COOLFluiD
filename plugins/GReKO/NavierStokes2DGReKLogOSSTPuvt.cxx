@@ -64,7 +64,7 @@ CFreal NavierStokes2DGReKLogOSSTPuvt::getTurbDynViscosityFromGradientVars(const 
   cf_assert(_wallDistance >= 0.);
 ///@todo put this here??
   cf_assert(gradients.size() > 0);
-
+//if (_wallDistance == 0.) CFLog(INFO, "wallDist: " << _wallDistance << "\n");
   CFreal mut = 0.;
   if((_wallDistance > 0.) && (gradients.size() > 0))
   {
@@ -73,7 +73,15 @@ CFreal NavierStokes2DGReKLogOSSTPuvt::getTurbDynViscosityFromGradientVars(const 
     const CFreal rho = getDensity(state);
     const CFreal K = std::max(state[4],0.0);
     const CFreal Omega = std::exp(state[5]);
-    const CFreal vorticity = fabs((*(gradients[2]))[XX] - (*(gradients[1]))[YY]);
+    
+    //const CFreal vorticity = fabs((*(gradients[2]))[XX] - (*(gradients[1]))[YY]);
+    const CFreal gradU_X = (*(gradients[1]))[XX];
+    const CFreal gradU_Y = (*(gradients[1]))[YY];
+    const CFreal gradV_X = (*(gradients[2]))[XX];
+    const CFreal gradV_Y = (*(gradients[2]))[YY];
+    const CFreal gradSum = (gradU_Y + gradV_X);
+    const CFreal strain = std::sqrt(2.*(gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y));
+    
     const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
 
     ///@todo here there should be an adimensionalization coef
@@ -83,7 +91,7 @@ CFreal NavierStokes2DGReKLogOSSTPuvt::getTurbDynViscosityFromGradientVars(const 
 
     const CFreal F2 = tanh(arg2*arg2);
 
-    mut = (a1 * rho * K )/ std::max(a1*Omega , vorticity*F2);
+    mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
   }
 
   return mut;

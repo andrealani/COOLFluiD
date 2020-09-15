@@ -72,7 +72,15 @@ CFreal NavierStokes2DGammaAlphaSSTPuvt::getTurbDynViscosityFromGradientVars(cons
     const CFreal rho = std::max(0., getDensity(state));
     const CFreal K = std::max(state[4],0.0);
     const CFreal Omega = std::exp(state[5]);
-    const CFreal vorticity = fabs((*(gradients[2]))[XX] - (*(gradients[1]))[YY]);
+    
+    //const CFreal vorticity = fabs((*(gradients[2]))[XX] - (*(gradients[1]))[YY]);
+    const CFreal gradU_X = (*(gradients[1]))[XX];
+    const CFreal gradU_Y = (*(gradients[1]))[YY];
+    const CFreal gradV_X = (*(gradients[2]))[XX];
+    const CFreal gradV_Y = (*(gradients[2]))[YY];
+    const CFreal gradSum = (gradU_Y + gradV_X);
+    const CFreal strain = std::sqrt(2.*(gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y));
+
     const CFreal mu = getLaminarDynViscosityFromGradientVars(state);
     const CFreal avGa = std::min(std::max(state[6],0.01),0.99);
     //const CFreal avGa = std::min(std::max(state[6],0.01),1.0);
@@ -84,7 +92,7 @@ CFreal NavierStokes2DGammaAlphaSSTPuvt::getTurbDynViscosityFromGradientVars(cons
 
     const CFreal F2 = tanh(arg2*arg2);
 
-    mut = (a1 * rho * K )/ std::max(a1*Omega , vorticity*F2);
+    mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
     
     // compute effective eddy viscosity
     const CFreal cmut1 = 0.5;

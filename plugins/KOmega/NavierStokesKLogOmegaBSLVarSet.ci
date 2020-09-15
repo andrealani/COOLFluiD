@@ -40,7 +40,7 @@ void NavierStokesKLogOmegaBSLVarSet<BASE, SGROUP>::computeBlendingCoefFromGradie
   const CFreal overOmega = 1./Omega;
   const CFreal mu = this->getLaminarDynViscosityFromGradientVars(state);
   const CFreal distance = std::max(this->_wallDistance, 1.e-12);
-  const CFreal CD_kw = std::max(2.*rho*this->_sigmaOmega2*MathFunctions::innerProd(gradK,gradOmega), 1.e-20);//*overOmega
+  const CFreal CD_kw = std::max(2.*rho*this->_sigmaOmega2*MathFunctions::innerProd(gradK,gradOmega), 1.e-10);//*overOmega
   
   // @todo here be careful with the adimensionalization...check this!!!
   const CFreal arg1_1 = std::sqrt(K)/(0.09*Omega*distance);

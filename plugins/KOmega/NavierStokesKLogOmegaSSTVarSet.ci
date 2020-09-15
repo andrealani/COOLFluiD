@@ -51,15 +51,22 @@ CFreal NavierStokesKLogOmegaSSTVarSet<BASE, SGROUP>::getTurbDynViscosityFromGrad
     const CFreal rho = this->getDensity(state);
     const CFreal K = std::max(state[this->_kID],0.0);
     const CFreal Omega = std::exp(state[this->_kID+1]);
-    CFreal vorticity = 0.;
-    if (Framework::PhysicalModelStack::getActive()->getDim() == 2) {
-      vorticity = fabs((*(gradients[this->_vID]))[XX] - (*(gradients[this->_uID]))[YY]);
-    }
-    else {
-      vorticity = sqrt( sq((*(gradients[this->_wID]))[YY] - (*(gradients[this->_vID]))[ZZ]) +
-			sq((*(gradients[this->_uID]))[ZZ] - (*(gradients[this->_wID]))[XX]) +
-			sq((*(gradients[this->_vID]))[XX] - (*(gradients[this->_uID]))[YY]) );
-    }
+//    CFreal vorticity = 0.;
+//    if (Framework::PhysicalModelStack::getActive()->getDim() == 2) {
+//      vorticity = fabs((*(gradients[this->_vID]))[XX] - (*(gradients[this->_uID]))[YY]);
+//    }
+//    else {
+//      vorticity = sqrt( sq((*(gradients[this->_wID]))[YY] - (*(gradients[this->_vID]))[ZZ]) +
+//			sq((*(gradients[this->_uID]))[ZZ] - (*(gradients[this->_wID]))[XX]) +
+//			sq((*(gradients[this->_vID]))[XX] - (*(gradients[this->_uID]))[YY]) );
+//    }
+    
+    const CFreal gradU_X = (*(gradients[1]))[XX];
+    const CFreal gradU_Y = (*(gradients[1]))[YY];
+    const CFreal gradV_X = (*(gradients[2]))[XX];
+    const CFreal gradV_Y = (*(gradients[2]))[YY];
+    const CFreal gradSum = (gradU_Y + gradV_X);
+    const CFreal strain = std::sqrt(2.*(gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y));
     
     const CFreal mu = this->getLaminarDynViscosityFromGradientVars(state);
     
@@ -69,10 +76,10 @@ CFreal NavierStokesKLogOmegaSSTVarSet<BASE, SGROUP>::getTurbDynViscosityFromGrad
     const CFreal arg2 = std::max(arg2_1,arg2_2);
     const CFreal F2 = tanh(arg2*arg2);
     
-    if (std::max(a1*Omega , vorticity*F2) == 0.0)
+    if (std::max(a1*Omega , strain*F2) == 0.0)
      mut =  0.0;
     else
-     mut = (a1 * rho * K )/ std::max(a1*Omega , vorticity*F2);
+     mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
     
   }
   

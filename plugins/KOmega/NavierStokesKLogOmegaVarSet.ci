@@ -39,7 +39,7 @@ void NavierStokesKLogOmegaVarSet<BASE, SGROUP>::setModelCoefficients()
   _beta1 = 0.075;
   _betaStar = 0.09;
   _kappa = 0.41;
-  _gamma1 = (_beta1/_betaStar) - (_sigmaOmega1 * _kappa * _kappa/(sqrt(_betaStar)));
+  _gamma1 = 5.0/9.0;//(_beta1/_betaStar) - (_sigmaOmega1 * _kappa * _kappa/(sqrt(_betaStar)));
 
   //Pure k-epsilon coeficients
   _sigmaK2 = 1.0;
@@ -48,7 +48,7 @@ void NavierStokesKLogOmegaVarSet<BASE, SGROUP>::setModelCoefficients()
    // 0.5;
   _beta2 = 0.0828; 
    // 0.075;
-  _gamma2 = (_beta2/_betaStar) - (_sigmaOmega2 * _kappa * _kappa/(sqrt(_betaStar)));
+  _gamma2 = 0.44;//(_beta2/_betaStar) - (_sigmaOmega2 * _kappa * _kappa/(sqrt(_betaStar)));
 
 }
 
