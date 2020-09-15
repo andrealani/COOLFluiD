@@ -159,14 +159,14 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerFaces Mirror Wall Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateGReKLogOUpgraded.CFmesh #P0NoPCorr.CFmesh #flatPlateGReKLogOTest-iter_23000.CFmesh #flatPlateGReKLogO-iter_1000.CFmesh #flatPlateGReKLogO-iter_15000.CFmesh #flatPlateGReKLogO-iter_500.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = flatPlateGReKLogOUpgraded.CFmesh #143P0.CFmesh #P0NoPCorr.CFmesh #flatPlateGReKLogOTest-iter_23000.CFmesh #flatPlateGReKLogO-iter_1000.CFmesh #flatPlateGReKLogO-iter_15000.CFmesh #flatPlateGReKLogO-iter_500.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
 ###################################
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
-Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS #RHSNS #
-Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobNS #ConvRHSJacobNS #ConvRHSNS #
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobTurb #RHSJacobNS #RHSNS #
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobTurb #ConvDiffRHSJacobNS #ConvRHSJacobNS #ConvRHSNS #
 Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobNS #DiffRHSNS #
 Simulator.SubSystem.FluxReconstruction.SetupCom = SetupExtra
 
@@ -187,7 +187,7 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= SSTPuvt #BSLPuvt #Puvt #
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusUpFluxTurb2D #LaxFriedrichsFlux #
-Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxTurb2D.machInf = 0.2 #0.0158
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxTurb2D.machInf = 2.0 #0.2 #0.0158
 Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
@@ -200,8 +200,10 @@ Simulator.SubSystem.FluxReconstruction.SrcTermNames = NavierStokesGReKO2DSourceT
 Simulator.SubSystem.FluxReconstruction.SrcTermComds = NavierStokesGReKO2DSourceTerm_Lang #KLogOmega2DSourceTerm #
 
 Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.LimitProductionTerm = true #false #
-Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.Decouple = false #true #
-Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.PGrad = true #false #
+Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.PGrad = false #true #
+Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.LimPRe = false #true #
+Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.AnalyticalJacob = true #false #
+Simulator.SubSystem.FluxReconstruction.NavierStokesGReKO2DSourceTerm_Lang.BlockDecoupledJacob = true #false #
 
 ###################################
 Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #Null #
@@ -236,7 +238,7 @@ Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall Mirror BcInlet BcOutl
 
 Simulator.SubSystem.FluxReconstruction.Data.Wall.KWall = 0.0 #
 #wallDist greatly influences stability: larger value, more stable (less steep omega), but rougher wall. Theoretically wallDist=0 -> omega_wall = infinity
-Simulator.SubSystem.FluxReconstruction.Data.Wall.WallDist = 3.5e-5 #7.0e-5 #6.37e-6 #3.19e-6 #6.9e-6 #1.38e-5
+Simulator.SubSystem.FluxReconstruction.Data.Wall.WallDist = 1.21605e-4 #2.4321e-4 #3.5e-5 #7.0e-5 #6.37e-6 #3.19e-6 #6.9e-6 #1.38e-5
 Simulator.SubSystem.FluxReconstruction.Data.Wall.OmegaWallFactor = 1.001 #2.0
 Simulator.SubSystem.FluxReconstruction.Data.Wall.ImposeOmegaWallIter = 0 #1000000000 #1000000000
 

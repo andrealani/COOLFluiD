@@ -53,13 +53,13 @@ Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = T3AP0New.CFmesh #143P0.CFmesh #GReKLogOFlatPlate143.CFmesh #GReKLogOFlatPlate.CFmesh #P0NewMeshStall.CFmesh #SAFlatPlateNew.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = T3A2003P4.CFmesh #143P4.CFmesh #GReKLogOFlatPlate143.CFmesh #GReKLogOFlatPlate.CFmesh #P0NewMeshStall.CFmesh #SAFlatPlateNew.CFmesh #
 Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
 #Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P5
 Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
@@ -69,7 +69,7 @@ Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
 ###################################
 Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DGReKLogO #NavierStokes2DKLogOmega #
-Simulator.SubSystem.NavierStokes2DGReKLogO.refValues  = 1.0e5 5.4 5.4 290.3135154 4.763286e-2 5.42417 1.0 168.7992 #4.763286e-6 -3.7869 #
+Simulator.SubSystem.NavierStokes2DGReKLogO.refValues  = 1.0e5 5.4 5.4 290.3135154 5.35815e-2 5.593145 1.0 160.9896 #4.763286e-6 -3.7869 #
 Simulator.SubSystem.NavierStokes2DGReKLogO.refLength  = 1.0
 
 Simulator.SubSystem.NavierStokes2DGReKLogO.ConvTerm.machInf = 0.0158
@@ -94,7 +94,7 @@ Simulator.SubSystem.DataProcessing1.ProcessRate = 100000000000000
 ###################################
 Simulator.SubSystem.OutputFormat        = CFmesh ParaView Tecplot 
 Simulator.SubSystem.CFmesh.FileName     = flatPlateGReKLogOCoarse.CFmesh
-Simulator.SubSystem.CFmesh.SaveRate = 1000
+Simulator.SubSystem.CFmesh.SaveRate = 500
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = true
 Simulator.SubSystem.CFmesh.ParWriteSol = ParWriteSolution
@@ -112,7 +112,7 @@ Simulator.SubSystem.ParaView.Data.printExtraValues = false #true
 Simulator.SubSystem.Tecplot.FileName    = flatPlateGReKLogOCoarse.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Puvt
 Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
-Simulator.SubSystem.Tecplot.SaveRate = 1000
+Simulator.SubSystem.Tecplot.SaveRate = 500
 Simulator.SubSystem.Tecplot.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = true
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true #false #
@@ -141,10 +141,10 @@ Simulator.SubSystem.NewtonIterator.TurbUpdateSol.KInlet = 1.0e-12 #1.0e-7
 Simulator.SubSystem.NewtonIterator.TurbUpdateSol.OmegaInlet = 1.0 #200.0
 #Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 100.
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,10.0,min(150.0,cfl*1.01)) #if(i<10,1.0,min(10.0,cfl*1.001)) #if(i<10,0.5,min(3.0,cfl*1.0001)) #
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,10.0,min(30.0,cfl*1.01)) #if(i<10,1.0,min(10.0,cfl*1.001)) #if(i<10,0.5,min(3.0,cfl*1.0001)) #
 Simulator.SubSystem.NewtonIterator.AbsoluteNormAndMaxIter.MaxIter = 1
 Simulator.SubSystem.NewtonIterator.Data.PrintHistory = true
-Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceFlatPlateGReKLogOCoarse.plt
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceFlatPlateGReKLogOCoarseBis.plt
 
 #######EXPLICIT############
 
@@ -159,7 +159,7 @@ Simulator.SubSystem.SpaceMethod = FluxReconstruction
 Simulator.SubSystem.Default.listTRS = InnerFaces Mirror Wall Inlet Outlet
 
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = T3AP1New.CFmesh #143P1.CFmesh #flatPlateGReKLogOUpgraded.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = T3A2003P5.CFmesh #flatPlateGReKLogOUpgraded.CFmesh #143P5.CFmesh #flatPlateGReKLogOCoarse-iter_500.CFmesh #P0NoPCorr.CFmesh #flatPlateGReKLogO-iter_1000.CFmesh #flatPlateGReKLogO-iter_15000.CFmesh #flatPlateGReKLogO-iter_500.CFmesh #
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
 ###################################
@@ -170,9 +170,9 @@ Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvDiffRHSJacobTurb #Conv
 Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobNS #DiffRHSNS #
 Simulator.SubSystem.FluxReconstruction.SetupCom = SetupExtra
 
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = false #true #
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = true #false #
 Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobIter = 10
-Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 10
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacobInterval = 20
 
 #####Comment in explicit#####
 Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob
@@ -187,14 +187,14 @@ Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
 Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
 Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= SSTPuvt #BSLPuvt #Puvt #
 Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusUpFluxTurb2D #LaxFriedrichsFlux #
-Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxTurb2D.machInf = 2.0 #0.2 #0.0158
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxTurb2D.machInf = 1.0 #0.2 #0.0158
 Simulator.SubSystem.FluxReconstruction.Data.DiffFluxDamping = 1.0
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 0.33 #0.33 #0.33 #0.0296296296 
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor = 1.7e-7 #9.5e-4 #0.033 #0.33 #0.33 #0.0296296296 
 
 Simulator.SubSystem.FluxReconstruction.SrcTermNames = NavierStokesGReKO2DSourceTerm_Lang #KLogOmega2DSourceTerm #
 Simulator.SubSystem.FluxReconstruction.SrcTermComds = NavierStokesGReKO2DSourceTerm_Lang #KLogOmega2DSourceTerm #
@@ -215,7 +215,7 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerCells
 Simulator.SubSystem.FluxReconstruction.InField.Vars = x y
-Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0e5 5.4 0.0 290.3135154 4.763286e-2 5.42417 1.0 168.7992 #
+Simulator.SubSystem.FluxReconstruction.InField.Def = 1.0e5 5.4 0.0 290.3135154 5.35815e-2 5.593145 1.0 160.9896 #
 
 Simulator.SubSystem.FluxReconstruction.BcNames = Wall Mirror BcInlet BcOutlet
 Simulator.SubSystem.FluxReconstruction.Mirror.applyTRS = Mirror
@@ -242,14 +242,14 @@ Simulator.SubSystem.FluxReconstruction.Data.BcNames = Wall Mirror BcInlet BcOutl
 
 Simulator.SubSystem.FluxReconstruction.Data.Wall.KWall = 0.0 #
 #wallDist greatly influences stability: larger value, more stable (less steep omega), but rougher wall. Theoretically wallDist=0 -> omega_wall = infinity
-Simulator.SubSystem.FluxReconstruction.Data.Wall.WallDist = 5.1e-5 #8.8e-5 #2.1e-4 #
+Simulator.SubSystem.FluxReconstruction.Data.Wall.WallDist = 8.2e-6 #1.4e-5 #2.9e-5 #4.7e-5 #8.8e-5 #2.1e-4 #
 Simulator.SubSystem.FluxReconstruction.Data.Wall.OmegaWallFactor = 1.001 #2.0
 Simulator.SubSystem.FluxReconstruction.Data.Wall.ImposeOmegaWallIter = 0 #1000000000 #1000000000
 
 Simulator.SubSystem.FluxReconstruction.Data.BcInlet.Vx = 5.4
 Simulator.SubSystem.FluxReconstruction.Data.BcInlet.Vy = 0.0
 Simulator.SubSystem.FluxReconstruction.Data.BcInlet.T = 290.3135154
-Simulator.SubSystem.FluxReconstruction.Data.BcInlet.TurbVars = 4.763286e-2 5.42417 1.0 168.7992 #
+Simulator.SubSystem.FluxReconstruction.Data.BcInlet.TurbVars = 5.35815e-2 5.593145 1.0 160.9896 #
 
 Simulator.SubSystem.FluxReconstruction.Data.BcOutlet.P = 1.0e5 #9300
 
@@ -270,3 +270,4 @@ Simulator.SubSystem.DataProcessing2.SkinFriction.pInf = 1.0e5
 Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = true
 #Simulator.SubSystem.DataProcessing2.SkinFriction.AppendTime = true
 #Simulator.SubSystem.DataProcessing2.SkipFirstIteration = true
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileConv = convergence-surfBis.plt
