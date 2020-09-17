@@ -130,7 +130,7 @@ void NavierStokesSkinFrictionHeatFluxFR::setup()
   m_varNames.push_back("Cfcrit");
   m_varNames.push_back("Cf");
   m_varNames.push_back("muWall"); 
-  m_varNames.push_back("heatFRad");
+  m_varNames.push_back("gamma");
   
   cf_always_assert(this->m_varNames.size() == 10 + dim); 
   
@@ -545,6 +545,11 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
   
   const CFreal heatFlux = m_diffVar->getHeatFlux( *(m_cellStatesFlxPnt[flxIdx]), m_cellGradFlxPnt[flxIdx], m_unitNormalFlxPnts[flxIdx])*heatFluxRef + m_heatFluxRad;
   //CFLog(INFO, "state: " << *(m_cellStatesFlxPnt[flxIdx]) << ", Tgrad: " << (*(m_cellGradFlxPnt[flxIdx][3])) << ", ref: " << heatFluxRef << "\n");
+  
+  if (m_cellStatesFlxPnt[flxIdx]->size() == 8)
+  {
+    m_heatFluxRad = (*(m_cellStatesFlxPnt[flxIdx]))[6];
+  }
   
   CFreal pDim = 0.;
   CFreal rhoDim = 0.;
