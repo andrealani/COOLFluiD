@@ -37,7 +37,8 @@ namespace COOLFluiD {
   
 ConvDiffCLLAVJacobFluxReconstruction::ConvDiffCLLAVJacobFluxReconstruction(const std::string& name) :
   ConvDiffLLAVJacobFluxReconstruction(name),
-  m_corrFctLLAV()
+  m_corrFctLLAV(),
+  m_alphaValues()
   {
     addConfigOptionsTo(this);
     
@@ -46,6 +47,12 @@ ConvDiffCLLAVJacobFluxReconstruction::ConvDiffCLLAVJacobFluxReconstruction(const
     
     m_LLAVCorrFctFactor = 0.0;
     setParameter( "LLAVCorrFctFactor", &m_LLAVCorrFctFactor);
+    
+    m_LLAVSubCellRedistribution = true;
+    setParameter( "LLAVSubCellRedistribution", &m_LLAVSubCellRedistribution);
+    
+    m_LLAVRelax = 1.0;
+    setParameter( "LLAVRelaxationFactor", &m_LLAVRelax);
   }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -59,9 +66,13 @@ void ConvDiffCLLAVJacobFluxReconstruction::configure ( Config::ConfigArgs& args 
 
 void ConvDiffCLLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFuint >("LLAVCorrFctOrder","Order of the VCJH corr fct used for LLAV.");
+  options.addConfigOption< CFuint >("LLAVCorrFctOrder","VCJH corr fct used for LLAV that will be used is tied to an FR scheme of this order (so corr fct will be this order + 1).");
   
-  options.addConfigOption< CFuint >("LLAVCorrFctFactor","Factor for the VCJH corr fct used for LLAV.");
+  options.addConfigOption< CFreal >("LLAVCorrFctFactor","Factor for the VCJH corr fct used for LLAV.");
+  
+  options.addConfigOption< bool,Config::DynamicOption<> >("LLAVSubCellRedistribution","Option to activate subcell AV redistribution.");
+  
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("LLAVRelaxationFactor","Relaxation factor for CLLAV correction function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -202,6 +213,41 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
           
       // compute the face correction term of the corrected gradients
       computeGradientFaceCorrections();
+      
+      // compute solution points epsilons
+      for (CFuint iSide = 0; iSide < 2; ++iSide)
+      {   
+        const CFuint iOtherSide = iSide == LEFT ? RIGHT : LEFT;
+            
+        // loop over flx pnts to correct the AV
+        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+        {     
+          // local flux point indices
+          const CFuint flxPntIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide][iFlxPnt];
+
+          // correct sol AV
+          for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+          {
+            const CFuint solIdx = (*m_flxSolDep)[flxPntIdx][iSol];
+            
+            const CFuint solID = (*(m_states[iSide]))[solIdx]->getLocalID();
+            
+//            const CFreal coord = ((*(m_states[iSide]))[solIdx]->getCoordinates())[YY];
+//
+//            if (coord < 0.32 && coord > 0.0)
+//            {
+//                CFLog(INFO, "coord: " << (*(m_states[iSide]))[solIdx]->getCoordinates()[XX] << " , " << coord << ", eps: " << m_nodeEpsilons[solID] << ", eps after: " << m_nodeEpsilons[solID]+m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]-m_cellEpsilons[m_cells[iSide]->getID()]) << ", corr: " << m_corrFctLLAV[solIdx][flxPntIdx] << ", otherE: " << m_cellEpsilons[m_cells[iOtherSide]->getID()] << ", thisE: " << m_cellEpsilons[m_cells[iSide]->getID()] << "\n");
+//            }
+            
+            //m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]+m_cellEpsilons[m_cells[iSide]->getID()]);
+            m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]-m_cellEpsilons[m_cells[iSide]->getID()]);
+            
+            m_nodeEpsilons[solID] = max(0.0,m_nodeEpsilons[solID]);
+            
+            cf_assert(m_nodeEpsilons[solID] > -0.01);
+          }
+        }
+      }
 
       // release the cells
       m_cellBuilders[LEFT ]->releaseGE();
@@ -287,6 +333,35 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
         const CFuint cellIDR = m_face->getNeighborGeo(RIGHT)->getID();
         geoDataCBR.idx = cellIDR;
         m_cells[RIGHT] = m_cellBuilders[RIGHT]->buildGE();
+        
+        // get the sol pnt jacobians
+        DataHandle< CFreal > volumes = socket_volumes.getDataHandle();
+        
+        // get the sol pnt normals
+        DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
+        
+        // compute solution points Jacobian determinants and epsilons
+	for (CFuint iSide = 0; iSide < 2; ++iSide)
+        {   
+          //const CFuint iOtherSide = iSide == LEFT ? RIGHT : LEFT;
+            
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_solJacobDet[iSide][iSol] = volumes[(*(m_states[iSide]))[iSol]->getLocalID()];
+            
+            const CFuint solID = (*(m_states[iSide]))[iSol]->getLocalID();
+            
+            m_solEpsilons[iSide][iSol] = m_nodeEpsilons[solID];
+      
+            for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+            {
+              for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+              {
+                m_neighbCellFluxProjVects[iSide][iDim][iSol][jDim] = solPntNormals[solID*m_dim*m_dim+iDim*m_dim+jDim];
+              }
+            }
+          }
+	}
 
 	// set the face data
 	setFaceData(m_face->getID());//faceID
@@ -317,49 +392,37 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
 	// update RHS
 	updateRHS();
         
-        // get the sol pnt jacobians
-        DataHandle< CFreal > volumes = socket_volumes.getDataHandle();
+        CFreal leftAvAlpha = 0.0;
+        CFreal rightAvAlpha = 0.0;
         
-        // get the sol pnt normals
-        DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
-        
-        // compute solution points Jacobian determinants and epsilons
-	for (CFuint iSide = 0; iSide < 2; ++iSide)
-        {   
+        if (m_LLAVSubCellRedistribution)
+        {       
           for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
           {
-            m_solJacobDet[iSide][iSol] = volumes[(*(m_states[iSide]))[iSol]->getLocalID()];
-            
-            // reset the states in the flx pnts
-            m_solEpsilons[iSide][iSol] = 0.0;
-            
-            const CFuint solID = (*(m_states[iSide]))[iSol]->getLocalID();
-      
-            for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-            {
-              for (CFuint jDim = 0; jDim < m_dim; ++jDim)
-              {
-                m_neighbCellFluxProjVects[iSide][iDim][iSol][jDim] = solPntNormals[solID*m_dim*m_dim+iDim*m_dim+jDim];
-              }
-            }
+            m_alphaValues[LEFT][iSol] = sqrt(((*(m_cellGrads[LEFT][iSol]))[0])[XX]*((*(m_cellGrads[LEFT][iSol]))[0])[XX]+((*(m_cellGrads[LEFT][iSol]))[0])[YY]*((*(m_cellGrads[LEFT][iSol]))[0])[YY]);
+            m_alphaValues[RIGHT][iSol] = sqrt(((*(m_cellGrads[RIGHT][iSol]))[0])[XX]*((*(m_cellGrads[RIGHT][iSol]))[0])[XX]+((*(m_cellGrads[RIGHT][iSol]))[0])[YY]*((*(m_cellGrads[RIGHT][iSol]))[0])[YY]);
+            leftAvAlpha += m_alphaValues[LEFT][iSol];
+            rightAvAlpha += m_alphaValues[RIGHT][iSol];
           }
-            
-          // loop over flx pnts to correct the AV
-          for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-          {     
-            // local flux point indices
-            const CFuint flxPntIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide][iFlxPnt];
-
-            // correct sol AV
-            for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
-            {
-              const CFuint solIdx = (*m_flxSolDep)[flxPntIdx][iSol];
- 
-              // add the contributions of the current sol pnt
-              m_solEpsilons[iSide][iSol] += m_corrFctLLAV[solIdx][flxPntIdx]*(m_epsilonLR[iSide][iFlxPnt]);
-            }
+          
+          leftAvAlpha /= m_nbrSolPnts;
+          rightAvAlpha /= m_nbrSolPnts;
+          
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_alphaValues[LEFT][iSol] /= leftAvAlpha;
+            m_alphaValues[RIGHT][iSol] /= rightAvAlpha;
           }
-	}
+        }
+        
+        if (m_LLAVSubCellRedistribution)
+        {       
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_solEpsilons[LEFT][iSol] *= m_alphaValues[LEFT][iSol];
+            m_solEpsilons[RIGHT][iSol] *= m_alphaValues[RIGHT][iSol];
+          }
+        }
         
         // compute needed cell contributions: what used to be cell loop is incorporated here!!
         if (!m_cellFlags[cellIDL])// && (*m_states[LEFT ])[0]->isParUpdatable())
@@ -440,6 +503,13 @@ void ConvDiffCLLAVJacobFluxReconstruction::storeEpsilon()
     const CFreal maxEps = max(m_epsilon, m_cellEpsilons[m_cell->getID()]);
     m_cellEpsilons[m_cell->getID()] = maxEps;
     m_totalEps += maxEps;
+  }
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+          
+    m_nodeEpsilons[stateID] = m_cellEpsilons[m_cell->getID()];
   }
 }
 
@@ -592,12 +662,36 @@ void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
     }
   }
   
-  // loop over flx pnts to extrapolate the states to the flux points
+//  // loop over flx pnts to extrapolate the states to the flux points
+//  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+//  {   
+//    // reset the states in the flx pnts
+//    m_epsilonLR[LEFT][iFlxPnt] = m_cellEpsilons[m_cells[LEFT]->getID()];
+//    m_epsilonLR[RIGHT][iFlxPnt] = m_cellEpsilons[m_cells[RIGHT]->getID()];
+//  }
+  
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-  {   
-    // reset the states in the flx pnts
-    m_epsilonLR[LEFT][iFlxPnt] = m_cellEpsilons[m_cells[LEFT]->getID()];
-    m_epsilonLR[RIGHT][iFlxPnt] = m_cellEpsilons[m_cells[RIGHT]->getID()];
+  {     
+    // local flux point indices in the left and right cell
+    const CFuint flxPntIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlxPnt];
+    const CFuint flxPntIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt];
+    
+    m_epsilonLR[LEFT][iFlxPnt] = 0.0;
+    m_epsilonLR[RIGHT][iFlxPnt] = 0.0;
+
+    // extrapolate the left and right states to the flx pnts
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+    {
+      const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
+      const CFuint solIdxR = (*m_flxSolDep)[flxPntIdxR][iSol];
+ 
+      // add the contributions of the current sol pnt
+      m_epsilonLR[LEFT][iFlxPnt] += (*m_solPolyValsAtFlxPnts)[flxPntIdxL][solIdxL]*m_solEpsilons[LEFT][solIdxL];
+      m_epsilonLR[RIGHT][iFlxPnt] += (*m_solPolyValsAtFlxPnts)[flxPntIdxR][solIdxR]*m_solEpsilons[RIGHT][solIdxR];
+    }
+    
+    m_epsilonLR[LEFT][iFlxPnt] = max(0.0,m_epsilonLR[LEFT][iFlxPnt]);
+    m_epsilonLR[RIGHT][iFlxPnt] = max(0.0,m_epsilonLR[RIGHT][iFlxPnt]);
   }
 }
 
@@ -633,26 +727,27 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeLLAVCellFluxJacobianAna(const 
 
     for (m_pertSol = 0; m_pertSol < m_nbrSolPnts; ++m_pertSol)
     {
-      CFreal w = 0.0;
+      ///@todo check this!
+      CFreal w = 1.0;//0.0;
       CFreal wOther = 0.0;
         
-      for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
-      {
-        // get node local index
-        const CFuint nodeIdx = (*(m_cellNodes[m_pertSide]))[iNode]->getLocalID();
-      
-        w += m_nodePolyValsAtSolPnts[m_pertSol][iNode]/m_nbNodeNeighbors[nodeIdx];
-        
-        for (CFuint jNode = 0; jNode < m_nbrCornerNodes; ++jNode)
-        {
-          const CFuint nodeIdxOther = (*(m_cellNodes[iOtherSide]))[jNode]->getLocalID();
-            
-          if (nodeIdx == nodeIdxOther)
-          {
-            wOther += m_nodePolyValsAtSolPnts[m_pertSol][iNode]/m_nbNodeNeighbors[nodeIdx];
-          }
-        }
-      }
+//      for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
+//      {
+//        // get node local index
+//        const CFuint nodeIdx = (*(m_cellNodes[m_pertSide]))[iNode]->getLocalID();
+//      
+//        w += m_nodePolyValsAtSolPnts[m_pertSol][iNode]/m_nbNodeNeighbors[nodeIdx];
+//        
+//        for (CFuint jNode = 0; jNode < m_nbrCornerNodes; ++jNode)
+//        {
+//          const CFuint nodeIdxOther = (*(m_cellNodes[iOtherSide]))[jNode]->getLocalID();
+//            
+//          if (nodeIdx == nodeIdxOther)
+//          {
+//            wOther += m_nodePolyValsAtSolPnts[m_pertSol][iNode]/m_nbNodeNeighbors[nodeIdx];
+//          }
+//        }
+//      }
 
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
       {          
@@ -720,21 +815,22 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeLLAVRiemannFluxJacobianAna(con
       
       const CFreal eps_dampF_side = dampFactor * sideTerm * epsilon;
           
-      CFreal w = 0.0;
+      ///@todo check this!
+      CFreal w = 1.0;//0.0;
       
-      for (CFuint iNode = 0; iNode < m_faceNodes->size(); ++iNode)
-      {
-        for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
-        {
-	  if ((*m_faceNodes)[iNode]->getLocalID() == (*(m_cellNodes[m_pertSide]))[iNodeCell]->getLocalID())
-	  {
-	    // get node local index
-            const CFuint nodeIdx = (*m_cellNodesConn)(m_cells[m_pertSide]->getID(),iNodeCell);
-	    
-            w += m_nodePolyValsAtFlxPnts[flxIdx][iNodeCell]/m_nbNodeNeighbors[nodeIdx];
-	  }
-	}
-      }
+//      for (CFuint iNode = 0; iNode < m_faceNodes->size(); ++iNode)
+//      {
+//        for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
+//        {
+//	  if ((*m_faceNodes)[iNode]->getLocalID() == (*(m_cellNodes[m_pertSide]))[iNodeCell]->getLocalID())
+//	  {
+//	    // get node local index
+//            const CFuint nodeIdx = (*m_cellNodesConn)(m_cells[m_pertSide]->getID(),iNodeCell);
+//	    
+//            w += m_nodePolyValsAtFlxPnts[flxIdx][iNodeCell]/m_nbNodeNeighbors[nodeIdx];
+//	  }
+//	}
+//      }
       
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
@@ -2098,11 +2194,32 @@ void ConvDiffCLLAVJacobFluxReconstruction::setup()
   
   const CFPolyOrder::Type orderLLAVCorr = static_cast<CFPolyOrder::Type> (m_LLAVCorrFctOrder);
   
+  const CFuint totNbFlxPnts = m_flxPntsLocalCoords->size();
+  
+  m_corrFctLLAV.resize(m_nbrSolPnts);
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_corrFctLLAV[iSol].resize(totNbFlxPnts);
+  }
+  
   // compute the divergence of the correction function
   m_corrFctComputer->computeCorrectionFunction(orderLLAVCorr,m_LLAVCorrFctFactor,frLocalData[0],m_corrFctLLAV);
   
-  m_nodeEpsilons.resize(0);
+  // get the elementTypeData
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  
+  // get the number of cells in the mesh
+  const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;
+  
+  m_nodeEpsilons.resize(nbStates);
   m_nbNodeNeighbors.resize(0);
+  
+  m_alphaValues.resize(2);
+  m_alphaValues[LEFT].resize(m_nbrSolPnts);
+  m_alphaValues[RIGHT].resize(m_nbrSolPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
