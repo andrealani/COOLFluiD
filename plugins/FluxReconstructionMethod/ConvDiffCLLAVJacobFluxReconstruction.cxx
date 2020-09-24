@@ -240,7 +240,8 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
 //            }
             
             //m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]+m_cellEpsilons[m_cells[iSide]->getID()]);
-            m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]-m_cellEpsilons[m_cells[iSide]->getID()]);
+            //m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]*0.5*(m_cellEpsilons[m_cells[iOtherSide]->getID()]-m_cellEpsilons[m_cells[iSide]->getID()]);
+            m_nodeEpsilons[solID] += m_LLAVRelax*m_corrFctLLAV[solIdx][flxPntIdx]/3.0*(m_cellEpsilons[m_cells[iOtherSide]->getID()]);
             
             m_nodeEpsilons[solID] = max(0.0,m_nodeEpsilons[solID]);
             
@@ -413,10 +414,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
             m_alphaValues[LEFT][iSol] /= leftAvAlpha;
             m_alphaValues[RIGHT][iSol] /= rightAvAlpha;
           }
-        }
-        
-        if (m_LLAVSubCellRedistribution)
-        {       
+       
           for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
           {
             m_solEpsilons[LEFT][iSol] *= m_alphaValues[LEFT][iSol];
@@ -509,7 +507,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::storeEpsilon()
   {
     const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
           
-    m_nodeEpsilons[stateID] = m_cellEpsilons[m_cell->getID()];
+    m_nodeEpsilons[stateID] += m_cellEpsilons[m_cell->getID()]/3.0;
   }
 }
 
@@ -603,6 +601,21 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeEpsilon()
           const CFuint dim = (*m_flxPntFlxDim)[currFlxIdx];
 
            m_extrapolatedFluxes[currFlxIdx] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(m_contFlxWoLLAV[solIdx][dim]);
+           
+           const CFuint stateID = (*m_cellStates)[solIdx]->getLocalID();
+           CFreal eps;
+           
+           if (!m_useMax) 
+           {
+             eps = m_epsilon;
+           }
+           else
+           {
+             const CFreal maxEps = max(m_epsilon, m_cellEpsilons[m_cell->getID()]);
+             eps = maxEps;
+           }
+
+           m_nodeEpsilons[stateID] += m_LLAVRelax*m_corrFctLLAV[solIdx][currFlxIdx]/3.0*eps;
         }
       } 
     }

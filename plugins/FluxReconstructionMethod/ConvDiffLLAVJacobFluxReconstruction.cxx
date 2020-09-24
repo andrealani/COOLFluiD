@@ -3477,8 +3477,8 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   // get the coefs for extrapolation of the node artificial viscosities to the flx pnts
   m_nodePolyValsAtFlxPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getFlxPntsLocalCoords()));
   
-  // get the coefs for extrapolation of the node artificial viscosities to the sol pnts
-  m_nodePolyValsAtSolPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getSolPntsLocalCoords()));
+  //// get the coefs for extrapolation of the node artificial viscosities to the sol pnts
+  //m_nodePolyValsAtSolPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getSolPntsLocalCoords()));
   
   // number of cell corner nodes
   /// @note in the future, hanging nodes should be taken into account here
