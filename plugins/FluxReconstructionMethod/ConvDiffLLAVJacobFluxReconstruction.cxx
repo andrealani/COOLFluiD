@@ -154,6 +154,12 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
     
     m_useWallCutOff = false;
     setParameter( "UseWallCutOff", &m_useWallCutOff);
+    
+    m_LLAVSubCellRedistribution = false;
+    setParameter( "LLAVSubCellRedistribution", &m_LLAVSubCellRedistribution);
+    
+    m_LLAVRelax = 1.0;
+    setParameter( "LLAVRelaxationFactor", &m_LLAVRelax);
   }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -194,6 +200,10 @@ void ConvDiffLLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionList
   options.addConfigOption< CFreal,Config::DynamicOption<> >("WallCutOffDistance","Distance from wall at which to cut off LLAV.");
   
   options.addConfigOption< bool >("UseWallCutOff","Boolean telling whether to use wall distance cut off of LLAV.");
+  
+  options.addConfigOption< bool,Config::DynamicOption<> >("LLAVSubCellRedistribution","Option to activate subcell AV redistribution.");
+  
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("LLAVRelaxationFactor","Relaxation factor for CLLAV correction function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -438,8 +448,8 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
       
       cf_assert(m_cellVolume[LEFT] > 0.0);
       cf_assert(m_cellVolume[RIGHT] > 0.0);
-      
-//      // if one of the neighbouring cells is parallel updatable, compute the correction flux
+
+      //      // if one of the neighbouring cells is parallel updatable, compute the correction flux
 //      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
 //      {
 	// build the neighbouring cells
@@ -471,7 +481,7 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
 
 	// update RHS
 	updateRHS();
-	
+
 	// compute the correction for the right neighbour
 	computeCorrection(RIGHT, m_divContFlxR);
 	m_divContFlx = m_divContFlxR;
@@ -484,14 +494,14 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
         
         // get the sol pnt normals
         DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
-        
+
         // compute solution points Jacobian determinants and epsilons
 	for (CFuint iSide = 0; iSide < 2; ++iSide)
         {   
           for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
           {
             m_solJacobDet[iSide][iSol] = volumes[(*(m_states[iSide]))[iSol]->getLocalID()];
-            
+
             // reset the states in the flx pnts
             m_solEpsilons[iSide][iSol] = 0.0;
 
@@ -500,7 +510,7 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
             {
               // get node local index
               const CFuint nodeIdx = (*(m_cellNodes[iSide]))[iNode]->getLocalID();
-      
+
               m_solEpsilons[iSide][iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
             }
             
@@ -515,7 +525,39 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
             }
           }
 	}
+
+        CFreal leftAvAlpha = 0.0;
+        CFreal rightAvAlpha = 0.0;
         
+        if (m_LLAVSubCellRedistribution)
+        {       
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_alphaValues[LEFT][iSol] = sqrt(((*(m_cellGrads[LEFT][iSol]))[0])[XX]*((*(m_cellGrads[LEFT][iSol]))[0])[XX]+((*(m_cellGrads[LEFT][iSol]))[0])[YY]*((*(m_cellGrads[LEFT][iSol]))[0])[YY]);
+            m_alphaValues[RIGHT][iSol] = sqrt(((*(m_cellGrads[RIGHT][iSol]))[0])[XX]*((*(m_cellGrads[RIGHT][iSol]))[0])[XX]+((*(m_cellGrads[RIGHT][iSol]))[0])[YY]*((*(m_cellGrads[RIGHT][iSol]))[0])[YY]);
+            leftAvAlpha += m_alphaValues[LEFT][iSol];
+            rightAvAlpha += m_alphaValues[RIGHT][iSol];
+          }
+          
+          leftAvAlpha /= m_nbrSolPnts;
+          rightAvAlpha /= m_nbrSolPnts;
+          
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_alphaValues[LEFT][iSol] *= m_LLAVRelax/leftAvAlpha;
+            m_alphaValues[RIGHT][iSol] *= m_LLAVRelax/rightAvAlpha;
+            
+            m_alphaValues[LEFT][iSol] += 1.0-m_LLAVRelax;
+            m_alphaValues[RIGHT][iSol] += 1.0-m_LLAVRelax;
+          }
+       
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            m_solEpsilons[LEFT][iSol] *= m_alphaValues[LEFT][iSol];
+            m_solEpsilons[RIGHT][iSol] *= m_alphaValues[RIGHT][iSol];
+          }
+        }
+
         // compute needed cell contributions: what used to be cell loop is incorporated here!!
         if (!m_cellFlags[cellIDL])// && (*m_states[LEFT ])[0]->isParUpdatable())
         {
@@ -3477,8 +3519,8 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   // get the coefs for extrapolation of the node artificial viscosities to the flx pnts
   m_nodePolyValsAtFlxPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getFlxPntsLocalCoords()));
   
-  //// get the coefs for extrapolation of the node artificial viscosities to the sol pnts
-  //m_nodePolyValsAtSolPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getSolPntsLocalCoords()));
+  // get the coefs for extrapolation of the node artificial viscosities to the sol pnts
+  m_nodePolyValsAtSolPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getSolPntsLocalCoords()));
   
   // number of cell corner nodes
   /// @note in the future, hanging nodes should be taken into account here
@@ -3749,6 +3791,10 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   m_flagComputeNbNghb = true;
   
   cf_assert(m_monitoredVar < m_nbrEqs);
+  
+  m_alphaValues.resize(2);
+  m_alphaValues[LEFT].resize(m_nbrSolPnts);
+  m_alphaValues[RIGHT].resize(m_nbrSolPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -448,6 +448,15 @@ protected: //data
   // Boolean telling whether to use wall distance cut off of LLAV
   bool m_useWallCutOff;
   
+  /// bool telling whether AV should be subcell redistributed
+  bool m_LLAVSubCellRedistribution;
+  
+  /// alpha values for subcell AV redistribution for each side for each sol pnt 
+  std::vector< std::vector< CFreal > > m_alphaValues;
+  
+  /// relaxation factor of LLAV corr fct
+  CFreal m_LLAVRelax;
+  
   
   private:
 

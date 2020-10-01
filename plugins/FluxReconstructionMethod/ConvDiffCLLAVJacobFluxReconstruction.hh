@@ -109,12 +109,6 @@ protected: //data
   /// VCJH factor of LLAV corr fct
   CFreal m_LLAVCorrFctFactor;
   
-  /// relaxation factor of LLAV corr fct
-  CFreal m_LLAVRelax;
-  
-  /// bool telling whether AV should be subcell redistributed
-  bool m_LLAVSubCellRedistribution;
-  
   /// alpha values for subcell AV redistribution for each side for each sol pnt 
   std::vector< std::vector< CFreal > > m_alphaValues;
   

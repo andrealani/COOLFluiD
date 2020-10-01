@@ -47,12 +47,6 @@ ConvDiffCLLAVJacobFluxReconstruction::ConvDiffCLLAVJacobFluxReconstruction(const
     
     m_LLAVCorrFctFactor = 0.0;
     setParameter( "LLAVCorrFctFactor", &m_LLAVCorrFctFactor);
-    
-    m_LLAVSubCellRedistribution = true;
-    setParameter( "LLAVSubCellRedistribution", &m_LLAVSubCellRedistribution);
-    
-    m_LLAVRelax = 1.0;
-    setParameter( "LLAVRelaxationFactor", &m_LLAVRelax);
   }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -69,10 +63,6 @@ void ConvDiffCLLAVJacobFluxReconstruction::defineConfigOptions(Config::OptionLis
   options.addConfigOption< CFuint >("LLAVCorrFctOrder","VCJH corr fct used for LLAV that will be used is tied to an FR scheme of this order (so corr fct will be this order + 1).");
   
   options.addConfigOption< CFreal >("LLAVCorrFctFactor","Factor for the VCJH corr fct used for LLAV.");
-  
-  options.addConfigOption< bool,Config::DynamicOption<> >("LLAVSubCellRedistribution","Option to activate subcell AV redistribution.");
-  
-  options.addConfigOption< CFreal,Config::DynamicOption<> >("LLAVRelaxationFactor","Relaxation factor for CLLAV correction function.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
