@@ -35,7 +35,7 @@ void UnsteadySuperInletFromInputMHD3DProjection::defineConfigOptions(Config::Opt
    options.addConfigOption< std::string >("ACEDataFileName","Name of Input File from where to read the inlet solar wind data from ACE satellite.");
    options.addConfigOption< CFreal >("beginTimeAtRestart","Begin time of the overall unsteady simulation that uses ACE data input file in case of restart.");
    options.addConfigOption< CFreal, Config::DynamicOption<> >
-     ("maxTime","Maximum time of the unsteady simulation.");
+    ("maxTime","Maximum time of the unsteady simulation.");
    options.addConfigOption< CFint, Config::DynamicOption<> >
      ("readInputFileFlag","Interactive flag telling whether to read the file.");
    options.addConfigOption< bool > ("useTimeInterpolation","Flag telling whether to use time interpolation.");
@@ -118,6 +118,8 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFileNoInterpolation()
 
 void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
 {
+  CFLog(INFO, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => START\n");
+
   // The input file is opened and closed twice: first for determining the number of lines in the input file; second for reading the data
 
   SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
@@ -177,14 +179,20 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
       bzFile[iLine] = atof(bz.c_str());
       pFile[iLine] = atof(p.c_str());
   }
-  
+
   fhandle->close();
+
+  // _maxTime = tFile.max();
+  // CFLog(INFO, "maxTime = " << _maxTime << "\n");
+
 
   // sanity check and removal of NaN's
   const CFuint nbL1 = nbLines-1;
   vector<bool>   hasNan(nbL1, false);
   vector<CFuint> validLines;
   validLines.reserve(nbL1);
+
+  CFLog(VERBOSE, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => nbLines =" << nbL1 << "\n");
 
   bool fixNeeded = false;
   for (CFuint iLine = 0; iLine < nbL1; ++iLine) {
@@ -198,6 +206,8 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
       validLines.push_back(iLine);
     }
   }
+
+  CFLog(VERBOSE, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => fixNeeded? " << ((fixNeeded) ? "yes" : "no") << "\n");
 
   if (fixNeeded) {
     const CFuint TOL = 10000000;
@@ -263,8 +273,13 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
                         indexMinDifference = jLine;
                 }
         }
+        assert(indexMinDifference < tFile.size());
+    //    CFLog(INFO, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => indexMinDifference = " << indexMinDifference << "\n");        
+
+      //  CFLog(INFO, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => " << time << " - " << tFile[indexMinDifference] <<  " = " <<  time-tFile[indexMinDifference] << "\n");
         if ((time-tFile[indexMinDifference]) >= 0.0)
         {
+           assert(indexMinDifference+1 < tFile.size());
                 t0 = tFile[indexMinDifference];
                 t1 = tFile[indexMinDifference+1];
                 rho0 = rhoFile[indexMinDifference];
@@ -286,6 +301,7 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
         }
         if ((time-tFile[indexMinDifference]) < 0.0)
         {
+           assert(indexMinDifference-1 < tFile.size());
                 t0 = tFile[indexMinDifference-1];
                 t1 = tFile[indexMinDifference];
                 rho0 = rhoFile[indexMinDifference-1];
@@ -305,6 +321,8 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
                 p0 = pFile[indexMinDifference-1];
                 p1 = pFile[indexMinDifference];
         }
+
+        assert(iLine < _rho.size());
         _rho[iLine] = rho0 + ((rho1-rho0)/(t1-t0))*(time-t0);
         _u[iLine] = u0 + ((u1-u0)/(t1-t0))*(time-t0);
         _v[iLine] = v0 + ((v1-v0)/(t1-t0))*(time-t0);
@@ -314,6 +332,8 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
         _bz[iLine] = bz0 + ((bz1-bz0)/(t1-t0))*(time-t0);
         _p[iLine] = p0 + ((p1-p0)/(t1-t0))*(time-t0);
   }
+
+  CFLog(VERBOSE, "UnsteadySuperInletFromInputMHD3DProjection::readInputFile() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -321,6 +341,58 @@ void UnsteadySuperInletFromInputMHD3DProjection::readInputFile()
 void UnsteadySuperInletFromInputMHD3DProjection::setup()
 {
   SuperInlet::setup();
+
+  const std::string nsp = getMethodData().getNamespace();
+  if (PE::GetPE().GetRank (nsp) == 0) {
+
+  SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  ifstream& inputFile = fhandle->open(constructFilename());
+
+  std::string line, t, rho, u, v, w, bx, by, bz, p;
+  CFuint nbLines = 0;
+
+  if (inputFile.is_open())
+  { 
+    while (true)
+    { 
+      if (inputFile.eof())
+      { 
+        break;
+      }
+      getline (inputFile,line);
+      ++nbLines;
+    }
+  }
+
+  fhandle->close();
+
+  ifstream& inpFile = fhandle->open(constructFilename());
+
+  RealVector tFile(nbLines-1);
+
+  for (CFuint iLine = 0; iLine < nbLines-1; ++iLine) {
+      getline(inpFile,line);
+      istringstream liness( line );
+      getline(liness, t, ' ');
+      getline(liness, rho, ' ');
+      getline(liness, u, ' ');
+      getline(liness, v, ' ');
+      getline(liness, w, ' ');
+      getline(liness, bx, ' ');
+      getline(liness, by, ' ');
+      getline(liness, bz, ' ');
+      getline(liness, p, ' ');
+      
+      tFile[iLine] = atof(t.c_str());
+  }
+  fhandle->close();
+  _maxTime = tFile.max();
+  }
+
+  CFuint root = 0; 
+  MPI_Bcast(&_maxTime, 1, MPIStructDef::getMPIType(&_maxTime), root, PE::GetPE().GetCommunicator(nsp)); 
+  assert(_maxTime > 0.);
+  CFLog(INFO, "UnsteadySuperInletFromInputMHD3DProjection::setup() => maxTime = " << _maxTime << "\n");
 
   cf_assert(_maxTime > 0.);
   SubSystemStatusStack::getActive()->setMaxTime(_maxTime);
