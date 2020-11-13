@@ -50,6 +50,10 @@ private: // data
 
   /// socket for gradients
   Framework::DataSocketSink< CFreal > socket_gradientsCUDA;
+  
+  /// socket for AV gradients
+  Framework::DataSocketSink< CFreal > socket_gradientsAVCUDA;
+  
 
 }; // class Prepare
 

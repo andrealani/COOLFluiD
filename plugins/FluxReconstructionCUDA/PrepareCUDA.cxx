@@ -24,7 +24,8 @@ MethodCommandProvider<PrepareCUDA, FluxReconstructionSolverData, FluxReconstruct
 //////////////////////////////////////////////////////////////////////////////
 
 PrepareCUDA::PrepareCUDA(const std::string& name) : StdPrepare(name),
-  socket_gradientsCUDA("gradientsCUDA")
+  socket_gradientsCUDA("gradientsCUDA"),
+  socket_gradientsAVCUDA("gradientsAVCUDA")
 {
 }
 
@@ -44,10 +45,12 @@ void PrepareCUDA::execute()
 
   // reset the gradients
   DataHandle< CFreal > gradients = socket_gradientsCUDA.getDataHandle();
+  DataHandle< CFreal > gradientsAV = socket_gradientsAVCUDA.getDataHandle();
   const CFuint nGrads = gradients.size();
   for (CFuint iGrad = 0; iGrad < nGrads; ++iGrad)
   {
     gradients[iGrad] = 0.0;
+    gradientsAV[iGrad] = 0.0;
   }
 }
 
@@ -59,6 +62,7 @@ PrepareCUDA::needsSockets()
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = StdPrepare::needsSockets();
 
   result.push_back(&socket_gradientsCUDA);
+  result.push_back(&socket_gradientsAVCUDA);
 
   return result;
 }
