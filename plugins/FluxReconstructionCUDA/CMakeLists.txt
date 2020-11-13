@@ -9,6 +9,9 @@ LIST ( APPEND FluxReconstructionCUDA_files
      ConvDiffRHSFluxReconstructionCUDA.hh
      ConvDiffRHSFluxReconstructionCUDA.ci
      ConvDiffRHSFluxReconstructionCUDA.cu
+     ConvDiffLLAVRHSFluxReconstructionCUDA.hh
+     ConvDiffLLAVRHSFluxReconstructionCUDA.ci
+     ConvDiffLLAVRHSFluxReconstructionCUDA.cu
      NSBndGradientComputerCUDA.hh
      NSBndGradientComputerCUDA.cxx
      DiffBndCorrectionsRHSFluxReconstructionNSCUDA.hh

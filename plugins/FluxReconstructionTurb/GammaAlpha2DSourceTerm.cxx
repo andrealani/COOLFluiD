@@ -421,6 +421,8 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     //destructionTerm_Ga = min(0.0,destructionTerm_Ga);
     
+    destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+    
     // compute production term of alpha
     const CFreal cpa1 = 0.3;
     const CFreal cpa2 = 50.0;
@@ -505,15 +507,15 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
       wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
       
-      MInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = destructionTerm_Ga;//prodTerm_Ga;//MInfLocal;//dudn;//
+      MInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = MInfLocal;//destructionTerm_Ga;//prodTerm_Ga;//dudn;//
       
-      uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = muGamma;//destructionTerm_Ga;//uInfLocal;//dgammadn;//
+      uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = uInfLocal;//muGamma;//destructionTerm_Ga;//dgammadn;//
       
-      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dgammadn;//dudn;//prodTerm_alpha;//TInfLocal;//dadn;//
+      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = TInfLocal;//dgammadn;//dudn;//prodTerm_alpha;//dadn;//
       
-      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = avV/(uInfLocal*uInfLocal);//destructionTerm_alpha;//TuInfLocal;//destructionTerm_Ga;//
+      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = TuInfLocal;//avV/(uInfLocal*uInfLocal);//destructionTerm_alpha;//destructionTerm_Ga;//
       
-      alphaDiffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dudn;//alphac - avAlpha;//muGamma;//
+      alphaDiffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = alphac - avAlpha;//dudn;//muGamma;//
     }
   }
 }

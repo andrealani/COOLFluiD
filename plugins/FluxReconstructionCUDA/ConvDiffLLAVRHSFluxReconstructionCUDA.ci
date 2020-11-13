@@ -19,6 +19,7 @@ ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_TH
   ConvRHSFluxReconstruction(name), 
   socket_states("states"),
   socket_gradientsCUDA("gradientsCUDA"),
+  socket_gradientsAVCUDA("gradientsAVCUDA"),        
   socket_solPntNormals("solPntNormals"),
   socket_flxPntNormals("flxPntNormals"),
   socket_faceDir("faceDir"),
@@ -47,6 +48,30 @@ ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_TH
   m_onGPU = true;
   setParameter("OnGPU",&m_onGPU);
   CFLog(VERBOSE,"Creating cuda solver\n");
+  
+  m_kappa = 1.0;
+  setParameter( "Kappa", &m_kappa);
+    
+  m_peclet = 5.0;
+  setParameter( "Peclet", &m_peclet);
+    
+  m_s0 = 0.0;
+  setParameter( "S0", &m_s0);
+  
+  m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
+  setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
+    
+  m_monitoredVar = 0;
+  setParameter( "MonitoredVar", &m_monitoredVar);
+    
+  m_addUpdCoeff = true;
+  setParameter( "AddUpdateCoeff", &m_addUpdCoeff);
+    
+  m_monitoredPhysVar = MathTools::MathConsts::CFuintMax();
+  setParameter( "MonitoredPhysVar", &m_monitoredPhysVar);
+    
+  m_LLAVBCZero = true;
+  setParameter( "LLAVBCZero", &m_LLAVBCZero);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -72,6 +97,22 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   options.template addConfigOption< CFuint > ("NbCellsPerBlock", "Number of cells per block");
   options.template addConfigOption< CFuint > ("NbThreadsOMP", "Number of OMP threads");
   options.template addConfigOption< bool > ("OnGPU", "Flag telling to solve on GPU");
+  
+  options.template addConfigOption< CFreal,Config::DynamicOption<> >("Kappa","Kappa factor of artificial viscosity.");
+  
+  options.template addConfigOption< CFreal,Config::DynamicOption<> >("Peclet","Peclet number to be used for artificial viscosity.");
+  
+  options.template addConfigOption< CFreal,Config::DynamicOption<> >("S0","Reference smoothness factor, will be multiplied by -log(P).");
+  
+  options.template addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+    
+  options.template addConfigOption< CFuint>("MonitoredVar","Index of the monitored var for positivity preservation.");
+  
+  options.template addConfigOption< bool >("AddUpdateCoeff","Boolean telling whether the update coefficient based on the artificial flux is added.");
+  
+  options.template addConfigOption< bool >("LLAVBCZero","Boolean telling whether to set LLAV to zero on the bnd.");
+  
+  options.template addConfigOption< CFuint>("MonitoredPhysVar","Index of the monitored physical var for positivity preservation, if not specified MonitoredVar is used instead.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -110,6 +151,7 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > ConvDiffLLAVRHSFlux
   std::vector<SafePtr<BaseDataSocketSink> > result = ConvRHSFluxReconstruction::needsSockets();
   result.push_back(&socket_states);
   result.push_back(&socket_gradientsCUDA);
+  result.push_back(&socket_gradientsAVCUDA);  
   result.push_back(&socket_solPntNormals);
   result.push_back(&socket_flxPntNormals);
   result.push_back(&socket_faceDir);
@@ -321,6 +363,66 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   // get convective/diffusive CFL ratio
   m_cflConvDiffRatio = frLocalData[0]->getCFLConvDiffRatio();
   
+  
+  
+  
+  
+  
+  m_subcellRes = frLocalData[0]->getSubcellResolution();
+  
+  // get the coefs for extrapolation of the node artificial viscosities to the flx pnts
+  m_nodePolyValsAtFlxPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getFlxPntsLocalCoords()));
+  
+  // get the coefs for extrapolation of the node artificial viscosities to the sol pnts
+  m_nodePolyValsAtSolPnts = frLocalData[0]->getNodePolyValsAtPnt(*(frLocalData[0]->getSolPntsLocalCoords()));
+  
+  // number of cell corner nodes
+  /// @note in the future, hanging nodes should be taken into account here
+  m_nbrCornerNodes = frLocalData[0]->getNbrCornerNodes();
+  
+  // get the number of nodes in the mesh
+  const CFuint nbrNodes = MeshDataStack::getActive()->getNbNodes();
+  
+  SafePtr<RealMatrix> vdm = frLocalData[0]->getVandermondeMatrix();
+  
+  SafePtr<RealMatrix> vdmInv = frLocalData[0]->getVandermondeMatrixInv();
+  
+  RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
+  temp = 0.0;
+  if (m_dim == 2)
+  {
+    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  else if (m_dim == 3)
+  {
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  
+  m_transformationMatrix.resize(m_nbrSolPnts,m_nbrSolPnts);
+  
+  m_transformationMatrix = (*vdm)*temp*(*vdmInv); 
+  
+  m_nbNodeNeighbors.resize(nbrNodes);
+  
+  m_nbNodeNeighbors = (CFuint) 0;
+  
+  m_flagComputeNbNghb = true;
+  
+  cf_assert(m_monitoredVar < m_nbrEqs);
+  
+  m_nodeEpsilons.resize(nbrNodes);
+  
+  m_nodeEpsilons = 0.0;
+  
+  
+  
+  
   // store locally the cell centers
   // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
   DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
@@ -338,6 +440,9 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_corrFctDiv2.resize(m_nbrSolPnts*m_nbrFlxPnts);
   m_faceFlxPntConn2.resize(m_nbrFlxPnts);
   m_faceIntegrationCoefs2.resize(m_nbrFaceFlxPnts);
+  m_transformationMatrix2.resize(m_nbrSolPnts*m_nbrSolPnts);
+  m_nodePolyValsAtFlxPnts2.resize(m_nbrFlxPnts*m_nbrCornerNodes);
+  m_nodePolyValsAtSolPnts2.resize(m_nbrSolPnts*m_nbrCornerNodes);
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
@@ -354,6 +459,11 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
       m_solPolyValsAtFlxPnts2[iSolPnt+iFlxPnt*m_nbrSolPnts] = (*m_solPolyValsAtFlxPnts)[iFlxPnt][iSolPnt];
       m_corrFctDiv2[iSolPnt*m_nbrFlxPnts+iFlxPnt] = m_corrFctDiv[iSolPnt][iFlxPnt];
     }
+    
+    for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
+    {
+      m_nodePolyValsAtSolPnts2[iSolPnt*m_nbrCornerNodes+iNode] = m_nodePolyValsAtSolPnts[iSolPnt][iNode]; 
+    }
   }
   
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxPnts; ++iFlxPnt)
@@ -363,6 +473,11 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {        
       m_flxSolDep2[iFlxPnt*m_nbrSolDep+iSolPnt] = (*m_flxSolDep)[iFlxPnt][iSolPnt];
+    }
+    
+    for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
+    {
+      m_nodePolyValsAtFlxPnts2[iFlxPnt*m_nbrCornerNodes+iNode] = m_nodePolyValsAtFlxPnts[iFlxPnt][iNode]; 
     }
   }
 
@@ -386,20 +501,25 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_corrFctDiv2.put();
   m_faceFlxPntConn2.put();
   m_faceIntegrationCoefs2.put();
+  m_nodeEpsilons.put();
+  m_nodePolyValsAtFlxPnts2.put();
+  m_nodePolyValsAtSolPnts2.put();
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
     {
-      for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
+      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
       {
         m_solPolyDerivAtSolPnts2[iSolPnt*m_dim*m_nbrSolPnts+iDim*m_nbrSolPnts+jSolPnt] = (*m_solPolyDerivAtSolPnts)[iSolPnt][iDim][jSolPnt];
       }
+      m_transformationMatrix2[iSolPnt*m_nbrSolPnts+jSolPnt] = m_transformationMatrix(iSolPnt,jSolPnt);
     }
   }
   
   m_solPolyDerivAtSolPnts2.put();
   m_solPolyValsAtFlxPnts2.put();
+  m_transformationMatrix2.put();
   
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
@@ -455,6 +575,11 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_neighbCellIDs.resize(nbCells*2*PHYSICS::DIM);
   m_neighbFaceIDs.resize(nbCells*2*PHYSICS::DIM);
   m_innerCellIsLeft.resize(nbCells*2*PHYSICS::DIM);
+  m_neighbNodeIDs.resize(nbCells*m_nbrCornerNodes);
+  m_cellEpsilons.resize(nbCells);
+  m_cellEpsilons = 0.0;  
+  
+  m_faceNeighbNodeIDs.resize(nbCells*2*PHYSICS::DIM*2*(PHYSICS::DIM-1));
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -480,11 +605,23 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
       
       const std::vector< Framework::GeometricEntity* >* faces = cell->getNeighborGeos();
       
+      std::vector< Framework::Node*  >* nodes = cell->getNodes();
+      
       const CFuint nbFaces = faces->size();
 
       for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
       {
         m_stateIDs[cellID * nbrStates + iSol] = (*states)[iSol]->getLocalID();
+      }
+      
+      for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
+      {
+        // get node ID
+        const CFuint nodeID = (*nodes)[iNode]->getLocalID();
+    
+        m_neighbNodeIDs[cellID * m_nbrCornerNodes + iNode] = nodeID;
+        
+        m_nbNodeNeighbors[nodeID] += 1;
       }
 
       for (CFuint iFace = 0; iFace < nbFaces; ++iFace)
@@ -510,6 +647,17 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
         {
           m_neighbCellIDs[cellID*nbFaces + iFace] = -1;
         }
+        
+        std::vector< Framework::Node*  >* faceNodes = (*faces)[iFace]->getNodes();
+        
+        m_nbFaceNodes = faceNodes->size();
+    
+        for (CFuint iNode = 0; iNode < m_nbFaceNodes; ++iNode)
+        {
+          const CFuint faceNodeIdx = (*faceNodes)[iNode]->getLocalID();
+          
+          m_faceNeighbNodeIDs[(*faces)[iFace]->getID() * m_nbFaceNodes+iNode] = faceNodeIdx;
+        }
       }
 
       //release the GeometricEntity
@@ -520,6 +668,10 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_neighbCellIDs.put();
   m_neighbFaceIDs.put();
   m_innerCellIsLeft.put();
+  m_neighbNodeIDs.put();
+  m_nbNodeNeighbors.put();
+  m_cellEpsilons.put();
+  m_faceNeighbNodeIDs.put();
 
   //socket_faceDir.getDataHandle().getLocalArray()->put();
   //socket_solPntNormals.getDataHandle().getLocalArray()->put();

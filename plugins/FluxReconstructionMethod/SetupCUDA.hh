@@ -54,6 +54,9 @@ protected: // data
 
   /// storage for the gradients
   Framework::DataSocketSource< CFreal > socket_gradientsCUDA;
+  
+  /// storage for the gradients
+  Framework::DataSocketSource< CFreal > socket_gradientsAVCUDA;
 
   /// storage for the face directions
   Framework::DataSocketSource< CFint > socket_faceDir;

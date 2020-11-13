@@ -38,22 +38,22 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#define FR_NS_RHS_PROV(__dim__,__svars__,__uvars__,__order__,__nbBThreads__,__providerName__) \
+#define FR_NSLLAV_RHS_PROV(__dim__,__svars__,__uvars__,__order__,__nbBThreads__,__providerName__) \
 MethodCommandProvider<ConvDiffLLAVRHSFluxReconstructionCUDA<LaxFriedrichsFlux, \
                       VarSetListT<Euler##__dim__##__svars__##T, Euler##__dim__##__uvars__##T>,NSVarSetListT<NavierStokes##__dim__##__svars__##T, NavierStokes##__dim__##__uvars__##T>,__order__,__nbBThreads__>, \
 		      FluxReconstructionSolverData,FluxReconstructionCUDAModule>	\
-FR_RhsNS##__dim__##__svars__##__uvars__##__order__##__nbBThreads__##Provider(__providerName__);
+FR_RhsNSLLAV##__dim__##__svars__##__uvars__##__order__##__nbBThreads__##Provider(__providerName__);
 // 48 block threads (default)
-FR_NS_RHS_PROV(2D, Cons, Cons, 0, 48, "NSFRLaxFriedrichs2DConsP0")
-FR_NS_RHS_PROV(2D, Cons, Cons, 1, 48, "NSFRLaxFriedrichs2DConsP1")
-FR_NS_RHS_PROV(2D, Cons, Cons, 2, 48, "NSFRLaxFriedrichs2DConsP2")
-FR_NS_RHS_PROV(2D, Cons, Cons, 3, 48, "NSFRLaxFriedrichs2DConsP3")
-FR_NS_RHS_PROV(2D, Cons, Cons, 4, 48, "NSFRLaxFriedrichs2DConsP4")
-FR_NS_RHS_PROV(2D, Cons, Cons, 5, 48, "NSFRLaxFriedrichs2DConsP5")
-FR_NS_RHS_PROV(2D, Cons, Cons, 6, 48, "NSFRLaxFriedrichs2DConsP6")
-FR_NS_RHS_PROV(2D, Cons, Cons, 7, 48, "NSFRLaxFriedrichs2DConsP7")
-FR_NS_RHS_PROV(2D, Cons, Cons, 8, 48, "NSFRLaxFriedrichs2DConsP8")
-FR_NS_RHS_PROV(2D, Cons, Cons, 9, 48, "NSFRLaxFriedrichs2DConsP9")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 0, 48, "NSLLAVFRLaxFriedrichs2DConsP0")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 1, 48, "NSLLAVFRLaxFriedrichs2DConsP1")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 2, 48, "NSLLAVFRLaxFriedrichs2DConsP2")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 3, 48, "NSLLAVFRLaxFriedrichs2DConsP3")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 4, 48, "NSLLAVFRLaxFriedrichs2DConsP4")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 5, 48, "NSLLAVFRLaxFriedrichs2DConsP5")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 6, 48, "NSLLAVFRLaxFriedrichs2DConsP6")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 7, 48, "NSLLAVFRLaxFriedrichs2DConsP7")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 8, 48, "NSLLAVFRLaxFriedrichs2DConsP8")
+FR_NSLLAV_RHS_PROV(2D, Cons, Cons, 9, 48, "NSLLAVFRLaxFriedrichs2DConsP9")
 //FR_EULER_RHS_PROV(3D, Cons, Cons, 48, "EulerFRLaxFried3DCons")
 //FR_NS_RHS_PROV(2D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD2DPrim")
 //FR_NS_RHS_PROV(3D, ProjectionCons, ProjectionPrim, 48, "CellLaxFriedMHD3DPrim")
@@ -242,6 +242,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
                                   const CFreal resFactor,
 				  CFreal* states, 
                                   CFreal* gradients,
+                                  CFreal* gradientsAV,
                                   CFreal* updateCoeff, 
 				  CFreal* rhs,
                                   CFreal* solPntNormals,
@@ -267,7 +268,16 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
                                   const CFuint* flxPntFlxDim,
                                   const CFreal* corrFctDiv,
                                   const CFreal* faceIntCoeff,
-                                  const CFreal cflConvDiffRatio)
+                                  const CFreal cflConvDiffRatio,
+                                  const CFuint* nbNodeNeighbors,
+                                  const CFreal* nodeEpsilons,
+                                  const CFuint nbrCornerNodes,
+                                  const CFuint* neighbNodeIDs,
+                                  const CFuint* faceNeighbNodeIDs,
+                                  const CFuint nbFaceNodes,
+                                  const CFreal* nodePolyValsAtFlxPnts,
+                                  const CFreal* nodePolyValsAtSolPnts,
+                                  const bool addUpdCoeff)
 {    
   // one thread per cell
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x;
@@ -298,7 +308,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     // initialize constants and vectors
     const CFuint nbFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1)*2*PHYS::DIM;//8;
     
-    const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
+    //const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
    
     const CFuint nbrFaceFlxPnts = (ORDER+1);
 
@@ -312,13 +322,19 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx*PHYS::DIM> flxPntGrads;
     
+    CudaEnv::CFVec<CFreal,nbFlxPntFlx*PHYS::DIM> flxPntGradsAV;
+    
     CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS*(ORDER+1)*(ORDER+1)*PHYS::DIM> solPntFlx;
     
     CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS> avgSol;
     
     CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS*PHYS::DIM> avgGrad;
     
+    CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS*PHYS::DIM> avgGradAV;    
+    
     CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS> currFlxPntFlx;
+    
+    CudaEnv::CFVec<CFreal,(ORDER+1)*(ORDER+1)> solEpsilons;    
     
     flxPntFlx = 0.0;
     
@@ -326,34 +342,35 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     
     flxPntGrads = 0.0;
     
+    flxPntGradsAV = 0.0;    
+    
     solPntFlx = 0.0;
 
     avgSol = 0.0;
     
     avgGrad = 0.0;
     
+    avgGradAV = 0.0;
+    
     currFlxPntFlx = 0.0;
     
-    CFreal currVol = cellVolumes[cellID];
+    const CFreal currVol = cellVolumes[cellID];
+    
+    solEpsilons = 0.0;
     
     
     
     // loop over flx pnts to extrapolate the states to the flux points
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
   {   
-    // reset the states in the flx pnts
-    m_solEpsilons[side][iSol] = 0.0;
-
     // loop over the sol pnts to compute the states and grads in the flx pnts
-    for (CFuint iNode = 0; iNode < m_nbrCornerNodes; ++iNode)
+    for (CFuint iNode = 0; iNode < nbrCornerNodes; ++iNode)
     {
       // get node local index
-      const CFuint nodeIdx = (*m_cellNodes)[iNode]->getLocalID();
+      const CFuint nodeIdx = neighbNodeIDs[cellID*nbrCornerNodes+iNode];
       
-      m_solEpsilons[side][iSol] += m_nodePolyValsAtSolPnts[iSol][iNode]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
+      solEpsilons[iSol] += nodePolyValsAtSolPnts[iSol*nbrCornerNodes+iNode]*nodeEpsilons[nodeIdx]/nbNodeNeighbors[nodeIdx];
     }
-        
-    artVisc[(((*(m_states[side]))[iSol]))->getLocalID()] = m_solEpsilons[side][iSol];
   }
     
     
@@ -368,6 +385,8 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       setFluxData(stateID, cellID, &kd, &currFd, iSolPnt);
 
       CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS*PHYS::DIM> grad(&gradients[stateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
+      
+      CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS*PHYS::DIM> gradAV(&gradientsAV[stateID*SCHEME::MODEL::NBEQS*PHYS::DIM]);
 
       CudaEnv::CFVecSlice<CFreal,nbNormals> n(&(kd.solPntNormals[stateID*nbNormals]));
 
@@ -400,12 +419,17 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
       {
         pmodelNS.getUpdateVS()->getFlux(&currState[0],&grad[0],&n[iDim*PHYS::DIM],&solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS]);
         
-//        for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
-//        {  
+        for (CFuint iDim2 = 0; iDim2 < PHYS::DIM; ++iDim2)
+        {
+          for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
+          {  
 //          if (cellID == 11) printf("iSol: %d, iDir: %d, iEq: %d, state: %e, grad: %e, nx: %e, ny: %e, flux: %e\n", 
 //                  iSolPnt, iDim, iEq, currState[iEq], grad[iEq*PHYS::DIM+iDim], nFd[iDim*PHYS::DIM], nFd[iDim*PHYS::DIM+1], 
 //                  solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS+iEq]);
-//        }
+            solPntFlx[iSolPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iDim*SCHEME::MODEL::NBEQS+iEq] += gradAV[iEq*PHYS::DIM+iDim2]*solEpsilons[iSolPnt]*nFd[iDim*PHYS::DIM+iDim2];
+            
+          }
+        }
       }
     }
 
@@ -461,6 +485,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
           {
             flxPntGrads[iFlxPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*gradients[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir];
+            flxPntGradsAV[iFlxPnt*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] += solPolyValsAtFlxPnts[iFlxPnt*nbSolPnts+solIdx]*gradientsAV[cell.getStateID(solIdx)*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir];
           }          
         }
       }
@@ -504,14 +529,21 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
     flxPntFlx = 0.0;
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntSolNeighb;
-    
+        
     CudaEnv::CFVec<CFreal,nbFlxPntFlx*PHYS::DIM> flxPntGradNeighb;
     
-    flxPntSolNeighb = 0.0;
+    CudaEnv::CFVec<CFreal,nbFlxPntFlx*PHYS::DIM> flxPntGradNeighbAV;
     
+    flxPntSolNeighb = 0.0;
+        
     flxPntGradNeighb = 0.0;
     
-    for (CFuint iFlxPnt = 0; iFlxPnt < nbFlxPntFlx; ++iFlxPnt) {flxPntSolNeighb[iFlxPnt] = 0.0;}
+    flxPntGradNeighbAV = 0.0;
+    
+    for (CFuint iFlxPnt = 0; iFlxPnt < nbFlxPntFlx; ++iFlxPnt) 
+    {
+        flxPntSolNeighb[iFlxPnt] = 0.0;
+    }
 
     // current neighb cell data
     CellData cells2(nbCells, stateIDs, neighbCellIDs, neighbFaceIDs, innerCellIsLeft, nbrFaces, nbSolPnts, ORDER);
@@ -549,6 +581,56 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         // @TODO check if this also works for non QUADs
         const CFuint flxIdx = faceFlxPntConn[iFace*nbrFaceFlxPnts+iFlxPnt];
         const CFuint jFlxIdx = faceFlxPntConn[jFaceIdx*nbrFaceFlxPnts+nbrFaceFlxPnts-1-iFlxPnt];
+        
+        
+        
+        
+       
+    
+    // reset the states in the flx pnts
+    CFreal epsL = 0.0;
+//    CFreal epsR = 0.0;
+    
+      //m_cellNodes = m_cells[LEFT]->getNodes();
+
+      for (CFuint iNode = 0; iNode < 2; ++iNode)
+      {
+        const CFuint faceNodeIdx = faceNeighbNodeIDs[faceID*2+iNode];
+          
+	for (CFuint iNodeCell = 0; iNodeCell < nbrCornerNodes; ++iNodeCell)
+        {
+          const CFuint nodeIdx = neighbNodeIDs[cellID*nbrCornerNodes+iNodeCell];
+            
+	  if (faceNodeIdx == nodeIdx)
+	  {
+	    // get node local index
+            //const CFuint nodeIdx = (*m_cellNodesConn)(m_cells[LEFT]->getID(),iNodeCell);
+	    
+            epsL += nodePolyValsAtFlxPnts[flxIdx*nbrCornerNodes+iNodeCell]*nodeEpsilons[nodeIdx]/nbNodeNeighbors[nodeIdx];
+	  }
+	}
+      }
+      
+//      m_cellNodes = m_cells[RIGHT]->getNodes();
+//
+//      for (CFuint iNode = 0; iNode < m_faceNodes->size(); ++iNode)
+//      {
+//	for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
+//        {
+//	  if ((*m_faceNodes)[iNode]->getLocalID() == (*m_cellNodes)[iNodeCell]->getLocalID())
+//	  {
+//	    // get node local index
+//            const CFuint nodeIdx = (*m_cellNodesConn)(m_cells[RIGHT]->getID(),iNodeCell);
+//	    
+//            epsR += m_nodePolyValsAtFlxPnts[jFlxIdx][iNodeCell]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
+//	  }
+//	}
+//      }
+  
+  
+  
+  
+  
 
         // loop over sol pnts to compute sol at flx pnt
         for (CFuint iSolPnt = 0; iSolPnt < nbrFlxSolDep; ++iSolPnt)
@@ -559,10 +641,11 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
           {
             flxPntSolNeighb[flxIdx*SCHEME::MODEL::NBEQS+iEq] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*states[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS+iEq];
-            
+                        
             for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
             {
               flxPntGradNeighb[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*gradients[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir];
+              flxPntGradNeighbAV[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] += solPolyValsAtFlxPnts[jFlxIdx*nbSolPnts+solIdx]*gradientsAV[cell2.getStateID(solIdx)*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir];
             }
           }
         }
@@ -576,6 +659,7 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
           for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
           {
             avgGrad[iEq*PHYS::DIM+iDir] = 0.5*(flxPntGradNeighb[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] + flxPntGrads[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir]);
+            avgGradAV[iEq*PHYS::DIM+iDir] = 0.5*(flxPntGradNeighbAV[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir] + flxPntGradsAV[flxIdx*SCHEME::MODEL::NBEQS*PHYS::DIM+iEq*PHYS::DIM+iDir]);
           }
         } 
 
@@ -601,9 +685,28 @@ __global__ void computeStateLocalRHSKernel(typename SCHEME::BASE::template Devic
         const CFreal mu = pmodelNS.getUpdateVS()->getDynViscosity(&avgSol[0]);
         const CFreal rho = pmodelNS.getUpdateVS()->getDensity(&avgSol[0]);
         
-        waveSpeedUpd += mu/rho*faceVecAbsSize2*faceIntCoeff[iFlxPnt]/currVol*cflConvDiffRatio;
+        if (addUpdCoeff)
+        {
+          waveSpeedUpd += (mu/rho+epsL)*faceVecAbsSize2*faceIntCoeff[iFlxPnt]/currVol*cflConvDiffRatio;
+        }
+        else
+        {
+          waveSpeedUpd += mu/rho*faceVecAbsSize2*faceIntCoeff[iFlxPnt]/currVol*cflConvDiffRatio; 
+        }
 
         pmodelNS.getUpdateVS()->getFlux(&avgSol[0],&avgGrad[0],&n[0],&currFlxPntFlx[0]);
+        
+        // compute artificial part
+        // get epsilon
+        const CFreal epsilon = epsL;//0.5*(epsL+epsR);
+    
+        for (CFuint iDim = 0; iDim < PHYS::DIM; ++iDim)
+        {
+          for (CFuint iVar = 0; iVar < SCHEME::MODEL::NBEQS; ++iVar)
+          {
+            currFlxPntFlx[iVar] += epsilon*avgGradAV[iVar*PHYS::DIM+iDim]*n[iDim];
+          }
+        }
         
         // extrapolate the fluxes to the flux points
         for (CFuint iSolPnt = 0; iSolPnt < nbrFlxSolDep; ++iSolPnt)
@@ -661,16 +764,21 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
                                        const CFuint nbCells,
 				       CFreal* states, 
                                        CFreal* gradients,
+                                       CFreal* gradientsAV,
                                        CFreal* solPntNormals,
                                        CFreal* flxPntNormals,
+                                       CFreal* cellVolumes,
                                        CFreal* volumes,
                                        CFint* faceDir,
+                                       CFreal* nodeEpsilons,
+                                       CFreal* cellEpsilons,
                                        const CFuint nbSolPnts,
                                        const CFuint nbrFaces,
                                        const CFuint* faceFlxPntConn,
                                        const CFuint* stateIDs,
                                        const CFint* neighbCellIDs,
                                        const CFuint* neighbFaceIDs,
+                                       const CFuint* neighbNodeIDs,
                                        const CFuint* innerCellIsLeft,
                                        const CFuint nbrFlxPnts,
                                        const CFuint nbrSolSolDep,
@@ -682,7 +790,17 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
                                        const CFreal* solPolyDerivAtSolPnts,
                                        const CFreal* solPolyValsAtFlxPnts,
                                        const CFuint* flxPntFlxDim,
-                                       const CFreal* corrFctDiv)
+                                       const CFreal* corrFctDiv,
+                                       const CFreal* transformationMatrix,
+                                       const CFreal peclet,
+                                       const CFreal subcellRes,
+                                       const CFreal kappa,
+                                       const CFreal s0,
+                                       const CFuint monitoredVar,
+                                       const CFreal monitoredPhysVar,
+                                       const CFuint nbrCornerNodes,
+                                       const bool useMax,
+                                       const bool flagComputeNbNghb)
 {    
   // one thread per cell
   const int cellID = threadIdx.x + blockIdx.x*blockDim.x;
@@ -705,7 +823,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
           
     const CFuint nbFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1)*2*PHYS::DIM;//8;
     
-    const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
+    //const CFuint nbFaceFlxPntFlx = SCHEME::MODEL::NBEQS*(ORDER+1);
    
     const CFuint nbrFaceFlxPnts = (ORDER+1);
 
@@ -716,9 +834,13 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntSol;
     
     CudaEnv::CFVec<CFreal,nbFlxPntFlx> flxPntSolAV;
+    
+    CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS*(ORDER+1)*(ORDER+1)> projStates;
 
     CudaEnv::CFVec<CFreal,SCHEME::MODEL::NBEQS> stateGradVars;
     //typename MathTypes<CFreal, GPU, SCHEME::MODEL::NBEQS>::VEC stateGradVars;
+    
+    CudaEnv::CFVec<CFreal,SCHEME::MODEL::DATASIZE> pdata;
     
     flxPntFlx = 0.0;
     
@@ -728,34 +850,31 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 
     stateGradVars = 0.0;
     
+    projStates = 0.0;  
+    
+    pdata = 0.0;
+    
     CFreal currVol = cellVolumes[cellID];
-    
-
-    
-    
-  ////////COMPUTE PROJECTED STATES//////////////////////////////////////////////////////////////////////
-  if (ORDER != 1)
-  {
-    for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
+   
+    ////////COMPUTE PROJECTED STATES//////////////////////////////////////////////////////////////////////
+    if (ORDER != 1)
     {
-      for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
+      for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
       {
-        // get current state ID
-        const CFuint stateID = cell.getStateID(iSolPnt);
+        for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
+        {
+          // get current state ID
+          const CFuint stateID = cell.getStateID(iSol);
         
-        CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
-      
-        m_tempSolPntVec[iSol] = currState[iEq];
-      }
-
-      m_tempSolPntVec2 = m_transformationMatrix*m_tempSolPntVec;
-
-      for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
-      {
-        m_projStates[iSol][iEq] = m_tempSolPntVec2[iSol];
+          CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
+          
+          for (CFuint jSol = 0; jSol < nbSolPnts; ++jSol)
+          {
+            projStates[jSol*SCHEME::MODEL::NBEQS+iEq] += currState[iEq]*transformationMatrix[iSol*nbSolPnts+jSol];
+          }
+        }
       }
     }
-  }
   else
   {
     for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
@@ -765,7 +884,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
       for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
       {
         // get current state ID
-        const CFuint stateID = cell.getStateID(iSolPnt);
+        const CFuint stateID = cell.getStateID(iSol);
         
         CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
         
@@ -776,7 +895,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
 
       for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
       {
-        m_projStates[iSol][iEq] = stateSum;
+        projStates[iSol*SCHEME::MODEL::NBEQS+iEq] = stateSum;
       }
     }
   }
@@ -791,13 +910,13 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
   for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
   {    
     // get current state ID
-    const CFuint stateID = cell.getStateID(iSolPnt);
+    const CFuint stateID = cell.getStateID(iSol);
         
     CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
     
-    pmodelNS.getUpdateVS()->computePhysicalData(&currState[0], &m_pdata[0]);
+    pmodel.getUpdateVS()->computePhysicalData(&currState[0], &pdata[0]);
 
-    wavespeed += m_pData[EulerTerm::V] + m_pData[EulerTerm::A];
+    wavespeed += pdata[EulerTerm::V] + pdata[EulerTerm::A];
   }
   
   wavespeed /= nbSolPnts;
@@ -816,7 +935,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
   
   CFreal sDenom = 0.0;
 
-  if (monitoredPhysVar < m_pdata.size())
+  if (monitoredPhysVar < SCHEME::MODEL::DATASIZE)
   {
     for (CFuint iSol = 0; iSol < nbSolPnts; ++iSol)
     {
@@ -824,15 +943,17 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
       CFreal diffStatesPPMinOne = 0.0;
       
       // get current state ID
-      const CFuint stateID = cell.getStateID(iSolPnt);
+      const CFuint stateID = cell.getStateID(iSol);
         
       CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
       
-      pmodelNS.getUpdateVS()->computePhysicalData(&currState[0], &m_pdata[0]);
-      pmodelNS.getUpdateVS()->computePhysicalData(&m_projStates[iSol][0], &m_pdata2[0]);
+      pmodel.getUpdateVS()->computePhysicalData(&currState[0], &pdata[0]);
+      
+      stateP = pdata[monitoredPhysVar];
+      
+      pmodel.getUpdateVS()->computePhysicalData(&projStates[iSol*SCHEME::MODEL::NBEQS], &pdata[0]);
 
-      stateP = m_pdata[monitoredPhysVar];
-      diffStatesPPMinOne = stateP - m_pdata2[monitoredPhysVar];
+      diffStatesPPMinOne = stateP - pdata[monitoredPhysVar];
 
       sNum += diffStatesPPMinOne*diffStatesPPMinOne;
       sDenom += stateP*stateP;
@@ -846,12 +967,12 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
       CFreal diffStatesPPMinOne = 0.0;
       
       // get current state ID
-      const CFuint stateID = cell.getStateID(iSolPnt);
+      const CFuint stateID = cell.getStateID(iSol);
         
       CudaEnv::CFVecSlice<CFreal,SCHEME::MODEL::NBEQS> currState(&states[stateID*SCHEME::MODEL::NBEQS]);
 
       stateP = currState[monitoredVar];
-      diffStatesPPMinOne = stateP - m_projStates[iSol][monitoredVar];
+      diffStatesPPMinOne = stateP - projStates[iSol*SCHEME::MODEL::NBEQS+monitoredVar];
 
       sNum += diffStatesPPMinOne*diffStatesPPMinOne;
       sDenom += stateP*stateP;
@@ -879,7 +1000,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
   }
   else
   {
-    eps = eps0*0.5*(1.0 + sin(0.5*MathTools::MathConsts::CFrealPi()*(smoothness-s0)/kappa));
+    eps = eps0*0.5*(1.0 + sin(0.5*3.141592653589793238462643383*(smoothness-s0)/kappa));
   }
 
 //  if (m_useWallCutOff)
@@ -918,10 +1039,10 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
   
   ////////STORE EPS///////////////////////////////////////////////////////////////////
   
-  for (CFuint iNode = 0; iNode < 4; ++iNode)
+  for (CFuint iNode = 0; iNode < nbrCornerNodes; ++iNode)
   {
     // get node ID
-    const CFuint nodeID = (*(m_cellNodes[0]))[iNode]->getLocalID();
+    const CFuint nodeID = neighbNodeIDs[cellID*nbrCornerNodes+iNode];
 
     if (!useMax) 
     {
@@ -934,19 +1055,8 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
       nodeEpsilons[nodeID] += maxEps;
       cellEpsilons[cellID] = maxEps;
     }
-    
-    if (m_flagComputeNbNghb)
-    {
-      m_nbNodeNeighbors[nodeID] += 1.0;
-    }
   }
-  
-  
-  
-  
-    
-    
-    
+
 
     // loop over sol pnts to compute flux
     for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -997,7 +1107,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
     // extrapolate the fluxes to the flux points
     for (CFuint iFlxPnt = 0; iFlxPnt < nbrFlxPnts; ++iFlxPnt)
     {
-      const CFuint dim = flxPntFlxDim[iFlxPnt];
+      //const CFuint dim = flxPntFlxDim[iFlxPnt];
 
       // loop over sol pnts to compute flux
       for (CFuint iSolPnt = 0; iSolPnt < nbrFlxSolDep; ++iSolPnt)
@@ -1106,7 +1216,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
               for (CFuint iDir = 0; iDir < PHYS::DIM; ++iDir)
               {
                 grad[iEq*PHYS::DIM+iDir] += divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactor; 
-                gradAV[iEq*PHYS::DIM+iDir] += divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactorAV; 
+                gradAV[iEq*PHYS::DIM+iDir] += divh*corrFactorAV*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactor; 
 
 //              if (cellID == 11) printf("iSol: %d, iEq: %d, iFlx %d, iDir: %d: %e\n", solIdx, iEq, flxIdx, iDir,
 //                      divh*corrFactor*flxPntNormals[faceID*nbrFaceFlxPnts*PHYS::DIM+iFlxPnt*PHYS::DIM+iDir]*dirFactor);  
@@ -1134,7 +1244,7 @@ __global__ void computeGradientsKernel(typename SCHEME::MODEL::PTERM::template D
         for (CFuint iEq = 0; iEq < SCHEME::MODEL::NBEQS; ++iEq)
         {
           grad[iEq*PHYS::DIM+jDir] *= invacob;
-          gradAV[iEq*PHYS::DIM+jDir] *= invacobAV;
+          gradAV[iEq*PHYS::DIM+jDir] *= invacob;
 	}
       }
     }
@@ -1200,6 +1310,7 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   DataHandle<CFreal> flxPntNormals = socket_flxPntNormals.getDataHandle(); 
   DataHandle<CFint> faceDir = socket_faceDir.getDataHandle(); 
   DataHandle<CFreal> gradients = socket_gradientsCUDA.getDataHandle();
+  DataHandle<CFreal> gradientsAV = socket_gradientsAVCUDA.getDataHandle();
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
   DataHandle<CFreal> cellVolumes = socket_cellVolumes.getDataHandle();
  
@@ -1220,6 +1331,12 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   typedef typename SCHEME::template DeviceFunc<CPU, PHYSICS, ORDER> FluxScheme;
 #endif 
   
+  // get current iteration
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  // check if LLAV should be frozen
+  m_useMax = iter > m_freezeLimiterIter;
+  
   if (m_onGPU) 
   {
 #ifdef CF_HAVE_CUDA
@@ -1230,6 +1347,7 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
     // copy of data that change at every iteration
     socket_states.getDataHandle().getGlobalArray()->put(); 
     socket_gradientsCUDA.getDataHandle().getLocalArray()->put();
+    socket_gradientsAVCUDA.getDataHandle().getLocalArray()->put();
     socket_rhs.getDataHandle().getLocalArray()->put(); 
     socket_updateCoeff.getDataHandle().getLocalArray()->put();
     
@@ -1271,6 +1389,11 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
     // get residual factor
     const CFreal resFactor = getMethodData().getResFactor();
     
+    m_nodeEpsilons = 0.0;
+    
+    m_nodeEpsilons.put();
+    m_cellEpsilons.put();
+    
     // cudaFuncSetCacheConfig("computeFluxKernel", cudaFuncCachePreferL1);
 
     // if there is a diffusive term, compute the gradients
@@ -1284,16 +1407,21 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
                                        nbCells,
 				       socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
                                        gradients.getLocalArray()->ptrDev(), 
+                                       gradientsAV.getLocalArray()->ptrDev(), 
                                        solPntNormals.getLocalArray()->ptrDev(),
                                        flxPntNormals.getLocalArray()->ptrDev(),
+                                       cellVolumes.getLocalArray()->ptrDev(),
                                        volumes.getLocalArray()->ptrDev(),
                                        faceDir.getLocalArray()->ptrDev(),
+                                       m_nodeEpsilons.ptrDev(),
+                                       m_cellEpsilons.ptrDev(),
                                        m_nbrSolPnts,
                                        4,
                                        m_faceFlxPntConn2.ptrDev(),
                                        m_stateIDs.ptrDev(),
                                        m_neighbCellIDs.ptrDev(),
                                        m_neighbFaceIDs.ptrDev(),
+                                       m_neighbNodeIDs.ptrDev(),
                                        m_innerCellIsLeft.ptrDev(),
                                        m_nbrFlxPnts,
                                        m_nbrSolSolDep,
@@ -1305,10 +1433,22 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
                                        m_solPolyDerivAtSolPnts2.ptrDev(),
                                        m_solPolyValsAtFlxPnts2.ptrDev(),
                                        m_flxPntFlxDim2.ptrDev(),
-                                       m_corrFctDiv2.ptrDev());
+                                       m_corrFctDiv2.ptrDev(),
+                                       m_transformationMatrix2.ptrDev(),
+                                       m_peclet,
+                                       m_subcellRes,
+                                       m_kappa,
+                                       m_s0,
+                                       m_monitoredVar,
+                                       m_monitoredPhysVar,
+                                       m_nbrCornerNodes,
+                                       m_useMax,
+                                       m_flagComputeNbNghb);
 //    }
         CFLog(VERBOSE, "sol kernel\n");
 
+    m_flagComputeNbNghb = false;
+        
     // compute the convective flux in each cell
     computeStateLocalRHSKernel<FluxScheme,PHYSICS,PHYSICSNS,ORDER> <<<blocksPerGrid,nThreads>>> 
       (dcof.getPtr(),
@@ -1318,6 +1458,7 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
        nbCells,
        resFactor,
        socket_states.getDataHandle().getGlobalArray()->ptrDev(), 
+       gradients.getLocalArray()->ptrDev(),
        gradients.getLocalArray()->ptrDev(), 
        updateCoeff.getLocalArray()->ptrDev(), 
        rhs.getLocalArray()->ptrDev(),
@@ -1344,7 +1485,16 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
        m_flxPntFlxDim2.ptrDev(),
        m_corrFctDiv2.ptrDev(),
        m_faceIntegrationCoefs2.ptrDev(),
-       m_cflConvDiffRatio);
+       m_cflConvDiffRatio,
+       m_nbNodeNeighbors.ptrDev(),
+       m_nodeEpsilons.ptrDev(),
+       m_nbrCornerNodes,
+       m_neighbNodeIDs.ptrDev(),
+       m_faceNeighbNodeIDs.ptrDev(),
+       m_nbFaceNodes,
+       m_nodePolyValsAtFlxPnts2.ptrDev(),
+       m_nodePolyValsAtSolPnts2.ptrDev(),
+       m_addUpdCoeff);
     
    
     cudaDeviceSynchronize();
@@ -1366,6 +1516,10 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
     rhs.getLocalArray()->get();
     updateCoeff.getLocalArray()->get();
     gradients.getLocalArray()->get();
+    gradientsAV.getLocalArray()->get();
+    
+    //m_nodeEpsilons.get();
+    m_cellEpsilons.get();
     
     //for (CFuint i = 0; i < rhs.size(); ++i) {CFLog(INFO, "res after: " << rhs[i]-rhsB[i] << "\n");}
     //CFLog(VERBOSE, "ConvDiffLLAVRHSFluxReconstructionCUDA::execute() => GPU-->CPU data transfer took " << timer.elapsed() << " s\n");

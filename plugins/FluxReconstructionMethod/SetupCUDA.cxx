@@ -45,6 +45,7 @@ MethodCommandProvider< SetupCUDA,FluxReconstructionSolverData,FluxReconstruction
 SetupCUDA::SetupCUDA(const std::string& name) :
   SetupExtra(name),
   socket_gradientsCUDA("gradientsCUDA"),
+  socket_gradientsAVCUDA("gradientsAVCUDA"),        
   socket_faceDir("faceDir")
 {
 }
@@ -62,6 +63,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 {
   std::vector< Common::SafePtr< BaseDataSocketSource > > result = SetupExtra::providesSockets();
   result.push_back(&socket_gradientsCUDA);
+  result.push_back(&socket_gradientsAVCUDA);
   result.push_back(&socket_faceDir);
 
   return result;
@@ -126,8 +128,10 @@ void SetupCUDA::createCUDASockets()
   
   // get the face flux point projection vector size data handle
   DataHandle< CFreal > gradients = socket_gradientsCUDA.getDataHandle();
+  DataHandle< CFreal > gradientsAV = socket_gradientsAVCUDA.getDataHandle();
 
   gradients.resize(totNbrStates*dim*nbrEqs);
+  gradientsAV.resize(totNbrStates*dim*nbrEqs);
 
   // get InnerFaces TopologicalRegionSet
   SafePtr<TopologicalRegionSet> faces = MeshDataStack::getActive()->getTrs("InnerFaces");

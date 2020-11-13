@@ -268,8 +268,9 @@ void BCNoSlipWallGammaAlpha2D::computeGhostStates(const vector< State* >& intSta
 //  }
         
       m_ghostSolPhysData[EulerTerm::GAMMA] = m_intSolPhysData[EulerTerm::GAMMA];
+      //CFLog(INFO, "coord: " << coords[iState][XX] << "\n");
       //CFLog(INFO, "is turb: " << m_transitionCriterion[iState] << ", transition occurred: " << m_transitionOccurred << "\n");
-      if ((m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold)) && !m_enforceLaminar)// && m_transitionOccurred))
+      if ((m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold)) && !m_enforceLaminar)// && coords[iState][XX]>0.1)// && m_transitionOccurred))
       {
         // gamma
         m_ghostSolPhysData[iK+2] = m_intSolPhysData[iK+2];
@@ -387,7 +388,7 @@ void BCNoSlipWallGammaAlpha2D::setup()
   BCStateComputer::setup();
 
   // no flux point coordinates required
-  m_needsSpatCoord = false;
+  m_needsSpatCoord = true;//false;
 
   m_varSetTurb = getMethodData().getUpdateVar().d_castTo<ConvTurb2DVarSet>();
 

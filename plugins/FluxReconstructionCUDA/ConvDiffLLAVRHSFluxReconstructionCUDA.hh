@@ -98,6 +98,9 @@ protected:
   /// storage for the gradients
   Framework::DataSocketSink< CFreal >  socket_gradientsCUDA;
   
+  /// storage for the gradients
+  Framework::DataSocketSink< CFreal >  socket_gradientsAVCUDA;
+  
   /// storage for solution point geometric jacobians
   Framework::DataSocketSink< CFreal >  socket_volumes;
   
@@ -145,6 +148,72 @@ protected:
 
   /// number of OpenMP threads
   CFuint m_nbThreadsOMP;
+
+  /// controlling parameter kappa
+  CFreal m_kappa;
+  
+  /// peclet number
+  CFreal m_peclet;
+  
+  /// number of neighbors for each node
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_nbNodeNeighbors;
+  
+  /// number of corner nodes for current element type
+  CFuint m_nbrCornerNodes;
+  
+  /// vector containing pointers to the nodes in a face
+  std::vector< Framework::Node*  >* m_faceNodes;
+  
+  /// flag telling whether to compute the number of node neighbors
+  bool m_flagComputeNbNghb;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the flx pnts
+  std::vector< std::vector< CFreal > > m_nodePolyValsAtFlxPnts;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the sol pnts
+  std::vector< std::vector< CFreal > > m_nodePolyValsAtSolPnts;
+  
+//  /// cell node connectivity table
+//  Common::SafePtr< Framework::MeshData::ConnTable > m_cellNodesConn;
+  
+   /// iteration after which the limiter is frozen
+  CFuint m_freezeLimiterIter;
+  
+  /// boolean telling whether to use max artificial viscosity wrt previous iteration
+  bool m_useMax;
+  
+  /// transformation matrices to order P-1
+  RealMatrix m_transformationMatrix;
+  
+  /// index of the monitored variable for LLAV
+  CFuint m_monitoredVar;
+  
+  /// subcell resolution
+  CFreal m_subcellRes;
+  
+  /// index of the monitored physical variable for LLAV
+  CFuint m_monitoredPhysVar;
+  
+  /// reference smoothness
+  CFreal m_s0;
+  
+  /// bool whether to impose zero LLAV BC
+  bool m_LLAVBCZero;
+  
+  /// IDs of the neighbor node IDs per cellID
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_neighbNodeIDs;
+  
+  /// node eps
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_nodeEpsilons;
+  
+  /// cell eps
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_cellEpsilons;
+  
+  /// node IDs of face nodes
+  Framework::LocalArray<CFuint>::MALLOC_TYPE m_faceNeighbNodeIDs;
+  
+  /// number of face nodes
+  CFuint m_nbFaceNodes;
   
   /// IDs of the solution points per cellID
   Framework::LocalArray<CFuint>::MALLOC_TYPE m_stateIDs;
@@ -184,12 +253,24 @@ protected:
 
   /// face integration coefficients
   Framework::LocalArray<CFreal>::MALLOC_TYPE m_faceIntegrationCoefs2;
+  
+  /// transformation matrices to order P-1
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_transformationMatrix2;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the flx pnts
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_nodePolyValsAtFlxPnts2;
+  
+  /// polynomial coefficients for reconstruction of the artificial viscosity at the sol pnts
+  Framework::LocalArray<CFreal>::MALLOC_TYPE m_nodePolyValsAtSolPnts2;
    
   /// flag telling to solve on GPU
   bool m_onGPU;
   
   /// ratio between conv and diff CFL
   CFreal m_cflConvDiffRatio;
+  
+  /// boolean telling whether to add the contribution of the artificial flux to the update coefficients
+  bool m_addUpdCoeff;
   
 }; // class FVMCC_ComputeRHSCell
 

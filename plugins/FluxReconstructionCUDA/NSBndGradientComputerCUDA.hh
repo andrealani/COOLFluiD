@@ -21,9 +21,8 @@ namespace COOLFluiD {
 
 /**
  * Daughterclass of ConvBndCorrectionsRHSFluxReconstruction, needed to 
- * calculate the bnd gradients for NS
+ * calculate the bnd gradients for NS for CUDA
  * 
- * @author Alexander Papen
  * @author Ray Vandenhoeck
  */
 class NSBndGradientComputerCUDA : public ConvBndCorrectionsRHSFluxReconstruction {
@@ -59,6 +58,9 @@ protected: //data
 
   /// socket for gradients cuda
   Framework::DataSocketSink< CFreal > socket_gradientsCUDA;
+  
+   /// socket for gradients cuda
+  Framework::DataSocketSink< CFreal > socket_gradientsAVCUDA;
   
   /// diffusive variable set
   Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
