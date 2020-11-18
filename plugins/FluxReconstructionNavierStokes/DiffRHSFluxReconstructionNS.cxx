@@ -49,7 +49,7 @@ DiffRHSFluxReconstructionNS::DiffRHSFluxReconstructionNS(const std::string& name
   m_tempStatesR(),
   m_dampCoeff()
 {
-  addConfigOptionsTo(this);
+  //addConfigOptionsTo(this);
 }
   
 //////////////////////////////////////////////////////////////////////////////

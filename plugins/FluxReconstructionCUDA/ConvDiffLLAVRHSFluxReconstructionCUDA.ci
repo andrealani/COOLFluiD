@@ -363,11 +363,6 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   // get convective/diffusive CFL ratio
   m_cflConvDiffRatio = frLocalData[0]->getCFLConvDiffRatio();
   
-  
-  
-  
-  
-  
   m_subcellRes = frLocalData[0]->getSubcellResolution();
   
   // get the coefs for extrapolation of the node artificial viscosities to the flx pnts
@@ -419,9 +414,6 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_nodeEpsilons.resize(nbrNodes);
   
   m_nodeEpsilons = 0.0;
-  
-  
-  
   
   // store locally the cell centers
   // in the future compute them on the GPU, this needs element node connectivity + number of nodes per element info 
@@ -579,7 +571,24 @@ void ConvDiffLLAVRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLO
   m_cellEpsilons.resize(nbCells);
   m_cellEpsilons = 0.0;  
   
-  m_faceNeighbNodeIDs.resize(nbCells*2*PHYSICS::DIM*2*(PHYSICS::DIM-1));
+      // build the GeometricEntity
+      geoData.idx = 0;
+      GeometricEntity *const cell = m_cellBuilder2->buildGE();
+      
+      const std::vector< Framework::GeometricEntity* >* faces = cell->getNeighborGeos();
+      
+      std::vector< Framework::Node*  >* nodes = cell->getNodes();
+        
+      std::vector< Framework::Node*  >* faceNodes = (*faces)[0]->getNodes();
+        
+      m_nbFaceNodes = faceNodes->size();
+
+      //release the GeometricEntity
+      m_cellBuilder2->releaseGE();
+      
+      CFLog(INFO, "nbFaceNodes: " << m_nbFaceNodes << "\n");
+  
+  m_faceNeighbNodeIDs.resize(nbCells*m_nbFaceNodes*PHYSICS::DIM*2);
 
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)

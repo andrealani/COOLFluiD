@@ -180,6 +180,7 @@ NSBndGradientComputerCUDA::needsSockets()
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = ConvBndCorrectionsRHSFluxReconstruction::needsSockets();
 
   result.push_back(&socket_gradientsCUDA);
+  result.push_back(&socket_gradientsAVCUDA);
 
   return result;
 }
