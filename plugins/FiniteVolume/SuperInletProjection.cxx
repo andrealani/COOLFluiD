@@ -31,11 +31,17 @@ void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFint >("Phi_divB_zero","Set Phi to zero at the ghost state.");
   options.addConfigOption< CFint >("Phi_divB_extrapolated","Copy Phi from the closest inner state to the ghost cell.");
   options.addConfigOption< CFint >("JensVelocityBC","Set velocity boundary conditions according to Pomoell 2012.");
+  options.addConfigOption< CFint >("BarbarasVelocityBC","Set velocity boundary conditions according to Zanni and Ferreira 2009.");
+  options.addConfigOption< CFint >("hydrodynamic_limit","Set velocity boundary conditions for the hydrodynamic limit case.");
   options.addConfigOption< CFint >("DanasVelocityBC","Set velocity boundary conditions according to Dana.");
   options.addConfigOption< CFint >("DifferentialRotation","Enable differential rotation in the azimuth momentum");
   options.addConfigOption< CFint >("JensBfieldBC","Fix Br and extrapolate Btheta and Bphi.");
   options.addConfigOption< CFint >("DanasBfieldBC","Fix Br and extrapolate Btheta*pow(r,alpha) and Bphi.");
   options.addConfigOption< CFint >("JonLinkersBfieldSuggestion","Freeze B_PFSS at the inlet.");
+  options.addConfigOption< CFint >("pressure_fixed","Dirichlet condition for P");
+  options.addConfigOption< CFint >("pressure_Neumann","Neumann condition for P");
+  options.addConfigOption< CFint >("JensRhoIni","Dirichlet condition for Jens' grav.strat. initial condition for rho");
+  options.addConfigOption< CFint >("JensPIni","Dirichlet condition for Jens' grav.strat. initial condition for P");
 
 }
       
@@ -53,11 +59,17 @@ SuperInletProjection::SuperInletProjection(const std::string& name) :
   setParameter("Phi_divB_zero",&_Phi_divB_zero);
   setParameter("Phi_divB_extrapolated",&_Phi_divB_extrapolated);
   setParameter("JensVelocityBC",&_JensVelocityBC);
+  setParameter("BarbarasVelocityBC",&_BarbarasVelocityBC);
+  setParameter("hydrodynamic_limit",&_hydrodynamic_limit);
   setParameter("DanasVelocityBC",&_DanasVelocityBC);
   setParameter("DifferentialRotation",&_DifferentialRotation);
   setParameter("JensBfieldBC",&_JensBfieldBC);
   setParameter("DanasBfieldBC",&_DanasBfieldBC);
   setParameter("JonLinkersBfieldSuggestion",&_JonLinkersBfieldSuggestion);
+  setParameter("pressure_fixed",&_pressure_fixed);
+  setParameter("pressure_Neumann",&_pressure_Neumann);
+  setParameter("JensRhoIni",&_JensRhoIni);
+  setParameter("JensPIni",&_JensPIni);
   
   _projectionIDs = vector<CFuint>();
   setParameter("ProjectionIDs",&_projectionIDs);
@@ -80,6 +92,9 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   // This BC (the PFSS solution fixed on the inlet) was suggested by Jon Linker and
   // is evaluated by default. When using Jens' or Dana's BCs for the magnetic field
   // the B-field values in the ghost cells are overwritten.
+
+  RealVector B_PFSS_dimless(3);
+
   if (m_initialSolutionMap.size() > 0) {
     /// map faces to corresponding TRS and index inside that TRS
     SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs =
@@ -93,6 +108,10 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       const CFuint varID = m_initialSolutionIDs[i];
       const CFuint idx = startID+i;
       cf_assert(idx < initialValues->size());
+
+
+      B_PFSS_dimless[i] = (*initialValues)[idx]; // save the Poisson PFSS solution in a vector
+
       (*ghostState)[varID] = 2.*(*initialValues)[idx] - (*innerState)[varID];
       CFLog(DEBUG_MIN, "SuperInletProjection::setGhostState() => [" << varID << "] => " << (*initialValues)[idx] << " | " << (*innerState)[varID] << "\n");
     }
@@ -167,9 +186,84 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
 
   //===== D E N S I T Y   B O U N D A R Y   C O N D I T I O N =================
-  CFreal densityBoundary_dimless = 1.0; // in code units
+  
+
+  CFreal densityBoundary_dimless = 1.0;
+  // The Dirichlet BC for rho with a value used by Linker et al. and B. Perri
+
+
+  if (_JensRhoIni==1) {
+     // The Dirichlet BC for with a value used by Jens for the surface
+     // density. This value is used for a gravitationally stratified
+     // density profile
+     densityBoundary_dimless = 4.03679312e-13/1.67e-13;
+  }
+
+
   CFreal densityG_dimless = 2.*densityBoundary_dimless - (*innerState)[0];
   (*ghostState)[0] = densityG_dimless;
+  //(*ghostState)[0] = (*innerState)[0]; // Neumann version
+
+
+
+
+
+   //=== M A G N E T I C - F I E L D   B O U N D A R Y   C O N D I T I O N ====
+
+
+
+  if (_JonLinkersBfieldSuggestion==1) {
+     // do nothing, as the boundary is already set to the PFSS initial solution
+     // above.
+  } else if (_JensBfieldBC==1) {
+      //Br should be taken from the PFSS initial solution, while Btheta and
+      // Bphi are linearly extrapolated to the ghost from the inner state:
+      CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
+
+      CFreal BxI_dimless = (*innerState)[4];
+      CFreal ByI_dimless = (*innerState)[5];
+      CFreal BzI_dimless = (*innerState)[6];
+      CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
+      CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
+      CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
+
+      CFreal BthetaG_dimless = BthetaI_dimless;
+      CFreal BphiG_dimless = BphiI_dimless;
+
+      // Back-transformation to Cartesian coordinates:
+      CFreal BxG_dimless = xG_dimless/rG_dimless*BrG_dimless - yG_dimless/rhoG_dimless*BphiG_dimless + xG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
+      CFreal ByG_dimless = yG_dimless/rG_dimless*BrG_dimless + xG_dimless/rhoG_dimless*BphiG_dimless + yG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
+      CFreal BzG_dimless = zG_dimless/rG_dimless*BrG_dimless - rhoG_dimless/rG_dimless*BthetaG_dimless;
+
+      (*ghostState)[4] = BxG_dimless;
+      (*ghostState)[5] = ByG_dimless;
+      (*ghostState)[6] = BzG_dimless;
+
+  } else if (_DanasBfieldBC==1) {
+      // Slightly modified version of Jens' BC:
+      CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
+
+      CFreal BxI_dimless = (*innerState)[4];
+      CFreal ByI_dimless = (*innerState)[5];
+      CFreal BzI_dimless = (*innerState)[6];
+      CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
+      CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
+      CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
+
+      CFreal BthetaG_dimless = BthetaI_dimless*std::pow(rI_dimless,5)/pow(rG_dimless,5);
+      CFreal BphiG_dimless = BphiI_dimless;
+ 
+      // Back-transformation to Cartesian coordinates:
+      CFreal BxG_dimless = xG_dimless/rG_dimless*BrG_dimless - yG_dimless/rhoG_dimless*BphiG_dimless + xG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
+      CFreal ByG_dimless = yG_dimless/rG_dimless*BrG_dimless + xG_dimless/rhoG_dimless*BphiG_dimless + yG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
+      CFreal BzG_dimless = zG_dimless/rG_dimless*BrG_dimless - rhoG_dimless/rG_dimless*BthetaG_dimless;
+      (*ghostState)[4] = BxG_dimless;
+      (*ghostState)[5] = ByG_dimless;
+      (*ghostState)[6] = BzG_dimless;
+  }
+
+
+
 
 
 
@@ -198,6 +292,68 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       (*ghostState)[3] = VzG_dimless;
 
   }
+  else if (_BarbarasVelocityBC==1) {
+/*
+      CFreal VxDimless = (*innerState)[1];
+      CFreal VyDimless = (*innerState)[2];
+      CFreal VzDimless = (*innerState)[3];
+      CFreal BxDimless = (*innerState)[4];
+      CFreal ByDimless = (*innerState)[5];
+      CFreal BzDimless = (*innerState)[6];
+*/
+
+      //CFreal BDimless = std::sqrt(BxDimless*BxDimless+ByDimless*ByDimless+BzDimless*BzDimless);
+      //CFreal BBoundaryDimless = std::sqrt(BxBoundaryDimless*BxBoundaryDimless + ByBoundaryDimless*ByBoundaryDimless + BzBoundaryDimless*BzBoundaryDimless);
+      
+      //CFreal Vparallel = (VxDimless*BxDimless + VyDimless*ByDimless + VzDimless*BzDimless)/BDimless;
+
+      // Version 2: konstante Ausströmung am Inlet mit Vr = 848.1501 m/s
+
+      CFreal VxBoundary_dimless = 848.15*(xBoundary/rBoundary)/(2.2e-4/sqrt(1.2566e-6*1.67e-13));
+      CFreal VyBoundary_dimless = 848.15*(yBoundary/rBoundary)/(2.2e-4/sqrt(1.2566e-6*1.67e-13));
+      CFreal VzBoundary_dimless = 848.15*(zBoundary/rBoundary)/(2.2e-4/sqrt(1.2566e-6*1.67e-13));
+      
+      // B at the boundary B_PFSS_dimless
+
+      CFreal BnormBoundary_dimless = std::sqrt(B_PFSS_dimless[0]*B_PFSS_dimless[0]+B_PFSS_dimless[1]*B_PFSS_dimless[1]+B_PFSS_dimless[2]*B_PFSS_dimless[2]);
+  
+
+      CFreal Vparallel = (VxBoundary_dimless*B_PFSS_dimless[0] + VyBoundary_dimless*B_PFSS_dimless[1] + VzBoundary_dimless*B_PFSS_dimless[2])/BnormBoundary_dimless;
+
+      CFreal VxBoundaryUpdate_dimless = Vparallel*B_PFSS_dimless[0]/BnormBoundary_dimless;
+      CFreal VyBoundaryUpdate_dimless = Vparallel*B_PFSS_dimless[1]/BnormBoundary_dimless;
+      CFreal VzBoundaryUpdate_dimless = Vparallel*B_PFSS_dimless[2]/BnormBoundary_dimless;
+
+
+
+      (*ghostState)[1] = 2.*VxBoundaryUpdate_dimless - (*innerState)[1];
+      (*ghostState)[2] = 2.*VyBoundaryUpdate_dimless - (*innerState)[2];
+      (*ghostState)[3] = 2.*VzBoundaryUpdate_dimless - (*innerState)[3];
+
+
+      if (_hydrodynamic_limit==1) {
+          // Im hydrodynamischen Limit ist B_PFSS = 0 und die perfekter Rotator BC muss adaptiert werden
+          // In the hydrodynamic Limit B_PFSS = 0 and thus we cannot computer V_par, because we have to divide by B there.
+          // However, in this limit V_par = Vr_Inlet*e_r anyway:
+
+          Vparallel = 848.15/(2.2e-4/sqrt(1.2566e-6*1.67e-13));  // = Vr|inlet
+
+
+          VxBoundaryUpdate_dimless = Vparallel*xBoundary_dimless/rBoundary_dimless;
+          VyBoundaryUpdate_dimless = Vparallel*xBoundary_dimless/rBoundary_dimless;
+          VzBoundaryUpdate_dimless = Vparallel*xBoundary_dimless/rBoundary_dimless;
+
+
+
+         (*ghostState)[1] = 2.*VxBoundaryUpdate_dimless - (*innerState)[1];
+         (*ghostState)[2] = 2.*VyBoundaryUpdate_dimless - (*innerState)[2];
+         (*ghostState)[3] = 2.*VzBoundaryUpdate_dimless - (*innerState)[3];
+
+      }
+      
+
+  
+  }
   else if (_DanasVelocityBC==1) {
       CFreal VrG_dimless = (*innerState)[0]*VrI_dimless*rI_dimless*rI_dimless/(densityG_dimless*rG_dimless*rG_dimless);
       CFreal VthetaG_dimless = -VthetaI_dimless;
@@ -223,62 +379,12 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       (*ghostState)[2] = VyG_dimless;
       (*ghostState)[3] = VzG_dimless;
   }
+  
 
 
 
 
 
-   //=== M A G N E T I C - F I E L D   B O U N D A R Y   C O N D I T I O N ====
-   if (_JonLinkersBfieldSuggestion==1) {
-     // do nothing, as the boundary is already set to the PFSS initial solution
-     // above.
-   }
-   else if (_JensBfieldBC==1) {
-     // Br should be taken from the PFSS initial solution, while Btheta and
-     // Bphi are linearly extrapolated to the ghost from the inner state:
-     CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
-
-     CFreal BxI_dimless = (*innerState)[4];
-     CFreal ByI_dimless = (*innerState)[5];
-     CFreal BzI_dimless = (*innerState)[6];
-     CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
-     CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
-     CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
-
-     CFreal BthetaG_dimless = BthetaI_dimless;
-     CFreal BphiG_dimless = BphiI_dimless;
-
-     // Back-transformation to Cartesian coordinates:
-     CFreal BxG_dimless = xG_dimless/rG_dimless*BrG_dimless - yG_dimless/rhoG_dimless*BphiG_dimless + xG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
-     CFreal ByG_dimless = yG_dimless/rG_dimless*BrG_dimless + xG_dimless/rhoG_dimless*BphiG_dimless + yG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
-     CFreal BzG_dimless = zG_dimless/rG_dimless*BrG_dimless - rhoG_dimless/rG_dimless*BthetaG_dimless;
-  (*ghostState)[4] = BxG_dimless;
-  (*ghostState)[5] = ByG_dimless;
-  (*ghostState)[6] = BzG_dimless;
-
-   }
-   else if (_DanasBfieldBC==1) {
-     // Slightly modified version of Jens' BC:
-     CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
-
-     CFreal BxI_dimless = (*innerState)[4];
-     CFreal ByI_dimless = (*innerState)[5];
-     CFreal BzI_dimless = (*innerState)[6];
-     CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
-     CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
-     CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
-
-     CFreal BthetaG_dimless = BthetaI_dimless*std::pow(rI_dimless,5)/pow(rG_dimless,5);
-     CFreal BphiG_dimless = BphiI_dimless;
-
-     // Back-transformation to Cartesian coordinates:
-     CFreal BxG_dimless = xG_dimless/rG_dimless*BrG_dimless - yG_dimless/rhoG_dimless*BphiG_dimless + xG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
-     CFreal ByG_dimless = yG_dimless/rG_dimless*BrG_dimless + xG_dimless/rhoG_dimless*BphiG_dimless + yG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
-     CFreal BzG_dimless = zG_dimless/rG_dimless*BrG_dimless - rhoG_dimless/rG_dimless*BthetaG_dimless;
-  (*ghostState)[4] = BxG_dimless;
-  (*ghostState)[5] = ByG_dimless;
-  (*ghostState)[6] = BzG_dimless;
-   }
 
 
 
@@ -293,10 +399,39 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   CFreal mu0 = 1.2566e-6;
   CFreal rhoRef = 1.67e-13;
   CFreal kB = 1.38e-23;
-  CFreal PressureBoundary_dimless = (2.0*rhoRef*kB*T_Sun/(mu_cor*mH))/(pow(BRef,2)/mu0);
+  
+  //V1:
+  if (_pressure_fixed==1) {
+  // This is a Dirichlet pressure BC for 1/r^2 initial condition like used by Linker et al
+  // or B. Perri
+  //CFreal PressureBoundary_dimless = (2.0*rhoRef*kB*T_Sun/(mu_cor*mH))/(pow(BRef,2)/mu0);
+CFreal PressureBoundary_dimless =  0.0032549425343197064/(pow(BRef,2)/mu0);
+  (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7];
+  }
+
+  else if (_JensPIni==1){
+  // This is a Dirichlet pressure BC for gravitationally stratified pressure initial
+  // condition as used by Jens
+  CFreal PressureBoundary_dimless = 8.01260207e-03/(pow(BRef,2)/mu0);
   (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7];
 
+  }
 
+  else if (_pressure_Neumann==1){
+  //V2:
+  //CFreal PressureBoundary_dimless = (rhoRef*kB*T_Sun/(mu_cor*mH))/(pow(BRef,2)/mu0);
+  //(*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7];
+
+
+  
+  (*ghostState)[7] = (*innerState)[7];
+  }
+  else {
+    std::cout << "ERROR: Pressure not specified at inlet boundary!" << endl;
+  }  
+  
+  //V4:
+  //(*ghostState)[7] = 2.0*std::pow(rhoRef,1.05)/(pow(BRef,2)/mu0) - (*innerState)[7];
 
 
 

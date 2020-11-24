@@ -55,12 +55,17 @@ private: //data
   CFint _Phi_divB_zero;
   CFint _Phi_divB_extrapolated;
   CFint _JensVelocityBC;
+  CFint _BarbarasVelocityBC;
+  CFint _hydrodynamic_limit;
   CFint _DanasVelocityBC;
   CFint _DifferentialRotation;
   CFint _JensBfieldBC;
   CFint _DanasBfieldBC;
   CFint _JonLinkersBfieldSuggestion;
-
+  CFint _pressure_fixed;
+  CFint _pressure_Neumann;
+  CFint _JensRhoIni;
+  CFint _JensPIni;
 
 
   
