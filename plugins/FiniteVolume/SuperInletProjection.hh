@@ -10,6 +10,10 @@
 
 namespace COOLFluiD {
 
+  namespace Framework {
+    class MapGeoToTrsAndIdx;
+  }
+
   namespace Numerics {
 
     namespace FiniteVolume {
@@ -43,13 +47,32 @@ public:
   virtual ~SuperInletProjection();
 
   /**
+   * Set up private data and data of the aggregated classes
+   * in this command before processing phase
+   */
+  virtual void setup();
+
+  /**
+   * Unset up private data and data of the aggregated classes
+   * in this command after processing phase
+   */
+  virtual void unsetup();
+  
+  /**
    * Apply boundary condition on the given face
    */
   virtual void setGhostState(Framework::GeometricEntity *const face);
   
 private: //data
+
+  /// pointer to the mapping face - TRS
+  Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
   
+  /// map each wall faceID to the corresponding wall temperature
+  Common::CFMap<Framework::TopologicalRegionSet*, RealVector*> m_mapTrs2Twall;
+
   /// phi value that is to be fixed
+  bool   m_BfromFile;
   CFreal _refPhi;
   CFint _inletCoronalBC;
   CFint _Phi_divB_zero;
@@ -66,11 +89,12 @@ private: //data
   CFint _pressure_Neumann;
   CFint _JensRhoIni;
   CFint _JensPIni;
-
-
   
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;
+  
+  /// IDs of the variables from which values are read by file
+  std::vector<CFuint> m_varIDs;
   
 }; // end of class SuperInletProjection
 

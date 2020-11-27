@@ -1,6 +1,8 @@
 #include "FiniteVolume/FiniteVolume.hh"
 #include "SuperInletProjection.hh"
 #include "Framework/MethodCommandProvider.hh"
+#include "Framework/MethodCommandProvider.hh"
+#include "Framework/MapGeoToTrsAndIdx.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -42,13 +44,16 @@ void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFint >("pressure_Neumann","Neumann condition for P");
   options.addConfigOption< CFint >("JensRhoIni","Dirichlet condition for Jens' grav.strat. initial condition for rho");
   options.addConfigOption< CFint >("JensPIni","Dirichlet condition for Jens' grav.strat. initial condition for P");
-
+  options.addConfigOption< vector<CFuint> >("VarIDs","IDs of the variables from which values are read by file");
 }
       
 //////////////////////////////////////////////////////////////////////////////
 
 SuperInletProjection::SuperInletProjection(const std::string& name) :
-  SuperInlet(name)
+  SuperInlet(name),
+  m_mapGeoToTrs(),
+  m_mapTrs2Twall(),
+  m_BfromFile(false)
 {
   addConfigOptionsTo(this);
 
@@ -73,12 +78,44 @@ SuperInletProjection::SuperInletProjection(const std::string& name) :
   
   _projectionIDs = vector<CFuint>();
   setParameter("ProjectionIDs",&_projectionIDs);
+  m_varIDs = vector<CFuint>();
+  setParameter("VarIDs",&m_varIDs);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 SuperInletProjection::~SuperInletProjection()
 {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SuperInletProjection::setup()
+{
+  SuperInlet::setup();
+
+  if (m_varIDs.size() > 0) {m_BfromFile = true;}
+  
+  m_mapGeoToTrs =
+    MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+  
+  // build the m_mapTrs2Twall storage
+  vector< SafePtr<TopologicalRegionSet> >& trsList = this->getTrsList();
+  
+  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
+    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
+    const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
+    RealVector* tWall = new RealVector(0.0,nbTrsFaces);
+    m_mapTrs2Twall.insert(&*trs, tWall);
+  }
+  m_mapTrs2Twall.sortKeys();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SuperInletProjection::unsetup()
+{
+  SuperInlet::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -109,7 +146,6 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       const CFuint idx = startID+i;
       cf_assert(idx < initialValues->size());
 
-
       B_PFSS_dimless[i] = (*initialValues)[idx]; // save the Poisson PFSS solution in a vector
 
       (*ghostState)[varID] = 2.*(*initialValues)[idx] - (*innerState)[varID];
@@ -117,7 +153,43 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
     }
   }
 
+  // this interpolates Br directly from the magnetogram file
+  // static CFreal maxBr = -1e-14;
+  CFreal BrFromFile = 0.;
+  
+  if (m_BfromFile) {
+    vector<Node*>& nodesInFace = *face->getNodes();
+    const CFuint nbNodesInFace = nodesInFace.size();
+    SafePtr<TopologicalRegionSet> trs = m_mapGeoToTrs->getTrs(face->getID());
+    cf_assert(trs.isNotNull());
+    
+    // build the mapTrs2NodalValues storage
+    SafePtr<NodalStatesExtrapolator<CellCenterFVMData> > nse =
+      this->getMethodData().getNodalStatesExtrapolator();
+    SafePtr<vector<NodalStatesExtrapolator<CellCenterFVMData>::MapTrs2NodalValues*> >
+      mapTrs2NodalValues = nse->getMapTrs2NodalValues();
+    
+    cf_assert(m_varIDs.size() == 1);
+    cf_assert(m_varIDs[0] == 0);
+    
+    const CFuint varID = 0;
+    cf_assert(varID < mapTrs2NodalValues->size());
+    
+    RealVector& bArray = *(*mapTrs2NodalValues)[varID]->find(&*trs);
+    CFMap<CFuint,CFuint>* mapNodeIDs = nse->getMapTrs2NodeIDs()->find(&*trs);
+    
+    BrFromFile = 0.0;
+    for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
+      const CFuint localNodeID = nodesInFace[iNode]->getLocalID();
+      // CFLog(INFO, "Barray = " << bArray[mapNodeIDs->find(localNodeID)] << "\n");
+      BrFromFile += bArray[mapNodeIDs->find(localNodeID)];
+    }
+    BrFromFile /= nbNodesInFace;
 
+    // maxBr = std::max(maxBr, BrFromFile);
+    // CFLog(INFO, "Br from file #### varID = " << varID << ", maxBr = " << maxBr << "\n");
+  }
+  
   if (_inletCoronalBC==1) {
 
   CFreal latG = 0.;
@@ -179,11 +251,8 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   } else if (thetaG > PI*0.5 && thetaG < PI) {
      latG = thetaG - PI*0.5;
   } else {
-    std::cout << "Error: value of theta for the point in question outside expected range" << endl;
+    CFLog(INFO, "Error: value of theta for the point in question outside expected range\n");
   }
-  
-
-
 
   //===== D E N S I T Y   B O U N D A R Y   C O N D I T I O N =================
   
@@ -427,14 +496,11 @@ CFreal PressureBoundary_dimless =  0.0032549425343197064/(pow(BRef,2)/mu0);
   (*ghostState)[7] = (*innerState)[7];
   }
   else {
-    std::cout << "ERROR: Pressure not specified at inlet boundary!" << endl;
+    CFLog(VERBOSE, "ERROR: Pressure not specified at inlet boundary!\n");
   }  
   
   //V4:
   //(*ghostState)[7] = 2.0*std::pow(rhoRef,1.05)/(pow(BRef,2)/mu0) - (*innerState)[7];
-
-
-
 
 
   //===== P S I   B O U N D A R Y   C O N D I T I O N S =======================
@@ -447,16 +513,6 @@ CFreal PressureBoundary_dimless =  0.0032549425343197064/(pow(BRef,2)/mu0);
   else {
     std::cout << "ERROR: Phi not specified at inlet boundary!" << endl;
   }
-
-
-
-
-
-
-
-
-
-
   
  } else {
 
