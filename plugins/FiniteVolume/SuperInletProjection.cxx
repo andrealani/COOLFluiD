@@ -280,14 +280,40 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
    //=== M A G N E T I C - F I E L D   B O U N D A R Y   C O N D I T I O N ====
 
 
+      // 1. Compute Btheta, Bphi at the boundary from B_PFS_dimless
+      // 2. Take Br from BrFromFile as provided by Andrea
+      // 3. From these 3 spherical B-field components compute the cartesian components
+      // 4. Set them accordingly in the ghost cells
+
+      CFreal BrBoundary_dimless = BrFromFile;
+      CFreal BthetaBoundary_dimless = xBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*B_PFSS_dimless[0] + yBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*B_PFSS_dimless[1] - rhoBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[2];
+      CFreal BphiBoundary_dimless = -yBoundary_dimless/rhoBoundary_dimless*B_PFSS_dimless[0] + xBoundary_dimless/rhoBoundary_dimless*B_PFSS_dimless[1];
+
+      CFreal BxBoundary_dimless = xBoundary_dimless/rBoundary_dimless*BrBoundary_dimless - yBoundary_dimless/rhoBoundary_dimless*BphiBoundary_dimless + xBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*BthetaBoundary_dimless;
+      CFreal ByBoundary_dimless = yBoundary_dimless/rBoundary_dimless*BrBoundary_dimless + xBoundary_dimless/rhoBoundary_dimless*BphiBoundary_dimless + yBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*BthetaBoundary_dimless;
+      CFreal BzBoundary_dimless = zBoundary_dimless/rBoundary_dimless*BrBoundary_dimless - rhoBoundary_dimless/rBoundary_dimless*BthetaBoundary_dimless;
+
+
+
 
   if (_JonLinkersBfieldSuggestion==1) {
-     // do nothing, as the boundary is already set to the PFSS initial solution
-     // above.
+      
+      // Freeze all three components of the magnetic field
+
+      /*
+      (*ghostState)[4] = 2*B_PFSS_dimless[0] - (*innerState)[4];
+      (*ghostState)[5] = 2*B_PFSS_dimless[1] - (*innerState)[5];
+      (*ghostState)[6] = 2*B_PFSS_dimless[2] - (*innerState)[6];
+      */
+
+      (*ghostState)[4] = 2*BxBoundary_dimless - (*innerState)[4];
+      (*ghostState)[5] = 2*ByBoundary_dimless - (*innerState)[5];
+      (*ghostState)[6] = 2*BzBoundary_dimless - (*innerState)[6];
+
   } else if (_JensBfieldBC==1) {
       //Br should be taken from the PFSS initial solution, while Btheta and
       // Bphi are linearly extrapolated to the ghost from the inner state:
-      CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
+      //CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
 
       CFreal BxI_dimless = (*innerState)[4];
       CFreal ByI_dimless = (*innerState)[5];
@@ -298,6 +324,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
       CFreal BthetaG_dimless = BthetaI_dimless;
       CFreal BphiG_dimless = BphiI_dimless;
+      CFreal BrG_dimless = 2*BrFromFile - BrI_dimless;
 
       // Back-transformation to Cartesian coordinates:
       CFreal BxG_dimless = xG_dimless/rG_dimless*BrG_dimless - yG_dimless/rhoG_dimless*BphiG_dimless + xG_dimless*zG_dimless/(rhoG_dimless*rG_dimless)*BthetaG_dimless;
@@ -310,12 +337,13 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
   } else if (_DanasBfieldBC==1) {
       // Slightly modified version of Jens' BC:
-      CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
+      ////CFreal BrG_dimless = xG_dimless/rG_dimless*(*ghostState)[4] + yG_dimless/rG_dimless*(*ghostState)[5] + zG_dimless/rG_dimless*(*ghostState)[6];
 
       CFreal BxI_dimless = (*innerState)[4];
       CFreal ByI_dimless = (*innerState)[5];
       CFreal BzI_dimless = (*innerState)[6];
       CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
+      CFreal BrG_dimless = 2*BrFromFile - BrI_dimless;
       CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
       CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
 
