@@ -651,7 +651,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     
     ///Compute the blending function Fthetat
     const CFreal  Rew         = (rho * m_currWallDist[iSol] * m_currWallDist[iSol] * avOmega)/(mu);   
-    const CFreal  Fwake1      = (1e-5 * Rew)*(1e-5 * Rew);   
+    const CFreal  Fwake1      = (1.0e-5 * Rew)*(1.0e-5 * Rew);   
     const CFreal  Fwake       = exp(-Fwake1);
     const CFreal  thetaBL     = (avRe*mu)/(rho*avV);
     const CFreal  deltaBL     = (0.5*15*thetaBL);

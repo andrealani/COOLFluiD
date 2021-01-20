@@ -60,13 +60,14 @@ void NavierStokes2DGReKLogOBSLPuvt::computeBlendingCoefFromGradientVars(const Re
 
   const CFreal arg1 = min(max(arg1_1, arg1_2), arg1_3);
   const CFreal F1org=  tanh(arg1*arg1*arg1*arg1);
- // Corrected Belnding Coefficient
+  
+  // Corrected Blending Coefficient
   const CFreal Ry= rho * distance * std::sqrt(K)/mu;
-  const CFreal F2 = std::exp(-Ry/120);
-  const CFreal F3bis = std::pow(F2,8);
-  const CFreal F3    = exp(-F3bis);
+  const CFreal F3bis = std::pow(Ry/120.0,8);
+  //const CFreal F2 = std::exp(-F3bis);
+  const CFreal F3 = std::exp(-F3bis);
  
- _blendingCoef1 = std::max(F1org,F3);
+  _blendingCoef1 = std::max(F1org,F3);
 }
 
 //////////////////////////////////////////////////////////////////////////////

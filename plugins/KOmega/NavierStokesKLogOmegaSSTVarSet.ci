@@ -77,9 +77,13 @@ CFreal NavierStokesKLogOmegaSSTVarSet<BASE, SGROUP>::getTurbDynViscosityFromGrad
     const CFreal F2 = tanh(arg2*arg2);
     
     if (std::max(a1*Omega , strain*F2) == 0.0)
-     mut =  0.0;
+    {
+      mut =  0.0;
+    }
     else
-     mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
+    {
+      mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
+    }
     
   }
   

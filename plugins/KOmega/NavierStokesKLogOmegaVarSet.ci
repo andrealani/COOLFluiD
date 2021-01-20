@@ -33,7 +33,7 @@ template <typename BASE, int SGROUP>
 void NavierStokesKLogOmegaVarSet<BASE, SGROUP>::setModelCoefficients()
 {
   //Pure k-omega coeficients
-  _sigmaK1 = 0.85;
+  _sigmaK1 = 0.5;//0.85;
    // 0.5;
   _sigmaOmega1 = 0.5;
   _beta1 = 0.075;
@@ -136,7 +136,7 @@ RealVector& NavierStokesKLogOmegaVarSet<BASE, SGROUP>::getFlux(const RealVector&
   const CFreal coeffTauMu1 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MU];
   const CFreal coeffTauMu2 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]*getSigmaK();
   const CFreal coeffTauMu3 = this->getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]*getSigmaOmega();
-  
+    
   flux[kID] = (coeffTauMu1 + coeffTauMu2)*MathFunctions::innerProd(gradK, normal);
   flux[oID] = (coeffTauMu1 + coeffTauMu3)*MathFunctions::innerProd(gradOmega, normal);
   
@@ -185,7 +185,7 @@ CFreal NavierStokesKLogOmegaVarSet<BASE, SGROUP>::getHeatFlux(const RealVector& 
   // adimensional turbulent dynamical viscosity
   const CFreal muTurb = this->getTurbDynViscosityFromGradientVars(state, gradients);
   // adimensional thermal conductivity
-  const CFreal lambda = this->getThermConductivity(state, muLam + muTurb);
+  const CFreal lambda = this->getThermConductivity(state, muLam + muTurb*this->getModel().getPrOverPrT());
   return -this->getModel().getCoeffQ()*lambda*MathTools::MathFunctions::innerProd(gradT, normal);
 }
       
