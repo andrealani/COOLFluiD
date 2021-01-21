@@ -24,8 +24,10 @@ void FVMCC_PolyRec::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
   options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
+  options.addConfigOption<CFuint, Config::DynamicOption<> >
+    ("StopLimiting","Stop applying the limiter.");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 FVMCC_PolyRec::FVMCC_PolyRec(const std::string& name) :
@@ -48,7 +50,10 @@ FVMCC_PolyRec::FVMCC_PolyRec(const std::string& name) :
   
   _vars = std::vector<std::string>();
   setParameter("Vars",&_vars);
-
+  
+  _stopLimiting = 0;
+  setParameter("StopLimiting",&_stopLimiting);
+  
   // fix high default value   
   _limitIter = 1000000000;
 }

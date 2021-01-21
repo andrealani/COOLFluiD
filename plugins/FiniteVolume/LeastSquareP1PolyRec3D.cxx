@@ -264,11 +264,13 @@ void LeastSquareP1PolyRec3D::extrapolateImpl(GeometricEntity* const face)
 		       uZ(neighStateIDgrad,iVar,nbEqs)*(zq - neighStateCoord[ZZ])) : 0.0;
     
     // left reconstructed value (the one inside the current cell)
-    (*valuesLR[0])[iVar] = (*state)[iVar] + newLimiter[startID + iVar]*gradientCoeffState;
+    const CFreal lValue = (_stopLimiting == 0) ? newLimiter[startID + iVar] : 1.;
+    (*valuesLR[0])[iVar] = (*state)[iVar] + lValue*gradientCoeffState;
     
     // right reconstructed value (the one inside the neighbor cell)
-    (*valuesLR[1])[iVar] = (*neighState)[iVar] + newLimiter[neighStartID + iVar]*gradientCoeffNeighbor;
-    
+    const CFreal rValue = (_stopLimiting == 0) ? newLimiter[neighStartID + iVar] : 1.;
+    (*valuesLR[1])[iVar] = (*neighState)[iVar] + rValue*gradientCoeffNeighbor;
+        
     getBackupValues(0)[iVar] =  (*valuesLR[0])[iVar];
     getBackupValues(1)[iVar] =  (*valuesLR[1])[iVar];
   }
@@ -316,7 +318,8 @@ void LeastSquareP1PolyRec3D::extrapolateImpl(GeometricEntity* const face,
 		     uZ(stateID,iVar,nbEqs)*(zq - stateCoord[ZZ])) : 0.0;
   
   // reconstructed value
-  getValues(leftOrRight)[iVar] = (*state)[iVar] + newLimiter[startID + iVar]*gradientCoeffState;
+  const CFreal lValue = (_stopLimiting == 0) ? newLimiter[startID + iVar] : 1.;
+  getValues(leftOrRight)[iVar] = (*state)[iVar] + lValue*gradientCoeffState;
 }
 
 //////////////////////////////////////////////////////////////////////////////

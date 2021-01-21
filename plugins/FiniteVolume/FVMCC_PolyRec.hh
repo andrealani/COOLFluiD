@@ -194,6 +194,9 @@ protected:
   
   /// a vector of string to hold the functions
   std::vector<std::string> _vars;
+
+  /// flag to stop the limiting
+  CFuint _stopLimiting;
   
 }; // end of class FVMCC_PolyRec
 
