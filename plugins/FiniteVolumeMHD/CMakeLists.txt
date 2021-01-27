@@ -10,6 +10,8 @@ AUSMFluxMHD.cxx
 AUSMFluxMHD.hh
 AUSMPWFluxMHD.ci 
 AUSMPWFluxMHD.hh
+ComputeFieldFromPotentialMHD.cxx
+ComputeFieldFromPotentialMHD.hh
 FiniteVolumeMHD.hh
 MHD3DCoriolisCentrifugalForcesSourceTerm.hh
 MHD3DProjectionCoriolisCentrifugalForcesSourceTerm.hh

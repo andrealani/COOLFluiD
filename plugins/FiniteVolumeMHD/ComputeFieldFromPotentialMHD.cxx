@@ -257,6 +257,7 @@ void ComputeFieldFromPotentialMHD::execute()
 	    
 	    for (CFuint i = 0; i < dim; ++i) {
 	      const CFuint varID = m_variableIDs[i];
+              assert(faceID < BPFSSFace.size()); 
 	      BPFSSFace[faceID][i] = (*stateL)[varID]*weightL + (*stateR)[varID]*weightR;
 	    }	  
 	  }
@@ -264,6 +265,7 @@ void ComputeFieldFromPotentialMHD::execute()
 	    // on a boundary face we constantly extrapolate the inner cell value
 	    for (CFuint i = 0; i < dim; ++i) {
 	      const CFuint varID = m_variableIDs[i];
+              assert(faceID < BPFSSFace.size());
 	      BPFSSFace[faceID][i] = (*stateL)[varID];
 	    }
 	  }
