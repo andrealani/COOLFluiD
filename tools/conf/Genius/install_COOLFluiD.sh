@@ -70,6 +70,7 @@ cd ${COOLFLUID_TOP_DIR}
 ./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
 elif [ "$2" == "--download=1" ] ; then
 # clean up old object files and libraries
+cp ${COOLFLUID_TOP_DIR}/tools/conf/Genius/${CONF_FILE} ${COOLFLUID_TOP_DIR}
 rm -fr ${COOLFLUID_BASEBUILD_DIR}/${BUILD_MODE} 
 cd ${COOLFLUID_TOP_DIR}
 ./prepare.pl --config-file=${COOLFLUID_CONF_FILE} --build=${BUILD_MODE}
