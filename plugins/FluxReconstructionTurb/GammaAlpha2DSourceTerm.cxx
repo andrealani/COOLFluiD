@@ -361,7 +361,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     CFreal fg = 1.0;
     
-//    if (avGa < 0.45) fg -= exp(-cfg1*tan(cfg2*avGa-cfg3)-cfg4);
+    if (avGa < 0.45) fg -= exp(-cfg1*tan(cfg2*avGa-cfg3)-cfg4);
     
     const CFreal fMnsigmaTerm = 1.0+0.58*pow(MInfLocal,0.6);
     const CFreal fMnsigma = 1.0/(fMnsigmaTerm*fMnsigmaTerm);
