@@ -185,6 +185,65 @@ RealVector& NavierStokes2DGammaAlphaPuvt::getFlux(const RealVector& values,
 }
 
 //////////////////////////////////////////////////////////////////////////////
+  
+void NavierStokes2DGammaAlphaPuvt::computeStressTensor(const RealVector& state,
+							       const std::vector<RealVector*>& gradients,
+							       const CFreal& radius)
+{  
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  
+  CFreal divTerm = 0.0;
+  if (dim == DIM_2D && radius > MathTools::MathConsts::CFrealEps())  {
+    // if the face is a boundary face, the radius could be 0
+    // check against eps instead of 0. for safety
+    divTerm = state[this->_vID]/radius;
+  }
+  else if (dim == DIM_3D) {
+    const RealVector& gradW = *gradients[this->_wID];
+    divTerm = gradW[ZZ];
+  }
+  
+  CFreal twoThirdRhoK = 0.;
+  if (getNbTurbVars() > 1) {
+    // Spalart-Allmaras case
+    const CFreal avK = state[_kID];
+    
+    const CFreal gamma = std::min(std::max(state[_kID+2],0.01),0.99);
+    const CFreal gammaTerm = gamma + gamma*(1.0-gamma);
+  
+    twoThirdRhoK = this->_twoThird*this->getDensity(state)*avK*gammaTerm;
+  }
+  
+  const RealVector& nsData = getModel().getPhysicalData();
+  const CFreal coeffTauMu = getModel().getCoeffTau()*(nsData[NSTurbTerm::MU] + nsData[NSTurbTerm::MUT]);
+  const RealVector& gradU = *gradients[this->_uID];
+  const RealVector& gradV = *gradients[this->_vID]; 
+ 
+  const CFreal twoThirdDivV = this->_twoThird*(gradU[XX] + gradV[YY] + divTerm);
+  
+  this->_tau(XX,XX) = coeffTauMu*(2.*gradU[XX] - twoThirdDivV)-twoThirdRhoK; 
+  this->_tau(XX,YY) = this->_tau(YY,XX) = coeffTauMu*(gradU[YY] + gradV[XX]);
+  this->_tau(YY,YY) = coeffTauMu*(2.*gradV[YY] - twoThirdDivV)-twoThirdRhoK;
+  
+  // KB & AL: This term should be wrong but KOmega in old COOLFLUID gives different results if this term is commented out!! 
+  // this->_tau(XX,XX) += (1. - getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]) * twoThirdRhoK;
+  // this->_tau(YY,YY) += (1. - getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]) * twoThirdRhoK;
+  
+  if (dim == DIM_3D) {
+    const RealVector& gradW = *gradients[this->_wID];
+    this->_tau(XX,ZZ) = this->_tau(ZZ,XX) = coeffTauMu*(gradU[ZZ] + gradW[XX]);
+    this->_tau(YY,ZZ) = this->_tau(ZZ,YY) = coeffTauMu*(gradV[ZZ] + gradW[YY]);
+    this->_tau(ZZ,ZZ) = coeffTauMu*(2.*gradW[ZZ] - twoThirdDivV)-twoThirdRhoK; 
+    
+    // KB & AL: This term should be wrong but KOmega in old COOLFLUID gives different results if this term is commented out!! 
+    // this->_tau(ZZ,ZZ) += (1. - getModel().getCoeffTau()*nsData[NSTurbTerm::MUT]) * twoThirdRhoK;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 
     } // namespace GammaAlpha

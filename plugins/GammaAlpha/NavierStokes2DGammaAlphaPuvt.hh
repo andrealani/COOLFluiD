@@ -65,6 +65,11 @@ public: // classes
                               const std::vector<RealVector*>& gradients,
                               const RealVector& normal,
                               const CFreal& radius);
+  
+  /// Compute the stress tensor
+  virtual void computeStressTensor(const RealVector& state,
+				   const std::vector<RealVector*>& gradients,
+				   const CFreal& radius); 
 
 private :
   
