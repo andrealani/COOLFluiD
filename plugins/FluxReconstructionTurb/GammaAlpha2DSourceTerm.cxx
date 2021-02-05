@@ -314,9 +314,12 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal dgammay = (*(m_cellGrads[iSol][6]))[YY];
     const CFreal dax = (*(m_cellGrads[iSol][7]))[XX];
     const CFreal day = (*(m_cellGrads[iSol][7]))[YY];
+    const CFreal dkx = (*(m_cellGrads[iSol][4]))[XX];
+    const CFreal dky = (*(m_cellGrads[iSol][4]))[YY];
 
     const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
-    const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
+    const CFreal gammaTerm = avGa+avGa*(1.0-avGa);
+    const CFreal twoThirdRhoK = (2./3.)*(avK * rho * gammaTerm);
   
     m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
 			         +(duy+dvx)*(duy+dvx)))
@@ -358,7 +361,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     CFreal fg = 1.0;
     
-    if (avGa < 0.45) fg -= exp(-cfg1*tan(cfg2*avGa-cfg3)-cfg4);
+//    if (avGa < 0.45) fg -= exp(-cfg1*tan(cfg2*avGa-cfg3)-cfg4);
     
     const CFreal fMnsigmaTerm = 1.0+0.58*pow(MInfLocal,0.6);
     const CFreal fMnsigma = 1.0/(fMnsigmaTerm*fMnsigmaTerm);
@@ -393,7 +396,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
       fk += fg*(PRC-1.0); 
       
-      lambda = -Rethetac*Rethetac*mu/(rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
+      lambda = -Rethetac*Rethetac*mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
     }
     
     const CFreal nsigma = 1.25e-11*pow(TuInfLocal,7.0/4.0)*fk*fMnsigma;
@@ -415,7 +418,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal dudn = -1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
     const CFreal dgammadn = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
     
-    CFreal  destructionTerm_Ga  = (-1.0) * cEg * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
+    CFreal  destructionTerm_Ga  = (-1.0) * cEg/0.57 * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
     //destructionTerm_Ga = min(max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga),10.0*fabs(prodTerm_Ga));
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
@@ -424,12 +427,14 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
-    const CFreal cpa1 = 0.3;
-    const CFreal cpa2 = 50.0;
+    const CFreal cpa1 = 0.03;
+    //const CFreal cpa2 = 100.0;//50.0;
     
     const CFreal alphac = rhoInfLocal*uInfLocal*uInfLocal*pow(0.09+lambda,0.62)/(Rethetac*sqrt(rhoInfLocal*muInfLocal));
     
     const CFreal t = (500.0 * mu )/(rho * avV * avV);
+    
+    const CFreal dkdn = 1.0/avV*(v*dkx - u*dky);//-dky; //    
     
     const CFreal  Rew         = (rho * m_currWallDist[iSol] * m_currWallDist[iSol] * avOmega)/(mu);   
     const CFreal  Fwake1      = (1.0e-5 * Rew)*(1.0e-5 * Rew);   
@@ -441,9 +446,13 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal  coefFtheta0 = (m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta)*(m_currWallDist[iSol]/delta);
     const CFreal  coefFtheta1 = exp(-coefFtheta0);
     const CFreal  Ftheta1     = Fwake * coefFtheta1;
-    const CFreal  Ftheta3     = 1.0-(((avGa-1.0/cpa2)/(1.0-1.0/cpa2))*((avGa-1.0/cpa2)/(1.0-1.0/cpa2)));
+    const CFreal  Ftheta3     = 1.0-(((avGa-0.01)/(0.99-0.01))*((avGa-0.01)/(0.99-0.01)));
     const CFreal  Ftheta4     = std::max(Ftheta1,Ftheta3);
-    const CFreal  Fthetat     = std::min(Ftheta4,1.0);
+    CFreal  Fthetat     = std::min(Ftheta4,1.0);
+    
+    const CFreal dkdnFactor = fabs(dkdn)/max(avK,1.0e-6);
+
+    if (dkdnFactor>100.0) Fthetat = 1.0;
     
     CFreal prodTerm_alpha = cpa1 * (rho/t) * (alphac - avAlpha) * (1.0 - Fthetat);
 

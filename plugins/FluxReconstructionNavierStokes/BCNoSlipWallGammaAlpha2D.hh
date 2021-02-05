@@ -130,6 +130,9 @@ protected: // data
   
   /// Flag to enforce laminar flow at all times (Default false)
   bool m_enforceLaminar;
+  
+  /// Distance after leading edge to enforce laminarity to avoid singular behavior at LE point
+  CFreal m_leadingEdgeLaminarEnforce;
 
 }; // class BCNoSlipWallGammaAlpha2D
 

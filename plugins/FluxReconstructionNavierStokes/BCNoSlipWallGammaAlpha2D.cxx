@@ -43,6 +43,7 @@ void BCNoSlipWallGammaAlpha2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("ImposeOmegaWallIter","Iteration at which to impose theoretical omegaWall value.");
   options.addConfigOption< CFreal,Config::DynamicOption<>  >("GammaThreshold","Threshold beyond which gamma is considered to be transitioning if transition already occurred (Default 0.02).");
   options.addConfigOption< bool,Config::DynamicOption<>  >("EnforceLaminar","Flag to enforce laminar flow at all times (Default false).");
+  options.addConfigOption< CFreal,Config::DynamicOption<>  >("LeadingEdgeLaminarEnforce","Distance after leading edge to enforce laminarity to avoid singular behavior at LE point (default -inf).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -95,6 +96,9 @@ BCNoSlipWallGammaAlpha2D::BCNoSlipWallGammaAlpha2D(const std::string& name) :
    
    m_enforceLaminar = false;
    setParameter("EnforceLaminar",&m_enforceLaminar);
+   
+   m_leadingEdgeLaminarEnforce = -MathTools::MathConsts::CFuintMax();
+   setParameter("LeadingEdgeLaminarEnforce",&m_leadingEdgeLaminarEnforce);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -270,7 +274,7 @@ void BCNoSlipWallGammaAlpha2D::computeGhostStates(const vector< State* >& intSta
       m_ghostSolPhysData[EulerTerm::GAMMA] = m_intSolPhysData[EulerTerm::GAMMA];
       //CFLog(INFO, "coord: " << coords[iState][XX] << "\n");
       //CFLog(INFO, "is turb: " << m_transitionCriterion[iState] << ", transition occurred: " << m_transitionOccurred << "\n");
-      if ((m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold)) && !m_enforceLaminar)// && coords[iState][XX]>0.1)// && m_transitionOccurred))
+      if ((m_transitionCriterion[iState] || (m_intSolPhysData[iK+2] > m_gammaThreshold)) && !m_enforceLaminar && coords[iState][XX]>m_leadingEdgeLaminarEnforce)// && coords[iState][XX]>0.1)// && m_transitionOccurred))
       {
         // gamma
         m_ghostSolPhysData[iK+2] = m_intSolPhysData[iK+2];
