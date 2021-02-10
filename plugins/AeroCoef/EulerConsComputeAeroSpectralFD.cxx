@@ -646,7 +646,8 @@ void EulerConsComputeAeroSpectralFD::prepareOutputFileAero()
 
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
 
-  boost::filesystem::path fpath (m_nameOutputFileAero);
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendParallel( fpath );
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
@@ -671,7 +672,8 @@ void EulerConsComputeAeroSpectralFD::updateOutputFileAero()
 {
   CFAUTOTRACE;
 
-  boost::filesystem::path fpath (m_nameOutputFileAero);
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendParallel( fpath );
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();

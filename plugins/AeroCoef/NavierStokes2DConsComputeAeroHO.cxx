@@ -1046,7 +1046,8 @@ void NavierStokes2DConsComputeAeroHO::prepareOutputFileWall()
 
 void NavierStokes2DConsComputeAeroHO::prepareOutputFileAero()
 {
-  boost::filesystem::path fpath = m_nameOutputFileAero;
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendAllInfo(fpath, false, false);
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
@@ -1070,7 +1071,8 @@ void NavierStokes2DConsComputeAeroHO::prepareOutputFileAero()
 
 void NavierStokes2DConsComputeAeroHO::updateOutputFileAero()
 {
-  boost::filesystem::path fpath (m_nameOutputFileAero);
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendAllInfo( fpath, false, false);
 
   SelfRegistPtr<FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<FileHandlerOutput>::getInstance().create();
