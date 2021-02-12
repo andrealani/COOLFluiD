@@ -159,6 +159,8 @@ protected: // data
   
   // boolean telling whether the source terms need to be limited for stability
   bool m_limitP;
+  bool m_blockDecoupled;
+  
 
   
 }; // class KLogOmega2DSourceTerm

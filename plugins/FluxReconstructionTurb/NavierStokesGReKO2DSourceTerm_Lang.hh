@@ -145,7 +145,6 @@ private: // data
   bool m_decouple;
   bool m_limPRe;
   bool m_addUpdateCoeff;
-  bool m_blockDecoupled;
   
   CFuint m_order;
 

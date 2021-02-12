@@ -36,6 +36,7 @@ KLogOmega2DSourceTermProvider("KLogOmega2DSourceTerm");
 void KLogOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("LimitProductionTerm","Limit the production terms for stability (Default = True)");
+  options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,6 +63,9 @@ KLogOmega2DSourceTerm::KLogOmega2DSourceTerm(const std::string& name) :
   
   m_limitP = true;
   setParameter("LimitProductionTerm",&m_limitP);
+  
+  m_blockDecoupled = false;
+  setParameter("BlockDecoupledJacob",&m_blockDecoupled);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -101,12 +105,15 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal overRT = 1.0/(R*T);
   const CFreal pOverRTT = p/(R*T*T);
   const CFreal overOmega = 1.0/avOmega;
-    
+  
+  if (!m_blockDecoupled)
+  {  
   //p
   m_stateJacobian[0][4] = -avOmega * avK * betaStar * overRT;
   
   //T
   m_stateJacobian[3][4] = avOmega * avK * betaStar * pOverRTT;
+  }
   
   //k
   m_stateJacobian[4][4] = -avOmega * betaStar * rho;
@@ -118,11 +125,14 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal beta = navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
   
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][5] = -avOmega * beta * overRT;
   
   //T
   m_stateJacobian[3][5] = avOmega * beta * pOverRTT;
+  }
   
   //logOmega
   m_stateJacobian[5][5] = -avOmega * beta * rho;
@@ -139,11 +149,14 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
   
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][4] += mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*overRT;
   
   //T
   m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy))*pOverRTT;
+  }
   
   //k
   m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy) + mutTerm*rho*overOmega;
@@ -159,11 +172,14 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
   
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*overRT) + pOmegaFactor*overRT*overOmega;
   
   //T
   m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)) - pOmegaFactor*pOverRTT*overOmega;
+  }
   
   //k
   //m_stateJacobian[4][5] += 0.0;
@@ -209,11 +225,14 @@ void  KLogOmega2DSourceTerm::getSToGradJacobian(const CFuint iState)
   const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
   
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][4] += mutTerm*avK*overRT/avOmega - (2./3.)*avK*(dux+dvy)*coeffTauMu*overRT;
   
   //T
   m_stateJacobian[3][4] += -mutTerm*avK*p/(R*T*T*avOmega) + (2./3.)*avK*(dux+dvy)*coeffTauMu*p/(R*T*T);
+  }
   
   //k
   m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy)*coeffTauMu + mutTerm*rho/avOmega;
@@ -228,11 +247,14 @@ void  KLogOmega2DSourceTerm::getSToGradJacobian(const CFuint iState)
   
   const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
   
+  if (!m_blockDecoupled)
+  {
   //p
   m_stateJacobian[0][5] += navierStokesVarSet->getGammaCoef()*(mutTerm*overRT/avOmega - (2./3.)*(dux+dvy)*coeffTauMu*overRT);
   
   //T
   m_stateJacobian[3][5] += navierStokesVarSet->getGammaCoef()*(-mutTerm*p/(R*T*T*avOmega) + (2./3.)*(dux+dvy)*coeffTauMu*p/(R*T*T));
+  }
   
   //k
   //m_stateJacobian[4][5] += 0.0;
@@ -423,7 +445,7 @@ void KLogOmega2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       const CFreal dUdY = (*(m_cellGrads[iSol][1]))[YY];
             
       // take the absolute value of dUdY to avoid nan which causes tecplot to be unable to load the file
-      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
+      wallShearStressVelocity[(((*m_cellStates)[iSol]))->getLocalID()] = mut;//sqrt(nuTot*fabs(dUdY));//m_prodTerm_Omega;//std::min(m_prodTerm_Omega,200.0);//m_prodTerm_Omega;//
       
       
       

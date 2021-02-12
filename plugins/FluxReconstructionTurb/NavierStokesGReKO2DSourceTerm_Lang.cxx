@@ -45,7 +45,6 @@ void NavierStokesGReKO2DSourceTerm_Lang::defineConfigOptions(Config::OptionList&
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
  options.addConfigOption< bool >("LimPRe","Limit P_Re.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
- options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,9 +85,6 @@ NavierStokesGReKO2DSourceTerm_Lang::NavierStokesGReKO2DSourceTerm_Lang(const std
   
   m_addUpdateCoeff = false;
   setParameter("AddUpdateCoeff",&m_addUpdateCoeff);
-  
-  m_blockDecoupled = false;
-  setParameter("BlockDecoupledJacob",&m_blockDecoupled);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -575,7 +571,7 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getStrain(const CFreal VoverRadius, co
   const CFreal gradV_X = (*(m_cellGrads[iState][2]))[XX];
   const CFreal gradV_Y = (*(m_cellGrads[iState][2]))[YY];
   const CFreal gradSum = (gradU_Y + gradV_X);
-  const CFreal strain = gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y + VoverRadius ;
+  const CFreal strain = gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y + VoverRadius*VoverRadius ;
   m_strain = std::sqrt(2.*strain);
 }
 

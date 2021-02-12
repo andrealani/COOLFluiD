@@ -41,7 +41,6 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
  options.addConfigOption< bool >("LimPAlpha","Limit P_alpha.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
- options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
  options.addConfigOption< bool,Config::DynamicOption<> >("AddDGamma","Add destruction terms for gamma and alpha.");
 }
 
@@ -75,9 +74,6 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
   
   m_addUpdateCoeff = false;
   setParameter("AddUpdateCoeff",&m_addUpdateCoeff);
-  
-  m_blockDecoupled = false;
-  setParameter("BlockDecoupledJacob",&m_blockDecoupled);
   
   m_addDGDA = true;
   setParameter("AddDGamma",&m_addDGDA);
@@ -374,10 +370,15 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     Rethetac *= sqrt(1.0+0.38*pow(MInfLocal,0.6));
     
     CFreal lambda = 0.0;
+
+    CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
     
     if (m_PGrad)
     {
-      const CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+      const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
+
+      const CFreal dpdsLimit = -0.04/(lambdaTerm1*Rethetac*Rethetac);
+      dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
     
       const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;
     
@@ -424,7 +425,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     //destructionTerm_Ga = min(0.0,destructionTerm_Ga);
     
-    destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+    destructionTerm_Ga = max(-16.0*fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.03;
@@ -573,8 +574,13 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
   const CFreal avV = m_solPhysData[EulerTerm::V]; 
   const CFreal u = m_solPhysData[EulerTerm::VX];
   const CFreal v = m_solPhysData[EulerTerm::VY]; 
-  const CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
-  const CFreal lambdaTerm = -mu/(rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
+  CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+  const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
+
+  const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat0*ReThetat0);
+  dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
+
+  const CFreal lambdaTerm = lambdaTerm1*dpds;
   
   const CFuint MAXITER   = 10;
   const CFreal TOL       = 1.0e-6;
@@ -583,9 +589,16 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
   {
     CFreal resReThetat = std::fabs(ReThetat0*TOL);
     
-    const CFreal lambda = ReThetat0*ReThetat0*lambdaTerm;
+    const CFreal lambda = max(ReThetat0*ReThetat0*lambdaTerm,-0.089);
     const CFreal SLambda = pow(0.09+lambda,0.62);
-    ReThetat1 = alphaTerm*SLambda;
+    //ReThetat1 = alphaTerm*SLambda;
+
+    const CFreal derivDenom = 1.0/pow(0.09+lambda,0.38);
+
+    const CFreal mainF = alphaTerm*SLambda - ReThetat0;
+    const CFreal mainFprime = 1.24*alphaTerm*lambdaTerm*ReThetat0*derivDenom - 1.0; 
+//CFLog(INFO, "lambdaTerm: " << lambdaTerm << ", alphaTerm: " << alphaTerm << ", Ret0: " << ReThetat0 << ", dpds: " << dpds << ", avV: " << avV << ", lambda: " << lambda << "\n");
+    ReThetat1 = max(ReThetat0 - mainF/mainFprime,10.0);
     
     if ( fabs(ReThetat0-ReThetat1) < resReThetat || iter == MAXITER-1) 
     { 
@@ -795,8 +808,8 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
 
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
-  
-  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  const CFreal gammaTerm = avGa + avGa*(1.0-avGa);
+  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy));
   
   const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
   
@@ -807,23 +820,23 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       //p
-      tempSTTerm = (mutTerm*avK*overRT*overOmega*mutGaMod - twoThirdduxduy*avK*overRT);
+      tempSTTerm = (mutTerm*avK*overRT*overOmega*mutGaMod - twoThirdduxduy*avK*overRT*gammaTerm);
       m_stateJacobian[0][4] += tempSTTerm;
       m_stateJacobian[0][3] -= tempSTTerm;
   
       //T
-      tempSTTerm = (-mutTerm*avK*overOmega*mutGaMod + twoThirdduxduy*avK)*pOverRTT;
+      tempSTTerm = (-mutTerm*avK*overOmega*mutGaMod + twoThirdduxduy*avK*gammaTerm)*pOverRTT;
       m_stateJacobian[3][4] += tempSTTerm;
       m_stateJacobian[3][3] -= tempSTTerm;
  
       //gamma
-      tempSTTerm = mutTerm*mut*dmudg/mutGaMod;
+      tempSTTerm = mutTerm*mut*dmudg/mutGaMod - twoThirdduxduy*avK*rho*2.0*(1.0-avGa);
       m_stateJacobian[6][4] += tempSTTerm;
       m_stateJacobian[6][3] -= tempSTTerm;
     }
   
     //k
-    tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega*mutGaMod);
+    tempSTTerm = (-twoThirdduxduy*rho*gammaTerm + mutTerm*rho*overOmega*mutGaMod);
     m_stateJacobian[4][4] += tempSTTerm;
     m_stateJacobian[4][3] -= tempSTTerm;
   
@@ -848,10 +861,10 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       //p
-      m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT/mutGaMod) + pOmegaFactor*overRT*overOmega;
+      m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT/mutGaMod*gammaTerm) + pOmegaFactor*overRT*overOmega;
   
       //T
-      m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy/mutGaMod) - pOmegaFactor*pOverRTT*overOmega;
+      m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy/mutGaMod*gammaTerm) - pOmegaFactor*pOverRTT*overOmega;
     }
  
     //logOmega
@@ -871,21 +884,31 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal fMnsigmaTerm = 1.0+0.58*pow(MInfLocal,0.6);
   const CFreal fMnsigma = 1.0/(fMnsigmaTerm*fMnsigmaTerm);
     
-  const CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
-   
-  const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;
+  CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+
+  CFreal PRC = 1.0;
     
-  CFreal PRC;
-  if (kPGrad < 0)
+  if (m_PGrad)
   {
-    const CFreal PRCfactor1 = 474.0*pow(TuInfLocal,-2.9);
-    const CFreal PRCexponent = 1.0-exp(2.0e6*kPGrad);
-    PRC = pow(PRCfactor1,PRCexponent);
-  }
-  else
-  {
-    const CFreal PRCexponent = -3227.0*pow(kPGrad,0.5985);
-    PRC = pow(10.0,PRCexponent);
+    const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
+
+    const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat*ReThetat);
+    dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
+    
+    const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;
+    
+      
+    if (kPGrad < 0)
+    {
+      const CFreal PRCfactor1 = 474.0*pow(TuInfLocal,-2.9);
+      const CFreal PRCexponent = 1.0-exp(2.0e6*kPGrad);
+      PRC = pow(PRCfactor1,PRCexponent);
+    }
+    else
+    {
+      const CFreal PRCexponent = -3227.0*pow(kPGrad,0.5985);
+      PRC = pow(10.0,PRCexponent);
+    }
   }
     
   const CFreal fk = 1.0+fg*(PRC-1.0); 
@@ -936,7 +959,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   }
   
   // D gamma
-  const CFreal cEg = 20.0;
+  const CFreal cEg = 20.0/0.57;
   
   const CFreal fMuGamma = 1.0-exp(-256.0*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal));
   const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));
@@ -973,8 +996,8 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   // production  Alpha
   
-  const CFreal cpa1 = 0.3;
-  const CFreal cpa2 = 50.0;
+  const CFreal cpa1 = 0.03;
+  //const CFreal cpa2 = 50.0;
 
   CFreal Rethetac = getRethetat(Tu, false);
     
@@ -985,7 +1008,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
 
   if (m_PGrad)
   {
-    lambda = -Rethetac*Rethetac*mu/(rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
+    lambda = -Rethetac*Rethetac*mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
   }
     
   const CFreal alphac = rhoInfLocal*uInfLocal*uInfLocal*pow(0.09+lambda,0.62)/(Rethetac*sqrt(rhoInfLocal*muInfLocal));
@@ -1002,7 +1025,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal  coefFtheta0 = (m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta)*(m_currWallDist[iState]/delta);
   const CFreal  coefFtheta1 = exp(-coefFtheta0);
   const CFreal  Ftheta1     = Fwake * coefFtheta1;
-  const CFreal  Ftheta3     = 1.0-(((avGa-1.0/cpa2)/(1.0-1.0/cpa2))*((avGa-1.0/cpa2)/(1.0-1.0/cpa2)));
+  const CFreal  Ftheta3     = 1.0-(((avGa-0.01)/(0.99-0.01))*((avGa-0.01)/(0.99-0.01)));
   const CFreal  Ftheta4     = std::max(Ftheta1,Ftheta3);
   const CFreal  Fthetat     = std::min(Ftheta4,1.0);
     
