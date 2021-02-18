@@ -113,7 +113,7 @@ void Euler2DGReKLogOPuvt::computePhysicalData(const State& state,
   data[EulerTerm::V] = sqrt(V2);
   data[EulerTerm::P] = p;
   data[EulerTerm::T] = T;
-  data[EulerTerm::H] = gammaDivGammaMinus1*p*overRho + 0.5*V2 + K;
+  data[EulerTerm::H] = gammaDivGammaMinus1*p*overRho + 0.5*V2;// + K;
   data[EulerTerm::E] = data[EulerTerm::H] - (p*overRho);
 
 //  data[EulerTerm::A] = sqrt(gammaMinus1*(data[EulerTerm::H] - 0.5*V2) + (gammaMinus1*K);

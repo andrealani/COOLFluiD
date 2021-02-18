@@ -104,7 +104,7 @@ private: // helper functions
   /// corresponding diffusive variable set
   void getVorticity(const CFuint iState);
 
-  void getStrain(const CFreal VoverRadius, const CFuint iState);
+  void getStrain(const CFuint iState);
 
   CFreal getRethetat(const CFreal Tu, bool prime);  
   

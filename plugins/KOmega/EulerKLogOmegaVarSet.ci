@@ -81,8 +81,8 @@ void EulerKLogOmegaVarSet<BASE, SGROUP>::computePhysicalData(const Framework::St
   const CFreal k     = state[m_startK]; 
   const CFreal omega = state[m_startK + 1];
   
-  data[NavierStokes::EulerTerm::H] += k;
-  data[NavierStokes::EulerTerm::E] += k;
+  //data[NavierStokes::EulerTerm::H] += k;
+  //data[NavierStokes::EulerTerm::E] += k;
   
   const CFuint iK = this->getModel()->getFirstScalarVar(SGROUP);
   data[iK]   = k;

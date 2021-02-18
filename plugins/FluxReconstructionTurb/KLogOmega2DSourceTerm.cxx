@@ -37,6 +37,7 @@ void KLogOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("LimitProductionTerm","Limit the production terms for stability (Default = True)");
   options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
+  options.addConfigOption< bool >("IsAxiSym","If axisymmetric, put to true.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,8 +57,7 @@ KLogOmega2DSourceTerm::KLogOmega2DSourceTerm(const std::string& name) :
     m_prodTerm_Omega(),
     m_destructionTerm_Omega(),
     m_destructionTerm_k(),
-    m_currWallDist(),
-    m_isAxisymmetric()
+    m_currWallDist()
 {
   addConfigOptionsTo(this);
   
@@ -66,6 +66,13 @@ KLogOmega2DSourceTerm::KLogOmega2DSourceTerm(const std::string& name) :
   
   m_blockDecoupled = false;
   setParameter("BlockDecoupledJacob",&m_blockDecoupled);
+  
+  m_isAxisymmetric = false;
+  setParameter("IsAxiSym",&m_isAxisymmetric);
+  
+  m_overRadius = 1.0;
+  
+  m_vOverRadius = 0.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -105,37 +112,62 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal overRT = 1.0/(R*T);
   const CFreal pOverRTT = p/(R*T*T);
   const CFreal overOmega = 1.0/avOmega;
+  const CFreal DkTerm = avOmega * betaStar;
+  const CFreal mut = navierStokesVarSet->getTurbDynViscosityFromGradientVars(*((*m_cellStates)[iState]), m_cellGrads[iState]);
+  
+  const CFreal Dk = -rho * avK * DkTerm;
+  
+  if (Dk < 0.0)
+  {
+ 
+  CFreal tempSTTerm = 0.0;
   
   if (!m_blockDecoupled)
-  {  
+  {
   //p
-  m_stateJacobian[0][4] = -avOmega * avK * betaStar * overRT;
+  tempSTTerm = -avK * overRT * DkTerm;
+  m_stateJacobian[0][4] += tempSTTerm;
+  m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  m_stateJacobian[3][4] = avOmega * avK * betaStar * pOverRTT;
+  tempSTTerm = DkTerm * avK * pOverRTT;
+  m_stateJacobian[3][4] += tempSTTerm;
+  m_stateJacobian[3][3] -= tempSTTerm;
   }
   
   //k
-  m_stateJacobian[4][4] = -avOmega * betaStar * rho;
+  tempSTTerm = -DkTerm * rho;
+  m_stateJacobian[4][4] += tempSTTerm;
+  m_stateJacobian[4][3] -= tempSTTerm;
   
   //logOmega
-  m_stateJacobian[5][4] = -avOmega * avK * betaStar * rho;
+  tempSTTerm = -DkTerm * avK * rho;
+  m_stateJacobian[5][4] += tempSTTerm;
+  m_stateJacobian[5][3] -= tempSTTerm;
+  }
   
   /// destruction term of logOmega
   
   const CFreal beta = navierStokesVarSet->getBeta(*((*m_cellStates)[iState]));
   
+  const CFreal DomegaTerm = avOmega * beta;
+  
+  const CFreal Domega = -DomegaTerm * rho;
+  
+  if (Domega < 0.0)
+  {
   if (!m_blockDecoupled)
   {
   //p
-  m_stateJacobian[0][5] = -avOmega * beta * overRT;
+  m_stateJacobian[0][5] = -DomegaTerm * overRT;
   
   //T
-  m_stateJacobian[3][5] = avOmega * beta * pOverRTT;
+  m_stateJacobian[3][5] = DomegaTerm * pOverRTT;
   }
   
   //logOmega
-  m_stateJacobian[5][5] = -avOmega * beta * rho;
+  m_stateJacobian[5][5] = -DomegaTerm * rho;
+  }
   
   /// production term of k
   
@@ -148,21 +180,38 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
 
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+    
+  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
   
+  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
+  
+  if (Pk > 0.0)
+  {
+  CFreal tempSTTerm = 0.0;
+      
   if (!m_blockDecoupled)
   {
   //p
-  m_stateJacobian[0][4] += mutTerm*avK*overRT*overOmega - (2./3.)*avK*(dux+dvy)*overRT;
+  tempSTTerm = (mutTerm*avK*overRT*overOmega - twoThirdduxduy*avK*overRT);
+  m_stateJacobian[0][4] += tempSTTerm;
+  m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  m_stateJacobian[3][4] += (-mutTerm*avK*overOmega + (2./3.)*avK*(dux+dvy))*pOverRTT;
+  tempSTTerm = (-mutTerm*avK*overOmega + twoThirdduxduy*avK)*pOverRTT;
+  m_stateJacobian[3][4] += tempSTTerm;
+  m_stateJacobian[3][3] -= tempSTTerm;
   }
   
   //k
-  m_stateJacobian[4][4] += -(2./3.)*rho*(dux+dvy) + mutTerm*rho*overOmega;
+  tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega);
+  m_stateJacobian[4][4] += tempSTTerm;
+  m_stateJacobian[4][3] -= tempSTTerm;
   
   //logOmega
-  m_stateJacobian[5][4] +=  -mutTerm*rho*avK*overOmega;
+  tempSTTerm = -mutTerm*rho*avK*overOmega;
+  m_stateJacobian[5][4] += tempSTTerm;
+  m_stateJacobian[5][3] -= tempSTTerm;
+  }
   
   /// production of logOmega
   
@@ -172,23 +221,22 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2* ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
   
+  const CFreal Pomega = (gamma*rho/mut) * Pk * overOmega + rho * overOmega * pOmegaFactor;
+  
+  if (Pomega > 0.0)
+  {
   if (!m_blockDecoupled)
   {
   //p
-  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - (2./3.)*(dux+dvy)*overRT) + pOmegaFactor*overRT*overOmega;
+  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT) + pOmegaFactor*overRT*overOmega;
   
   //T
-  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + (2./3.)*(dux+dvy)) - pOmegaFactor*pOverRTT*overOmega;
+  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy) - pOmegaFactor*pOverRTT*overOmega;
   }
-  
-  //k
-  //m_stateJacobian[4][5] += 0.0;
-  
+ 
   //logOmega
   m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
-  
-  
-  
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -161,6 +161,12 @@ protected: // data
   bool m_limitP;
   bool m_blockDecoupled;
   
+  // one over the radius in an axisymmetric case
+  CFreal m_overRadius;
+  
+  // v over radius in an axisymmetric case
+  CFreal m_vOverRadius;
+  
 
   
 }; // class KLogOmega2DSourceTerm
