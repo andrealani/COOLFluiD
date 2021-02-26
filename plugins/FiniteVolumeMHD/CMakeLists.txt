@@ -101,6 +101,8 @@ UnsteadyMHD3DProjectionPhotosphere.hh
 UnsteadyMHD3DProjectionPhotosphere.cxx
 UnsteadyMHD3DProjectionPolytropicPhotosphere.hh
 UnsteadyMHD3DProjectionPolytropicPhotosphere.cxx
+Venktn3DStrict.cxx
+Venktn3DStrict.hh
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )
