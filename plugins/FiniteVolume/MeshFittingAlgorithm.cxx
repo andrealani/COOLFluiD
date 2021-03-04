@@ -112,8 +112,8 @@ MeshFittingAlgorithm::MeshFittingAlgorithm(const std::string& name) :
   socket_normals("normals"),
   socket_rhs("rhs"), 
   socket_wallDistance("wallDistance",false),
-  socket_nodeisAD("nodeisAD"),
-  socket_nodeDistance("nodeDistance"),
+  socket_nodeisAD("nodeisAD",false),
+  socket_nodeDistance("nodeDistance", false),
   socket_stencil("stencil"),
   socket_relativeError("relativeError"),
   m_wallDistance(CFNULL),
@@ -1113,9 +1113,9 @@ void MeshFittingAlgorithm::execute()
   Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
   Framework::DataHandle< CFreal> wallDistance = socket_wallDistance.getDataHandle();
-  
+ 
   typedef CFMultiMap<CFuint, CFuint> MapNodeCell;
-  Common::CFMultiMap<CFuint,CFuint>  m_mapNodeCell(5000000);
+  Common::CFMultiMap<CFuint,CFuint>  m_mapNodeCell(5000000); // AL: what is this??? please compute some estimation of size which is more automatic 
   typedef MapNodeCell::MapIterator mapIt;
   for (CFuint iNode = 0; iNode < nodes.size(); ++iNode) { 
  	nodeDistance[nodes[iNode]->getLocalID()] = 0.;
@@ -1834,7 +1834,6 @@ void MeshFittingAlgorithm::assembleLinearSystem(){
   CFLog(VERBOSE, "MeshFittingAlgorithm::assembleLinearSystem()\n");
   Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes = socket_nodes.getDataHandle();
   const CFuint nbNodes = nodes.size();
-  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
   Framework::DataHandle <CFreal> nodeDistance = socket_nodeDistance.getDataHandle();
 
   Common::SafePtr<Framework::TopologicalRegionSet> cells =
@@ -3926,7 +3925,6 @@ void MeshFittingAlgorithm::updateNodePositions () {
   Framework::DataHandle<CFreal> nodeDistance = socket_nodeDistance.getDataHandle(); 
   Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
-  Framework::DataHandle <bool> nodeisAD = socket_nodeisAD.getDataHandle();
   Framework::DataHandle < CFreal > rhs = socket_rhs.getDataHandle();
   const CFuint totalNbEqs = Framework::PhysicalModelStack::getActive()->getNbEq();
   Framework::DataHandle<CFreal> iradius = socket_iradius.getDataHandle();
