@@ -38,6 +38,8 @@ void KLogOmega2DSourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("LimitProductionTerm","Limit the production terms for stability (Default = True)");
   options.addConfigOption< bool >("BlockDecoupledJacob","Block decouple ST Jacob in NS-KOmega-GammaRe blocks.");
   options.addConfigOption< bool >("IsAxiSym","If axisymmetric, put to true.");
+  options.addConfigOption< bool >("IsSSTV","If using SST-V instead of SST-2003, put to true.");
+  options.addConfigOption< bool >("NeglectSSTVTerm","If using SST-Vm instead of SST-V, put to true.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -69,6 +71,12 @@ KLogOmega2DSourceTerm::KLogOmega2DSourceTerm(const std::string& name) :
   
   m_isAxisymmetric = false;
   setParameter("IsAxiSym",&m_isAxisymmetric);
+  
+  m_isSSTV = false;
+  setParameter("IsSSTV",&m_isSSTV);
+  
+  m_neglectSSTVTerm = false;
+  setParameter("NeglectSSTVTerm",&m_neglectSSTVTerm);
   
   m_overRadius = 1.0;
   
@@ -182,9 +190,28 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal dvy = (*(m_cellGrads[iState][vID]))[YY]; 
 
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
-  const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
     
-  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  CFreal mutTerm;
+  CFreal Pk;
+  
+  if (!m_isSSTV)
+  {
+    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  }
+  else if (m_neglectSSTVTerm)
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = mutTerm*mut;  
+  }
+  else
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy)); 
+  }
   
   const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
   
@@ -195,23 +222,30 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   if (!m_blockDecoupled)
   {
   //p
-  tempSTTerm = (mutTerm*avK*overRT*overOmega - twoThirdduxduy*avK*overRT);
+  tempSTTerm = mutTerm*avK*overRT*overOmega;
+  if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*avK*overRT;
+  
   m_stateJacobian[0][4] += tempSTTerm;
   m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  tempSTTerm = (-mutTerm*avK*overOmega + twoThirdduxduy*avK)*pOverRTT;
+  tempSTTerm = -mutTerm*avK*overOmega*pOverRTT;
+  if (!m_neglectSSTVTerm) tempSTTerm += twoThirdduxduy*avK*pOverRTT;
+  
   m_stateJacobian[3][4] += tempSTTerm;
   m_stateJacobian[3][3] -= tempSTTerm;
   }
   
   //k
-  tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega);
+  tempSTTerm = mutTerm*rho*overOmega;
+  if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*rho;
+  
   m_stateJacobian[4][4] += tempSTTerm;
   m_stateJacobian[4][3] -= tempSTTerm;
   
   //logOmega
   tempSTTerm = -mutTerm*rho*avK*overOmega;
+  
   m_stateJacobian[5][4] += tempSTTerm;
   m_stateJacobian[5][3] -= tempSTTerm;
   }
@@ -231,10 +265,12 @@ void  KLogOmega2DSourceTerm::getSToStateJacobian(const CFuint iState)
   if (!m_blockDecoupled)
   {
   //p
-  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT) + pOmegaFactor*overRT*overOmega;
+  m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega) + pOmegaFactor*overRT*overOmega;
+  if (!m_neglectSSTVTerm) m_stateJacobian[0][5] += -gamma*twoThirdduxduy*overRT;
   
   //T
-  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy) - pOmegaFactor*pOverRTT*overOmega;
+  m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega) - pOmegaFactor*pOverRTT*overOmega;
+  if (!m_neglectSSTVTerm) m_stateJacobian[3][5] += gamma*pOverRTT*twoThirdduxduy;
   }
  
   //logOmega
@@ -341,9 +377,24 @@ void KLogOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
   const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
   
-  KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
+  if (!m_isSSTV)
+  {
+    KProdTerm = coeffTauMu*(MUT*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
 			       +(duy+dvx)*(duy+dvx)))
                              -twoThirdRhoK*(dux+dvy);
+  }
+  else if (m_neglectSSTVTerm)
+  {
+    const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+    KProdTerm = coeffTauMu*MUT*vorticity2;  
+  }
+  else
+  {
+    const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+    KProdTerm = coeffTauMu*MUT*vorticity2 - twoThirdRhoK*(dux+dvy);  
+  }
  
 //  KProdTerm = coeffTauMu*(MUT*((4./3.)*(dux*dux + dvy*dvy - dux*dvy) + duy*duy + dvx*dvx + 2*duy*dvx))
 //                             -twoThirdRhoK*(dux+dvy);

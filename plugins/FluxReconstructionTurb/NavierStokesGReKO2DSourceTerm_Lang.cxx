@@ -307,9 +307,31 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   const CFreal dvy = (*(m_cellGrads[iState][vID]))[YY]; 
 
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
-  const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+  //const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
   
-  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  CFreal mutTerm;
+  CFreal Pk;
+  
+  if (!m_isSSTV)
+  {
+    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+  }
+  else if (m_neglectSSTVTerm)
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = mutTerm*mut;  
+  }
+  else
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy)); 
+  }
+  
+  //const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
   
   const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
   
@@ -320,23 +342,30 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   if (!m_blockDecoupled)
   {
   //p
-  tempSTTerm = (mutTerm*avK*overRT*overOmega - twoThirdduxduy*avK*overRT) * gammaEff;
+  tempSTTerm = mutTerm*avK*overRT*overOmega * gammaEff;
+  if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*avK*overRT * gammaEff;
+  
   m_stateJacobian[0][4] += tempSTTerm;
   m_stateJacobian[0][3] -= tempSTTerm;
   
   //T
-  tempSTTerm = (-mutTerm*avK*overOmega + twoThirdduxduy*avK)*pOverRTT * gammaEff;
+  tempSTTerm = -mutTerm*avK*overOmega*pOverRTT * gammaEff;
+  if (!m_neglectSSTVTerm) tempSTTerm += twoThirdduxduy*avK*pOverRTT * gammaEff;
+  
   m_stateJacobian[3][4] += tempSTTerm;
   m_stateJacobian[3][3] -= tempSTTerm;
  
   //gamma
-  tempSTTerm = mutTerm*mut-twoThirdduxduy * avK * rho;
+  tempSTTerm = mutTerm*mut;
+  if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy * avK * rho;
   m_stateJacobian[6][4] += tempSTTerm;
   m_stateJacobian[6][3] -= tempSTTerm;
   }
   
   //k
-  tempSTTerm = (-twoThirdduxduy*rho + mutTerm*rho*overOmega) * gammaEff;
+  tempSTTerm = mutTerm*rho*overOmega * gammaEff;
+  if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*rho * gammaEff;
+  
   m_stateJacobian[4][4] += tempSTTerm;
   m_stateJacobian[4][3] -= tempSTTerm;
   
@@ -755,10 +784,29 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
 
     const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
     const CFreal twoThirdRhoK = (2./3.)*(avK * rho);
+    
+    if (!m_isSSTV)
+    {
+      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
+			       +(duy+dvx)*(duy+dvx)))
+                             -twoThirdRhoK*(dux+dvy);
+    }
+    else if (m_neglectSSTVTerm)
+    {
+      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+      m_prodTerm_k = coeffTauMu*mut*vorticity2;  
+    }
+    else
+    {
+      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+      m_prodTerm_k = coeffTauMu*mut*vorticity2 - twoThirdRhoK*(dux+dvy);  
+    }
   
-    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
-			         +(duy+dvx)*(duy+dvx)))
-                                 -twoThirdRhoK*(dux+dvy);
+//    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
+//			         +(duy+dvx)*(duy+dvx)))
+//                                 -twoThirdRhoK*(dux+dvy);
   
     ///Production term: Omega
     const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();

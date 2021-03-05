@@ -322,10 +322,29 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
     const CFreal gammaTerm = avGa+avGa*(1.0-avGa);
     const CFreal twoThirdRhoK = (2./3.)*(avK * rho * gammaTerm);
-  
-    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
+    
+    if (!m_isSSTV)
+    {
+      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
 			         +(duy+dvx)*(duy+dvx)))
                                  -twoThirdRhoK*(dux+dvy+m_vOverRadius);
+    }
+    else if (m_neglectSSTVTerm)
+    {
+      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+      m_prodTerm_k = coeffTauMu*mut*vorticity2;  
+    }
+    else
+    {
+      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+
+      m_prodTerm_k = coeffTauMu*mut*vorticity2 - twoThirdRhoK*(dux+dvy+m_vOverRadius);  
+    }
+  
+//    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
+//			         +(duy+dvx)*(duy+dvx)))
+//                                 -twoThirdRhoK*(dux+dvy+m_vOverRadius);
   
     ///Production term: Omega
     const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();
@@ -431,7 +450,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     //destructionTerm_Ga = min(0.0,destructionTerm_Ga);
     
-    destructionTerm_Ga = max(-16.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+    destructionTerm_Ga = max(-17.0*fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.03;
@@ -855,9 +874,32 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   /// production term of k
 
   const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
-  const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)+(duy+dvx)*(duy+dvx));
+  //const CFreal mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)+(duy+dvx)*(duy+dvx));
   const CFreal gammaTerm = avGa + avGa*(1.0-avGa);
-  const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy+m_vOverRadius));
+  
+  CFreal mutTerm;
+  CFreal Pk;
+  
+  if (!m_isSSTV)
+  {
+    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)+(duy+dvx)*(duy+dvx));
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy+m_vOverRadius));
+  }
+  else if (m_neglectSSTVTerm)
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = mutTerm*mut;  
+  }
+  else
+  {
+    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy+m_vOverRadius)); 
+  }
+  
+  //const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy+m_vOverRadius));
   
   const CFreal twoThirdduxduy = (2./3.)*(dux+dvy+m_vOverRadius);
   
@@ -868,21 +910,27 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       //p
-      tempSTTerm = (mutTerm*avK*overRT*overOmega*mutGaMod - twoThirdduxduy*avK*overRT*gammaTerm);
+      tempSTTerm = mutTerm*avK*overRT*overOmega*mutGaMod;
+      if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*avK*overRT * gammaTerm;
+      
       m_stateJacobian[0][4] += tempSTTerm;
       m_stateJacobian[0][3] -= tempSTTerm;
   
       //T
-      tempSTTerm = (-mutTerm*avK*overOmega*mutGaMod + twoThirdduxduy*avK*gammaTerm)*pOverRTT;
+      tempSTTerm = -mutTerm*avK*overOmega*mutGaMod*pOverRTT;
+      if (!m_neglectSSTVTerm) tempSTTerm += twoThirdduxduy*avK*pOverRTT * gammaTerm;
+      
       m_stateJacobian[3][4] += tempSTTerm;
       m_stateJacobian[3][3] -= tempSTTerm;
  
       //gamma
-      tempSTTerm = mutTerm*mut*dmudg/mutGaMod - twoThirdduxduy*avK*rho*2.0*(1.0-avGa);
+      tempSTTerm = mutTerm*mut*dmudg/mutGaMod;
+      if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy * avK * rho*2.0*(1.0-avGa);
+      
       m_stateJacobian[6][4] += tempSTTerm;
       m_stateJacobian[6][3] -= tempSTTerm;
       
-      if (m_isAxisymmetric)
+      if (m_isAxisymmetric && !m_isSSTV)
       {
         //v
         tempSTTerm = mut*coeffTauMu*4./3.*m_overRadius*(-(dux+dvy)+v*2.0)- (2./3.)*(avK * rho * gammaTerm)*m_overRadius;
@@ -892,7 +940,9 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     }
   
     //k
-    tempSTTerm = (-twoThirdduxduy*rho*gammaTerm + mutTerm*rho*overOmega*mutGaMod);
+    tempSTTerm = mutTerm*rho*overOmega*mutGaMod;
+    if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*rho * gammaTerm;
+    
     m_stateJacobian[4][4] += tempSTTerm;
     m_stateJacobian[4][3] -= tempSTTerm;
   

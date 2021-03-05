@@ -167,6 +167,12 @@ protected: // data
   // v over radius in an axisymmetric case
   CFreal m_vOverRadius;
   
+  // flag to use SST-V instead of SST-2003
+  bool m_isSSTV;
+  
+  // flag to neglect SST-V dudx term, so SST-Vm will be used
+  bool m_neglectSSTVTerm;
+  
 
   
 }; // class KLogOmega2DSourceTerm
