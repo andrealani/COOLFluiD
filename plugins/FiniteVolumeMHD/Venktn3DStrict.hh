@@ -23,7 +23,9 @@ namespace COOLFluiD {
  */
 class Venktn3DStrict : public Venktn2D {
 public:
+  
 
+  static void defineConfigOptions(Config::OptionList& options);
   /**
    * Constructor
    */
@@ -75,6 +77,9 @@ protected:
       (socket_uY.getDataHandle())(stateID,iVar,state.size())*(coord[YY] - stateCoord[YY]) +
       (socket_uZ.getDataHandle())(stateID,iVar,state.size())*(coord[ZZ] - stateCoord[ZZ]);
   }
+
+protected:
+  CFreal _strictCoeff;  
   
 private:
 

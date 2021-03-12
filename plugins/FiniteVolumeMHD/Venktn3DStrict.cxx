@@ -25,12 +25,22 @@ namespace COOLFluiD {
 MethodStrategyProvider<Venktn3DStrict,CellCenterFVMData,Limiter<CellCenterFVMData>,FiniteVolumeModule>
 venktn3DStrictProvider("Venktn3DStrict");
 
+
+void Venktn3DStrict::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFreal >
+    ("strictCoeff","Fix for smooth flow region.");
+}
 //////////////////////////////////////////////////////////////////////////////
 
 Venktn3DStrict::Venktn3DStrict(const std::string& name) :
   Venktn2D(name),
   socket_uZ("uZ")
 {
+  addConfigOptionsTo(this);
+  
+  _strictCoeff = 1.0;
+  setParameter("strictCoeff",&_strictCoeff);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -120,12 +130,25 @@ void Venktn3DStrict::limit(const vector<vector<Node*> >& coord,
       avgDistance /= nbFaces;
     }
     
-    const CFreal deltaPlusMax = max0 - (*state)[iVar];
-    const CFreal deltaPlusMin = min0 - (*state)[iVar];
+    //const CFreal deltaPlusMax = max0 - (*state)[iVar];
+    //const CFreal deltaPlusMin = min0 - (*state)[iVar];
+    CFreal deltaPlusMax = max0 - (*state)[iVar];
+    CFreal deltaPlusMin = min0 - (*state)[iVar];
     
-    if(iVar==0) 
-      weight = 0.2*pow(std::abs((min0+1e-10)/(max0+1e-10)),1.0)+0.8;
-    
+    if(iVar==0)
+     weight = _strictCoeff*pow(std::abs((min0+1e-10)/(max0+1e-10)),1.0)+(1.0-_strictCoeff);
+      
+    //weight = 1.0;
+    //if((iVar==1 || iVar==2 || iVar==3)&&deltaPlusMax*deltaPlusMin<0.0){ 
+      //weight = _strictCoeff*pow(std::abs((min0+1e-20)/(max0+1e-20)),1.0)+(1.0-_strictCoeff);
+    //  weight = (std::abs(deltaPlusMin)+1e-20)/(std::abs(deltaPlusMax)+1e-20);
+   //   if(weight>1.0) weight=1.0/weight;
+   //   weight = _strictCoeff*pow(weight,1.0)+(1.0-_strictCoeff);
+   //}
+    //if((iVar==1 || iVar==2 || iVar==3)){
+    //deltaPlusMax=deltaPlusMax*0.5;
+    //deltaPlusMin=deltaPlusMin*0.5;
+    //} 
     CFreal psi = 1.0;
     CFreal psimin = 1.1;
     if(_isMFMHD){ // IMPLEMENTATION FROM VENKATAKRISHNAN PAPER 
