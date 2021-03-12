@@ -38,6 +38,11 @@ MethodCommandProvider< NSBndGradientComputer,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
 NsBndGradientComputerProvider("ConvBndCorrectionsRHSNS");
+
+MethodCommandProvider< NSBndGradientComputer,
+		       FluxReconstructionSolverData,
+		       FluxReconstructionNavierStokesModule >
+NSBndGradientComputerTurbProvider("ConvBndCorrectionsRHSTurb");
   
 //////////////////////////////////////////////////////////////////////////////
   
