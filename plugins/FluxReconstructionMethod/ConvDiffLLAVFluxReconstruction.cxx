@@ -110,7 +110,8 @@ ConvDiffLLAVFluxReconstruction::ConvDiffLLAVFluxReconstruction(const std::string
   m_gradUpdates(),
   m_projectedCorrL(),
   m_projectedCorrR(),
-  m_contFlxWoLLAV()
+  m_contFlxWoLLAV(),
+  m_updateToSolutionVecTrans(CFNULL)
   {
     addConfigOptionsTo(this);
     
@@ -270,7 +271,7 @@ void ConvDiffLLAVFluxReconstruction::execute()
   geoDataCBL.trs = cells;
   CellToFaceGEBuilder::GeoData& geoDataCBR = m_cellBuilders[RIGHT]->getDataGE();
   geoDataCBR.trs = cells;
-  
+
   // reset epsilon in vertices
   m_nodeEpsilons = 0.0;
   
@@ -288,7 +289,7 @@ void ConvDiffLLAVFluxReconstruction::execute()
   m_totalEps = 0.0;
 
   ////////////////////COMPUTE EPSILON AND GRADIENTS/////////////////////////
-  
+
   //// Loop over faces to add the face part to the gradients
   
   // loop over different orientations
@@ -365,6 +366,10 @@ void ConvDiffLLAVFluxReconstruction::execute()
 
 	// store epsilon
 	storeEpsilon();
+        
+        //if (m_cell->getID() == 0) CFLog(INFO, "eps0: " << m_epsilon0 << "\n");
+        //if (m_cell->getID() == 0) CFLog(INFO, "s: " << m_s << "\n");
+        //if (m_cell->getID() == 0) CFLog(INFO, "eps: " << m_epsilon << ", s: " << m_s << ", s0: " << m_s0 << ", k: " << m_kappa << "\n");
 //       } 
 
       // add the cell part to the gradients
@@ -664,12 +669,17 @@ void ConvDiffLLAVFluxReconstruction::setFaceData(CFuint faceID)
       {
 	for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
         {
+            
+            //if(m_cells[iSide]->getID() == 0) CFLog(INFO,"faceNodeID: " << (*m_faceNodes)[iNode]->getLocalID() << ", cellNodeID: " << (*m_cellNodes)[iNodeCell]->getLocalID() << "\n");
+                    
 	  if ((*m_faceNodes)[iNode]->getLocalID() == (*m_cellNodes)[iNodeCell]->getLocalID())
 	  {
 	    // get node local index
             const CFuint nodeIdx = (*m_cellNodesConn)(m_cells[iSide]->getID(),iNodeCell);
 	    
             m_epsilonLR[iSide][iFlxPnt] += m_nodePolyValsAtFlxPnts[flxIdx][iNodeCell]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
+            
+            //if(m_cells[iSide]->getID() == 0) CFLog(INFO,"node eps: " << m_nodeEpsilons[nodeIdx] <<", polyVal: " << m_nodePolyValsAtFlxPnts[flxIdx][iNodeCell] << ", nbNeighb: " << m_nbNodeNeighbors[nodeIdx] << "\n");
 	  }
 	}
       }
@@ -758,6 +768,8 @@ void ConvDiffLLAVFluxReconstruction::computeInterfaceFlxCorrection()
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
         m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGradAV[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
+        
+        //if (m_cells[LEFT]->getID() == 0 || m_cells[RIGHT]->getID() == 0) printf("second flx: %d, var: %d, dim: %d, eps: %e, grad: %e, n: %e\n",iFlxPnt,iVar,iDim,epsilon,((*(m_avgGradAV[iVar]))[iDim]),m_unitNormalFlxPnts[iFlxPnt][iDim]); 
       }
     }
      
@@ -855,6 +867,8 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
     }
         
     artVisc[(((*(m_states[side]))[iSol]))->getLocalID()] = m_solEpsilons[side][iSol];
+    
+    //if (m_cells[side]->getID() == 0) CFLog(INFO, "eps: " << m_solEpsilons[side][iSol] << "\n");
   }
   
   // reset the extrapolated fluxes
@@ -895,6 +909,9 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
           m_contFlx[iSolPnt][iDim][iVar] += m_solEpsilons[side][iSolPnt]*((*m_avgGradAV[iVar])[iDim2])*m_cellFluxProjVects[iDim][iSolPnt][iDim2];
+          
+//       if (m_cells[side]->getID() == 0) CFLog(INFO,"first iSol: " << iSolPnt << ", iDir: " << iDim << ", iEq: " << iVar << 
+//               ", gradAV: " << ((*m_avgGradAV[iVar])[iDim2]) << ", eps: " << m_solEpsilons[side][iSolPnt] << ", n: " << m_cellFluxProjVects[iDim][iSolPnt][iDim2] << "\n");  
         }
       }
     }
@@ -1438,6 +1455,10 @@ void ConvDiffLLAVFluxReconstruction::setup()
 
   // setup parent class
   DiffRHSFluxReconstruction::setup();
+  
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  
+  m_updateToSolutionVecTrans->setup(2);
   
   // get the update varset
   m_updateVarSet = getMethodData().getUpdateVar();

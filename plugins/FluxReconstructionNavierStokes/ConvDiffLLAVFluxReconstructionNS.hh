@@ -162,6 +162,10 @@ protected: // data
   /// physical model (in conservative variables)
   Common::SafePtr< Physics::NavierStokes::MultiScalarVarSet< Physics::NavierStokes::Euler2DVarSet > > m_eulerVarSet2;
   
+  RealVector m_tempSolVarState;
+  
+  RealVector m_tempSolVarState2;
+  
   private:
 
   /// Physical data temporary vector

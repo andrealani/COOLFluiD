@@ -190,6 +190,16 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
   const CFreal mut = navierStokesVarSet->getTurbDynViscosityFromGradientVars(*((*m_cellStates)[iState]), m_cellGrads[iState]);
   
+  if (m_isAxisymmetric)
+  {
+    m_overRadius = 1.0/max(((*m_cellStates)[iState]->getCoordinates())[YY],1.0e-4);
+    m_vOverRadius = m_overRadius*(*((*m_cellStates)[iState]))[2];
+  }
+  
+  const CFreal u = (*((*m_cellStates)[iState]))[1];
+  const CFreal v = (*((*m_cellStates)[iState]))[2];
+  const CFreal gammaIsentropic = m_eulerVarSet->getModel()->getGamma();
+  
   //Compute _Retheta_C
   getRethetac(avRe);
   
@@ -314,9 +324,9 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   
   if (!m_isSSTV)
   {
-    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx));
+    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))+(duy+dvx)*(duy+dvx)-(dux+dvy-m_vOverRadius)*m_vOverRadius);
 
-    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy+m_vOverRadius));
   }
   else if (m_neglectSSTVTerm)
   {
@@ -328,12 +338,12 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   {
     mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
 
-    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy)); 
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy+m_vOverRadius)); 
   }
   
   //const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy));
   
-  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy);
+  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy+m_vOverRadius);
   
   if (Pk*gammaEff > 0.0)
   {
@@ -360,6 +370,14 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy * avK * rho;
   m_stateJacobian[6][4] += tempSTTerm;
   m_stateJacobian[6][3] -= tempSTTerm;
+  
+  if (m_isAxisymmetric && !m_isSSTV)
+      {
+        //v
+        tempSTTerm = mut*coeffTauMu*4./3.*m_overRadius*(-(dux+dvy)+v*2.0)*gammaEff- (2./3.)*(avK * rho * gammaEff)*m_overRadius;
+        m_stateJacobian[2][4] += tempSTTerm;
+        m_stateJacobian[2][3] -= tempSTTerm;
+      }
   }
   
   //k
@@ -543,6 +561,76 @@ void  NavierStokesGReKO2DSourceTerm_Lang::getSToStateJacobian(const CFuint iStat
   }
   }
   
+  if (m_isAxisymmetric)
+  { 
+      const CFreal rhovr = rho*v*m_overRadius;
+      const CFreal vrOverRT = v*m_overRadius*overRT;
+      const CFreal vrPOverRTT = v*m_overRadius*pOverRTT;
+      const CFreal rhor = m_overRadius*rho;
+      
+      const CFreal coeffTauMuAS = coeffTauMu*(mu+mut);
+      
+      //rho
+      m_stateJacobian[0][0] += -vrOverRT;
+      m_stateJacobian[2][0] += -rhor;
+      m_stateJacobian[3][0] += vrPOverRTT;
+      
+      //rho u
+      m_stateJacobian[0][1] += -vrOverRT*u;
+      m_stateJacobian[2][1] += -rhor*u;
+      m_stateJacobian[3][1] += vrPOverRTT*u;
+      m_stateJacobian[1][1] += -rhovr;
+      
+      //rho v
+      m_stateJacobian[0][2] += -vrOverRT*v;
+      m_stateJacobian[2][2] += -2.0*rhovr-m_overRadius*m_overRadius*2.0*coeffTauMuAS;
+      m_stateJacobian[3][2] += vrPOverRTT*v;
+      
+      //rho e
+      const CFreal isentropicTerm = gammaIsentropic/(gammaIsentropic-1.0);
+      m_stateJacobian[0][3] += -isentropicTerm*m_vOverRadius-0.5*avV*avV*vrOverRT;
+      m_stateJacobian[2][3] += -isentropicTerm*p*m_overRadius-0.5*(avV*avV+2.0*v*v)*rho*m_overRadius - 4.0/3.0*m_overRadius*m_overRadius*coeffTauMuAS*v;
+      m_stateJacobian[3][3] += 0.5*avV*avV*vrPOverRTT;
+      m_stateJacobian[1][3] += -rhovr*u;
+      
+      //rho k
+      if (!m_blockDecoupled)
+      {
+        m_stateJacobian[0][4] += -vrOverRT*avK;
+        m_stateJacobian[2][4] += -rhor*avK;
+        m_stateJacobian[3][4] += vrPOverRTT*avK;
+      }
+      m_stateJacobian[4][4] += -rhovr;
+      
+      //rho logOmega
+      const CFreal logOmega = (*((*m_cellStates)[iState]))[5];
+      if (!m_blockDecoupled)
+      {
+        m_stateJacobian[0][5] += -vrOverRT*logOmega;
+        m_stateJacobian[2][5] += -rhor*logOmega;
+        m_stateJacobian[3][5] += vrPOverRTT*logOmega;
+      }
+      m_stateJacobian[5][5] += -rhovr;
+      
+      //rho gamma
+      if (!m_blockDecoupled)
+      {
+        m_stateJacobian[0][6] += -vrOverRT*avGa;
+        m_stateJacobian[2][6] += -rhor*avGa;
+        m_stateJacobian[3][6] += vrPOverRTT*avGa;
+      }
+      m_stateJacobian[6][6] += -rhovr;
+      
+      //rho Re
+      if (!m_blockDecoupled)
+      {
+        m_stateJacobian[0][7] += -vrOverRT*avRe;
+        m_stateJacobian[2][7] += -rhor*avRe;
+        m_stateJacobian[3][7] += vrPOverRTT*avRe;
+      }
+      m_stateJacobian[7][7] += -rhovr;
+  }
+  
   if (m_addUpdateCoeff)
   {
   DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
@@ -664,6 +752,12 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     
     navierStokesVarSet->computeBlendingCoefFromGradientVars(*((*m_cellStates)[iSol]), *(m_cellGrads[iSol][kID]), *(m_cellGrads[iSol][omegaID]));
     
+    if (m_isAxisymmetric)
+    {
+      m_overRadius = 1.0/max(((*m_cellStates)[iSol]->getCoordinates())[YY],1.0e-4);
+      m_vOverRadius = m_overRadius*m_solPhysData[EulerTerm::VY];
+    }
+    
     // Get Vorticity
     getVorticity(iSol);
 
@@ -713,7 +807,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     getRethetac(avRe);
   
     //Compute Strain 
-    getStrain(0.0,iSol);//_vOverRadius); 
+    getStrain(m_vOverRadius,iSol);//_vOverRadius); 
     
     //compute Gasep
     const CFreal Rt         = (rho*avK)/(mu*avOmega);
@@ -787,9 +881,9 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     
     if (!m_isSSTV)
     {
-      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
+      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
 			       +(duy+dvx)*(duy+dvx)))
-                             -twoThirdRhoK*(dux+dvy);
+                             -twoThirdRhoK*(dux+dvy+m_vOverRadius);
     }
     else if (m_neglectSSTVTerm)
     {
@@ -801,7 +895,7 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     {
       const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
 
-      m_prodTerm_k = coeffTauMu*mut*vorticity2 - twoThirdRhoK*(dux+dvy);  
+      m_prodTerm_k = coeffTauMu*mut*vorticity2 - twoThirdRhoK*(dux+dvy+m_vOverRadius);  
     }
   
 //    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy))
@@ -887,6 +981,46 @@ void NavierStokesGReKO2DSourceTerm_Lang::addSourceTerm(RealVector& resUpdates)
     resUpdates[m_nbrEqs*iSol + ReTID] = prodTerm_Re + destructionTerm_Re;
     
     resUpdates[m_nbrEqs*iSol + 3] = -m_prodTerm_k - m_destructionTerm_k;
+    
+    if (m_isAxisymmetric)
+    { 
+      const CFreal rhovr = rho*m_vOverRadius;
+      
+      const CFreal u = m_solPhysData[EulerTerm::VX];
+      const CFreal v = m_solPhysData[EulerTerm::VY];
+      
+      const CFreal divV = dux + dvy;
+      const CFreal lambdaQ = navierStokesVarSet->getThermConductivity(*((*m_cellStates)[iSol]), mu + mut * navierStokesVarSet->getModel().getPrOverPrT());
+      const CFreal coeffTauMuAS = coeffTauMu*(mu+mut);
+      const CFreal tauRX = coeffTauMuAS*(duy + dvx);
+      const CFreal tauRR = coeffTauMuAS*(2.*dvy - 2.0/3.0*(divV + m_vOverRadius));
+      const CFreal tauTT = -coeffTauMuAS*2.0/3.0*(divV - 2.*m_vOverRadius);
+      const CFreal qr = -navierStokesVarSet->getModel().getCoeffQ()*lambdaQ*(*(m_cellGrads[iSol][3]))[YY];
+      
+      //rho
+      resUpdates[m_nbrEqs*iSol + 0] = -rhovr;
+      
+      //rho u
+      resUpdates[m_nbrEqs*iSol + 1] = -rhovr*u + m_overRadius*tauRX;
+      
+      //rho v
+      resUpdates[m_nbrEqs*iSol + 2] = -rhovr*v + m_overRadius*(tauRR - tauTT);
+      
+      //rho e
+      resUpdates[m_nbrEqs*iSol + 3] += -rhovr*m_solPhysData[EulerTerm::H] + m_overRadius*(-qr + tauRX*u + tauRR*v);
+      
+      //rho k
+      resUpdates[m_nbrEqs*iSol + 4] += -rhovr*avK + m_overRadius*(mu+navierStokesVarSet->getSigmaK()*mut)*(*(m_cellGrads[iSol][kID]))[YY];
+      
+      //rho logOmega
+      resUpdates[m_nbrEqs*iSol + 5] += -rhovr*m_solPhysData[iKPD+1] + m_overRadius*(mu+navierStokesVarSet->getSigmaOmega()*mut)*(*(m_cellGrads[iSol][omegaID]))[YY];
+      
+      //rho gamma
+      resUpdates[m_nbrEqs*iSol + 6] += -rhovr*avGa + m_overRadius*(mu+mut)*(*(m_cellGrads[iSol][kID+2]))[YY];
+      
+      //rho Re
+      resUpdates[m_nbrEqs*iSol + 7] += -rhovr*avRe + m_overRadius*2.0*(mu+mut)*(*(m_cellGrads[iSol][kID+3]))[YY];
+    }
     
     if (!m_isPerturbed)
     {

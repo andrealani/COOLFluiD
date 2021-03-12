@@ -124,6 +124,9 @@ void ConvDiffLLAVFluxReconstructionTurb::computeInterfaceFlxCorrection()
 
     // damping factor
     const CFreal dampFactor = m_dampCoeffDiff*m_faceInvCharLengths[iFlxPnt];
+    
+    m_tempSolVarState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[LEFT][iFlxPnt]));
+    m_tempSolVarState2 = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[RIGHT][iFlxPnt]));
 
     // compute averaged (damped) gradients
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -133,7 +136,7 @@ void ConvDiffLLAVFluxReconstructionTurb::computeInterfaceFlxCorrection()
       *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
       
       // compute damping term for LLAV
-      const RealVector dGradVarXNormalAV = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iGrad] - (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      const RealVector dGradVarXNormalAV = (m_tempSolVarState[iGrad] - m_tempSolVarState2[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
       *m_avgGradAV[iGrad] -= dampFactor*dGradVarXNormalAV;
     }
     

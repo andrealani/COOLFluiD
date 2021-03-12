@@ -390,6 +390,11 @@ protected: //data
   // Boolean telling whether to use wall distance cut off of LLAV
   bool m_useWallCutOff;
   
+  CFuint m_maxLLAVVar;
+  
+  /// Vector transformer from update to solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
   private:
 
   /// Physical data temporary vector

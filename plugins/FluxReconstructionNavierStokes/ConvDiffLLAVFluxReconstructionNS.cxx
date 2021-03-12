@@ -63,7 +63,9 @@ ConvDiffLLAVFluxReconstructionNS::ConvDiffLLAVFluxReconstructionNS(const std::st
   m_nbrSpecies(),
   m_pData(),
   m_pData2(),
-  m_eulerVarSet2(CFNULL)
+  m_eulerVarSet2(CFNULL),
+  m_tempSolVarState(),
+  m_tempSolVarState2()
 {
 }
 
@@ -145,7 +147,10 @@ void ConvDiffLLAVFluxReconstructionNS::computeInterfaceFlxCorrection()
       *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
       
       // compute damping term for LLAV
-      const RealVector dGradVarXNormalAV = ((*(m_cellStatesFlxPnt[LEFT][iFlxPnt]))[iGrad] - (*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]))[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
+      m_tempSolVarState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[LEFT][iFlxPnt]));
+      m_tempSolVarState2 = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[RIGHT][iFlxPnt]));
+    
+      const RealVector dGradVarXNormalAV = (m_tempSolVarState[iGrad] - m_tempSolVarState2[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
       *m_avgGradAV[iGrad] -= dampFactor*dGradVarXNormalAV;
     }
     
@@ -168,6 +173,9 @@ void ConvDiffLLAVFluxReconstructionNS::computeInterfaceFlxCorrection()
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
         m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGradAV[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
+        
+//        if (m_cells[LEFT]->getID() == 0) printf("second flx: %d, var: %d, dim: %d, eps: %e, grad: %e, n: %e\n",iFlxPnt,iVar,iDim,epsilon,((*(m_avgGradAV[iVar]))[iDim]),m_unitNormalFlxPnts[iFlxPnt][iDim]*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT]);
+//      if (m_cells[RIGHT]->getID() == 0) printf("second flx: %d, var: %d, dim: %d, eps: %e, grad: %e, n: %e\n",iFlxPnt,iVar,iDim,epsilon,((*(m_avgGradAV[iVar]))[iDim]),m_unitNormalFlxPnts[iFlxPnt][iDim]*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT]);
       }
     }
      
@@ -298,7 +306,9 @@ void ConvDiffLLAVFluxReconstructionNS::computeGradients()
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
     {
       const CFuint solID = (*m_cellStates)[iSolPnt]->getLocalID();
-        
+      
+      m_tempSolVarState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform((*m_cellStates)[iSolPnt]));
+              
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
@@ -308,7 +318,7 @@ void ConvDiffLLAVFluxReconstructionNS::computeGradients()
           for (CFuint jDir = 0; jDir < m_dim; ++jDir)
           {
 	    // project the state on a normal and reuse a RealVector variable of the class to store
-	    m_projectedCorrL[jDir] = (*((*m_cellStates)[iSolPnt]))[iEq] * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
+	    m_projectedCorrL[jDir] = m_tempSolVarState[iEq] * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
           }
 
           // Loop over solution pnts to count factor of all sol pnt polys
@@ -442,13 +452,17 @@ void ConvDiffLLAVFluxReconstructionNS::computeGradientFaceCorrections()
     {
       const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
       const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+      
+      
+      m_tempSolVarState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[LEFT][iFlx]));
+      m_tempSolVarState2 = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[RIGHT][iFlx]));
 
       // compute the face corrections to the gradients
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
-        const CFreal avgSol = ((*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq]+(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])/2.0;
-	m_projectedCorrL = (avgSol-(*(m_cellStatesFlxPnt[LEFT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-	m_projectedCorrR = (avgSol-(*(m_cellStatesFlxPnt[RIGHT][iFlx]))[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
+        const CFreal avgSol = (m_tempSolVarState[iEq]+m_tempSolVarState2[iEq])/2.0;
+	m_projectedCorrL = (avgSol-m_tempSolVarState[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
+	m_projectedCorrR = (avgSol-m_tempSolVarState2[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
 
         // Loop over solution pnts to calculate the grad updates
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -757,6 +771,9 @@ void ConvDiffLLAVFluxReconstructionNS::setup()
   m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
   
   m_updateToSolutionVecTrans->setup(2);
+  
+  m_tempSolVarState.resize(m_nbrEqs);
+  m_tempSolVarState2.resize(m_nbrEqs);
   
   m_tempGradTerm.resize(m_nbrEqs,m_nbrSolPnts);
   

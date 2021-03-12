@@ -241,7 +241,6 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.01),0.99);
     //const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.0),1.0);
 
-    const CFreal avAlpha    = std::max(m_solPhysData[iKPD+3],0.0);
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
     const CFreal u = m_solPhysData[EulerTerm::VX];
     const CFreal v = m_solPhysData[EulerTerm::VY];
@@ -276,6 +275,10 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal muInfLocal = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iSol]));
     
     (*((*m_cellStates)[iSol]))[4] = TLocal;
+    
+    const CFreal alphaMin = rhoInfLocal*uInfLocal*uInfLocal*0.2247/(std::sqrt(rhoInfLocal*muInfLocal*(1.0+0.38*pow(MInfLocal,0.6)))*4900.0);
+    
+    const CFreal avAlpha    = std::max(m_solPhysData[iKPD+3],alphaMin);    
     
     CFreal ReThetat;
 
@@ -663,7 +666,14 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
     
     if ( fabs(ReThetat0-ReThetat1) < resReThetat || iter == MAXITER-1) 
     { 
-      if (iter == MAXITER-1) CFLog(INFO, "Max iter thetat reached!\n");
+      if (iter == MAXITER-1) CFLog(INFO, "Max iter thetat reached!, Re0: " << ReThetat0 << ", Re1: " << ReThetat1 << ", mainF: " << mainF << ", derivF: " << mainFprime << ", alpha: " << avAlpha << "\n");
+          
+      break;
+    }
+    
+    if (ReThetat0 != ReThetat0 || ReThetat1 != ReThetat1) 
+    { 
+      CFLog(INFO, "Nan detected!, Re0: " << ReThetat0 << ", Re1: " << ReThetat1 << ", mainF: " << mainF << ", derivF: " << mainFprime << ", alpha: " << avAlpha << "\n");
           
       break;
     }
