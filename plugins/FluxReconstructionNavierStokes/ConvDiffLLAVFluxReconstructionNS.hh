@@ -147,9 +147,6 @@ protected: // data
   /// damping coefficient
   CFreal m_dampCoeffDiff;
   
-  /// Vector transformer from update to solution variables
-  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-  
   /// physical model
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
   

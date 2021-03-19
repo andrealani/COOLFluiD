@@ -109,7 +109,8 @@ ConvDiffLLAVJacobFluxReconstruction::ConvDiffLLAVJacobFluxReconstruction(const s
   m_llavFluxJacobian(),
   m_llavRiemannFluxJacobian(),
   m_dampCoeffDiff(),
-  m_contFlxWoLLAV()
+  m_contFlxWoLLAV(),
+  m_updateToSolutionVecTrans(CFNULL)
   {
     addConfigOptionsTo(this);
     
@@ -3503,6 +3504,10 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
   
   // get cell-node connectivity
   m_cellNodesConn = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
+  
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  
+  m_updateToSolutionVecTrans->setup(2);
   
   // get the local spectral FD data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();

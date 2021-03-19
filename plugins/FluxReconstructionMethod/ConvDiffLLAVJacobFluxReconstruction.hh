@@ -457,6 +457,9 @@ protected: //data
   /// relaxation factor of LLAV corr fct
   CFreal m_LLAVRelax;
   
+  /// Vector transformer from update to solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
   
   private:
 

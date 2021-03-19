@@ -161,9 +161,6 @@ protected: // data
   /// extra element states of the cell in the correct format
   std::vector< RealVector* > m_tempStatesCell;
   
-  /// Vector transformer from update to solution variables
-  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-  
   /// physical model
   Common::SafePtr<Physics::NavierStokes::EulerVarSet> m_eulerVarSet;
   
@@ -193,6 +190,10 @@ protected: // data
   
   /// perturbed grad vars
   RealVector m_pertGradVars;
+  
+  RealVector m_tempSolVarState;
+  
+  RealVector m_tempSolVarState2;
   
   private:
 

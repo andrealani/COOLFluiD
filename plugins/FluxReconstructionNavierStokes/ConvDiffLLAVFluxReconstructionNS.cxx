@@ -768,10 +768,6 @@ void ConvDiffLLAVFluxReconstructionNS::setup()
   // get the diffusive varset
   m_diffusiveVarSetNS = (getMethodData().getDiffusiveVar()).d_castTo< NavierStokesVarSet >();
   
-  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
-  
-  m_updateToSolutionVecTrans->setup(2);
-  
   m_tempSolVarState.resize(m_nbrEqs);
   m_tempSolVarState2.resize(m_nbrEqs);
   
