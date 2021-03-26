@@ -68,9 +68,7 @@ ConvDiffLLAVJacobFluxReconstructionNS::ConvDiffLLAVJacobFluxReconstructionNS(con
   m_tempGradTermJacob2(),
   m_tempStatesJacob2(),
   m_unpertGradVars(),
-  m_pertGradVars(),
-  m_tempSolVarState(),
-  m_tempSolVarState2()
+  m_pertGradVars()
 {
 }
 
@@ -1223,9 +1221,6 @@ void ConvDiffLLAVJacobFluxReconstructionNS::setup()
   m_tempGradTerm.resize(m_nbrEqs,m_nbrSolPnts);
   m_tempGradTermJacob.resize(m_nbrEqs,1);
   m_tempGradTermJacob2.resize(m_nbrEqs,1);
-
-  m_tempSolVarState.resize(m_nbrEqs);
-  m_tempSolVarState2.resize(m_nbrEqs);
   
   m_tempGradTermL.resize(m_nbrEqs,m_nbrFaceFlxPnts);
   m_tempGradTermR.resize(m_nbrEqs,m_nbrFaceFlxPnts);

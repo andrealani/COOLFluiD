@@ -104,12 +104,12 @@ protected: //functions
   /**
    * compute the contribution of the diffusive face term to both Jacobians
    */
-  void computeBothJacobsDiffFaceTerm();
+  virtual void computeBothJacobsDiffFaceTerm();
 
   /**
    * compute the contribution of the diffusive face term to one Jacobians
    */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
+  virtual void computeOneJacobDiffFaceTerm(const CFuint side);
   
   /**
    * Compute the projected states on order P-1
@@ -459,6 +459,10 @@ protected: //data
   
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+  
+  RealVector m_tempSolVarState;
+  
+  RealVector m_tempSolVarState2;
   
   
   private:

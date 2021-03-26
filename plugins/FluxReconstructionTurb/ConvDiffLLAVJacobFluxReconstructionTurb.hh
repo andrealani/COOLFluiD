@@ -83,6 +83,16 @@ protected: //functions
   /// compute the flux to gradient jacobian numerically
   virtual void computeFluxToGradJacobianNum(const CFreal resFactor);
   
+  /**
+   * compute the contribution of the diffusive face term to both Jacobians
+   */
+  virtual void computeBothJacobsDiffFaceTerm();
+
+  /**
+   * compute the contribution of the diffusive face term to one Jacobians
+   */
+  virtual void computeOneJacobDiffFaceTerm(const CFuint side);
+  
 protected: // data
 
   /// handle to the wall distance

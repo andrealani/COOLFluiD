@@ -191,10 +191,6 @@ protected: // data
   /// perturbed grad vars
   RealVector m_pertGradVars;
   
-  RealVector m_tempSolVarState;
-  
-  RealVector m_tempSolVarState2;
-  
   private:
 
   /// Physical data temporary vector
