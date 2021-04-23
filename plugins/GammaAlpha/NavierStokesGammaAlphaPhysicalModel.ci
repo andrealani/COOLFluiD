@@ -49,8 +49,8 @@ template <int DIM>
 std::string NavierStokesGammaAlphaPhysicalModel<DIM>::getConvectiveName() const
 {
   if (DIM == 2) return "Euler2DGammaAlpha";
-  //cf_assert (DIM == 3);
-  //return "Euler3DGammaAlpha";
+  cf_assert (DIM == 3);
+  return "Euler3DGammaAlpha";
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -41,6 +41,10 @@ EulerKOmegaVarSet.hh
 EulerKLogOmegaVarSet.ci
 EulerKLogOmegaVarSet.cxx
 EulerKLogOmegaVarSet.hh
+Euler3DKLogOmegaConsToPuvtInPuvt.cxx
+Euler3DKLogOmegaConsToPuvtInPuvt.hh
+Euler3DKLogOmegaPuvtToCons.cxx
+Euler3DKLogOmegaPuvtToCons.hh
 KOmega.hh
 KOmegaReactionTerm.ci
 KOmegaReactionTerm.hh

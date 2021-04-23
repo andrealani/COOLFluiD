@@ -28,7 +28,7 @@ ns2DKLogOmegaPuvtProvider("NavierStokes2DKLogOmegaPuvt");
 
 Environment::ObjectProvider<NavierStokesKLogOmegaPvt<NavierStokesKLogOmegaVarSet<NavierStokes3DVarSet, 0> >, DiffusiveVarSet,
 			    KOmegaModule, 2>
-ns3DKLogOmegaPvtProvider("NavierStokes3DKLogOmegaPuvt"); // change this to Pvt
+ns3DKLogOmegaPvtProvider("NavierStokes3DKLogOmegaPvt"); // change this to Pvt
 
 Environment::ObjectProvider<NavierStokesKLogOmegaPvt<NavierStokesKLogOmegaBSLVarSet<NavierStokes2DVarSet, 0> >, DiffusiveVarSet,
 			    KOmegaModule, 2>
@@ -36,7 +36,7 @@ ns2DKLogOmegaBSLPuvtProvider("NavierStokes2DKLogOmegaBSLPuvt");
 
 Environment::ObjectProvider<NavierStokesKLogOmegaPvt<NavierStokesKLogOmegaBSLVarSet<NavierStokes3DVarSet, 0> >, DiffusiveVarSet,
 			    KOmegaModule, 2>
-ns3DKLogOmegaBSLPvtProvider("NavierStokes3DKLogOmegaBSLPuvt"); // change this to Pvt
+ns3DKLogOmegaBSLPvtProvider("NavierStokes3DKLogOmegaBSLPvt"); // change this to Pvt
       
 Environment::ObjectProvider<NavierStokesKLogOmegaPvt<NavierStokesKLogOmegaSSTVarSet<NavierStokes2DVarSet, 0> >, DiffusiveVarSet,
 			    KOmegaModule, 2>
@@ -44,7 +44,7 @@ ns2DKLogOmegaSSTPuvtProvider("NavierStokes2DKLogOmegaSSTPuvt");
 
 Environment::ObjectProvider<NavierStokesKLogOmegaPvt<NavierStokesKLogOmegaSSTVarSet<NavierStokes3DVarSet, 0> >, DiffusiveVarSet,
 			    KOmegaModule, 2>
-ns3DKLogOmegaSSTPvtProvider("NavierStokes3DKLogOmegaSSTPuvt"); // change this to Pvt
+ns3DKLogOmegaSSTPvtProvider("NavierStokes3DKLogOmegaSSTPvt"); // change this to Pvt
       
 //////////////////////////////////////////////////////////////////////////////
 

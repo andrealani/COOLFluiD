@@ -22,9 +22,9 @@ Environment::ObjectProvider<NavierStokesGammaAlphaPhysicalModel<DIM_2D>,
 	       PhysicalModelImpl, GammaAlphaModule, 1>
 navierStokes2DGammaAlphaProvider("NavierStokes2DGammaAlpha");
 
-//Environment::ObjectProvider<NavierStokesGammaAlphaPhysicalModel<DIM_3D>, 
-//	       PhysicalModelImpl, GammaAlphaModule, 1>
-//navierStokes3DGammaAlphaProvider("NavierStokes3DGammaAlpha");
+Environment::ObjectProvider<NavierStokesGammaAlphaPhysicalModel<DIM_3D>, 
+	       PhysicalModelImpl, GammaAlphaModule, 1>
+navierStokes3DGammaAlphaProvider("NavierStokes3DGammaAlpha");
 
 //////////////////////////////////////////////////////////////////////////////
 

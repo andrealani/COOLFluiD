@@ -61,12 +61,32 @@ CFreal NavierStokesKLogOmegaSSTVarSet<BASE, SGROUP>::getTurbDynViscosityFromGrad
 //			sq((*(gradients[this->_vID]))[XX] - (*(gradients[this->_uID]))[YY]) );
 //    }
     
+    CFreal strain = 0.0;
+    
     const CFreal gradU_X = (*(gradients[1]))[XX];
     const CFreal gradU_Y = (*(gradients[1]))[YY];
     const CFreal gradV_X = (*(gradients[2]))[XX];
     const CFreal gradV_Y = (*(gradients[2]))[YY];
-    const CFreal gradSum = (gradU_Y + gradV_X);
-    const CFreal strain = std::sqrt(2.*(gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y));
+    
+    if (Framework::PhysicalModelStack::getActive()->getDim() == 2)
+    {
+      const CFreal gradSum = (gradU_Y + gradV_X);
+      strain = std::sqrt(2.*(gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y));
+    }
+    else
+    {
+      const CFreal gradU_Z = (*(gradients[1]))[ZZ];
+      const CFreal gradV_Z = (*(gradients[2]))[ZZ];
+      const CFreal gradW_X = (*(gradients[3]))[XX];
+      const CFreal gradW_Y = (*(gradients[3]))[YY];
+      const CFreal gradW_Z = (*(gradients[3]))[ZZ];
+      
+      const CFreal gradSumXY = (gradU_Y + gradV_X);
+      const CFreal gradSumXZ = (gradU_Z + gradW_X);
+      const CFreal gradSumYZ = (gradW_Y + gradV_Z);
+      
+      strain = std::sqrt(2.*(gradU_X*gradU_X + gradV_Y*gradV_Y + gradW_Z*gradW_Z) + gradSumXY*gradSumXY + gradSumXZ*gradSumXZ + gradSumYZ*gradSumYZ);
+    }
     
     const CFreal mu = this->getLaminarDynViscosityFromGradientVars(state);
     
