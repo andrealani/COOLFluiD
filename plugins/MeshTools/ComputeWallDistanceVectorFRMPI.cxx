@@ -150,7 +150,7 @@ void ComputeWallDistanceVectorFRMPI::execute()
   const CFuint nbFaceFlxPnts = flxLocalCoords->size();
   
   // AL: gory fix to use centroid-based algorithm 
-  if (dim == DIM_3D) {execute3D(); return;}
+  //if (dim == DIM_3D) {execute3D(); return;}
   
   CFLog(INFO, "ComputeWallDistanceVectorFRMPI::execute() => Computing distance to the wall ...\n");
   

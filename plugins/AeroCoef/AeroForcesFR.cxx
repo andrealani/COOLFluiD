@@ -1019,7 +1019,8 @@ void AeroForcesFR::computeSurfaceResiduals()
     m_valuesMatL2 = m_l2Norm;
 #endif
     for (CFuint varID = 0; varID < m_valuesMatL2.size(); ++varID) {
-      m_valuesMatL2[varID] = (std::abs(m_valuesMatL2[varID]) > 1e-16) ? std::log(std::sqrt(m_valuesMatL2[varID])) : 1e-16;
+      //m_valuesMatL2[varID] = (std::abs(m_valuesMatL2[varID]) > 1e-16) ? std::log(std::sqrt(m_valuesMatL2[varID])) : 1e-16;
+      m_valuesMatL2[varID] = std::log(std::sqrt(m_valuesMatL2[varID]));
     }
     writeFile = true;
   }
