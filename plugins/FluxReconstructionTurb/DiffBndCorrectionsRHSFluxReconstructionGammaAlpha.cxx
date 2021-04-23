@@ -100,8 +100,33 @@ void DiffBndCorrectionsRHSFluxReconstructionGammaAlpha::computeFlxPntStates()
     
     const CFreal muTot = navierStokesVarSet->getDynViscosity(*(m_cellStatesFlxPnt[iFlxPnt]), m_cellGradFlxPnt[iFlxPnt]);
     
-    const CFreal tau = muTot*(m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][1]),m_unitNormalFlxPnts[iFlxPnt]) -
-                       m_unitNormalFlxPnts[iFlxPnt][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]));
+    CFreal tau = 0.0;
+    
+    if (m_dim == 2)
+    {
+      tau = muTot*(m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][1]),m_unitNormalFlxPnts[iFlxPnt]) -
+            m_unitNormalFlxPnts[iFlxPnt][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]));
+    }
+    else if (fabs(m_unitNormalFlxPnts[iFlxPnt][ZZ]) <= fabs(m_unitNormalFlxPnts[iFlxPnt][XX]))
+    {
+      const CFreal tauT1 = muTot*(m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][1]),m_unitNormalFlxPnts[iFlxPnt]) -
+                           m_unitNormalFlxPnts[iFlxPnt][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]));
+      
+      const CFreal tauT2 = muTot*(m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][1]),m_unitNormalFlxPnts[iFlxPnt]) +
+                           m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]) - 
+                           (m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][XX]+m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][YY])*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][3]),m_unitNormalFlxPnts[iFlxPnt]));
+      tau = sqrt(tauT1*tauT1+tauT2*tauT2);
+    }
+    else
+    {
+      const CFreal tauT1 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]) +
+                           m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][3]),m_unitNormalFlxPnts[iFlxPnt]));
+      
+      const CFreal tauT2 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][2]),m_unitNormalFlxPnts[iFlxPnt]) -
+                           m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][3]),m_unitNormalFlxPnts[iFlxPnt]) + 
+                           (m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][YY]+m_unitNormalFlxPnts[iFlxPnt][ZZ]*m_unitNormalFlxPnts[iFlxPnt][ZZ])*MathFunctions::innerProd(*(m_cellGradFlxPnt[iFlxPnt][1]),m_unitNormalFlxPnts[iFlxPnt]));
+      tau = sqrt(tauT1*tauT1+tauT2*tauT2);
+    }
     
     const CFreal tauCrit = tau/sqrt(rho*muTot);
     

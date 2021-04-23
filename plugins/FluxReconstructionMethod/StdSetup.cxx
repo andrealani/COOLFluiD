@@ -159,7 +159,7 @@ void StdSetup::execute()
         gradients[iState][iGrad].resize(dim);
       }
     }
-    
+
     // get datahandle
     DataHandle< std::vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
 
@@ -183,19 +183,20 @@ void StdSetup::execute()
 
     // initialize the positivity preservation values
     DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
-    
+
     posPrev.resize(nbrElems);
   }
   
   // CREATE ADDITIONAL MESH DATASTRUCTURE
+
+  // Set the coordinates of the states
+  setStateCoords();
+  
   // compute the cell volumes if necessary (actually, the Jacobian determinants in the states are put in the volumes socket)
   if (getMethodData().createVolumesSocket())
   {
     computeStatesVolumes();
   }
-  
-  // Set the coordinates of the states
-  setStateCoords();
 
   // get the start indexes of the range of faces with a certain orientation
   createFaceOrientationStartIndexes();
@@ -205,7 +206,7 @@ void StdSetup::execute()
 
   // set the boundary condition type of the boundary faces
   setBndFacesBCType();
-    
+
   CFLog(VERBOSE, "StdSetup::execute() => END\n");
 }
 
@@ -275,11 +276,12 @@ void StdSetup::computeStatesVolumes()
       for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
       {
         const CFuint solID = (*states)[iSol]->getLocalID();
+
         if (jacobDet[iSol] < 0.0)
         {
-          const std::string message = "Negative Jacobian determinant (" + StringOps::to_str(jacobDet[iSol]) +
-                                   ") in cell with ID " + StringOps::to_str(elemIdx);
-          throw BadFormatException (FromHere(),message);
+          CFLog(INFO, "NEGATIVE JACOBIAN DETERMINANT FOUND: " << jacobDet[iSol] << ", in solID: " << solID << ", in coordinates: " << (*states)[iSol]->getCoordinates() << "\n");
+          //const std::string message = "Negative Jacobian determinant (" + StringOps::to_str(jacobDet[iSol]) + ") in cell with ID " + StringOps::to_str(elemIdx);
+          //throw BadFormatException (FromHere(),message);
         }
         volumes[solID] = jacobDet[iSol];
       }

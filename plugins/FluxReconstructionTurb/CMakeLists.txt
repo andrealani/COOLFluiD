@@ -13,6 +13,8 @@ KOmega2DSourceTerm.hh
 KOmega2DSourceTerm.cxx
 KLogOmega2DSourceTerm.hh
 KLogOmega2DSourceTerm.cxx
+KLogOmega3DSourceTerm.hh
+KLogOmega3DSourceTerm.cxx
 ConvDiffJacobFluxReconstructionTurb.hh
 ConvDiffJacobFluxReconstructionTurb.cxx
 ConvDiffLLAVFluxReconstructionTurb.hh
@@ -41,6 +43,8 @@ LIST ( APPEND FluxReconstructionGammaAlpha_files
 FluxReconstructionGammaAlpha.hh
 GammaAlpha2DSourceTerm.hh
 GammaAlpha2DSourceTerm.cxx
+GammaAlpha3DSourceTerm.hh
+GammaAlpha3DSourceTerm.cxx
 DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha.hh
 DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha.cxx
 DiffBndCorrectionsRHSFluxReconstructionGammaAlpha.hh

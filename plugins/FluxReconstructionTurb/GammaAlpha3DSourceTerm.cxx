@@ -1,11 +1,11 @@
-#include "FluxReconstructionTurb/GammaAlpha2DSourceTerm.hh"
+#include "FluxReconstructionTurb/GammaAlpha3DSourceTerm.hh"
 #include "Common/CFLog.hh"
 #include "Framework/GeometricEntity.hh"
 #include "Framework/MeshData.hh"
 #include "FluxReconstructionTurb/FluxReconstructionKOmega.hh"
 #include "Framework/SubSystemStatus.hh"
-#include "FluxReconstructionTurb/KLogOmega2DSourceTerm.hh"
-#include "GammaAlpha/NavierStokes2DGammaAlphaPuvt.hh"
+#include "FluxReconstructionTurb/KLogOmega3DSourceTerm.hh"
+#include "GammaAlpha/NavierStokes3DGammaAlphaPuvt.hh"
 
 #include "Framework/MethodCommandProvider.hh"
 #include "MathTools/MathConsts.hh"
@@ -30,12 +30,12 @@ namespace COOLFluiD {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<GammaAlpha2DSourceTerm, FluxReconstructionSolverData, FluxReconstructionKOmegaModule>
-GammaAlpha2DSourceTermFRProvider("GammaAlpha2DSourceTerm");
+MethodCommandProvider<GammaAlpha3DSourceTerm, FluxReconstructionSolverData, FluxReconstructionKOmegaModule>
+GammaAlpha3DSourceTermFRProvider("GammaAlpha3DSourceTerm");
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
+void GammaAlpha3DSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
  options.addConfigOption< bool >("PGrad","pressure Gradient");
  options.addConfigOption< bool >("Decouple","Decouple y-ReTheta from k and log(omega), simply solving as fully turbulent.");
@@ -46,8 +46,8 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
-  KLogOmega2DSourceTerm(name),
+GammaAlpha3DSourceTerm::GammaAlpha3DSourceTerm(const std::string& name) :
+  KLogOmega3DSourceTerm(name),
   socket_MInfLocal("MInfLocal"),
   socket_uInfLocal("uInfLocal"),
   socket_TInfLocal("TInfLocal"),
@@ -81,15 +81,15 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-GammaAlpha2DSourceTerm::~GammaAlpha2DSourceTerm()
+GammaAlpha3DSourceTerm::~GammaAlpha3DSourceTerm()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void GammaAlpha2DSourceTerm::setup()
+void GammaAlpha3DSourceTerm::setup()
 {
-  KLogOmega2DSourceTerm::setup();
+  KLogOmega3DSourceTerm::setup();
   
   DataHandle< CFreal > MInfLocal = socket_MInfLocal.getDataHandle();
   
@@ -123,17 +123,17 @@ void GammaAlpha2DSourceTerm::setup()
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void GammaAlpha2DSourceTerm::unsetup()
+void GammaAlpha3DSourceTerm::unsetup()
 {
-  KLogOmega2DSourceTerm::unsetup();
+  KLogOmega3DSourceTerm::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSource > >
-  GammaAlpha2DSourceTerm::providesSockets()
+  GammaAlpha3DSourceTerm::providesSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSource > > result = KLogOmega2DSourceTerm::providesSockets();
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result = KLogOmega3DSourceTerm::providesSockets();
   result.push_back(&socket_MInfLocal);
   result.push_back(&socket_uInfLocal);
   result.push_back(&socket_TInfLocal);
@@ -145,37 +145,55 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSink > >
-GammaAlpha2DSourceTerm::needsSockets()
+GammaAlpha3DSourceTerm::needsSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSink > > result = KLogOmega2DSourceTerm::needsSockets();
+  std::vector< Common::SafePtr< BaseDataSocketSink > > result = KLogOmega3DSourceTerm::needsSockets();
   result.push_back(&socket_updateCoeff);
   return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void  GammaAlpha2DSourceTerm::getStrain(const CFuint iState)
+void  GammaAlpha3DSourceTerm::getStrain(const CFuint iState)
 {
   const CFreal gradU_X = (*(m_cellGrads[iState][1]))[XX];
   const CFreal gradU_Y = (*(m_cellGrads[iState][1]))[YY];
+  const CFreal gradU_Z = (*(m_cellGrads[iState][1]))[ZZ];
   const CFreal gradV_X = (*(m_cellGrads[iState][2]))[XX];
   const CFreal gradV_Y = (*(m_cellGrads[iState][2]))[YY];
-  const CFreal gradSum = (gradU_Y + gradV_X);
-  const CFreal strain = gradU_X*gradU_X + 0.5*gradSum*gradSum + gradV_Y*gradV_Y + m_vOverRadius*m_vOverRadius ;
-  m_strain = std::sqrt(2.*strain);
+  const CFreal gradV_Z = (*(m_cellGrads[iState][2]))[ZZ];
+  const CFreal gradW_X = (*(m_cellGrads[iState][3]))[XX];
+  const CFreal gradW_Y = (*(m_cellGrads[iState][3]))[YY];
+  const CFreal gradW_Z = (*(m_cellGrads[iState][3]))[ZZ];
+      
+  const CFreal gradSumXY = (gradU_Y + gradV_X);
+  const CFreal gradSumXZ = (gradU_Z + gradW_X);
+  const CFreal gradSumYZ = (gradW_Y + gradV_Z);
+     
+  m_strain = std::sqrt(2.*(gradU_X*gradU_X + gradV_Y*gradV_Y + gradW_Z*gradW_Z) + gradSumXY*gradSumXY + gradSumXZ*gradSumXZ + gradSumYZ*gradSumYZ);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void  GammaAlpha2DSourceTerm::getVorticity(const CFuint iState)
+void  GammaAlpha3DSourceTerm::getVorticity(const CFuint iState)
 {
-  const CFreal Vorticity1 = (*(m_cellGrads[iState][2]))[XX] - (*(m_cellGrads[iState][1]))[YY];
-  m_vorticity = fabs(Vorticity1);
+  const CFreal gradU_Y = (*(m_cellGrads[iState][1]))[YY];
+  const CFreal gradU_Z = (*(m_cellGrads[iState][1]))[ZZ];
+  const CFreal gradV_X = (*(m_cellGrads[iState][2]))[XX];
+  const CFreal gradV_Z = (*(m_cellGrads[iState][2]))[ZZ];
+  const CFreal gradW_X = (*(m_cellGrads[iState][3]))[XX];
+  const CFreal gradW_Y = (*(m_cellGrads[iState][3]))[YY];
+  
+  const CFreal gradDiffXY = (gradU_Y - gradV_X);
+  const CFreal gradDiffXZ = (gradU_Z - gradW_X);
+  const CFreal gradDiffYZ = (gradW_Y - gradV_Z);
+  
+  m_vorticity = sqrt(gradDiffXY*gradDiffXY+gradDiffXZ*gradDiffXZ+gradDiffYZ*gradDiffYZ);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
+void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
 {       
   const CFuint kID = (*m_cellStates)[0]->size() - 4;
   const CFuint omegaID = kID + 1;
@@ -184,7 +202,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
 
   const CFuint iKPD = m_eulerVarSet->getModel()->getFirstScalarVar(0);
       
-  SafePtr< NavierStokes2DGammaAlphaPuvt > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DGammaAlphaPuvt >();
+  SafePtr< NavierStokes3DGammaAlphaPuvt > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes3DGammaAlphaPuvt >();
    
   // get the gradients datahandle
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
@@ -244,8 +262,10 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
     const CFreal u = m_solPhysData[EulerTerm::VX];
     const CFreal v = m_solPhysData[EulerTerm::VY];
+    const CFreal w = m_solPhysData[EulerTerm::VZ];
     const CFreal dpx = (*(m_cellGrads[iSol][0]))[XX];
     const CFreal dpy = (*(m_cellGrads[iSol][0]))[YY];
+    const CFreal dpz = (*(m_cellGrads[iSol][0]))[ZZ];
     
     // compute local freestream values with isentropic assumption
     const CFreal MInf = m_eulerVarSet->getModel()->getMachInf();
@@ -269,12 +289,12 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     if (!(Tu >= 0.0)) CFLog(INFO, "Tu problem, k: " << avK << ", V: " << avV << "\n");
     
-    const CFreal TLocal = (*((*m_cellStates)[iSol]))[3];
-    (*((*m_cellStates)[iSol]))[3] = TInfLocal;
+    const CFreal TLocal = (*((*m_cellStates)[iSol]))[4];
+    (*((*m_cellStates)[iSol]))[4] = TInfLocal;
     
     const CFreal muInfLocal = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iSol]));
     
-    (*((*m_cellStates)[iSol]))[3] = TLocal;
+    (*((*m_cellStates)[iSol]))[4] = TLocal;
     
     const CFreal alphaMin = rhoInfLocal*uInfLocal*uInfLocal*0.2247/(std::sqrt(rhoInfLocal*muInfLocal*(1.0+0.38*pow(MInfLocal,0.6)))*4900.0);
     
@@ -288,7 +308,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     }
     else
     {
-      ReThetat = getRethetatwithPressureGradient(avAlpha,rhoInfLocal,uInfLocal,muInfLocal,mu,rho,dpx,dpy);
+      ReThetat = getRethetatwithPressureGradient(avAlpha,rhoInfLocal,uInfLocal,muInfLocal,mu,rho,dpx,dpy,dpz);
     }
 
     const CFreal TuInfLocal = getTuInfLocal(ReThetat,MInfLocal,Tu);
@@ -312,37 +332,45 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFuint uID = 1;//getStateVelocityIDs()[XX];
     const CFuint vID = 2;//getStateVelocityIDs()[YY];
     const CFreal dux = (*(m_cellGrads[iSol][uID]))[XX];
-    const CFreal duy = (*(m_cellGrads[iSol][uID]))[YY]; 
+    const CFreal duy = (*(m_cellGrads[iSol][uID]))[YY];
+    const CFreal duz = (*(m_cellGrads[iSol][uID]))[ZZ];
     const CFreal dvx = (*(m_cellGrads[iSol][vID]))[XX]; 
     const CFreal dvy = (*(m_cellGrads[iSol][vID]))[YY]; 
-    const CFreal dgammax = (*(m_cellGrads[iSol][6]))[XX];
-    const CFreal dgammay = (*(m_cellGrads[iSol][6]))[YY];
-    const CFreal dax = (*(m_cellGrads[iSol][7]))[XX];
-    const CFreal day = (*(m_cellGrads[iSol][7]))[YY];
-    const CFreal dkx = (*(m_cellGrads[iSol][4]))[XX];
-    const CFreal dky = (*(m_cellGrads[iSol][4]))[YY];
+    const CFreal dvz = (*(m_cellGrads[iSol][vID]))[ZZ];
+    const CFreal dwx = (*(m_cellGrads[iSol][3]))[XX]; 
+    const CFreal dwy = (*(m_cellGrads[iSol][3]))[YY]; 
+    const CFreal dwz = (*(m_cellGrads[iSol][3]))[ZZ];
+    const CFreal dgammax = (*(m_cellGrads[iSol][7]))[XX];
+    const CFreal dgammay = (*(m_cellGrads[iSol][7]))[YY];
+    const CFreal dgammaz = (*(m_cellGrads[iSol][7]))[ZZ];
+    const CFreal dax = (*(m_cellGrads[iSol][8]))[XX];
+    const CFreal day = (*(m_cellGrads[iSol][8]))[YY];
+    const CFreal daz = (*(m_cellGrads[iSol][8]))[ZZ];
+    const CFreal dkx = (*(m_cellGrads[iSol][5]))[XX];
+    const CFreal dky = (*(m_cellGrads[iSol][5]))[YY];
+    const CFreal dkz = (*(m_cellGrads[iSol][5]))[ZZ];
 
     const CFreal coeffTauMu = navierStokesVarSet->getModel().getCoeffTau();
     const CFreal gammaTerm = avGa+avGa*(1.0-avGa);
     const CFreal twoThirdRhoK = (2./3.)*(avK * rho * gammaTerm);
     
-    if (!m_isSSTV)
+//    if (!m_isSSTV)
+//    {
+//      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
+//			         +(duy+dvx)*(duy+dvx)))
+//                                 -twoThirdRhoK*(dux+dvy+m_vOverRadius);
+//    }
+    if (m_neglectSSTVTerm)
     {
-      m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
-			         +(duy+dvx)*(duy+dvx)))
-                                 -twoThirdRhoK*(dux+dvy+m_vOverRadius);
-    }
-    else if (m_neglectSSTVTerm)
-    {
-      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+      //const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
 
-      m_prodTerm_k = coeffTauMu*mut*vorticity2;  
+      m_prodTerm_k = coeffTauMu*mut*m_vorticity*m_vorticity;  
     }
     else
     {
-      const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
+      //const CFreal vorticity2 = (duy-dvx)*(duy-dvx);
 
-      m_prodTerm_k = coeffTauMu*mut*vorticity2 - twoThirdRhoK*(dux+dvy+m_vOverRadius);  
+      m_prodTerm_k = coeffTauMu*mut*m_vorticity*m_vorticity - twoThirdRhoK*(dux+dvy+dwz);  
     }
   
 //    m_prodTerm_k = coeffTauMu*(mut*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
@@ -363,7 +391,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     }  
   
     ///This is used in (BSL,SST), not for normal kOmeg
-    m_prodTerm_Omega += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iSol][kID]))[XX]*(*(m_cellGrads[iSol][omegaID]))[XX] + (*(m_cellGrads[iSol][kID]))[YY]*(*(m_cellGrads[iSol][omegaID]))[YY]);
+    m_prodTerm_Omega += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iSol][kID]))[XX]*(*(m_cellGrads[iSol][omegaID]))[XX] + (*(m_cellGrads[iSol][kID]))[YY]*(*(m_cellGrads[iSol][omegaID]))[YY] + (*(m_cellGrads[iSol][kID]))[ZZ]*(*(m_cellGrads[iSol][omegaID]))[ZZ]);
   //OmegaProdTerm += (1. - blendingCoefF1) * 2. * rho * overOmega * sigmaOmega2* ((*(m_cellGrads[iState][kID]))[XX]*(*(m_cellGrads[iState][omegaID]))[XX] + (*(m_cellGrads[iState][kID]))[YY]*(*(m_cellGrads[iState][omegaID]))[YY]);
     //MathFunctions::innerProd(*(m_cellGrads[iState][kID]), *(m_cellGrads[iState][omegaID]));
 //  OmegaProdTerm *= _Radius; 
@@ -371,7 +399,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal coeffTauMu1 = coeffTauMu*mu;
     const CFreal coeffTauMu3 = coeffTauMu*mut*navierStokesVarSet->getSigmaOmega();//(blendingCoefF1 * navierStokesVarSet->getSigmaOmega1() + (1.0-blendingCoefF1)*sigmaOmega2);
   
-    m_prodTerm_Omega += (coeffTauMu1 + coeffTauMu3)*((*(m_cellGrads[iSol][omegaID]))[XX]*(*(m_cellGrads[iSol][omegaID]))[XX] + (*(m_cellGrads[iSol][omegaID]))[YY]*(*(m_cellGrads[iSol][omegaID]))[YY]);
+    m_prodTerm_Omega += (coeffTauMu1 + coeffTauMu3)*((*(m_cellGrads[iSol][omegaID]))[XX]*(*(m_cellGrads[iSol][omegaID]))[XX] + (*(m_cellGrads[iSol][omegaID]))[YY]*(*(m_cellGrads[iSol][omegaID]))[YY] + (*(m_cellGrads[iSol][omegaID]))[ZZ]*(*(m_cellGrads[iSol][omegaID]))[ZZ]);
   
     //Make sure negative values dont propagate...
     m_prodTerm_k            = std::max(0., m_prodTerm_k);
@@ -399,7 +427,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     CFreal lambda = 0.0;
 
-    CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+    CFreal dpds = 1.0/avV*(u*dpx + v*dpy + w*dpz);
     
     if (m_PGrad)
     {
@@ -444,8 +472,73 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
     const CFreal muGamma = 0.57*pow(-log(1.0-avGa),-5.0/6.0*(1.0-avGa))*fMuGamma*fMMuGamma*mu;
     
-    const CFreal dudn = -1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
-    const CFreal dgammadn = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+    //const CFreal dudn = -1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
+    //CFreal dgammadn = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+    
+    const CFreal overVel = 1.0/avV;
+    const CFreal dVeldx = overVel*(u*dux+v*dvx+w*dwx);
+    const CFreal dVeldy = overVel*(u*duy+v*dvy+w*dwy);
+    const CFreal dVeldz = overVel*(u*duz+v*dvz+w*dwz);
+    
+    CFreal dVeldnx;
+    CFreal dVeldny;
+    CFreal dVeldnz;
+    CFreal dVeldnSize;
+    
+    if (fabs(w) <= fabs(u))
+    {
+        const CFreal dVeldn1 = overVel*(dVeldx*v-u*dVeldy);
+        
+        const CFreal dVeldn2 = overVel*(dVeldx*w*u+v*w*dVeldy-(u*u+v*v)*dVeldz);
+        
+        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
+        
+        dVeldnx = overVel*(dVeldn1*v+dVeldn2*u*w)/dVeldnSize;
+        
+        dVeldny = overVel*(-dVeldn1*u+dVeldn2*v*w)/dVeldnSize;
+        
+        dVeldnz = overVel*(-dVeldn2*(u*u+v*v))/dVeldnSize;
+        
+//      const CFreal dgammadn1 = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+//      
+//      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
+//      
+//      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
+    }
+    else
+    {
+        const CFreal dVeldn1 = overVel*(-dVeldy*w+v*dVeldz);
+        
+        const CFreal dVeldn2 = overVel*(-dVeldy*v*u-u*w*dVeldz+(w*w+v*v)*dVeldx);
+        
+        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
+        
+        dVeldnx = overVel*(dVeldn2*(w*w+v*v))/dVeldnSize;
+        
+        dVeldny = overVel*(-dVeldn1*w-dVeldn2*v*u)/dVeldnSize;
+        
+        dVeldnz = overVel*(dVeldn1*v-dVeldn2*u*w)/dVeldnSize;
+        
+//      const CFreal dgammadn1 = 1.0/avV*(-w*dgammax - u*dgammay);//-dgammay; //
+//      
+//      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
+//      
+//      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
+//      
+//      const CFreal tauT1 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) +
+//                           m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]));
+//      
+//      const CFreal tauT2 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) -
+//                           m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]) + 
+//                           (m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][YY]+m_unitNormalFlxPnts[iFlxPnt][ZZ]*m_unitNormalFlxPnts[iFlxPnt][ZZ])*MathFunctions::innerProd(m_uGrad,m_unitNormalFlxPnts[iFlxPnt]));
+//      tau = sqrt(tauT1*tauT1+tauT2*tauT2);
+    }
+    
+    const CFreal dudn = -dVeldnSize;//1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
+    
+    const CFreal dgammadn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dgammax + dVeldny*dgammay + dVeldnz*dgammaz);//-dgammay; //
+    
+    
     
     CFreal  destructionTerm_Ga  = (-1.0) * cEg/0.57 * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
@@ -453,7 +546,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     //destructionTerm_Ga = min(0.0,destructionTerm_Ga);
     
-    destructionTerm_Ga = max(-17.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+    destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.03;
@@ -463,7 +556,8 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     const CFreal t = (500.0 * mu )/(rho * avV * avV);
     
-    const CFreal dkdn = 1.0/avV*(v*dkx - u*dky);//-dky; //    
+    //const CFreal dkdn = 1.0/avV*(v*dkx - u*dky);//-dky; // 
+    const CFreal dkdn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dkx + dVeldny*dky + dVeldnz*dkz);
     
     const CFreal  Rew         = (rho * m_currWallDist[iSol] * m_currWallDist[iSol] * avOmega)/(mu);   
     const CFreal  Fwake1      = (1.0e-5 * Rew)*(1.0e-5 * Rew);   
@@ -487,7 +581,8 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
 
     // compute destruction term of alpha
     const CFreal cna = 0.4;
-    const CFreal dadn = 1.0/avV*(v*dax - u*day);
+    //const CFreal dadn = 1.0/avV*(v*dax - u*day);
+    const CFreal dadn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dax + dVeldny*day + dVeldnz*daz);
     
     CFreal destructionTerm_alpha = -1.0*cna*rho*avV*dadn;
     
@@ -514,44 +609,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       resUpdates[m_nbrEqs*iSol + gammaID] += destructionTerm_Ga;
     }
     
-    resUpdates[m_nbrEqs*iSol + 3] = -m_prodTerm_k - m_destructionTerm_k;
-    
-    if (m_isAxisymmetric)
-    { 
-      const CFreal rhovr = rho*m_vOverRadius;
-      
-      const CFreal divV = dux + dvy;
-      const CFreal lambdaQ = navierStokesVarSet->getThermConductivity(*((*m_cellStates)[iSol]), mu + mut * navierStokesVarSet->getModel().getPrOverPrT());
-      const CFreal coeffTauMuAS = coeffTauMu*(mu+mut);
-      const CFreal tauRX = coeffTauMuAS*(duy + dvx);
-      const CFreal tauRR = coeffTauMuAS*(2.*dvy - 2.0/3.0*(divV + m_vOverRadius));
-      const CFreal tauTT = -coeffTauMuAS*2.0/3.0*(divV - 2.*m_vOverRadius);
-      const CFreal qr = -navierStokesVarSet->getModel().getCoeffQ()*lambdaQ*(*(m_cellGrads[iSol][3]))[YY];
-      
-      //rho
-      resUpdates[m_nbrEqs*iSol + 0] = -rhovr;
-      
-      //rho u
-      resUpdates[m_nbrEqs*iSol + 1] = -rhovr*u + m_overRadius*tauRX;
-      
-      //rho v
-      resUpdates[m_nbrEqs*iSol + 2] = -rhovr*v + m_overRadius*(tauRR - tauTT);
-      
-      //rho e
-      resUpdates[m_nbrEqs*iSol + 3] += -rhovr*m_solPhysData[EulerTerm::H] + m_overRadius*(-qr + tauRX*u + tauRR*v);
-      
-      //rho k
-      resUpdates[m_nbrEqs*iSol + 4] += -rhovr*avK + m_overRadius*(mu+navierStokesVarSet->getSigmaK()*mut)*(*(m_cellGrads[iSol][kID]))[YY];
-      
-      //rho logOmega
-      resUpdates[m_nbrEqs*iSol + 5] += -rhovr*m_solPhysData[iKPD+1] + m_overRadius*(mu+navierStokesVarSet->getSigmaOmega()*mut)*(*(m_cellGrads[iSol][omegaID]))[YY];
-      
-      //rho gamma
-      resUpdates[m_nbrEqs*iSol + 6] += -rhovr*avGa + m_overRadius*muGamma*dgammay;
-      
-      //rho alpha
-      resUpdates[m_nbrEqs*iSol + 7] += -rhovr*avAlpha + m_overRadius*2.0*(mu+mut)*day;
-    }
+    resUpdates[m_nbrEqs*iSol + 4] = -m_prodTerm_k - m_destructionTerm_k;
     
     //if (m_solPhysData[iKPD+2]<0) CFLog(INFO, "ST update: " << resUpdates << "\n");
     
@@ -583,7 +641,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       
       MInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dkdnFactor;//MInfLocal;//destructionTerm_Ga;//prodTerm_Ga;//dudn;//
       
-      uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = 1.0/avV*(u*dpx + v*dpy);//uInfLocal;//muGamma;//destructionTerm_Ga;//dgammadn;//
+      uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = 1.0/avV*(u*dpx + v*dpy + w*dpz);//uInfLocal;//muGamma;//destructionTerm_Ga;//dgammadn;//
       
       TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dpds;//TInfLocal;//dgammadn;//dudn;//prodTerm_alpha;//dadn;//
       
@@ -596,7 +654,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
  
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CFreal GammaAlpha2DSourceTerm::getRethetat(const CFreal Tu, bool prime) 
+CFreal GammaAlpha3DSourceTerm::getRethetat(const CFreal Tu, bool prime) 
 {
    //if (!(Tu >= 0.0)) CFLog(INFO, "Tu problem: " << Tu << "\n");
   //cf_assert(Tu >= 0.0);   
@@ -630,7 +688,7 @@ CFreal GammaAlpha2DSourceTerm::getRethetat(const CFreal Tu, bool prime)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAlpha, const CFreal rhoInfLocal, const CFreal uInfLocal, const CFreal muInfLocal, const CFreal mu, const CFreal rho, const CFreal dpx, const CFreal dpy)
+CFreal GammaAlpha3DSourceTerm::getRethetatwithPressureGradient(const CFreal avAlpha, const CFreal rhoInfLocal, const CFreal uInfLocal, const CFreal muInfLocal, const CFreal mu, const CFreal rho, const CFreal dpx, const CFreal dpy, const CFreal dpz)
 {  
   const CFreal alphaTerm = rhoInfLocal*uInfLocal*uInfLocal/(avAlpha*sqrt(rhoInfLocal*muInfLocal));
   CFreal ReThetat0 = alphaTerm*0.2247141166;
@@ -638,7 +696,8 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
   const CFreal avV = m_solPhysData[EulerTerm::V]; 
   const CFreal u = m_solPhysData[EulerTerm::VX];
   const CFreal v = m_solPhysData[EulerTerm::VY]; 
-  CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+  const CFreal w = m_solPhysData[EulerTerm::VZ];
+  CFreal dpds = 1.0/avV*(u*dpx + v*dpy + w*dpz);
   const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
   const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat0*ReThetat0);
@@ -686,7 +745,7 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CFreal GammaAlpha2DSourceTerm::getTuInfLocal(const CFreal Rethetat, const CFreal MInfLocal, const CFreal TuLocal)
+CFreal GammaAlpha3DSourceTerm::getTuInfLocal(const CFreal Rethetat, const CFreal MInfLocal, const CFreal TuLocal)
 {  
   const CFreal fM = sqrt(1.0+0.38*pow(MInfLocal,0.6));
   CFreal Tu0 = TuLocal;
@@ -721,7 +780,7 @@ CFreal GammaAlpha2DSourceTerm::getTuInfLocal(const CFreal Rethetat, const CFreal
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
+void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
 {
   // reset the jacobian
   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
@@ -729,7 +788,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
     m_stateJacobian[iEq] = 0.0;
   }
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  SafePtr< NavierStokes3DKLogOmega > navierStokesVarSet = m_diffVarSet.d_castTo< NavierStokes3DKLogOmega >();
   
   // Set the wall distance before computing the turbulent viscosity
   navierStokesVarSet->setWallDistance(m_currWallDist[iState]);
@@ -770,6 +829,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal v = (*((*m_cellStates)[iState]))[2];
   const CFreal dpx = (*(m_cellGrads[iState][0]))[XX];
   const CFreal dpy = (*(m_cellGrads[iState][0]))[YY];
+  const CFreal dpz = (*(m_cellGrads[iState][0]))[ZZ];
     
   // compute local freestream values with isentropic assumption
   const CFreal MInf = m_eulerVarSet->getModel()->getMachInf();
@@ -803,7 +863,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   }
   else
   {
-    ReThetat = getRethetatwithPressureGradient(avAlpha,rhoInfLocal,uInfLocal,muInfLocal,mu,rho,dpx,dpy);
+    ReThetat = getRethetatwithPressureGradient(avAlpha,rhoInfLocal,uInfLocal,muInfLocal,mu,rho,dpx,dpy,dpz);
   }
 
   const CFreal TuInfLocal = getTuInfLocal(ReThetat,MInfLocal,Tu);

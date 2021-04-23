@@ -68,6 +68,9 @@ protected: //data
   /// v gradient
   RealVector m_vGrad;
   
+  /// w gradient
+  RealVector m_wGrad;
+  
   /// flux projection vectors in solution points for disc flux
   std::vector< std::vector< RealVector > > m_cellFluxProjVects;
   
