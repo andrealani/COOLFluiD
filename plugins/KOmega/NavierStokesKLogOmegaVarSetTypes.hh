@@ -24,6 +24,9 @@ namespace COOLFluiD {
 typedef NavierStokesKLogOmegaVarSet<NavierStokes::NavierStokes2DVarSet, 0> NavierStokes2DKLogOmega;
  
 typedef NavierStokesKLogOmegaVarSet<NavierStokes::NavierStokes3DVarSet, 0> NavierStokes3DKLogOmega;
+
+typedef NavierStokesKLogOmegaVarSet<NavierStokes::NavierStokesVarSet, 0> NavierStokesKLogOmega;
+
  
       /* typedef NavierStokesKOmegaPvt<NavierStokesKOmegaVarSet
 	 <NavierStokes::NavierStokes2DVarSet, 0> > NavierStokes2DKOmegaPuvt;

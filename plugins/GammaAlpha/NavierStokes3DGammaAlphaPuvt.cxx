@@ -38,7 +38,7 @@ NavierStokes3DGammaAlphaPuvt::NavierStokes3DGammaAlphaPuvt
 {
   const CFuint nbTurbEquations = _eulerModel->getNbScalarVars(0);
   
-  vector<std::string> names(4 + nbTurbEquations);
+  vector<std::string> names(5 + nbTurbEquations);
   names[0] = "p";
   names[1] = "u";
   names[2] = "v";
@@ -72,8 +72,8 @@ RealVector& NavierStokes3DGammaAlphaPuvt::getFlux(const RealVector& values,
 {  
   // compute the flux in the base class
   //RealVector& flux = BASE::getFlux(values, gradients, normal, radius);
-  
-  //setGradientState(state);
+  //CFLog(INFO, "uID: " << _uID << ", vID: " << _vID << ", wID: " << _wID << ", TID: " << _TID << ", kID: " << _kID << "\n");
+  setGradientState(values);
   computeTransportProperties(values, gradients, normal);
   computeStressTensor(values, gradients, radius);
   
@@ -84,6 +84,8 @@ RealVector& NavierStokes3DGammaAlphaPuvt::getFlux(const RealVector& values,
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   _flux.slice(_uID, dim) = _tau*normal;
   _flux[_TID] = MathFunctions::innerProd(_flux.slice(_uID,dim), _gradState.slice(_uID,dim)) - qFlux;
+  
+  //CFLog(INFO, "u v w: " << _gradState.slice(_uID,dim) << "\n");
   
   const RealVector& gradK     = *gradients[5];
   const RealVector& gradOmega = *gradients[6];
@@ -126,7 +128,7 @@ RealVector& NavierStokes3DGammaAlphaPuvt::getFlux(const RealVector& values,
   const CFreal TInfLocal = p/(rhoInfLocal*R);
   
   RealVector copyState = values;
-  copyState[3] = TInfLocal;
+  copyState[4] = TInfLocal;
   
   const CFreal muInfLocal = getLaminarDynViscosityFromGradientVars(copyState);
   

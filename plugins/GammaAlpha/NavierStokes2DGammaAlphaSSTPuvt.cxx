@@ -95,7 +95,7 @@ CFreal NavierStokes2DGammaAlphaSSTPuvt::getTurbDynViscosityFromGradientVars(cons
     mut = (a1 * rho * K )/ std::max(a1*Omega , strain*F2);
     
     // compute effective eddy viscosity
-    const CFreal cmut1 = 0.5;//0.68;//
+    const CFreal cmut1 = 0.5;//0.7;//0.68;//
     const CFreal cmut2 = 0.25;
     const CFreal cmut3 = 0.1;
     mut *= (avGa+avGa*(1.0-avGa)*cmut1*(1.0+tanh((avGa-cmut2)/(cmut3))));

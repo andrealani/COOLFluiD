@@ -19,7 +19,7 @@ namespace COOLFluiD {
 
   /**
    * This class represents a NavierStokes physical model 3D for primitive
-   * variables and Gamma-Alpha trasition model coupled with K-LogOmega turbulence model
+   * variables and Gamma-Alpha transition model coupled with K-LogOmega turbulence model
    *
    * @author Ray Vandenhoeck
    */
