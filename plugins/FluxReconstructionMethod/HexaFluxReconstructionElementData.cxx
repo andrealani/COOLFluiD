@@ -1319,6 +1319,7 @@ void HexaFluxReconstructionElementData::createFlxSolDependencies()
   m_solFlxDep.resize(nbrSolPnts);
   m_solSolDep.resize(nbrSolPnts);
   m_flxSolDep.resize(nbrFlxPnts);
+  m_closestSolToFlxIdx.resize(nbrFlxPnts);
 
   CFuint iSol = 0;
   
@@ -1349,6 +1350,25 @@ void HexaFluxReconstructionElementData::createFlxSolDependencies()
           if (iSol != iZta + jSol*nbrSolPnts1D*nbrSolPnts1D + iEta*nbrSolPnts1D) m_solSolDep[iSol].push_back(iZta + jSol*nbrSolPnts1D*nbrSolPnts1D + iEta*nbrSolPnts1D);
         }
       }
+    }
+  }
+  
+
+  for (CFuint i = 0; i < nbrSolPnts1D; ++i)
+  {
+    for (CFuint j = 0; j < nbrSolPnts1D; ++j)
+    {
+      // face 0 and 1
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D] = j*nbrSolPnts1D+i*nbrSolPnts1D*nbrSolPnts1D; 
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D] = j*nbrSolPnts1D+i*nbrSolPnts1D*nbrSolPnts1D + nbrSolPnts1D-1; 
+      
+      // face 2 and 3
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 2*nbrSolPnts1D*nbrSolPnts1D] = j+i*nbrSolPnts1D; 
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 3*nbrSolPnts1D*nbrSolPnts1D] = j+i*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D*(nbrSolPnts1D-1); 
+        
+      // face 4 and 5
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 4*nbrSolPnts1D*nbrSolPnts1D] = i+j*nbrSolPnts1D*nbrSolPnts1D; 
+      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 5*nbrSolPnts1D*nbrSolPnts1D] = i+j*nbrSolPnts1D*nbrSolPnts1D + nbrSolPnts1D*(nbrSolPnts1D-1); 
     }
   }
 }

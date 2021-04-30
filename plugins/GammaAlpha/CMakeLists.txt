@@ -18,6 +18,8 @@ Euler3DGammaAlphaPuvtToCons.cxx
 Euler3DGammaAlphaPuvtToCons.hh
 Euler3DGammaAlphaPuvt.cxx
 Euler3DGammaAlphaPuvt.hh
+Euler3DGammaAlphaCons.cxx
+Euler3DGammaAlphaCons.hh
 NavierStokes2DGammaAlphaBSLPuvt.cxx
 NavierStokes2DGammaAlphaBSLPuvt.hh
 NavierStokes2DGammaAlphaPuvt.cxx

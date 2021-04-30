@@ -241,12 +241,6 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     navierStokesVarSet->computeBlendingCoefFromGradientVars(*((*m_cellStates)[iSol]), *(m_cellGrads[iSol][kID]), *(m_cellGrads[iSol][omegaID]));
     
-    if (m_isAxisymmetric)
-    {
-      m_overRadius = 1.0/max(((*m_cellStates)[iSol]->getCoordinates())[YY],1.0e-4);
-      m_vOverRadius = m_overRadius*m_solPhysData[EulerTerm::VY];
-    }
-    
     // Get Vorticity
     getVorticity(iSol);
     
@@ -480,65 +474,84 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal dVeldy = overVel*(u*duy+v*dvy+w*dwy);
     const CFreal dVeldz = overVel*(u*duz+v*dvz+w*dwz);
     
+//    const CFreal dVeldx = overVel*(u*dux+v*dvx);
+//    const CFreal dVeldy = overVel*(u*duy+v*dvy);
+//    const CFreal dVeldz = overVel*(u*duz+v*dvz);
+    
     CFreal dVeldnx;
     CFreal dVeldny;
     CFreal dVeldnz;
     CFreal dVeldnSize;
     
-    if (fabs(w) <= fabs(u))
-    {
-        const CFreal dVeldn1 = overVel*(dVeldx*v-u*dVeldy);
+    // temporary solution for cone case, code below based on largest du/dn, i.e. direction for shear vector, should work, but u grads in 3D seem too oscillatory in P1
+    const CFreal xvec = -0.12186934;
+    const CFreal zcurr = ((*m_cellStates)[iSol]->getCoordinates())[ZZ];
+    const CFreal ycurr = ((*m_cellStates)[iSol]->getCoordinates())[YY];
+    const CFreal nsizecurr = 1.0/sqrt(zcurr*zcurr+ycurr*ycurr);
+    const CFreal dVeldn1 = (dVeldy*ycurr*0.99254615+zcurr*dVeldz*0.99254615)*nsizecurr+xvec*dVeldx;
+    dVeldnSize = fabs(dVeldn1);
+    dVeldnx = xvec;
+    dVeldny = ycurr*nsizecurr*0.99254615;//dVeldn1*ycurr*nsizecurr/dVeldnSize;
+    dVeldnz = zcurr*nsizecurr*0.99254615;//dVeldn1*zcurr*nsizecurr/dVeldnSize;
         
-        const CFreal dVeldn2 = overVel*(dVeldx*w*u+v*w*dVeldy-(u*u+v*v)*dVeldz);
-        
-        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
-        
-        dVeldnx = overVel*(dVeldn1*v+dVeldn2*u*w)/dVeldnSize;
-        
-        dVeldny = overVel*(-dVeldn1*u+dVeldn2*v*w)/dVeldnSize;
-        
-        dVeldnz = overVel*(-dVeldn2*(u*u+v*v))/dVeldnSize;
-        
-//      const CFreal dgammadn1 = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
-//      
-//      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
-//      
-//      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
-    }
-    else
-    {
-        const CFreal dVeldn1 = overVel*(-dVeldy*w+v*dVeldz);
-        
-        const CFreal dVeldn2 = overVel*(-dVeldy*v*u-u*w*dVeldz+(w*w+v*v)*dVeldx);
-        
-        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
-        
-        dVeldnx = overVel*(dVeldn2*(w*w+v*v))/dVeldnSize;
-        
-        dVeldny = overVel*(-dVeldn1*w-dVeldn2*v*u)/dVeldnSize;
-        
-        dVeldnz = overVel*(dVeldn1*v-dVeldn2*u*w)/dVeldnSize;
-        
-//      const CFreal dgammadn1 = 1.0/avV*(-w*dgammax - u*dgammay);//-dgammay; //
-//      
-//      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
-//      
-//      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
-//      
-//      const CFreal tauT1 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) +
-//                           m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]));
-//      
-//      const CFreal tauT2 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) -
-//                           m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]) + 
-//                           (m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][YY]+m_unitNormalFlxPnts[iFlxPnt][ZZ]*m_unitNormalFlxPnts[iFlxPnt][ZZ])*MathFunctions::innerProd(m_uGrad,m_unitNormalFlxPnts[iFlxPnt]));
-//      tau = sqrt(tauT1*tauT1+tauT2*tauT2);
-    }
+//    if (fabs(w) <= fabs(u))
+//    {
+//        const CFreal nsize1 = 1.0/sqrt(u*u+v*v);
+//        const CFreal dVeldn1 = (dVeldx*v-u*dVeldy)*nsize1;
+//        
+//        const CFreal nsize2 = 1.0/sqrt(w*u*w*u+v*w*v*w+(u*u+v*v)*(u*u+v*v));
+//        const CFreal dVeldn2 = (dVeldx*w*u+v*w*dVeldy-(u*u+v*v)*dVeldz)*nsize2;
+//        
+//        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
+//        
+//        dVeldnx = (dVeldn1*v*nsize1+dVeldn2*u*w*nsize2)/dVeldnSize;
+//        
+//        dVeldny = (-dVeldn1*u*nsize1+dVeldn2*v*w*nsize2)/dVeldnSize;
+//        
+//        dVeldnz = (-dVeldn2*(u*u+v*v)*nsize2)/dVeldnSize;
+//        
+////      const CFreal dgammadn1 = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+////      
+////      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
+////      
+////      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
+//    }
+//    else
+//    {
+//        const CFreal nsize1 = 1.0/sqrt(w*w+v*v);
+//        const CFreal dVeldn1 = nsize1*(-dVeldy*w+v*dVeldz);
+//        
+//        const CFreal nsize2 = 1.0/sqrt(v*u*v*u+u*w*u*w+(w*w+v*v)*(w*w+v*v));
+//        const CFreal dVeldn2 = nsize2*(-dVeldy*v*u-u*w*dVeldz+(w*w+v*v)*dVeldx);
+//        
+//        dVeldnSize = sqrt(dVeldn1*dVeldn1+dVeldn2*dVeldn2);
+//        
+//        dVeldnx = (dVeldn2*(w*w+v*v)*nsize2)/dVeldnSize;
+//        
+//        dVeldny = (-dVeldn1*w*nsize1-dVeldn2*v*u*nsize2)/dVeldnSize;
+//        
+//        dVeldnz = (dVeldn1*v*nsize1-dVeldn2*u*w*nsize2)/dVeldnSize;
+//        
+////      const CFreal dgammadn1 = 1.0/avV*(-w*dgammax - u*dgammay);//-dgammay; //
+////      
+////      const CFreal dgammadn2 = 1.0/(avV*avV)*(u*w*dgammax + v*w*dgammay - (u*u+v*v)*dgammaz);
+////      
+////      dgammadn = sqrt(dgammadn1*dgammadn1+dgammadn2*dgammadn2);
+////      
+////      const CFreal tauT1 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) +
+////                           m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]));
+////      
+////      const CFreal tauT2 = muTot*(-m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][YY]*MathFunctions::innerProd(m_vGrad,m_unitNormalFlxPnts[iFlxPnt]) -
+////                           m_unitNormalFlxPnts[iFlxPnt][XX]*m_unitNormalFlxPnts[iFlxPnt][ZZ]*MathFunctions::innerProd(m_wGrad,m_unitNormalFlxPnts[iFlxPnt]) + 
+////                           (m_unitNormalFlxPnts[iFlxPnt][YY]*m_unitNormalFlxPnts[iFlxPnt][YY]+m_unitNormalFlxPnts[iFlxPnt][ZZ]*m_unitNormalFlxPnts[iFlxPnt][ZZ])*MathFunctions::innerProd(m_uGrad,m_unitNormalFlxPnts[iFlxPnt]));
+////      tau = sqrt(tauT1*tauT1+tauT2*tauT2);
+//    }
     
     const CFreal dudn = -dVeldnSize;//1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
     
     const CFreal dgammadn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dgammax + dVeldny*dgammay + dVeldnz*dgammaz);//-dgammay; //
     
-    
+    //CFLog(INFO, "nx: " << dVeldnx << ", ny: " << dVeldny << ", nz: " << dVeldnz << ", dudn: " << dudn << ", dgdn: " << dgammadn << "\n");
     
     CFreal  destructionTerm_Ga  = (-1.0) * cEg/0.57 * muGamma * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
@@ -546,7 +559,7 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
     //if (avGa<0.1) destructionTerm_Ga = min(max(-fabs(prodTerm_Ga),destructionTerm_Ga),fabs(prodTerm_Ga));//if (avGa<0.4) destructionTerm_Ga = max(-fabs(prodTerm_Ga),destructionTerm_Ga);
     //destructionTerm_Ga = min(0.0,destructionTerm_Ga);
     
-    destructionTerm_Ga = max(-10.0*fabs(prodTerm_Ga),destructionTerm_Ga);
+    destructionTerm_Ga = max(-17.0*fabs(prodTerm_Ga),destructionTerm_Ga);
     
     // compute production term of alpha
     const CFreal cpa1 = 0.03;
@@ -643,11 +656,11 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
       
       uInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = 1.0/avV*(u*dpx + v*dpy + w*dpz);//uInfLocal;//muGamma;//destructionTerm_Ga;//dgammadn;//
       
-      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dpds;//TInfLocal;//dgammadn;//dudn;//prodTerm_alpha;//dadn;//
+      TInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dVeldnx;//dpds;//TInfLocal;//dgammadn;//dudn;//prodTerm_alpha;//dadn;//
       
-      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = TuInfLocal;//avV/(uInfLocal*uInfLocal);//destructionTerm_alpha;//destructionTerm_Ga;//
+      TuInfLocalSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dVeldny;//TuInfLocal;//avV/(uInfLocal*uInfLocal);//destructionTerm_alpha;//destructionTerm_Ga;//
       
-      alphaDiffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = ((*m_cellStates)[iSol]->getCoordinates())[YY];//m_currWallDist[iSol];//alphac - avAlpha;//dudn;//muGamma;//
+      alphaDiffSocket[(((*m_cellStates)[iSol]))->getLocalID()] = dVeldnz;//((*m_cellStates)[iSol]->getCoordinates())[YY];//m_currWallDist[iSol];//alphac - avAlpha;//dudn;//muGamma;//
     }
   }
 }

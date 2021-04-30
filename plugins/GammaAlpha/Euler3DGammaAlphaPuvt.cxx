@@ -25,7 +25,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<Euler3DGammaAlphaPuvt, ConvectiveVarSet, GammaAlphaModule, 1>
-euler3DGammaAlphaPuvtProvider("Euler3DGammaAlphaPuvt");
+euler3DGammaAlphaPuvtProvider("Euler3DGammaAlphaPvt");
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -128,7 +128,7 @@ void Euler3DGammaAlphaPuvt::computePhysicalData(const State& state,
   data[iK+2] = state[7];
   data[iK+3] = state[8];
 
-
+//CFLog(INFO, "p: " << p << ", Omega: " << Omega << ", Ga: " << Ga << ", alpha: " << Alpha << ", iK: " << iK << ", nbTurbVars: " << getModel()->getNbScalarVars(0) << "\n");
 
 }
 

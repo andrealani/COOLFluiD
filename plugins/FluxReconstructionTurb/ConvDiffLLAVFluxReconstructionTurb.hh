@@ -11,6 +11,8 @@
 
 #include "FluxReconstructionNavierStokes/ConvDiffLLAVFluxReconstructionNS.hh"
 
+#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -75,6 +77,10 @@ protected: // data
   
   /// idx of closest sol to each flx
   Common::SafePtr< std::vector< CFuint > > m_closestSolToFlxIdx;
+  
+  Common::SafePtr< Physics::KOmega::NavierStokes2DKLogOmega > m_navierStokesVarSetTurb;
+  
+  Common::SafePtr< Physics::KOmega::NavierStokes3DKLogOmega > m_navierStokesVarSetTurb3D;
   
   private:
 

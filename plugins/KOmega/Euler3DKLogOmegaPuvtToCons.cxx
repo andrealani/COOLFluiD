@@ -21,7 +21,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 Environment::ObjectProvider<Euler3DKLogOmegaPuvtToCons, VarSetTransformer, KOmegaModule, 1>
-euler3DKLogOmegaPuvtToConsProvider("Euler3DKLogOmegaPuvtToCons");
+euler3DKLogOmegaPuvtToConsProvider("Euler3DKLogOmegaPvtToCons");
 
 //////////////////////////////////////////////////////////////////////////////
 

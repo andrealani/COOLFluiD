@@ -397,22 +397,40 @@ void NavierStokesSkinFrictionHeatFluxFR::computeTauWall(CFuint flxIdx)
     
     if (fabs(m_unitNormalFlxPnts[flxIdx][ZZ]) <= fabs(m_unitNormalFlxPnts[flxIdx][XX]))
     {
-      const CFreal tauT1 = m_muWall*(m_unitNormalFlxPnts[flxIdx][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) -
-                           m_unitNormalFlxPnts[flxIdx][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]));
+      const CFreal nx1 = m_unitNormalFlxPnts[flxIdx][YY];
+      const CFreal ny1 = -m_unitNormalFlxPnts[flxIdx][XX];
+      const CFreal nsize1 = sqrt(nx1*nx1+ny1*ny1);
+        
+      const CFreal tauT1 = m_muWall*(nx1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) +
+                           ny1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]))/nsize1;
       
-      const CFreal tauT2 = m_muWall*(m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) +
-                           m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) - 
-                           (m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][XX]+m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY])*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]));
+      const CFreal nx2 = m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ];
+      const CFreal ny2 = m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][ZZ];
+      const CFreal nz2 = -(m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][XX]+m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY]);
+      const CFreal nsize2 = sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
+      
+      const CFreal tauT2 = m_muWall*(nx2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) +
+                           ny2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) + 
+                           nz2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]))/nsize2;
       m_tau = sqrt(tauT1*tauT1+tauT2*tauT2);
     }
     else
     {
-      const CFreal tauT1 = m_muWall*(-m_unitNormalFlxPnts[flxIdx][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) +
-                           m_unitNormalFlxPnts[flxIdx][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]));
+      const CFreal ny1 = -m_unitNormalFlxPnts[flxIdx][ZZ];
+      const CFreal nz1 = m_unitNormalFlxPnts[flxIdx][YY];
+      const CFreal nsize1 = sqrt(ny1*ny1+nz1*nz1);
       
-      const CFreal tauT2 = m_muWall*(-m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) -
-                           m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]) + 
-                           (m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY]+m_unitNormalFlxPnts[flxIdx][ZZ]*m_unitNormalFlxPnts[flxIdx][ZZ])*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]));
+      const CFreal tauT1 = m_muWall*(ny1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) +
+                           nz1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]))/nsize1;
+      
+      const CFreal nx2 = m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY]+m_unitNormalFlxPnts[flxIdx][ZZ]*m_unitNormalFlxPnts[flxIdx][ZZ];
+      const CFreal ny2 = -m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][YY];
+      const CFreal nz2 = -m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ];
+      const CFreal nsize2 = sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
+      
+      const CFreal tauT2 = m_muWall*(ny2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) +
+                           nz2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]) + 
+                           nx2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]))/nsize2;
       m_tau = sqrt(tauT1*tauT1+tauT2*tauT2);
     }
     
@@ -429,6 +447,11 @@ void NavierStokesSkinFrictionHeatFluxFR::computeTauWall(CFuint flxIdx)
     
     //Compute the viscous force coefficients on this wall face.
     m_frictionForces = m_Cf3D * m_unitNormalFlxPnts[flxIdx];
+    
+    if (m_cellStatesFlxPnt[flxIdx]->size() == 9)
+    {
+      m_yPlus = (*(m_cellStatesFlxPnt[flxIdx]))[8]*sqrt(m_muWall*m_rhoWall)/(0.5*m_rhoInf*m_uInf*m_uInf);
+    }
   }
   
   // forces coefficients must be still divided by the wet surface
@@ -586,6 +609,10 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
   {
     m_heatFluxRad = (*(m_cellStatesFlxPnt[flxIdx]))[6];
   }
+  else if (m_cellStatesFlxPnt[flxIdx]->size() == 9)
+  {
+    m_heatFluxRad = (*(m_cellStatesFlxPnt[flxIdx]))[7];
+  }
   
   CFreal pDim = 0.;
   CFreal rhoDim = 0.;
@@ -678,7 +705,7 @@ void NavierStokesSkinFrictionHeatFluxFR::computeDimensionalPressDensTemp(CFreal&
 {
   CFAUTOTRACE;
   
-  const bool Puvt = m_frData->getUpdateVarStr() == "Puvt";
+  const bool Puvt = m_frData->getUpdateVarStr() == "Puvt" || m_frData->getUpdateVarStr() == "Pvt";
   
   const CFreal rhoRef = (m_updateVarSet->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
   

@@ -81,7 +81,7 @@ CFreal NavierStokesKLogOmegaVarSet<BASE, SGROUP>::getTurbDynViscosityFromGradien
 {
   const CFreal rho = this->getDensity(state);
   const CFreal K = std::max(0.,state[this->_kID]);
-  const CFreal Omega = exp(std::max(0.,state[this->_kID+1]));
+  const CFreal Omega = exp(state[this->_kID+1]);
   
   if (Omega == 0.0)
     return 0.0;

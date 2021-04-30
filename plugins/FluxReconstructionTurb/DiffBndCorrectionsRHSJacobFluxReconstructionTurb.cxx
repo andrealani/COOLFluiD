@@ -64,6 +64,15 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionTurb::setup()
   
   // get closest sol indices
   m_closestSolToFlxIdx = frLocalData[0]->getClosestSolToFlxIdx();
+  
+  if (m_dim == 2)
+  {
+    m_navierStokesVarSetTurb = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  }
+  else
+  {  
+    m_navierStokesVarSetTurb3D = m_diffusiveVarSet.d_castTo< NavierStokes3DKLogOmega >();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -92,7 +101,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionTurb::computeInterfaceFlxCorrec
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // compute the riemann flux in the flx pnts
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -105,7 +114,14 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionTurb::computeInterfaceFlxCorrec
     const CFuint stateID = (*m_cellStates)[closestSolIdx]->getLocalID();
     
     // Set the wall distance before computing the turbulent viscosity
-    navierStokesVarSet->setWallDistance(wallDist[stateID]);
+    if (m_dim == 2)
+    {
+      m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
+    }
+    else
+    {
+      m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
+    }
       
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {

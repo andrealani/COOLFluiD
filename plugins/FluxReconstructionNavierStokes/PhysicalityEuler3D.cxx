@@ -76,7 +76,7 @@ PhysicalityEuler3D::PhysicalityEuler3D(const std::string& name) :
   m_limCompleteState = true;
   setParameter( "LimCompleteState", &m_limCompleteState );
   
-  m_expLim = false;
+  m_expLim = true;
   setParameter( "ExpLim", &m_expLim );
 }
 
@@ -99,7 +99,7 @@ bool PhysicalityEuler3D::checkPhysicality()
 {
   bool physical = true;
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
-  const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
+  const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "Pvt";
   const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
   const bool hasArtVisc = getMethodData().hasArtificialViscosity();
@@ -236,7 +236,7 @@ bool PhysicalityEuler3D::checkPhysicality()
 
 void PhysicalityEuler3D::enforcePhysicality()
 {
-  const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt";
+  const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "Pvt";
   const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
   bool needsLim = false;

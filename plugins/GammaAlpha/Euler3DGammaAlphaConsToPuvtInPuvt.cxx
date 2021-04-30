@@ -21,7 +21,7 @@ namespace COOLFluiD {
 
 Environment::ObjectProvider<Euler3DGammaAlphaConsToPuvtInPuvt, VarSetMatrixTransformer,
 	       GammaAlphaModule, 1>
-euler3DGammaAlphaConsToPuvtInPuvt("Euler3DGammaAlphaConsToPuvtInPuvt");
+euler3DGammaAlphaConsToPuvtInPuvt("Euler3DGammaAlphaConsToPvtInPvt");
 
 //////////////////////////////////////////////////////////////////////////////
 

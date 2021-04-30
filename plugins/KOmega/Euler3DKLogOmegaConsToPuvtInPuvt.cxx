@@ -21,7 +21,7 @@ namespace COOLFluiD {
 
 Environment::ObjectProvider<Euler3DKLogOmegaConsToPuvtInPuvt, VarSetMatrixTransformer,
                             KOmegaModule, 1>
-euler3DKLogOmegaConsToPuvtInPuvt("Euler3DKLogOmegaConsToPuvtInPuvt");
+euler3DKLogOmegaConsToPuvtInPuvt("Euler3DKLogOmegaConsToPvtInPvt");
 
 //////////////////////////////////////////////////////////////////////////////
 

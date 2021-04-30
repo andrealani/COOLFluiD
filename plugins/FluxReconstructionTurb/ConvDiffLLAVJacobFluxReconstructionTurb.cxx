@@ -95,7 +95,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeInterfaceFlxCorrection()
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
     
   // Loop over the flux points to calculate FI
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -113,7 +113,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeInterfaceFlxCorrection()
     const CFreal flxPntWallDist = 0.5*(wallDist[stateIDL]+wallDist[stateIDR]);
     
     // Set the wall distance before computing the turbulent viscosity
-    navierStokesVarSet->setWallDistance(flxPntWallDist);
+    if (m_dim == 2)
+    {
+      m_navierStokesVarSetTurb->setWallDistance(flxPntWallDist);
+    }
+    else
+    {
+      m_navierStokesVarSetTurb3D->setWallDistance(flxPntWallDist); 
+    }
     
     // compute the average sol and grad to use the BR2 scheme
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
@@ -181,7 +188,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeUnpertCellDiffResiduals(con
   // get datahandle
   DataHandle< CFreal > artVisc = socket_artVisc.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
@@ -210,7 +217,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeUnpertCellDiffResiduals(con
     const CFuint stateID = (*(m_states[side]))[iSolPnt]->getLocalID();
     
     // Set the wall distance before computing the turbulent viscosity
-    navierStokesVarSet->setWallDistance(wallDist[stateID]);
+    if (m_dim == 2)
+    {
+      m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
+    }
+    else
+    {
+      m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
+    }
     
     m_updateVarSet->computePhysicalData(*((*(m_states[side]))[iSolPnt]), m_pData); 
 
@@ -338,7 +352,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::initJacobianComputation()
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // set block row and column indices, proj vectors and make a backup of discontinuous fluxes
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
@@ -354,7 +368,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::initJacobianComputation()
       const CFuint stateID = (*(m_states[m_pertSide]))[m_pertSol]->getLocalID();
     
       // Set the wall distance before computing the turbulent viscosity
-      navierStokesVarSet->setWallDistance(wallDist[stateID]);
+      if (m_dim == 2)
+      {
+        m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
+      }
+      else
+      {
+        m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
+      }
 
       m_avgSol = *((*(m_states[m_pertSide]))[m_pertSol]->getData());
       
@@ -386,7 +407,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeCellFluxJacobianNum(const C
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // loop over left and right cell to compute flux jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
@@ -411,7 +432,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeCellFluxJacobianNum(const C
       const CFuint stateID = (*(m_states[m_pertSide]))[m_pertSol]->getLocalID();
     
       // Set the wall distance before computing the turbulent viscosity
-      navierStokesVarSet->setWallDistance(wallDist[stateID]);
+      if (m_dim == 2)
+      {
+        m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
+      }
+      else
+      {
+        m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
+      }
 
       // loop over the variables in the state
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
@@ -463,7 +491,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeRiemannFluxJacobianNum(cons
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -492,7 +520,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeRiemannFluxJacobianNum(cons
       const CFreal flxPntWallDist = 0.5*(wallDist[stateIDL]+wallDist[stateIDR]);
     
       // Set the wall distance before computing the turbulent viscosity
-      navierStokesVarSet->setWallDistance(flxPntWallDist);
+      if (m_dim == 2)
+      {
+        m_navierStokesVarSetTurb->setWallDistance(flxPntWallDist);
+      }
+      else
+      {
+        m_navierStokesVarSetTurb3D->setWallDistance(flxPntWallDist); 
+      }
       
       // dereference state
       State& pertState = *(m_cellStatesFlxPnt[m_pertSide][iFlxPnt]);
@@ -591,7 +626,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeRiemannFluxToGradJacobianNu
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -617,7 +652,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeRiemannFluxToGradJacobianNu
     const CFreal flxPntWallDist = 0.5*(wallDist[stateIDL]+wallDist[stateIDR]);
     
     // Set the wall distance before computing the turbulent viscosity
-    navierStokesVarSet->setWallDistance(flxPntWallDist);
+    if (m_dim == 2)
+    {
+      m_navierStokesVarSetTurb->setWallDistance(flxPntWallDist);
+    }
+    else
+    {
+      m_navierStokesVarSetTurb3D->setWallDistance(flxPntWallDist); 
+    }
     
     // damping factor
     const CFreal dampFactor = m_dampCoeffDiff*m_faceInvCharLengths[iFlxPnt]; 
@@ -669,7 +711,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeRiemannFluxToGradJacobianNu
   }
   
   // Reset wall distance in case this is the last face: afterwards diff BC is done which needs the wall dist to be zero!!
-  navierStokesVarSet->setWallDistance(0.0);
+  if (m_dim == 2)
+  {
+    m_navierStokesVarSetTurb->setWallDistance(0.0);
+  }
+  else
+  {
+    m_navierStokesVarSetTurb3D->setWallDistance(0.0); 
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -681,7 +730,7 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeFluxToGradJacobianNum(const
   // Get the wall distance
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
   
-  SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
   
   // loop over left and right cell to compute flux jacobian
   for (m_pertSide = 0; m_pertSide < 2; ++m_pertSide)
@@ -695,7 +744,14 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::computeFluxToGradJacobianNum(const
       const CFuint stateID = (*(m_states[m_pertSide]))[m_pertSol]->getLocalID();
     
       // Set the wall distance before computing the turbulent viscosity
-      navierStokesVarSet->setWallDistance(wallDist[stateID]);
+      if (m_dim == 2)
+      {
+        m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
+      }
+      else
+      {
+        m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
+      }
       
       // dereference state
       m_avgSol = *((*(m_states[m_pertSide]))[m_pertSol]->getData());
@@ -2107,6 +2163,15 @@ void ConvDiffLLAVJacobFluxReconstructionTurb::setup()
   
   // get closest sol indices
   m_closestSolToFlxIdx = frLocalData[0]->getClosestSolToFlxIdx();
+  
+  if (m_dim == 2)
+  {
+    m_navierStokesVarSetTurb = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
+  }
+  else
+  {  
+    m_navierStokesVarSetTurb3D = m_diffusiveVarSet.d_castTo< NavierStokes3DKLogOmega >();
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
