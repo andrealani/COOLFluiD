@@ -42,6 +42,9 @@ void PhysicalityEuler3D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("CheckInternal","Boolean to tell wether to also check internal solution for physicality.");
   options.addConfigOption< bool >("LimCompleteState","Boolean to tell wether to limit complete state or single variable.");
   options.addConfigOption< bool >("ExpLim","Boolean to tell wether to use the experimental limiter.");
+  options.addConfigOption< bool >("GammaClipping","Boolean to tell wether to clip gamma.");
+  options.addConfigOption< CFreal >("MinGamma","Minimum clipping value for gamma.");
+  options.addConfigOption< CFreal >("MaxGamma","Maximum clipping value for gamma.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,6 +81,16 @@ PhysicalityEuler3D::PhysicalityEuler3D(const std::string& name) :
   
   m_expLim = true;
   setParameter( "ExpLim", &m_expLim );
+  
+  m_clipGamma = false;
+  setParameter( "GammaClipping", &m_clipGamma );
+  
+  m_minGamma = 0.01;
+  setParameter( "MinGamma", &m_minGamma );
+  
+  m_maxGamma = 0.99;
+  setParameter( "MaxGamma", &m_maxGamma );
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -225,6 +238,22 @@ bool PhysicalityEuler3D::checkPhysicality()
 	    break;
 	  }
 	}
+      }
+    }
+  }
+  
+  // clip gamma if needed (default false, only activate in GReKO or gamma-alpha) 
+  if (Puvt && m_clipGamma)
+  {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      if ((*((*m_cellStates)[iSol]))[7] < m_minGamma)
+      {
+	(*((*m_cellStates)[iSol]))[7] = m_minGamma;
+      }
+      else if ((*((*m_cellStates)[iSol]))[7] > m_maxGamma)
+      {
+        (*((*m_cellStates)[iSol]))[7] = m_maxGamma; 
       }
     }
   }
