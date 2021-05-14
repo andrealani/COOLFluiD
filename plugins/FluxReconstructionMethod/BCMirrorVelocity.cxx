@@ -66,11 +66,15 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
        (*ghostStates[iState])[i] = (*intStates[iState])[i];
      }
      else {
-       (*ghostStates[iState])[i]= (*intStates[iState])[i] - 2.0*vn*normals[iState][jxx]/area2;
+       (*ghostStates[iState])[i]= (*intStates[iState])[i] - 1.0*vn*normals[iState][jxx]/area2;
        jxx++;
      }
      // if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
    }
+   
+   //(*ghostStates[iState])[0] = 1.0e5;
+   //(*ghostStates[iState])[4] = 7.19e-5; // 1.0e-7;
+   //(*ghostStates[iState])[5] = 6.2519; //200.0;
    
    //CFLog(DEBUG_MAX, "MirrorVelocity::setGhostState() => ghostState = " << *ghostState << "\n"); 
   }
@@ -100,50 +104,60 @@ void BCMirrorVelocity::computeGhostGradients
     const RealVector& normal = normals[iState];
 
     // tangential unit vector
-    m_tangent[XX] = -normal[YY];
-    m_tangent[YY] =  normal[XX];
+//    m_tangent[XX] = -normal[YY];
+//    m_tangent[YY] =  normal[XX];
+    
+    //CFreal vn = 0.;
+    CFreal area2 = 0.;
+    for (CFuint i = 0; i < m_velocityIDs.size(); ++i) { 
+     const CFreal nxComp = normals[iState][i];
+     //vn += nxComp*(*intStates[iState])[m_velocityIDs[i]];
+     area2 += nxComp*nxComp;
+   }
 
     const vector< RealVector* >& velocityGradI = intGrads[iState];
     m_velocityNGradI = 0.;
     m_velocityTGradI = 0.;
     CFuint jxx = 0;
     for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
-      if (!m_isVelocityComp[i]) {
-	const RealVector& varGradI =  *intGrads[iState][i];
-	RealVector& varGradG =  *ghostGrads[iState][i];
-	const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
-	varGradG = varGradI - 2.0*nVarGrad*normal;
-      }
-      else {
-	// internal normal and tangential component
-	m_velocityNGradI +=  *velocityGradI[i]*normal[jxx];
-	m_velocityTGradI +=  *velocityGradI[i]*m_tangent[jxx];
-	++jxx;
-      }
+//      if (!m_isVelocityComp[i]) {
+//	const RealVector& varGradI =  *intGrads[iState][i];
+//	RealVector& varGradG =  *ghostGrads[iState][i];
+//	const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
+//	varGradG = varGradI - 2.0*nVarGrad*normal/area2;
+//      }
+//      else {
+//	// internal normal and tangential component
+//	m_velocityNGradI +=  *velocityGradI[i]*normal[jxx];
+//	m_velocityTGradI +=  *velocityGradI[i]*m_tangent[jxx];
+//	++jxx;
+        
+        *ghostGrads[iState][i] = *intGrads[iState][i];
+//      }
     }
 
-    m_velocityNGradG = m_velocityNGradI;
-
-    jxx = 0;
-    CFreal nGradUT = 0.;
-    for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
-      if (m_isVelocityComp[i]){
-        // ghost normal and tangential component
-        nGradUT += m_velocityTGradI[jxx]*normal[jxx];  
-	++jxx;
-      }
-    }
-
-    m_velocityTGradG = m_velocityTGradI - 2.0*nGradUT*normal;
-
-    // project onto x- and y-axis
-    jxx = 0;
-    for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
-      if (m_isVelocityComp[i]) {
-        *ghostGrads[iState][i] = m_velocityNGradG*normal[jxx] + m_velocityTGradG*m_tangent[jxx];
-	++jxx;
-      }
-    }
+//    m_velocityNGradG = m_velocityNGradI;
+//
+//    jxx = 0;
+//    CFreal nGradUT = 0.;
+//    for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
+//      if (m_isVelocityComp[i]){
+//        // ghost normal and tangential component
+//        nGradUT += m_velocityTGradI[jxx]*normal[jxx];  
+//	++jxx;
+//      }
+//    }
+//
+//    m_velocityTGradG = m_velocityTGradI - 2.0*nGradUT*normal;
+//
+//    // project onto x- and y-axis
+//    jxx = 0;
+//    for (CFuint i = 0; i < m_isVelocityComp.size(); ++i) {
+//      if (m_isVelocityComp[i]) {
+//        *ghostGrads[iState][i] = m_velocityNGradG*normal[jxx]/area2 + m_velocityTGradG*m_tangent[jxx];
+//	++jxx;
+//      }
+//    }
   }
 }
 
