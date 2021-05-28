@@ -34,6 +34,8 @@ LIST ( APPEND FluxReconstructionGReKO_files
 FluxReconstructionGReKO.hh
 NavierStokesGReKO2DSourceTerm_Lang.hh
 NavierStokesGReKO2DSourceTerm_Lang.cxx
+NavierStokesGReKO3DSourceTerm_Lang.hh
+NavierStokesGReKO3DSourceTerm_Lang.cxx
 )
 
 LIST ( APPEND FluxReconstructionGReKO_cflibs NavierStokes GReKO FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega )

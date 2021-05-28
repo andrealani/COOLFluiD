@@ -22,9 +22,9 @@ Environment::ObjectProvider<NavierStokesGReKLogOPhysicalModel<DIM_2D>,
 	       PhysicalModelImpl, GReKOModule, 1>
 navierStokes2DGReKLogOProvider("NavierStokes2DGReKLogO");
 
-//Environment::ObjectProvider<NavierStokesGReKLogOPhysicalModel<DIM_3D>, 
-//	       PhysicalModelImpl, GReKOModule, 1>
-//navierStokes3DGReKLogOProvider("NavierStokes3DGReKLogO");
+Environment::ObjectProvider<NavierStokesGReKLogOPhysicalModel<DIM_3D>, 
+	       PhysicalModelImpl, GReKOModule, 1>
+navierStokes3DGReKLogOProvider("NavierStokes3DGReKLogO");
 
 //////////////////////////////////////////////////////////////////////////////
 
