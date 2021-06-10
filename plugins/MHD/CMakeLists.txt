@@ -62,6 +62,10 @@ MHD3DProjectionCons.cxx
 MHD3DProjectionCons.hh
 MHD3DProjectionConsToPrim.cxx
 MHD3DProjectionConsToPrim.hh
+MHD3DProjectionDiffVarSet.cxx
+MHD3DProjectionDiffVarSet.hh
+MHD3DProjectionDiffPrim.cxx
+MHD3DProjectionDiffPrim.hh
 MHD3DProjectionPolytropicConsToPrim.cxx
 MHD3DProjectionPolytropicConsToPrim.hh
 MHD3DProjectionConsToPrimInPrim.cxx
@@ -96,6 +100,13 @@ MHDPhysicalModel.hh
 MHDProjection.ci
 MHDProjection.cxx
 MHDProjection.hh
+MHDProjectionDiffPhysicalModel.ci
+MHDProjectionDiffPhysicalModel.cxx
+MHDProjectionDiffPhysicalModel.hh
+MHDProjectionDiffTerm.cxx
+MHDProjectionDiffTerm.hh
+MHDProjectionDiffVarSet.cxx
+MHDProjectionDiffVarSet.hh
 MHDProjectionPolytropic.ci
 MHDProjectionPolytropic.cxx
 MHDProjectionPolytropic.hh

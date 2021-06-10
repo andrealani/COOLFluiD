@@ -1,0 +1,98 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace MHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjectionDiffPhysicalModel<DIM>::MHDProjectionDiffPhysicalModel(const std::string& name)
+  : Framework::ConvectionDiffusionPM<MHDProjectionTerm, MHDProjectionDiffTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+MHDProjectionDiffPhysicalModel<DIM>::~MHDProjectionDiffPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjectionDiffPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint MHDProjectionDiffPhysicalModel<DIM>::getNbEquations() const
+{
+  return 9;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string MHDProjectionDiffPhysicalModel<DIM>::getConvectiveName() const
+{
+ return std::string("MHD" + Common::StringOps::to_str(DIM) + "DProjection");	
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string MHDProjectionDiffPhysicalModel<DIM>::getDiffusiveName() const
+{
+  return getTypeName();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDProjectionDiffPhysicalModel<DIM>::setReferenceValues()
+{
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDProjectionDiffPhysicalModel<DIM>::setReferenceTime()
+{
+  /// @warning the reference time set below is only okay if the reference length is equal
+  /// to one, or if the diffusion coefficient is equal to zero. To make it general, the diffusion
+   /// coefficient should be rescaled also.
+  _refTime = getRefLength();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void MHDProjectionDiffPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionDiffusionPM<MHDProjectionTerm, MHDProjectionDiffTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(DIM);
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace MHD 
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
