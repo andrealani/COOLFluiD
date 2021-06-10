@@ -86,6 +86,7 @@ MirrorMHD3DTanaka.cxx
 MirrorMHD3DTanakaPFix.cxx
 MHDConsACASourceTerm.cxx
 MHDRoeFlux.cxx
+NSFluxMHD.cxx   
 SuperOutletMHD2DProjection.cxx
 SuperOutletMHD3DProjection.cxx
 SuperOutletMHD3DProjectionHeating.cxx
