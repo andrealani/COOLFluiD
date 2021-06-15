@@ -42,6 +42,7 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool >("LimPAlpha","Limit P_alpha.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
  options.addConfigOption< bool,Config::DynamicOption<> >("AddDGamma","Add destruction terms for gamma and alpha.");
+ options.addConfigOption< CFreal >("LimLambda","Limit Lambda pressure term.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +78,9 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
   
   m_addDGDA = true;
   setParameter("AddDGamma",&m_addDGDA);
+  
+  m_lambdaLim = 0.04;
+  setParameter("LimLambda",&m_lambdaLim);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -405,7 +409,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     {
       const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-      const CFreal dpdsLimit = -0.04/(lambdaTerm1*Rethetac*Rethetac);
+      const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*Rethetac*Rethetac);
       dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
     
       const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;
@@ -641,7 +645,7 @@ CFreal GammaAlpha2DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
   CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
   const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-  const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat0*ReThetat0);
+  const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*ReThetat0*ReThetat0);
   dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
 
   const CFreal lambdaTerm = lambdaTerm1*dpds;
@@ -1008,7 +1012,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   {
     const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-    const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat*ReThetat);
+    const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*ReThetat*ReThetat);
     dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
     
     const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;

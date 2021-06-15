@@ -125,6 +125,7 @@ private: // data
   bool m_limPRe;
   bool m_addUpdateCoeff;
   bool m_addDGDA;
+  CFreal  m_lambdaLim;
   
   CFuint m_order;
 

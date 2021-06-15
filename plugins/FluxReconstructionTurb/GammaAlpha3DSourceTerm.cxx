@@ -42,6 +42,7 @@ void GammaAlpha3DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool >("LimPAlpha","Limit P_alpha.");
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
  options.addConfigOption< bool,Config::DynamicOption<> >("AddDGamma","Add destruction terms for gamma and alpha.");
+ options.addConfigOption< CFreal >("LimLambda","Limit Lambda pressure term.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +78,10 @@ GammaAlpha3DSourceTerm::GammaAlpha3DSourceTerm(const std::string& name) :
   
   m_addDGDA = true;
   setParameter("AddDGamma",&m_addDGDA);
+  
+  m_lambdaLim = 0.04;
+  setParameter("LimLambda",&m_lambdaLim);
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -427,7 +432,7 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
     {
       const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-      const CFreal dpdsLimit = -0.04/(lambdaTerm1*Rethetac*Rethetac);
+      const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*Rethetac*Rethetac);
       dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
     
       const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;
@@ -484,15 +489,17 @@ void GammaAlpha3DSourceTerm::addSourceTerm(RealVector& resUpdates)
     CFreal dVeldnSize;
     
     // temporary solution for cone case, code below based on largest du/dn, i.e. direction for shear vector, should work, but u grads in 3D seem too oscillatory in P1
-    const CFreal xvec = -0.12186934;
+    const CFreal sinA = 0.139173101;//0.1218693434;    
+const CFreal cosA = 0.9902680687;//0.9925461516;
+const CFreal xvec = -sinA;
     const CFreal zcurr = ((*m_cellStates)[iSol]->getCoordinates())[ZZ];
     const CFreal ycurr = ((*m_cellStates)[iSol]->getCoordinates())[YY];
     const CFreal nsizecurr = 1.0/sqrt(zcurr*zcurr+ycurr*ycurr);
-    const CFreal dVeldn1 = (dVeldy*ycurr*0.99254615+zcurr*dVeldz*0.99254615)*nsizecurr+xvec*dVeldx;
+    const CFreal dVeldn1 = (dVeldy*ycurr*cosA+zcurr*dVeldz*cosA)*nsizecurr+xvec*dVeldx;
     dVeldnSize = fabs(dVeldn1);
     dVeldnx = xvec;
-    dVeldny = ycurr*nsizecurr*0.99254615;//dVeldn1*ycurr*nsizecurr/dVeldnSize;
-    dVeldnz = zcurr*nsizecurr*0.99254615;//dVeldn1*zcurr*nsizecurr/dVeldnSize;
+    dVeldny = ycurr*nsizecurr*cosA;//dVeldn1*ycurr*nsizecurr/dVeldnSize;
+    dVeldnz = zcurr*nsizecurr*cosA;//dVeldn1*zcurr*nsizecurr/dVeldnSize;
         
 //    if (fabs(w) <= fabs(u))
 //    {
@@ -713,7 +720,7 @@ CFreal GammaAlpha3DSourceTerm::getRethetatwithPressureGradient(const CFreal avAl
   CFreal dpds = 1.0/avV*(u*dpx + v*dpy + w*dpz);
   const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-  const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat0*ReThetat0);
+  const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*ReThetat0*ReThetat0);
   dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
 
   const CFreal lambdaTerm = lambdaTerm1*dpds;
@@ -1081,7 +1088,7 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   {
     const CFreal lambdaTerm1 = -mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal);
 
-    const CFreal dpdsLimit = -0.04/(lambdaTerm1*ReThetat*ReThetat);
+    const CFreal dpdsLimit = -m_lambdaLim/(lambdaTerm1*ReThetat*ReThetat);
     dpds = min(max(dpds,-dpdsLimit),dpdsLimit);
     
     const CFreal kPGrad = -muInfLocal/(rhoInfLocal*rhoInfLocal*uInfLocal*uInfLocal*uInfLocal)*fabs(1.0-MInfLocal*MInfLocal)*dpds;

@@ -91,6 +91,12 @@ protected: // data
   /// minimum allowable value for temperature
   CFreal m_minTemperature;
   
+  /// minimum allowable value for gamma
+  CFreal m_minGamma;
+  
+  /// maximum allowable value for gamma
+  CFreal m_maxGamma;
+  
   /// Turbulent Variables K, Omega...
   std::vector<CFreal> m_minTurbVars;
   
@@ -102,6 +108,9 @@ protected: // data
   
   /// boolean telling whether to use the experimental limiter
   bool m_expLim;
+  
+  /// boolean telling whether to clip gamma
+  bool m_clipGamma;
   
   /// physical model 
   Common::SafePtr<Physics::NavierStokes::Euler2DVarSet> m_eulerVarSet;
