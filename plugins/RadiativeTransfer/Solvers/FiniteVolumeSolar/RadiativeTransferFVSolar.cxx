@@ -73,7 +73,7 @@ RadiativeTransferFVSolar::RadiativeTransferFVSolar(const std::string& name) :
   m_cellID2WallFaceID(),
   m_tableWallFaceID2CellIDs(),
   m_mapWallTRSToOffsetFaceID(),
-  m_geoBuilder(), 
+  m_cellBuilder(), 
   m_wallFaceBuilder(),
   m_normal()
 {
@@ -105,7 +105,7 @@ void RadiativeTransferFVSolar::defineConfigOptions(Config::OptionList& options)
     ("RadNamespace","Namespace grouping all ranks involved in parallel communication");
 
   options.addConfigOption< vector<std::string> >
-    ("wallTrsNames","Names of the TRSs from which the integration lines are constructed");
+    ("wallTrsNames","Names of the TRSs from which the integration lines are constructed (solar surface)");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -216,10 +216,10 @@ void RadiativeTransferFVSolar::setup()
   */
   
   // cell builder
-  m_geoBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
-  m_geoBuilder.setup();
-  CellTrsGeoBuilder::GeoData& geoData = m_geoBuilder.getDataGE();
-  geoData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
+  m_cellBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
+  m_cellBuilder.setup();
+  CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
+  cellData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
   
   // wall face builder
   m_wallFaceBuilder.setup();
@@ -310,16 +310,9 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
     faceBuilder.setup();
     faceBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
     FaceTrsGeoBuilder::GeoData& faceData = faceBuilder.getDataGE();
-    
-    GeometricEntityPool<CellTrsGeoBuilder> cellBuilder;
-    cellBuilder.setup();
-    cellBuilder.getGeoBuilder()->setDataSockets(socket_states, socket_gstates, socket_nodes);
-    CellTrsGeoBuilder::GeoData& cellData = cellBuilder.getDataGE();
-    
+    CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
     SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
-    CellTrsGeoBuilder::GeoData& geoData = cellBuilder.getDataGE();
-    geoData.trs = cells;
-
+    
     const CFuint nbCells = cells->getLocalNbGeoEnts();
     // supposing that the mesh is fully cartesian/structured, we need mappings:
     // [cellID     -> wallfaceID] 
@@ -362,7 +355,7 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
 	while (!lastFace /*&& (countFaces < m_maxNbNormalFaces)*/) {
 	  cellData.idx = cellID;
 	  CFuint oppositeIFace = 0;
-	  GeometricEntity *const cell = cellBuilder.buildGE();
+	  GeometricEntity *const cell = m_cellBuilder.buildGE();
 	  const vector<GeometricEntity*>& cellFaces = *cell->getNeighborGeos();
 	  const CFuint nbCellFaces =  cellFaces.size();
 	  
@@ -389,7 +382,7 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
 	      break;
 	    }
 	  }
-	  cellBuilder.releaseGE();
+	  m_cellBuilder.releaseGE();
 	}
 	faceBuilder.releaseGE();
 	faceData.isBFace = false;
@@ -427,7 +420,7 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
 	while (!lastFace /*&& (countFaces < m_maxNbNormalFaces)*/) {
 	  cellData.idx = cellID;
 	  CFuint oppositeIFace = 0;
-	  GeometricEntity *const cell = cellBuilder.buildGE();
+	  GeometricEntity *const cell = m_cellBuilder.buildGE();
 	  const vector<GeometricEntity*>& cellFaces = *cell->getNeighborGeos();
 	  const CFuint nbCellFaces =  cellFaces.size();
 	  
@@ -456,7 +449,7 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
 	      break;
 	    }
 	  }
-	  cellBuilder.releaseGE();
+	  m_cellBuilder.releaseGE();
 	}
 	// fout << endl;
 	faceBuilder.releaseGE();
@@ -476,15 +469,55 @@ void RadiativeTransferFVSolar::execute()
   CFAUTOTRACE;
   
   CFLog(INFO, "RadiativeTransferFVSolar::execute() => START\n");
+
+  DataHandle<State*, GLOBAL> states = socket_states.getDataHandle();
   
   Stopwatch<WallTime> stp;
   stp.start();
   
+  // this can only work serial!!
+  if (m_wallTrsNames.size() > 0) {
+    
+    
+    CFuint wallTrsFaceID = 0;
+    // loop over photosphere TRS (typically is only one)
+    for (CFuint j = 0; j < m_wallTrsNames.size(); ++j) {
+      SafePtr<TopologicalRegionSet> wallTRS = MeshDataStack::getActive()->getTrs(m_wallTrsNames[j]);
+      const CFuint nbTrsFaces = wallTRS->getLocalNbGeoEnts(); 
+      CellTrsGeoBuilder::GeoData& cellData = m_cellBuilder.getDataGE();
+      
+      // loop over photosphere TRS boundary faces
+      for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace, ++wallTrsFaceID) {
+	const CFuint nbCellsInLine = m_tableWallFaceID2CellIDs.nbCols(wallTrsFaceID);
+	for (CFuint iCell = 0; iCell < nbCellsInLine; ++iCell) {
+	  const CFuint cellID = m_tableWallFaceID2CellIDs(wallTrsFaceID, iCell);
+	  cellData.idx = cellID;
+	  // "create" cell while marching normal to the solar photosphere
+	  GeometricEntity *const cell = m_cellBuilder.buildGE();
+	  const State& state = *states[cellID];
+	  const Node& coord = state.getCoordinates(); // position of cell center
+	  
+	  // here access density of whatevr you need from the state value
+	  // ...
+	  
+	  // in case you need to use faces, you can access them this way
+	  const vector<GeometricEntity*>& cellFaces = *cell->getNeighborGeos();
+	  //const CFuint nbCellFaces =  cellFaces.size();
+	  //for (CFuint f = 0; f < nbCellFaces; ++f) {
+	  //}
+	  
+	  // destroy cell
+	  m_cellBuilder.releaseGE();
+	}
+      } 
+    }
+  }
   
   //reduceHeatFlux();
   
   
   CFLog(INFO, "RadiativeTransferFVSolar::execute() => took " << stp.read() << "s \n");
+  CFLog(INFO, "RadiativeTransferFVSolar::execute() => END\n");
 }
     
 //////////////////////////////////////////////////////////////////////////////

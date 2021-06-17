@@ -197,7 +197,7 @@ protected: //data
   std::map<std::string, CFuint> m_mapWallTRSToOffsetFaceID;
   
   /// builder of geometric entities
-  Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_geoBuilder;
+  Framework::GeometricEntityPool<Framework::CellTrsGeoBuilder> m_cellBuilder;
   
   /// wall face builder
   Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> m_wallFaceBuilder;
