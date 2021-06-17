@@ -494,8 +494,11 @@ void RadiativeTransferFVSolar::execute()
 	  cellData.idx = cellID;
 	  // "create" cell while marching normal to the solar photosphere
 	  GeometricEntity *const cell = m_cellBuilder.buildGE();
-	  const State& state = *states[cellID];
-	  const Node& coord = state.getCoordinates(); // position of cell center
+	  const State& cellState = *cell->getState(0);
+
+	  // if needed
+	  const Node& coord = cellState.getCoordinates(); // position of cell center
+	  const vector<Node*>& cellNodes = *cell->getNodes(); // vertices of cell 
 	  
 	  // here access density of whatevr you need from the state value
 	  // ...
