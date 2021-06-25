@@ -123,6 +123,9 @@ protected:
   Framework::DataSocketSink<
                             Framework::ProxyDofIterator<RealVector>*> socket_nstatesProxy;
 
+  /// socket for State's
+  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
+  
 private:
 
   /// File format to write in (ASCII or Binary)

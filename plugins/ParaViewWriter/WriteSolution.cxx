@@ -19,6 +19,7 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/DataHandleOutput.hh"
+#include "Framework/SubSystemStatus.hh"
 
 #include "ParaViewWriter/ParaViewWriter.hh"
 #include "ParaViewWriter/WriteSolution.hh"
@@ -53,9 +54,11 @@ void WriteSolution::defineConfigOptions(Config::OptionList& options)
 
 //////////////////////////////////////////////////////////////////////////////
 
-WriteSolution::WriteSolution(const std::string& name) : ParaWriterCom(name),
+WriteSolution::WriteSolution(const std::string& name) :
+  ParaWriterCom(name),
   socket_nodes("nodes"),
-  socket_nstatesProxy("nstatesProxy")
+  socket_nstatesProxy("nstatesProxy"),
+  socket_states("states")
 {
   addConfigOptionsTo(this);
 
@@ -108,18 +111,17 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   
   if (!getMethodData().onlySurface())
   {
+    // get the nodes datahandle
+    DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
+    
+    // get iterator for nodal states datahandle
+    DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
 
-  // get the nodes datahandle
-  DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
-
-  // get iterator for nodal states datahandle
-  DataHandle<ProxyDofIterator<RealVector>*> nstatesProxy = socket_nstatesProxy.getDataHandle();
-
-  // this is a sort of handle for the nodal states
-  // (which can be stored as arrays of State*, RealVector* or
-  // RealVector but they are used as arrays of RealVector*)
-  ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
-
+    // this is a sort of handle for the nodal states
+    // (which can be stored as arrays of State*, RealVector* or
+    // RealVector but they are used as arrays of RealVector*)
+    ProxyDofIterator<RealVector>& nodalStates = *nstatesProxy[0];
+      
   // get the cells
   SafePtr<TopologicalRegionSet> elements = MeshDataStack::getActive()->getTrs("InnerCells");
 
@@ -131,6 +133,37 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
   const CFuint nbrNodes = nodes.size();
   cf_assert(cellNodes->nbRows() == nbrCells);
 
+  const bool firstTime = (SubSystemStatusStack::getActive()->getNbIter() == 0);
+  if (firstTime) {
+    DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+    const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+    const string ofile = getMethodData().getFilename().string() + "_updatables.dat"; 
+    ofstream outf(ofile.c_str());
+    const CFuint stride = 100;
+
+    outf << "NODES " << nbrNodes << "\n";
+    for (CFuint iNode = 0; iNode < nbrNodes; ++iNode) {
+      outf << ((nodes[iNode]->isParUpdatable()) ? 1 : 0); 
+      if ((iNode+1)%stride>0) {
+	outf << " "; 
+      }
+      else {
+	outf << "\n"; 
+      }
+    }
+
+    outf << "\nCELLS " << nbrCells << "\n";
+    for (CFuint iCell = 0; iCell < nbrCells; ++iCell) {
+      outf << ((states[iCell]->isParUpdatable()) ? 1 : 0); 
+      if ((iCell+1)%stride>0) {
+	outf << " "; 
+      }
+      else {
+	outf << "\n"; 
+      }
+    }
+  }
+  
   // we will assume that the number of nodes is the same as
   // the number of states but the connectivity might be different
   //   cf_assert(nodes.size() == nodalStates.getSize());
@@ -244,10 +277,12 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
       for (CFuint iVecComp = 0; iVecComp < nbVecComponents; ++iVecComp)
       {
         fout << scientific << setprecision(12) << dimState[vectorComponentIdxs[iVecComp]] << " ";
+	// cout << "[" << vectorComponentIdxs[iVecComp] << "] " << scientific << setprecision(12) << dimState[vectorComponentIdxs[iVecComp]] << " ";
       }
+      // cout << endl;
       for (CFuint iVecComp = nbVecComponents; iVecComp < 3; ++iVecComp)
       {
-        fout << scientific << setprecision(1) << 0.0 << " ";
+	fout << scientific << setprecision(1) << 0.0 << " ";
       }
 
     }
@@ -627,6 +662,7 @@ WriteSolution::needsSockets()
 
   result.push_back(&socket_nodes);
   result.push_back(&socket_nstatesProxy);
+  result.push_back(&socket_states);
 
   return result;
 }
