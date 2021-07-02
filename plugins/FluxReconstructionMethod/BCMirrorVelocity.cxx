@@ -131,8 +131,12 @@ void BCMirrorVelocity::computeGhostGradients
 //	m_velocityNGradI +=  *velocityGradI[i]*normal[jxx];
 //	m_velocityTGradI +=  *velocityGradI[i]*m_tangent[jxx];
 //	++jxx;
-        
-        *ghostGrads[iState][i] = *intGrads[iState][i];
+        const RealVector& varGradI =  *intGrads[iState][i];
+        const CFreal nVarGrad = MathTools::MathFunctions::innerProd(varGradI, normal);
+
+        *ghostGrads[iState][i] = *intGrads[iState][i] - 1.0*nVarGrad*normal/area2;//0.0;
+
+        //*ghostGrads[iState][i] = *intGrads[iState][i];
 //      }
     }
 
