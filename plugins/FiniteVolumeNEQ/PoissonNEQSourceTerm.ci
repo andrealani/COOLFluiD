@@ -77,6 +77,11 @@ void PoissonNEQSourceTerm<EULERVAR, NSVAR>::computeSource
   const CFuint uID = nbSpecies;     // ID of x-momentum equation
   const CFuint vID = nbSpecies+1;   // ID of y-momentum equation
   const CFuint eID = nbSpecies+dim; // ID of total energy equation
+
+  const CFuint idxB = elemID*DIM_3D;
+  const CFreal Bx = Bfield[idxB];
+  const CFreal By = Bfield[idxB+1];
+  const CFreal Bz = Bfield[idxB+2];
   
   if (dim == DIM_2D) {
     // VATSALYA: all these components need to be computed using Bfield socket
