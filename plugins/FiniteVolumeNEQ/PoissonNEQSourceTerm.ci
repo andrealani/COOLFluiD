@@ -101,7 +101,8 @@ template <class EULERVAR, class NSVAR>
 std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
 PoissonNEQSourceTerm<EULERVAR, NSVAR>::needsSockets()
 {
-  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result =
+    ComputeSourceTermFVMCC::needsSockets();
   result.push_back(&socket_Bfield);
   return result;
 }
