@@ -57,6 +57,9 @@ NoSlipWallIsothermalNSrvtCatT.ci
 NoSlipWallIsothermalNSrvtLTE.hh
 NoSlipWallIsothermalNSrvtLTE.ci
 NoSlipWallIsothermalNSrvtLTE.cxx
+PoissonNEQSourceTerm.ci
+PoissonNEQSourceTerm.cxx
+PoissonNEQSourceTerm.hh
 ConstInflowEuler1DTtPtYiv.cxx
 ConstInflowEuler1DTtPtYiv.hh
 SubInletEuler1DTtPtYi.cxx

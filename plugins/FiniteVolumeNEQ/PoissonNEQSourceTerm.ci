@@ -1,0 +1,112 @@
+#include "Common/CFLog.hh"
+#include "Framework/GeometricEntity.hh"
+#include "Framework/MeshData.hh"
+#include "Framework/BaseDataSocketSink.hh"
+#include "Framework/PhysicalModel.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolume {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+PoissonNEQSourceTerm<EULERVAR, NSVAR>::PoissonNEQSourceTerm(const std::string& name) :
+  ComputeSourceTermFVMCC(name),
+  m_varSet(CFNULL),
+  m_diffVarSet(CFNULL),
+  socket_Bfield("Bfield"),
+  m_physicalData()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+PoissonNEQSourceTerm<EULERVAR, NSVAR>::~PoissonNEQSourceTerm()
+{ 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void PoissonNEQSourceTerm<EULERVAR, NSVAR>::setup()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  
+  ComputeSourceTermFVMCC::setup();
+
+  m_varSet = this->getMethodData().getUpdateVar().template d_castTo<EULERVAR>();
+  m_varSet->getModel()->resizePhysicalData(m_physicalData);
+  m_diffVarSet = this->getMethodData().getDiffusiveVar().template d_castTo<NSVAR>();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+void PoissonNEQSourceTerm<EULERVAR, NSVAR>::computeSource
+(Framework::GeometricEntity *const element,
+ RealVector& source, RealMatrix& jacobian)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  CFLogDebugMed( "PoissonNEQSourceTerm::computeSource()\n");
+  
+  //DataHandle<RealVector> nstates =
+  // this->_sockets.template getSocketSink<RealVector>("nstates")->getDataHandle();
+  //DataHandle<CFint> isOutward = this->socket_isOutward.getDataHandle();
+  DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
+  DataHandle<CFreal> Bfield = this->socket_Bfield.getDataHandle();
+  
+  cf_assert(this->m_varSet.isNotNull());
+  
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  DataHandle<CFreal> volumes = this->socket_volumes.getDataHandle();
+  const CFuint nbSpecies = this->m_varSet->getModel()->getNbScalarVars(0);
+  State& currState = *element->getState(0);
+  const CFuint elemID = currState.getLocalID();
+  
+  const CFuint uID = nbSpecies;     // ID of x-momentum equation
+  const CFuint vID = nbSpecies+1;   // ID of y-momentum equation
+  const CFuint eID = nbSpecies+dim; // ID of total energy equation
+  
+  if (dim == DIM_2D) {
+    // VATSALYA: all these components need to be computed using Bfield socket
+    source[uID]   = 0.;
+    source[vID]   = 0.;
+    source[eID]   = 0.;
+    source[eID+1] = 0.;
+    
+    const CFreal radius = currState.getCoordinates()[YY];
+    source *= (volumes[elemID]/radius);
+  }
+}
+    
+//////////////////////////////////////////////////////////////////////////////
+
+template <class EULERVAR, class NSVAR>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+PoissonNEQSourceTerm<EULERVAR, NSVAR>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result;
+  result.push_back(&socket_Bfield);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolume
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

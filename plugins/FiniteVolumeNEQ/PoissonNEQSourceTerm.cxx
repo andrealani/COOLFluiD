@@ -1,5 +1,4 @@
-#include "FiniteVolumeNavierStokes/NavierStokes2DAxiSourceTerm.hh"
-#include "FiniteVolumeNEQ/NavierStokes2DNEQSourceTerm.hh"
+#include "FiniteVolumeNEQ/PoissonNEQSourceTerm.hh"
 #include "NavierStokes/Euler2DVarSet.hh"
 #include "NavierStokes/MultiScalarVarSet.hh"
 #include "NEQ/NavierStokesCNEQVarSet.hh"
@@ -25,38 +24,22 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodStrategyProvider<NavierStokes2DAxiSourceTerm
+MethodStrategyProvider<PoissonNEQSourceTerm
 		       <MultiScalarVarSet<Euler2DVarSet>,
 			NavierStokesCNEQVarSet<NavierStokes2DVarSet> >,
 		       CellCenterFVMData,
 		       ComputeSourceTerm<CellCenterFVMData>,
 		       FiniteVolumeNEQModule>
-navierStokes2DNEQAxiSTFVMCCProvider("NavierStokes2DNEQAxiST");
-
-MethodStrategyProvider<NavierStokes2DAxiSourceTerm
+poisson2DCNEQSTFVMCCProvider("PoissonCNEQSourceTerm");
+      
+MethodStrategyProvider<PoissonNEQSourceTerm
 		       <MultiScalarVarSet<Euler2DVarSet>,
 			NavierStokesTCNEQVarSet<NavierStokes2DVarSet> >,
 		       CellCenterFVMData,
 		       ComputeSourceTerm<CellCenterFVMData>,
 		       FiniteVolumeNEQModule>
-navierStokes2DTCNEQAxiSTFVMCCProvider("NavierStokes2DTCNEQAxiST");
-
-MethodStrategyProvider<NavierStokes2DNEQSourceTerm
-		       <MultiScalarVarSet<Euler2DVarSet>,
-			NavierStokesCNEQVarSet<NavierStokes2DVarSet> >,
-		       CellCenterFVMData,
-		       ComputeSourceTerm<CellCenterFVMData>,
-		       FiniteVolumeNEQModule>
-navierStokes2DNEQSTFVMCCProvider("NavierStokes2DNEQST");
-
-MethodStrategyProvider<NavierStokes2DNEQSourceTerm
-		       <MultiScalarVarSet<Euler2DVarSet>,
-			NavierStokesTCNEQVarSet<NavierStokes2DVarSet> >,
-		       CellCenterFVMData,
-		       ComputeSourceTerm<CellCenterFVMData>,
-		       FiniteVolumeNEQModule>
-navierStokes2DTCNEQSTFVMCCProvider("NavierStokes2DTCNEQST");
-
+poisson2DTCNEQSTFVMCCProvider("PoissonTCNEQSourceTerm");
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume
