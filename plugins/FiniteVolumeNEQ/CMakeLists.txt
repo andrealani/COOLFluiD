@@ -12,6 +12,8 @@ ChemNEQST.cxx
 CoupledNoSlipWallIsothermalNSrvtLTE_Nodes.hh
 CoupledNoSlipWallIsothermalNSrvtLTE_Nodes.ci
 CoupledNoSlipWallIsothermalNSrvtLTE_Nodes.cxx
+ComputeFieldFromPotentialNEQ.cxx
+ComputeFieldFromPotentialNEQ.hh
 ThermNEQST.hh
 ThermNEQST.ci
 ThermNEQST.cxx
