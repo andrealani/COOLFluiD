@@ -862,7 +862,8 @@ void NavierStokes3DConsComputeAero::computeWall( bool saveWall, bool saveAero)
 
   if (writeAero) {
     cout << "Global aerodynamic coefficients: " << m_sumFMtotal << "    " << m_sumFMfric << "    " << m_sumFMpres << "\n" << flush;
-    boost::filesystem::path fpath = m_nameOutputFileAero;
+    using namespace boost::filesystem;
+    path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
     fpath = PathAppender::getInstance().appendAllInfo(fpath, false, false, false);
     SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
     ofstream& convergenceFile = fhandle->open(fpath,ios_base::app);
@@ -901,7 +902,8 @@ void NavierStokes3DConsComputeAero::prepareOutputFileWall()
 
 void NavierStokes3DConsComputeAero::prepareOutputFileAero()
 {
-  boost::filesystem::path fpath = m_nameOutputFileAero;
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendAllInfo(fpath, false, false, false);
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& convergenceFile = fhandle->open(fpath);

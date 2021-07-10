@@ -539,7 +539,8 @@ void EulerComputeAeroDG::prepareOutputFileAero()
 {
   CFAUTOTRACE;
 
-  boost::filesystem::path fpath (m_nameOutputFileAero);
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
   fpath = PathAppender::getInstance().appendParallel( fpath );
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
@@ -557,7 +558,8 @@ void EulerComputeAeroDG::updateOutputFileAero()
 {
   CFAUTOTRACE;
 
-  boost::filesystem::path fpath (m_nameOutputFileAero);
+  using namespace boost::filesystem;
+  path fpath = Environment::DirPaths::getInstance().getResultsDir() / path ( m_nameOutputFileAero );
 //  fpath = PathAppender::getInstance().appendAllInfo( fpath );
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
