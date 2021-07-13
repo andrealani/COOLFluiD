@@ -1,0 +1,207 @@
+#include "Framework/State.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Common/CFPrintContainer.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace PoissonNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+PoissonNEQConvVarSet<BASEVS>::PoissonNEQConvVarSet
+(Common::SafePtr<Framework::BaseTerm> term) :
+  BASEVS(term),
+  _poissonModel(term.template d_castTo<PTERM>())
+{
+  this->addVarName("phi");
+  
+  CFLog(DEBUG_MAX, "PoissonNEQConvVarSet::PoissonNEQConvVarSet()\n");
+  CFLog(DEBUG_MAX, Common::CFPrintContainer<const std::vector<std::string> >("varnames = ", &this->getVarNames()));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+PoissonNEQConvVarSet<BASEVS>::~PoissonNEQConvVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal PoissonNEQConvVarSet<BASEVS>::getMaxEigenValue
+  (const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFreal PoissonNEQConvVarSet<BASEVS>::getMaxAbsEigenValue
+(const RealVector& pdata, const RealVector& normal)
+{
+  return BASEVS::getMaxAbsEigenValue(pdata, normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>:: computeEigenValues	
+(const RealVector& pdata, const RealVector& normal, RealVector& eValues)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeEigenValues(pdata,normal,eValues);
+
+  const CFuint nbBaseEqs = eValues.size() - 1;
+  eValues[nbBaseEqs] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars, const RealVector& normals)
+{
+  using namespace COOLFluiD::Framework;
+
+  // first call the parent class
+  BASEVS::computeFlux(vars,normals);
+  
+  const CFuint nbBaseEqs = vars.size() - 1;
+  this->_fluxArray[nbBaseEqs] = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::computeFlux
+(const Framework::State& vars)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "PoissonNEQConvVarSet::computeFlux()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::computePhysicalData
+(const Framework::State& state, RealVector& data)
+{
+  CFLog(DEBUG_MIN, "PoissonNEQConvVarSet::computePhysicalData() START\n");
+  
+  BASEVS::computePhysicalData(state,data);
+  
+  const CFuint nbBaseEqs = state.size() - 1;
+  const CFuint firstScalarVar = _poissonModel->getDataSize()-1;
+  data[firstScalarVar]   = state[nbBaseEqs];
+  
+  CFLog(DEBUG_MIN, "PoissonNEQConvVarSet::computePhysicalData() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::computeStateFromPhysicalData
+(const RealVector& data,Framework::State& state)
+{
+  throw Common::NotImplementedException
+    (FromHere(), "PoissonNEQConvVarSet::computeStateFromPhysicalData()");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+CFuint PoissonNEQConvVarSet<BASEVS>::getBlockSeparator() const
+{
+  return Framework::PhysicalModelStack::getActive()->getNbEq();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::setDimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  using namespace COOLFluiD::Framework;
+
+  BASEVS::setDimensionalValues(state, result);
+
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _poissonModel->getReferencePhysicalData();
+  const CFuint phiID = state.size() - 1;
+  const CFuint firstScalarVar = _poissonModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[phiID] = state[phiID]*refData[firstScalarVar];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::setAdimensionalValues
+(const Framework::State& state,
+ RealVector& result)
+{
+  BASEVS::setAdimensionalValues(state, result);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _poissonModel->getReferencePhysicalData();
+  const CFuint phiID = state.size() - 1;
+  const CFuint firstScalarVar = _poissonModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[phiID] = state[phiID]/refData[firstScalarVar];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues
+(const Framework::State& state, RealVector& result, RealVector& extra)
+{
+  CFLog(DEBUG_MIN, "PoissonNEQConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() START\n");
+  BASEVS::setDimensionalValuesPlusExtraValues(state, result, extra);
+  
+  // we assume here that the E variables are the last two in the state
+  const RealVector& refData = _poissonModel->getReferencePhysicalData();
+  const CFuint phiID = state.size() - 1;
+  const CFuint firstScalarVar = _poissonModel->getDataSize()-1;
+  cf_assert(refData[firstScalarVar] > 0.);
+  
+  result[phiID] = state[phiID]*refData[firstScalarVar];
+  // std::cout << "result => "<< result[phiID]   << " ####################### " << result[phiID] << std::endl;
+  
+  CFLog(DEBUG_MIN, "PoissonNEQConvVarSet<BASEVS>::setDimensionalValuesPlusExtraValues() END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASEVS>
+void PoissonNEQConvVarSet<BASEVS>::setup()
+{
+  BASEVS::setup();
+  
+  const CFuint phiID = Framework::PhysicalModelStack::getActive()->getNbEq()-1;
+  // inactivate variables
+  this->_maskArray[phiID] = false; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace PoissonNEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,111 @@
+ namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace PoissonNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+PoissonNEQPhysicalModel<DIM>::PoissonNEQPhysicalModel(const std::string& name)
+  : NEQ::NavierStokesNEQ <DIM, Framework::MultiScalarTerm<NavierStokes::EulerTerm>, 
+			  PoissonNEQTerm<NavierStokes::NSTerm>, NEQ::NEQReactionTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+PoissonNEQPhysicalModel<DIM>::~PoissonNEQPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint PoissonNEQPhysicalModel<DIM>::getNbEquations() const
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  
+  std::valarray<CFuint> v(3);
+  v[0] = this->_nbSpecies;
+
+  //const CFuint nbTe =
+  // getPhysicalPropertyLibrary<PhysicalChemicalLibrary>()->getNbTe();
+  v[1] = this->_nbVibEnergyEqs + this->_nbTe;
+
+  // poisson equation is included
+  v[2] = 1;
+
+  // set the number of species in the convective term
+  this->getConvTerm()->setNbScalarVars(v);
+  
+  return this->_nbEulerEqs + this->_nbSpecies + this->_nbVibEnergyEqs + this->_nbTe + 1; 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+std::string PoissonNEQPhysicalModel<DIM>::getConvectiveName() const
+{
+  return "PoissonNEQ" + Common::StringOps::to_str(DIM) + "D";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void PoissonNEQPhysicalModel<DIM>::setReferenceValues()
+{
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  // AL: here we neglect what is done in the base class
+  // If adimensionalization is needed, it will have to be 
+  // implemented here consistently
+
+  SafePtr<MultiScalarTerm<EulerTerm> > convTerm = this->getConvTerm();
+  SafePtr<PoissonNEQTerm<NSTerm> > diffTerm = this->getDiffTerm();
+  SafePtr<NEQ::NEQReactionTerm> srcTerm = this->getSrcTerm();
+
+  // reference values for the convective part
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  // reference values for the diffusive part
+  RealVector& refDataDiff = diffTerm->getReferencePhysicalData();
+  // reference values for the reaction (source) part
+  RealVector& refDataSrc = srcTerm->getReferencePhysicalData();
+
+  // override the reference values for Euler data starting from
+  CFout << "WATCH OUT: Equations will be solved dimensionally." << "\n";
+
+  refDataConv = 1.0;
+  refDataDiff = 1.0;
+  refDataSrc  = 1.0;
+
+  // the constant of real gas, density, thermodynamic pressure and Cv
+  // set to infinite dimensional values
+  convTerm->setRRef(convTerm->getRdim());
+
+  // reference values set to 1.0
+  convTerm->setTempRef(1.0);
+  convTerm->setPressRef(1.0);
+
+  // scaling coefficient for the momentum equations
+  diffTerm->setCoeffTau(1.0);
+
+  // scaling coefficient for the energy equation
+  diffTerm->setCoeffQ(1.0);
+
+  this->_isAdimensional = false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace PoissonNEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

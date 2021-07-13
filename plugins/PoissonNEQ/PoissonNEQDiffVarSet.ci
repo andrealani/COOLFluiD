@@ -1,0 +1,140 @@
+#include "PoissonNEQ/PoissonNEQTerm.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace PoissonNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+PoissonNEQDiffVarSet<BASEVS>::PoissonNEQDiffVarSet
+(const std::string& name,
+ Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  BASEVS(name, model),
+  m_diffModel(model->getDiffusiveTerm().template d_castTo<PoissonNEQTerm<typename BASEVS::DTERM> >()),
+  m_sigmaCoeff(0.),
+  m_tVec()
+{
+  this->addVarName("phi");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+PoissonNEQDiffVarSet<BASEVS>::~PoissonNEQDiffVarSet()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+void PoissonNEQDiffVarSet<BASEVS>::setup()
+{
+  BASEVS::setup();
+  
+  m_tVec.resize(this->_eulerModel->getNbScalarVars(1));
+  cf_assert(m_tVec.size() > 0);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+RealVector& PoissonNEQDiffVarSet<BASEVS>::getFlux
+(const RealVector& values,
+ const std::vector<RealVector*>& gradients,
+ const RealVector& normal,
+ const CFreal& radius)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+	
+  const CFuint nbEqs =
+    PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+
+  // here it is assumed that you don't derive from this class (for the moment is
+  // a reasonable assumption)
+  const CFuint totalNbEqs = this->_flux.size();
+  // if more than 1 or all the equations equations are considered
+  if (nbEqs > 1 || nbEqs == totalNbEqs) {
+    BASEVS::getFlux(values,gradients,normal,radius);
+  }
+  
+  // if only the last two equations or all the equations are considered
+  if (nbEqs == 1 || nbEqs == totalNbEqs) {
+    RealVector& nsData = m_diffModel->getPhysicalData();
+    const CFuint sigmaID = PoissonNEQTerm<typename BASEVS::DTERM>::SIGMA;
+    cf_assert(sigmaID < nsData.size());
+    
+    // computation of sigma, frozen during jacobian computation if so chosen by the user)
+    if (this->_freezeDiffCoeff || this->_useBackUpValues) {
+      nsData[sigmaID] = m_sigmaCoeff;
+    }
+    else {
+      cf_assert(this->_TID > 0);  
+      CFreal Tdim = values[this->_TID];
+      cf_assert(Tdim > 0.01);
+      CFreal rho = this->getDensity(values);
+      cf_assert(rho > 0.);
+      const CFuint TvID = this->_TID+1;
+      for (CFuint iTv = 0; iTv < m_tVec.size(); ++iTv) {
+	m_tVec[iTv] = values[TvID+iTv];
+      }
+      
+      CFreal* tVec = &m_tVec[0];
+      CFreal pdim = this->_library->pressure(rho, Tdim, tVec); 
+      cf_assert(pdim > 0.01);
+      nsData[sigmaID] = this->_library->sigma(Tdim, pdim, tVec);
+      
+      if (this->_setBackUpValues) {
+	cf_assert(!this->_freezeDiffCoeff);
+	m_sigmaCoeff = nsData[sigmaID];
+      }
+    }    
+    
+    const CFreal sigma = nsData[sigmaID];
+    cf_assert(sigma > 0.);
+    
+    // assumption: phi is in the last equation
+    const CFuint phiID = totalNbEqs -1;
+    const RealVector& gradPhi = *gradients[phiID];
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    
+    this->_flux[phiID] = 0.0;
+    for (CFuint i = 0; i < dim; ++i) {
+      this->_flux[phiID] += sigma*gradPhi[i]*normal[i];
+      CFLog(DEBUG_MAX, "PoissonNEQDiffVarSet::getFlux; gradPhi["<< i <<"] = "<< gradPhi[i]
+	    << ", normal["<< i <<"] = " << normal[i] <<  "\n");
+    }
+    
+    if (m_diffModel->useAxiModel()) {
+      // ...
+    }
+  }
+  
+  return this->_flux;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename BASEVS>
+CFreal PoissonNEQDiffVarSet<BASEVS>::getCurrUpdateDiffCoeff(CFuint iEqSS)
+{
+  if (iEqSS == 0) {
+    return BASEVS::getCurrUpdateDiffCoeff(iEqSS);
+  }
+  return 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+      
+} // namespace PoissonNEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
