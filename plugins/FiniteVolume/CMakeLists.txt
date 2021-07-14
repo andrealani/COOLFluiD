@@ -252,6 +252,8 @@ NeumannBC.hh
 NeumannBC.cxx
 NeumannBCFromFile.hh
 NeumannBCFromFile.cxx
+NeumannCondition.cxx
+NeumannCondition.hh
 NullBC.hh
 NullBC.cxx
 NullComputeSourceTerm.cxx

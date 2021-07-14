@@ -1,4 +1,4 @@
-#include "ComputeSourceTermFVMCC.hh"
+#include "FiniteVolume/ComputeSourceTermFVMCC.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/BaseTerm.hh"
 #include "FiniteVolume/CellCenterFVMData.hh"

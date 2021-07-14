@@ -1,5 +1,5 @@
 #include "FiniteVolume/FiniteVolume.hh"
-#include "NeumannCondition.hh"
+#include "FiniteVolume/NeumannCondition.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/SubSystemStatus.hh"
 
@@ -20,7 +20,8 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<NeumannCondition, CellCenterFVMData, FiniteVolumeModule> NeumannConditionFVMCCProvider("NeumannConditionFVMCC");
+MethodCommandProvider<NeumannCondition, CellCenterFVMData, FiniteVolumeModule>
+NeumannConditionFVMCCProvider("NeumannConditionFVMCC");
 
 //////////////////////////////////////////////////////////////////////////////
 

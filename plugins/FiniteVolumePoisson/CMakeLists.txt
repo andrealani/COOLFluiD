@@ -2,8 +2,6 @@ LIST ( APPEND FiniteVolumePoisson_files
 CurrentCondition.cxx
 CurrentCondition.hh
 FiniteVolumePoisson.hh
-NeumannCondition.cxx
-NeumannCondition.hh
 PureDiffFlux.cxx
 PureDiffFlux.hh
 PureDiffFluxAndJacob.cxx
