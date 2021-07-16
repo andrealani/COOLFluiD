@@ -66,24 +66,37 @@ public:
   virtual void setGhostState(Framework::GeometricEntity *const face);
 
 private:
+
+  /// compute the boundary value: Phi (Dirichlet) or dPhi/dr (Neumann)
+  void computeBoundaryValue(const RealVector& innerCoord,
+			    const RealVector& ghostCoord,
+			    RealVector& input);
+  
+private:
   
   /// storage for the temporary boundary point coordinates
   RealVector m_bCoord;
   
   /// RealVector holding [x,y,z] and iteration number
   RealVector m_xyzIter;
-
+  
   /// array (with size=1) holding the input phi
   RealVector m_input;
+
+  /// direction vector for RL
+  RealVector _eRL;
   
   /// a vector of string to hold the functions
   std::vector<std::string> m_functions;
-
+  
   /// a vector of string to hold the functions
   std::vector<std::string> m_vars;
   
   /// the VectorialFunction to use
   Framework::VectorialFunction m_vFunction;
+  
+  /// apply the Dirichlet condition
+  bool m_useDirichlet;
   
 }; // end of class PoissonNEQBC
 

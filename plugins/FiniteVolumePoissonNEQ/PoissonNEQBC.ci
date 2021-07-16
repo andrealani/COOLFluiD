@@ -16,8 +16,9 @@ void PoissonNEQBC<BASE>::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::vector<std::string> >("PhiVars","Definition of the Variables.");
   options.addConfigOption< std::vector<std::string> >("PhiDef","Definition of the Functions.");
+  options.addConfigOption< bool >("useDirichlet","Apply the Dirichlet condition on phi.");
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
@@ -26,7 +27,8 @@ PoissonNEQBC(const std::string& name) :
   BASE(name),
   m_bCoord(),
   m_xyzIter(),
-  m_input()
+  m_input(),
+  _eRL()
 {
   this->addConfigOptionsTo(this);
   
@@ -35,6 +37,9 @@ PoissonNEQBC(const std::string& name) :
   
   m_vars = std::vector<std::string>();
   this->setParameter("PhiVars",&m_vars);
+  
+  m_useDirichlet = true;
+  this->setParameter("useDirichlet",&m_useDirichlet);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -53,9 +58,11 @@ void PoissonNEQBC<BASE>::setup()
 
   BASE::setup();
   
-  m_bCoord.resize(PhysicalModelStack::getActive()->getDim());
-  m_xyzIter.resize(PhysicalModelStack::getActive()->getDim() + 1);
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  m_bCoord.resize(dim);
+  m_xyzIter.resize(dim + 1);
   m_input.resize(1); // phi component
+  _eRL.resize(dim);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -82,8 +89,7 @@ void PoissonNEQBC<BASE>::configure ( Config::ConfigArgs& args )
     NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   
   // WATCH OUT: both m_functions and m_vars must have sizes > 0 to be usable! 
-  cf_assert((m_functions.size() == 1 && m_vars.size() >1) ||
-	    (m_functions.size() == 0 && m_vars.size() == 0)); 
+  cf_assert(m_functions.size() == 1 && m_vars.size() >1);
   
   m_vFunction.setFunctions(m_functions);
   m_vFunction.setVariables(m_vars);
@@ -99,8 +105,7 @@ void PoissonNEQBC<BASE>::configure ( Config::ConfigArgs& args )
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
-void PoissonNEQBC<BASE>::setGhostState
-(Framework::GeometricEntity *const face)
+void PoissonNEQBC<BASE>::setGhostState(Framework::GeometricEntity *const face)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -124,42 +129,72 @@ void PoissonNEQBC<BASE>::setGhostState
   if (nbEqs != 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
     BASE::setGhostState(face);
   }
-  
+
   // here it is assumed that the Poisson equation is the last one
   if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
     CFLog(DEBUG_MIN, "PoissonNEQBC<BASE>::setGhostState() with nbEqs = " << nbEqs << "\n");
-    
     State *const innerState = face->getState(0);
     State *const ghostState = face->getState(1);
-
-    if (m_functions.size() > 1 && m_vars.size() > 1) {
-      const CFuint dim = PhysicalModelStack::getActive()->getDim();
-            
-      // coordinate of the boundary point
-      m_bCoord = (innerState->getCoordinates() + ghostState->getCoordinates());
-      m_bCoord *= 0.5;
-      
-      // [x,y,z] and iteration "i" are fed to the evaluate function
-      for (CFuint i = 0; i < dim; ++i) {
-	m_xyzIter[i] = m_bCoord[i]; 
-      }
-      m_xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
-      
-      //Evaluate the function
-      m_vFunction.evaluate(m_xyzIter, m_input);
-      
+    const Node& nodeI = innerState->getCoordinates();
+    const Node& nodeG = ghostState->getCoordinates();
+    
+    // compute the boundary value: Phi (Dirichlet) or dPhi/dr (Neumann)
+    computeBoundaryValue(nodeI, nodeG, m_input);
+    
+    if (m_useDirichlet) {
       // Dirichlet condition with m_input[0] storing the imposed function for phi defined by PhiDef(PhiVars)
       (*ghostState)[lastEq] = 2.0*(m_input[0]) - (*innerState)[lastEq];
     }
     else {
       // Neumann condition
-      (*ghostState)[lastEq] =  -(*innerState)[lastEq];
+      
+      // distance for the computation of the gradient
+      const CFreal dr = MathFunctions::getDistance(nodeI, nodeG);
+      cf_assert(dr > 0.);
+      _eRL = (nodeG - nodeI)/dr;
+      
+      const CFuint dim = PhysicalModelStack::getActive()->getDim();
+      const CFuint faceID = face->getID();
+      const CFuint startID = faceID*dim;
+      DataHandle< CFreal> normals   = this->socket_normals.getDataHandle();
+      DataHandle< CFreal> faceAreas = this->socket_faceAreas.getDataHandle();
+      RealVector normalPtr(dim, &normals[startID]);
+      CFreal eDotN = MathFunctions::innerProd(_eRL, normalPtr);
+      cf_assert(faceAreas[faceID] > 0.);
+      eDotN /= faceAreas[faceID];
+      (*ghostState)[lastEq] = (*innerState)[lastEq] + dr*m_input[0]/eDotN;
     }
   }
   
   CFLog(DEBUG_MAX, "PoissonNEQBC<BASE>::setGhostState() => end\n");
 }
       
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::computeBoundaryValue
+(const RealVector& innerCoord, const RealVector& ghostCoord, RealVector& input)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+ 
+  // coordinate of the boundary point
+  m_bCoord = (innerCoord + ghostCoord);
+  m_bCoord *= 0.5;
+  
+  // [x,y,z] and iteration "i" are fed to the evaluate function
+  const CFuint dim = m_bCoord.size();
+  for (CFuint i = 0; i < dim; ++i) {
+    m_xyzIter[i] = m_bCoord[i]; 
+  }
+  m_xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
+  
+  //Evaluate the function
+  m_vFunction.evaluate(m_xyzIter, input);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolumePoissonNEQ
