@@ -82,7 +82,7 @@ void PoissonNEQBC<BASE>::configure ( Config::ConfigArgs& args )
     NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
   
   // WATCH OUT: both m_functions and m_vars must have sizes > 0 to be usable! 
-  cf_assert((m_functions.size() > 1 && m_vars.size() >1) ||
+  cf_assert((m_functions.size() == 1 && m_vars.size() >1) ||
 	    (m_functions.size() == 0 && m_vars.size() == 0)); 
   
   m_vFunction.setFunctions(m_functions);
@@ -112,41 +112,43 @@ void PoissonNEQBC<BASE>::setGhostState
   const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint lastEq = totalNbEqs - 1;
   const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+
+  // A) In weakly coupled setup:
+  // there are two subsystems: (0) plasma equations (nbEqs=nbEq0), (1) Poisson equation (nbEqs=1)
+  // nbEqs = nbEqs0+1  (=totalNbEqs)  when computing the RHS or initialization
+  // nbEqs = nbEqs0    when computing the jacobian for (0)
+  // nbEqs = 1         when computing the jacobian for (1)
+  // B) In fully coupled setup: it is ALWAYS nbEqs=totalNbEqs
+  
   const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
-    
   if (nbEqs != 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
     BASE::setGhostState(face);
   }
-    
+  
   // here it is assumed that the Poisson equation is the last one
   if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
+    CFLog(DEBUG_MIN, "PoissonNEQBC<BASE>::setGhostState() with nbEqs = " << nbEqs << "\n");
+    
     State *const innerState = face->getState(0);
     State *const ghostState = face->getState(1);
 
     if (m_functions.size() > 1 && m_vars.size() > 1) {
       const CFuint dim = PhysicalModelStack::getActive()->getDim();
-      const bool hasIter = (m_vars.size() == dim + 1);
-      
+            
       // coordinate of the boundary point
       m_bCoord = (innerState->getCoordinates() + ghostState->getCoordinates());
       m_bCoord *= 0.5;
       
-      if (!hasIter) {
-	//Evaluate the function
-	m_vFunction.evaluate(m_bCoord, m_input);
+      // [x,y,z] and iteration "i" are fed to the evaluate function
+      for (CFuint i = 0; i < dim; ++i) {
+	m_xyzIter[i] = m_bCoord[i]; 
       }
-      else {
-	// [x,y,z] and iteration "i" are fed to the evaluate function
-	for (CFuint i = 0; i < dim; ++i) {
-	  m_xyzIter[i] = m_bCoord[i]; 
-	}
-	m_xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
-	
-	//Evaluate the function
-	m_vFunction.evaluate(m_xyzIter, m_input);
-      }
+      m_xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
       
-      // Dirichlet condition with m_input[0] storing the imposed function for phi
+      //Evaluate the function
+      m_vFunction.evaluate(m_xyzIter, m_input);
+      
+      // Dirichlet condition with m_input[0] storing the imposed function for phi defined by PhiDef(PhiVars)
       (*ghostState)[lastEq] = 2.0*(m_input[0]) - (*innerState)[lastEq];
     }
     else {
