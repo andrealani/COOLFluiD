@@ -1,5 +1,8 @@
 LIST ( APPEND FiniteVolumePoissonNEQ_files
 FiniteVolumePoissonNEQ.hh
+PoissonNEQBC.ci
+PoissonNEQBC.cxx
+PoissonNEQBC.hh
 PoissonNEQST.cxx
 PoissonNEQST.hh
 )

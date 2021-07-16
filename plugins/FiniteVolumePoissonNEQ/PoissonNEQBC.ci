@@ -1,0 +1,167 @@
+#include "Framework/MeshData.hh"
+#include "Framework/NamespaceSwitcher.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Numerics {
+
+    namespace FiniteVolumePoissonNEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< std::vector<std::string> >("PhiVars","Definition of the Variables.");
+  options.addConfigOption< std::vector<std::string> >("PhiDef","Definition of the Functions.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+PoissonNEQBC<BASE>::
+PoissonNEQBC(const std::string& name) :
+  BASE(name),
+  m_bCoord(),
+  m_xyzIter(),
+  m_input()
+{
+  this->addConfigOptionsTo(this);
+  
+  m_functions = std::vector<std::string>();
+  this->setParameter("PhiDef",&m_functions);
+  
+  m_vars = std::vector<std::string>();
+  this->setParameter("PhiVars",&m_vars);
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+PoissonNEQBC<BASE>::~PoissonNEQBC()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::setup()
+{
+  using namespace Framework;
+
+  BASE::setup();
+  
+  m_bCoord.resize(PhysicalModelStack::getActive()->getDim());
+  m_xyzIter.resize(PhysicalModelStack::getActive()->getDim() + 1);
+  m_input.resize(1); // phi component
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::unsetup()
+{
+  BASE::unsetup();
+}
+
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::configure ( Config::ConfigArgs& args )
+{  
+  using namespace Framework;
+  
+  BASE::configure(args);
+
+  const std::string name = this->getMethodData().getNamespace();
+  
+  Common::SafePtr<Namespace> nsp =
+    NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(name);
+  
+  // WATCH OUT: both m_functions and m_vars must have sizes > 0 to be usable! 
+  cf_assert((m_functions.size() > 1 && m_vars.size() >1) ||
+	    (m_functions.size() == 0 && m_vars.size() == 0)); 
+  
+  m_vFunction.setFunctions(m_functions);
+  m_vFunction.setVariables(m_vars);
+  try {
+    m_vFunction.parse();
+  }
+  catch (Common::ParserException& e) {
+    CFout << e.what() << "\n";
+    throw; // retrow the exception to signal the error to the user
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void PoissonNEQBC<BASE>::setGhostState
+(Framework::GeometricEntity *const face)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Common;
+  using namespace COOLFluiD::MathTools;
+ 
+  CFLog(DEBUG_MAX, "PoissonNEQBC<BASE>::setGhostState() => start\n");
+  
+  const CFuint totalNbEqs = PhysicalModelStack::getActive()->getNbEq();
+  const CFuint lastEq = totalNbEqs - 1;
+  const CFuint nbEqs = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getNbEqsSS();
+  const CFuint eqSSID = PhysicalModelStack::getActive()->getEquationSubSysDescriptor().getEqSS();
+    
+  if (nbEqs != 1 || (nbEqs == 1 && eqSSID == 0) || nbEqs == totalNbEqs) {
+    BASE::setGhostState(face);
+  }
+    
+  // here it is assumed that the Poisson equation is the last one
+  if ((nbEqs == 1 && eqSSID == 1) || nbEqs == totalNbEqs) {
+    State *const innerState = face->getState(0);
+    State *const ghostState = face->getState(1);
+
+    if (m_functions.size() > 1 && m_vars.size() > 1) {
+      const CFuint dim = PhysicalModelStack::getActive()->getDim();
+      const bool hasIter = (m_vars.size() == dim + 1);
+      
+      // coordinate of the boundary point
+      m_bCoord = (innerState->getCoordinates() + ghostState->getCoordinates());
+      m_bCoord *= 0.5;
+      
+      if (!hasIter) {
+	//Evaluate the function
+	m_vFunction.evaluate(m_bCoord, m_input);
+      }
+      else {
+	// [x,y,z] and iteration "i" are fed to the evaluate function
+	for (CFuint i = 0; i < dim; ++i) {
+	  m_xyzIter[i] = m_bCoord[i]; 
+	}
+	m_xyzIter[dim] = SubSystemStatusStack::getActive()->getNbIter();
+	
+	//Evaluate the function
+	m_vFunction.evaluate(m_xyzIter, m_input);
+      }
+      
+      // Dirichlet condition with m_input[0] storing the imposed function for phi
+      (*ghostState)[lastEq] = 2.0*(m_input[0]) - (*innerState)[lastEq];
+    }
+    else {
+      // Neumann condition
+      (*ghostState)[lastEq] =  -(*innerState)[lastEq];
+    }
+  }
+  
+  CFLog(DEBUG_MAX, "PoissonNEQBC<BASE>::setGhostState() => end\n");
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace FiniteVolumePoissonNEQ
+
+  } // namespace Numerics
+
+} // namespace COOLFluiD
