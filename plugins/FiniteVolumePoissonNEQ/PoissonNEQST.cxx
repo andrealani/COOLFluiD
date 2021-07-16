@@ -138,6 +138,7 @@ void PoissonNEQST::computeSource
     cf_assert(Tdim > 0.01);
     CFreal* tVec = &(*currState)[nbSpecies+dim+1]; // array pointing to the Tv(s)/Te
     const CFreal sigma = m_library->sigma(Tdim, pdim, tVec);
+    CFLog(DEBUG_MAX, "PoissonNEQST::computeSource() => sigma = " << sigma << "\n");
     
     // velocities (3 components needed for cross product, even in 2D)
     for (CFuint d = 0; d < DIM_3D; ++d) {
