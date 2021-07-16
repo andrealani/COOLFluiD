@@ -49,6 +49,8 @@ public:
   virtual void configure ( Config::ConfigArgs& args )
   {
     FiniteVolume::ComputeSourceTermFVMCC::configure(args);
+       
+    _sockets.template createSocketSink<RealVector>("nstates");
   }
 
   /**
