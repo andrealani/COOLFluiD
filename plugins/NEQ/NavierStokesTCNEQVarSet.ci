@@ -13,6 +13,7 @@ NavierStokesTCNEQVarSet<BASE>::NavierStokesTCNEQVarSet
   _normConcGradientsAxi(),
   _rhoUdiffAxi(),
   _lambdaVibAxi()
+//  socket_heatflux("HeatFlux")
 {
 }
 
@@ -22,7 +23,17 @@ template <typename BASE>
 NavierStokesTCNEQVarSet<BASE>::~NavierStokesTCNEQVarSet()
 {
 }
-
+/*
+template <typename BASE>
+std::vector<Common::SafePtr<Framework::BaseDataSocketSink> >
+NavierStokesTCNEQVarSet<BASE>::needsSockets()
+{
+  std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > result =
+    ComputeSourceTermFVMCC::needsSockets();
+  result.push_back(&socket_qflux);
+  return result;
+}
+*/
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>      
@@ -36,8 +47,17 @@ void NavierStokesTCNEQVarSet<BASE>::setup()
   
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   this->_lambdaVibAxi.resize(nbTv);
+
 }
-      
+/*
+std::vector<Common::SafePtr<BaseDataSocketSource> >
+NavierStokesTCNEQVarSet<BASE>::providesSockets()
+{
+  std::vector<Common::SafePtr<BaseDataSocketSource> > result;
+  result.push_back(&socket_heatflux);
+  return result;
+}
+*/
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename BASE>      
@@ -65,8 +85,9 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
   
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   const CFuint nbTvib = nbTv - this->_library->getNbTe();
+  const CFuint nbTee = this->_library->getNbTe(); //new
   if (nbTvib > 1) {
-    cf_assert(this->_moleculeIdx.size() > 0);
+    cf_assert(this->_moleculeIdx.size() > 0); 
     // list of the molecule IDs corresponding to each vibrational energy equations 
     // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
     const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
@@ -113,7 +134,6 @@ RealVector& NavierStokesTCNEQVarSet<BASE>::getFlux(const RealVector& state,
     
     if (nbTvib == 0) {
       CFLog(DEBUG_MIN, "NavierStokesTCNEQVarSet::getFlux() => nbTvib == 0, nbTe = 1\n");
-      // case in which there is only Te and not Tv
       if (this->_library->getNbTe() == 1) {
 	const RealVector& gradTe = *gradients[this->_TvibID[0]];
 	const CFreal qe = this->_lambdaVib[0] *MathFunctions::innerProd(gradTe, normal);
@@ -158,7 +178,9 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
   RealVector& nsData = this->getModel().getPhysicalData();
   RealVector& refData = this->getModel().getReferencePhysicalData();
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
-  
+  const CFuint nbTvib = nbTv - this->_library->getNbTe(); //new
+  const CFuint nbTee = this->_library->getNbTe(); //new
+
   RealVector& eulerRefData = this->_eulerModel->getReferencePhysicalData();
   CFreal avTdim = eulerRefData[EulerTerm::T]*this->_gradState[this->_TID];
   CFreal avpdim = this->_avP*eulerRefData[EulerTerm::P];
@@ -203,9 +225,9 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
   
   // heat flux due to enthalpy diffusion
   heatFlux += MathFunctions::innerProd(this->_hsTot, this->_rhoUdiff);
-  cf_assert(this->_moleculeIdx.size() > 0);
-  
+    
   if (nbTv > 1) {
+    cf_assert(this->_moleculeIdx.size() > 0);  // this was outside this loop. VS brought it inside
     // list of the molecule IDs corresponding to each vibrational energy equations 
     // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
     const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
@@ -223,11 +245,13 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
     }
   }
   else {
-    if (nbTv == 1) {
+                         //VS: changed this to nbTvib, because in the older algo, nbTv =1. _TvibID is defined in NavierStokesNEQVarSet.hh, and _TvibID.resize(nbTv). so, it's size is 1 
+      if (nbTvib == 1){  // the nbTv==1 loop asks for _TvibID[1], which is not possible, since its size is 1, so the nbTv ==1 loop gives seg fault for Te case. 
+                        //This needs to be checked for Tv case(like mars case etc)
       const RealVector& gradTv = *gradients[this->_TvibID[0]];
       heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
       
-      const CFuint nbMol = this->_moleculeIdx.size();
+      const CFuint nbMol = this->_moleculeIdx.size(); 
       for (CFuint i = 0; i < nbMol; ++i) {
 	const CFuint ispecies = this->_moleculeIdx[i];
 	// heatFlux += this->_hsVib[i]*this->_rhoUdiff[this->_moleculeIdx[i]];
@@ -240,8 +264,7 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
 	heatFlux -= this->_lambdaVib[1]*MathFunctions::innerProd(gradTe, normal);
       }
     }
-    
-    if (nbTv == 0) {
+     if (nbTvib == 0){ 
       if (this->_library->getNbTe() == 1) {
 	const RealVector& gradTe = *gradients[this->_TvibID[0]];
 	heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTe, normal);
@@ -252,7 +275,6 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
       heatFlux += MathFunctions::innerProd(this->_hsEl, this->_rhoUdiff);
     }
   }
-  
   return heatFlux;
 }
 
@@ -270,7 +292,7 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
   using namespace COOLFluiD::Physics::NavierStokes;
   using namespace COOLFluiD::Common;
   using namespace COOLFluiD::MathTools;
-  
+//  cout << "in Axi source term loop[] \n";
   cf_assert(PhysicalModelStack::getActive()->getDim() == 2);
   
   // set the private data storing the adimensional values
@@ -374,6 +396,7 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
   const CFreal tauTT = -coeffTauMu*twoThird*(divV - 2.*vOverRadius);
   const CFreal qFlux = - this->getModel().getCoeffQ()*nsData[NSTerm::LAMBDA]*gradT[YY];
 
+ //DataHandle<CFreal> qflux_write = socket_heatflux.getDataHandle();
   // Nonequilibrium term of the energy equation
   CFreal qNEQ = 0.0;
   for (CFuint is = 0; is < nbSpecies; ++is) {
@@ -384,6 +407,7 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
   source[this->_vID] = -rhov*v + tauRR - tauTT;
   source[this->_TID] = -rhov*physicalData[EulerTerm::H] + tauRX*u + tauRR*v - qFlux - qNEQ;
   
+  
   cf_assert(this->_moleculeIdx.size() > 0);
   
   for (CFuint i = 0; i < nbSpecies; ++i) {
@@ -393,6 +417,7 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
   
   const CFuint firstTv = this->_eulerModel->getFirstScalarVar(1);
   if (nbTv > 1) {
+   // cout << "in if loop \n";
     // list of the molecule IDs corresponding to each vibrational energy equations 
     // e.g. in air5 with 2 Tv  => 0(N2) 2(O2)  
     const vector<CFuint>& molEvIDs = this->_library->getMolecule2EqIDs(); 
@@ -411,6 +436,7 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
     }
   }
   else {
+   // cout << "in else loop \n";
     const CFreal qVib = this->_lambdaVib[0]*(*gradients[this->_TvibID[0]])[YY];
     source[this->_TID] += qVib;
     source[this->_TvibID[0]] = -rhov*physicalData[firstTv] + qVib;
