@@ -245,9 +245,9 @@ CFreal NavierStokesTCNEQVarSet<BASE>::getHeatFlux(const RealVector& state,
     }
   }
   else {
-                         //VS: changed this to nbTvib, because in the older algo, nbTv =1. _TvibID is defined in NavierStokesNEQVarSet.hh, and _TvibID.resize(nbTv). so, it's size is 1 
-      if (nbTvib == 1){  // the nbTv==1 loop asks for _TvibID[1], which is not possible, since its size is 1, so the nbTv ==1 loop gives seg fault for Te case. 
-                        //This needs to be checked for Tv case(like mars case etc)
+        if (nbTvib == 1){      //VS: changed this to nbTvib, because in the older algo, nbTv =1. _TvibID is defined in NavierStokesNEQVarSet.hh, and _TvibID.resize(nbTv). so, it's size is 1 
+                              // the nbTv==1 loop asks for _TvibID[1], which is not possible, since its size is 1, so the nbTv ==1 loop gives seg fault for Te case. 
+                            //This needs to be checked for Tv case(like mars case etc)
       const RealVector& gradTv = *gradients[this->_TvibID[0]];
       heatFlux -= this->_lambdaVib[0]*MathFunctions::innerProd(gradTv, normal);
       
