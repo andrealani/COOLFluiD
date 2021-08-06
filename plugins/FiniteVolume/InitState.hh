@@ -75,6 +75,11 @@ protected:
    */
   virtual void configure ( Config::ConfigArgs& args );
 
+  /**
+   * Read the file defining the vectorial functions
+   */
+  virtual void readFunctionsFile();
+  
 protected: // data
   
   /// handle to the face normals
@@ -107,6 +112,9 @@ protected: // data
   /// a vector of string to hold the functions
   std::vector<std::string> _vars;
 
+  /// name of the file where strings holding the functions are defined
+  std::string _functionsFileName;
+  
   // the VectorialFunction to use
   Framework::VectorialFunction _vFunction;
 

@@ -1,9 +1,12 @@
 #include "FiniteVolume/FiniteVolume.hh"
 #include "FiniteVolume/InitState.hh"
 #include "Common/CFLog.hh"
-#include "Framework/MethodCommandProvider.hh"
 #include "Common/BadValueException.hh"
+#include "Common/PEFunctions.hh"
+#include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Environment/FileHandlerInput.hh"
+#include "Environment/SingleBehaviorFactory.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,6 +33,7 @@ void InitState::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
   options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
+  options.addConfigOption< std::string >("DefFileName","Name of file where Functions are defined.");
   options.addConfigOption< std::string >("InputVar","Input variables.");
   options.addConfigOption< bool >("AdimensionalValues","Flag to input adimensional values.");
 }
@@ -59,8 +63,11 @@ InitState::InitState(const std::string& name) :
   
   _inputAdimensionalValues = false;
   setParameter("AdimensionalValues",&_inputAdimensionalValues);
-}
 
+  _functionsFileName = "";
+  setParameter("DefFileName",&_functionsFileName);
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
 InitState::~InitState()
@@ -134,6 +141,9 @@ void InitState::setup()
 
   CellCenterFVMCom::setup();
 
+  // number of functions detected must match the total number of equations
+  cf_assert(_functions.size() == PhysicalModelStack::getActive()->getNbEq());
+  
   _input = new State();
 
   const CFuint maxNbStatesInCell =
@@ -182,6 +192,10 @@ void InitState::configure ( Config::ConfigArgs& args )
     FACTORY_GET_PROVIDER(getFactoryRegistry(), VarSetTransformer, provider)->
     create(physModel->getImplementor());
   
+  if (_functionsFileName != "" && _functions.size() == 0) {
+    runSerial<void, InitState, &InitState::readFunctionsFile>(this, name);
+  }
+  
   cf_assert(_inputToUpdateVar.isNotNull());
   _vFunction.setFunctions(_functions);
   _vFunction.setVariables(_vars);
@@ -193,6 +207,65 @@ void InitState::configure ( Config::ConfigArgs& args )
     throw; // retrow the exception to signal the error to the user
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void InitState::readFunctionsFile()
+{
+  boost::filesystem::path fpath(_functionsFileName);
+
+  CFLog(INFO, "InitState::readFunctionsFile() " << _functionsFileName << "\n");
+  
+  SelfRegistPtr<Environment::FileHandlerInput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+  /* ifstream& inputFile = fhandle->open(fpath);
+     CFuint nbVars  = 0; 
+   inputFile >> nbVars;
+   cf_assert(nbVars == nbEqs);
+   _functions.resize(nbVars);
+   
+   // this assumes that the functions are written each in one line, one per variable
+   for (CFuint iVar = 0; iVar < nbVars; ++iVar) {
+   inputFile >> _functions[iVar];
+   }
+   fhandle->close();
+*/
+  
+  string line = "";
+  CFuint nbLines = 0;
+  ifstream& inputFile1 = fhandle->open(fpath);
+
+  if (inputFile1.is_open()) {
+    while (!inputFile1.eof()) {
+      getline (inputFile1,line);
+      ++nbLines;
+    }
+  }
+  fhandle->close();
+    
+  ifstream& inputFile2 = fhandle->open(fpath);
+  string functionName = "";
+  for (CFuint iLine = 0; iLine < nbLines-1; ++iLine) {
+    getline(inputFile2, line);
+    // if you find "\", remove it and update the string
+    if (line.find('\\') != std::string::npos) {
+      CFLog(VERBOSE, "BEFORE InitState::readFunctionsFile() => " << line << "\n");
+      line.erase(remove(line.begin(), line.end(), '\\'), line.end());
+      CFLog(VERBOSE, "AFTER  InitState::readFunctionsFile() => " << line << "\n");
+      StringOps::trim(line);
+      functionName += line;
+    }
+    else {
+      StringOps::trim(line);
+      functionName += line;
+      _functions.push_back(functionName);
+      CFLog(VERBOSE, "InitState::readFunctionsFile() => [" << functionName << "]\n");
+      functionName = "";
+    }
+  }
+  
+  fhandle->close();
+ }
 
 //////////////////////////////////////////////////////////////////////////////
 
