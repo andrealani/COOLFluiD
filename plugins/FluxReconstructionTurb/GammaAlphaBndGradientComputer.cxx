@@ -311,7 +311,7 @@ void GammaAlphaBndGradientComputer::computeFlxPntStates()
     
     const CFreal tauCrit = tau/sqrt(rho*muTot);
     
-    if (tauCrit <= (*(m_cellStatesFlxPnt[iFlxPnt]))[7])
+    if (tauCrit <= (*(m_cellStatesFlxPnt[iFlxPnt]))[5+m_dim])
     {
       m_bcStateComputer->setTransitionCriterion(iFlxPnt,true);
     }

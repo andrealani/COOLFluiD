@@ -815,29 +815,23 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     
   /// destruction term of k
     
-  const CFreal avK     = max((*((*m_cellStates)[iState]))[4],0.0);
-  const CFreal avOmega = exp((*((*m_cellStates)[iState]))[5]);
-  const CFreal T = max(1.0e-3,(*((*m_cellStates)[iState]))[3]);
+  const CFreal avK     = max((*((*m_cellStates)[iState]))[5],0.0);
+  const CFreal avOmega = exp((*((*m_cellStates)[iState]))[6]);
+  const CFreal T = max(1.0e-3,(*((*m_cellStates)[iState]))[4]);
   const CFreal p = max(1.0e-3,(*((*m_cellStates)[iState]))[0]);
   const CFreal rho = max(navierStokesVarSet->getDensity(*((*m_cellStates)[iState])),1.0e-8);
   const CFreal R = m_eulerVarSet->getModel()->getR();
   const CFreal overRT = 1.0/(R*T);
   const CFreal pOverRTT = p/(R*T*T);
   const CFreal overOmega = 1.0/avOmega;
-  const CFreal avV = sqrt((*((*m_cellStates)[iState]))[1]*(*((*m_cellStates)[iState]))[1]+(*((*m_cellStates)[iState]))[2]*(*((*m_cellStates)[iState]))[2]);
+  const CFreal avV = sqrt((*((*m_cellStates)[iState]))[1]*(*((*m_cellStates)[iState]))[1]+(*((*m_cellStates)[iState]))[2]*(*((*m_cellStates)[iState]))[2]+(*((*m_cellStates)[iState]))[3]*(*((*m_cellStates)[iState]))[3]);
   
-  const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[6],0.01),0.99);
+  const CFreal avGa    = min(max((*((*m_cellStates)[iState]))[7],0.01),0.99);
     
-  const CFreal avAlpha    = max((*((*m_cellStates)[iState]))[7],0.0);
+  const CFreal avAlpha    = max((*((*m_cellStates)[iState]))[8],0.0);
   
   const CFreal mu = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
   const CFreal mut = navierStokesVarSet->getTurbDynViscosityFromGradientVars(*((*m_cellStates)[iState]), m_cellGrads[iState]);
-  
-  if (m_isAxisymmetric)
-  {
-    m_overRadius = 1.0/max(((*m_cellStates)[iState]->getCoordinates())[YY],1.0e-4);
-    m_vOverRadius = m_overRadius*(*((*m_cellStates)[iState]))[2];
-  }
   
   //Compute Strain 
   getStrain(iState);
@@ -847,6 +841,7 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal u = (*((*m_cellStates)[iState]))[1];
   const CFreal v = (*((*m_cellStates)[iState]))[2];
+  const CFreal w = (*((*m_cellStates)[iState]))[3];
   const CFreal dpx = (*(m_cellGrads[iState][0]))[XX];
   const CFreal dpy = (*(m_cellGrads[iState][0]))[YY];
   const CFreal dpz = (*(m_cellGrads[iState][0]))[ZZ];
@@ -869,11 +864,11 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     
   const CFreal Tu = min(max(100.0 * (std::sqrt(2.0*avK/3.0))/(avV),0.027),13.0);
       
-  (*((*m_cellStates)[iState]))[3] = TInfLocal;
+  (*((*m_cellStates)[iState]))[4] = TInfLocal;
     
   const CFreal muInfLocal = navierStokesVarSet->getLaminarDynViscosityFromGradientVars(*((*m_cellStates)[iState]));
     
-  (*((*m_cellStates)[iState]))[3] = T;
+  (*((*m_cellStates)[iState]))[4] = T;
       
   CFreal ReThetat;
 
@@ -890,14 +885,22 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal dux = (*(m_cellGrads[iState][1]))[XX];
   const CFreal duy = (*(m_cellGrads[iState][1]))[YY]; 
+  const CFreal duz = (*(m_cellGrads[iState][1]))[ZZ]; 
   const CFreal dvx = (*(m_cellGrads[iState][2]))[XX]; 
   const CFreal dvy = (*(m_cellGrads[iState][2]))[YY]; 
-  const CFreal dgammax = (*(m_cellGrads[iState][6]))[XX];
-  const CFreal dgammay = (*(m_cellGrads[iState][6]))[YY];
-  const CFreal dkx = (*(m_cellGrads[iState][4]))[XX];
-  const CFreal dky = (*(m_cellGrads[iState][4]))[YY];
-  const CFreal dax = (*(m_cellGrads[iState][7]))[XX];
-  const CFreal day = (*(m_cellGrads[iState][7]))[YY];
+  const CFreal dvz = (*(m_cellGrads[iState][2]))[ZZ];
+  const CFreal dwx = (*(m_cellGrads[iState][3]))[XX]; 
+  const CFreal dwy = (*(m_cellGrads[iState][3]))[YY]; 
+  const CFreal dwz = (*(m_cellGrads[iState][3]))[ZZ];
+  const CFreal dgammax = (*(m_cellGrads[iState][7]))[XX];
+  const CFreal dgammay = (*(m_cellGrads[iState][7]))[YY];
+  const CFreal dgammaz = (*(m_cellGrads[iState][7]))[ZZ];
+  const CFreal dkx = (*(m_cellGrads[iState][5]))[XX];
+  const CFreal dky = (*(m_cellGrads[iState][5]))[YY];
+  const CFreal dkz = (*(m_cellGrads[iState][5]))[ZZ];
+  const CFreal dax = (*(m_cellGrads[iState][8]))[XX];
+  const CFreal day = (*(m_cellGrads[iState][8]))[YY];
+  const CFreal daz = (*(m_cellGrads[iState][8]))[ZZ];
   
   const CFreal betaStar = navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]));
   
@@ -918,24 +921,24 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     {
       //p
       tempSTTerm = -avK * overRT * DkTerm;
-      m_stateJacobian[0][4] += tempSTTerm;
-      m_stateJacobian[0][3] -= tempSTTerm;
+      m_stateJacobian[0][5] += tempSTTerm;
+      m_stateJacobian[0][4] -= tempSTTerm;
   
       //T
       tempSTTerm = DkTerm * avK * pOverRTT;
-      m_stateJacobian[3][4] += tempSTTerm;
-      m_stateJacobian[3][3] -= tempSTTerm;
+      m_stateJacobian[4][5] += tempSTTerm;
+      m_stateJacobian[4][4] -= tempSTTerm;
     }
   
     //k
     tempSTTerm = -DkTerm * rho;
-    m_stateJacobian[4][4] += tempSTTerm;
-    m_stateJacobian[4][3] -= tempSTTerm;
+    m_stateJacobian[5][5] += tempSTTerm;
+    m_stateJacobian[5][4] -= tempSTTerm;
   
     //logOmega
     tempSTTerm = -DkTerm * avK * rho;
-    m_stateJacobian[5][4] += tempSTTerm;
-    m_stateJacobian[5][3] -= tempSTTerm;
+    m_stateJacobian[6][5] += tempSTTerm;
+    m_stateJacobian[6][4] -= tempSTTerm;
   }
   
   /// destruction term of logOmega
@@ -951,14 +954,14 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       //p
-      m_stateJacobian[0][5] = -DomegaTerm * overRT;
+      m_stateJacobian[0][6] = -DomegaTerm * overRT;
   
       //T
-      m_stateJacobian[3][5] = DomegaTerm * pOverRTT;
+      m_stateJacobian[4][6] = DomegaTerm * pOverRTT;
     }
   
     //logOmega
-    m_stateJacobian[5][5] = -DomegaTerm * rho;
+    m_stateJacobian[6][6] = -DomegaTerm * rho;
   }
   
   /// production term of k
@@ -970,28 +973,22 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   CFreal mutTerm;
   CFreal Pk;
   
-  if (!m_isSSTV)
+  if (m_neglectSSTVTerm)
   {
-    mutTerm = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)+(duy+dvx)*(duy+dvx));
-
-    Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy+m_vOverRadius));
-  }
-  else if (m_neglectSSTVTerm)
-  {
-    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+    mutTerm = coeffTauMu*m_vorticity*m_vorticity;
 
     Pk = mutTerm*mut;  
   }
   else
   {
-    mutTerm = coeffTauMu*(duy-dvx)*(duy-dvx);
+    mutTerm = coeffTauMu*m_vorticity*m_vorticity;
 
-    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy+m_vOverRadius)); 
+    Pk = (mutTerm*mut - (2./3.)*(avK * rho)*(dux+dvy+dwz)); 
   }
   
   //const CFreal Pk = (mutTerm*mut - (2./3.)*(avK * rho * gammaTerm)*(dux+dvy+m_vOverRadius));
   
-  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy+m_vOverRadius);
+  const CFreal twoThirdduxduy = (2./3.)*(dux+dvy+dwz);
   
   if (Pk > 0.0)
   {
@@ -1003,43 +1000,35 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
       tempSTTerm = mutTerm*avK*overRT*overOmega*mutGaMod;
       if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*avK*overRT * gammaTerm;
       
-      m_stateJacobian[0][4] += tempSTTerm;
-      m_stateJacobian[0][3] -= tempSTTerm;
+      m_stateJacobian[0][5] += tempSTTerm;
+      m_stateJacobian[0][4] -= tempSTTerm;
   
       //T
       tempSTTerm = -mutTerm*avK*overOmega*mutGaMod*pOverRTT;
       if (!m_neglectSSTVTerm) tempSTTerm += twoThirdduxduy*avK*pOverRTT * gammaTerm;
       
-      m_stateJacobian[3][4] += tempSTTerm;
-      m_stateJacobian[3][3] -= tempSTTerm;
+      m_stateJacobian[4][5] += tempSTTerm;
+      m_stateJacobian[4][4] -= tempSTTerm;
  
       //gamma
       tempSTTerm = mutTerm*mut*dmudg/mutGaMod;
       if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy * avK * rho*2.0*(1.0-avGa);
       
-      m_stateJacobian[6][4] += tempSTTerm;
-      m_stateJacobian[6][3] -= tempSTTerm;
-      
-      if (m_isAxisymmetric && !m_isSSTV)
-      {
-        //v
-        tempSTTerm = mut*coeffTauMu*4./3.*m_overRadius*(-(dux+dvy)+v*2.0)- (2./3.)*(avK * rho * gammaTerm)*m_overRadius;
-        m_stateJacobian[2][4] += tempSTTerm;
-        m_stateJacobian[2][3] -= tempSTTerm;
-      }
+      m_stateJacobian[7][5] += tempSTTerm;
+      m_stateJacobian[7][4] -= tempSTTerm;
     }
   
     //k
     tempSTTerm = mutTerm*rho*overOmega*mutGaMod;
     if (!m_neglectSSTVTerm) tempSTTerm += -twoThirdduxduy*rho * gammaTerm;
     
-    m_stateJacobian[4][4] += tempSTTerm;
-    m_stateJacobian[4][3] -= tempSTTerm;
+    m_stateJacobian[5][5] += tempSTTerm;
+    m_stateJacobian[5][4] -= tempSTTerm;
   
     //logOmega
     tempSTTerm = -mutTerm*rho*avK*overOmega*mutGaMod;
-    m_stateJacobian[5][4] += tempSTTerm;
-    m_stateJacobian[5][3] -= tempSTTerm;
+    m_stateJacobian[6][5] += tempSTTerm;
+    m_stateJacobian[6][4] -= tempSTTerm;
   }
   
   /// production of logOmega
@@ -1048,7 +1037,7 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal blendingCoefF1 = navierStokesVarSet->getBlendingCoefficientF1();
   const CFreal sigmaOmega2 = navierStokesVarSet->getSigmaOmega2();
   
-  const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2 * ((*(m_cellGrads[iState][4]))[XX]*(*(m_cellGrads[iState][5]))[XX] + (*(m_cellGrads[iState][4]))[YY]*(*(m_cellGrads[iState][5]))[YY]);
+  const CFreal pOmegaFactor = (1. - blendingCoefF1) * 2. * sigmaOmega2 * ((*(m_cellGrads[iState][5]))[XX]*(*(m_cellGrads[iState][6]))[XX] + (*(m_cellGrads[iState][5]))[YY]*(*(m_cellGrads[iState][6]))[YY] + (*(m_cellGrads[iState][5]))[ZZ]*(*(m_cellGrads[iState][6]))[ZZ]);
   
   const CFreal Pomega = (gamma*rho/mut) * Pk * overOmega + rho * overOmega * pOmegaFactor;
   
@@ -1057,14 +1046,14 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       //p
-      m_stateJacobian[0][5] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT/mutGaMod*gammaTerm) + pOmegaFactor*overRT*overOmega;
+      m_stateJacobian[0][6] += gamma*(mutTerm*overRT*overOmega - twoThirdduxduy*overRT/mutGaMod*gammaTerm) + pOmegaFactor*overRT*overOmega;
   
       //T
-      m_stateJacobian[3][5] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy/mutGaMod*gammaTerm) - pOmegaFactor*pOverRTT*overOmega;
+      m_stateJacobian[4][6] += gamma*pOverRTT*(-mutTerm*overOmega + twoThirdduxduy/mutGaMod*gammaTerm) - pOmegaFactor*pOverRTT*overOmega;
     }
  
     //logOmega
-    m_stateJacobian[5][5] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
+    m_stateJacobian[6][6] +=  -gamma*rho*mutTerm*overOmega - pOmegaFactor*rho*overOmega;
   }
   
   // P gamma
@@ -1080,7 +1069,7 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal fMnsigmaTerm = 1.0+0.58*pow(MInfLocal,0.6);
   const CFreal fMnsigma = 1.0/(fMnsigmaTerm*fMnsigmaTerm);
     
-  CFreal dpds = 1.0/avV*(u*dpx + v*dpy);
+  CFreal dpds = 1.0/avV*(u*dpx + v*dpy + w*dpz);
 
   CFreal PRC = 1.0;
     
@@ -1137,16 +1126,19 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
       const CFreal gTermFgBeta2 = gTerm * fg * betaGA *2.0;
       
       //p
-      m_stateJacobian[0][6] +=  gTermFgBeta2 * overRT * avV;
+      m_stateJacobian[0][7] +=  gTermFgBeta2 * overRT * avV;
   
       //T
-      m_stateJacobian[3][6] +=  -gTermFgBeta2 * pOverRTT * avV;
+      m_stateJacobian[4][7] +=  -gTermFgBeta2 * pOverRTT * avV;
       
       //u
-      m_stateJacobian[1][6] +=  gTermFgBeta2 * rho * u/avV;
+      m_stateJacobian[1][7] +=  gTermFgBeta2 * rho * u/avV;
               
       //v
-      m_stateJacobian[2][6] +=  gTermFgBeta2 * rho * v/avV;    
+      m_stateJacobian[2][7] +=  gTermFgBeta2 * rho * v/avV;    
+      
+      //w
+      m_stateJacobian[3][7] +=  gTermFgBeta2 * rho * w/avV;  
     }
   }
   
@@ -1159,8 +1151,39 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   //const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
   const CFreal muGamma = 0.57*pow(-log(1.0-avGa),-5.0/6.0*(1.0-avGa))*fMuGamma*fMMuGamma*mu;
     
-  const CFreal dudn = -1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
-  const CFreal dgammadn = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+  //const CFreal dudn = -1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
+  //const CFreal dgammadn = 1.0/avV*(v*dgammax - u*dgammay);//-dgammay; //
+  
+  const CFreal overVel = 1.0/avV;
+    const CFreal dVeldx = overVel*(u*dux+v*dvx+w*dwx);
+    const CFreal dVeldy = overVel*(u*duy+v*dvy+w*dwy);
+    const CFreal dVeldz = overVel*(u*duz+v*dvz+w*dwz);
+    
+//    const CFreal dVeldx = overVel*(u*dux+v*dvx);
+//    const CFreal dVeldy = overVel*(u*duy+v*dvy);
+//    const CFreal dVeldz = overVel*(u*duz+v*dvz);
+    
+    CFreal dVeldnx;
+    CFreal dVeldny;
+    CFreal dVeldnz;
+    CFreal dVeldnSize;
+    
+    // temporary solution for cone case, code below based on largest du/dn, i.e. direction for shear vector, should work, but u grads in 3D seem too oscillatory in P1
+    const CFreal sinA = 0.139173101;//0.1218693434;    
+const CFreal cosA = 0.9902680687;//0.9925461516;
+const CFreal xvec = -sinA;
+    const CFreal zcurr = ((*m_cellStates)[iState]->getCoordinates())[ZZ];
+    const CFreal ycurr = ((*m_cellStates)[iState]->getCoordinates())[YY];
+    const CFreal nsizecurr = 1.0/sqrt(zcurr*zcurr+ycurr*ycurr);
+    const CFreal dVeldn1 = (dVeldy*ycurr*cosA+zcurr*dVeldz*cosA)*nsizecurr+xvec*dVeldx;
+    dVeldnSize = fabs(dVeldn1);
+    dVeldnx = xvec;
+    dVeldny = ycurr*nsizecurr*cosA;//dVeldn1*ycurr*nsizecurr/dVeldnSize;
+    dVeldnz = zcurr*nsizecurr*cosA;//dVeldn1*zcurr*nsizecurr/dVeldnSize;
+    
+    const CFreal dudn = -dVeldnSize;//1.0/(avV*avV)*(u*u*duy-v*v*dvx+u*v*(dvy-dux));//-duy; //
+    
+    const CFreal dgammadn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dgammax + dVeldny*dgammay + dVeldnz*dgammaz);//-dgammay; //
   
   const CFreal dgTerm = -cEg * avV/(uInfLocal*uInfLocal) * dudn * dgammadn;
     
@@ -1179,10 +1202,13 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     if (!m_blockDecoupled)
     {
       // u
-      m_stateJacobian[1][6] +=  destructionTerm_Ga * u/(avV*avV);
+      m_stateJacobian[1][7] +=  destructionTerm_Ga * u/(avV*avV);
       
       // v
-      m_stateJacobian[2][6] +=  destructionTerm_Ga * v/(avV*avV);      
+      m_stateJacobian[2][7] +=  destructionTerm_Ga * v/(avV*avV);  
+      
+      // w
+      m_stateJacobian[3][7] +=  destructionTerm_Ga * w/(avV*avV); 
     }
   }
   
@@ -1207,7 +1233,8 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
     
   const CFreal t = (500.0 * mu )/(rho * avV * avV);
   
-  const CFreal dkdn = 1.0/avV*(v*dkx - u*dky);//-dky; //  
+  //const CFreal dkdn = 1.0/avV*(v*dkx - u*dky);//-dky; //  
+  const CFreal dkdn = (dVeldnSize < 1.0e-7*avV) ? 0.0 : -(dVeldnx*dkx + dVeldny*dky + dVeldnz*dkz);
     
   const CFreal  Rew         = (rho * m_currWallDist[iState] * m_currWallDist[iState] * avOmega)/(mu);   
   const CFreal  Fwake1      = (1.0e-5 * Rew)*(1.0e-5 * Rew);   
@@ -1239,23 +1266,26 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   if (prodTerm_alpha > 0.0 || !m_limPRe)
   {
     // alpha
-    m_stateJacobian[7][7] +=  -cpa1 * (rho/t) * (1.0 - Fthetat);
+    m_stateJacobian[8][8] +=  -cpa1 * (rho/t) * (1.0 - Fthetat);
   
     if (!m_blockDecoupled)
     {
       const CFreal tTerm = 2.0*rho*avV*avV/(500.0*mu);
         
       // p
-      m_stateJacobian[0][7] +=  cpa1 * tTerm * overRT * (alphac - avAlpha) * (1.0 - Fthetat);
+      m_stateJacobian[0][8] +=  cpa1 * tTerm * overRT * (alphac - avAlpha) * (1.0 - Fthetat);
   
       // T
-      m_stateJacobian[3][7] +=  -cpa1 * tTerm * pOverRTT * (alphac - avAlpha) * (1.0 - Fthetat);
+      m_stateJacobian[4][8] +=  -cpa1 * tTerm * pOverRTT * (alphac - avAlpha) * (1.0 - Fthetat);
   
       // u
-      m_stateJacobian[1][7] +=  cpa1 * 2.0*rho*rho*u/(500.0*mu) * (alphac - avAlpha) * (1.0 - Fthetat);
+      m_stateJacobian[1][8] +=  cpa1 * 2.0*rho*rho*u/(500.0*mu) * (alphac - avAlpha) * (1.0 - Fthetat);
   
       // v
-      m_stateJacobian[2][7] +=  cpa1 * 2.0*rho*rho*v/(500.0*mu) * (alphac - avAlpha) * (1.0 - Fthetat);
+      m_stateJacobian[2][8] +=  cpa1 * 2.0*rho*rho*v/(500.0*mu) * (alphac - avAlpha) * (1.0 - Fthetat);
+      
+      // w
+      m_stateJacobian[3][8] +=  cpa1 * 2.0*rho*rho*w/(500.0*mu) * (alphac - avAlpha) * (1.0 - Fthetat);
     }
   }
   
@@ -1264,86 +1294,19 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
       const CFreal daTerm = -cna*dadn;
         
       // p
-      m_stateJacobian[0][7] +=  daTerm*avV*overRT;
+      m_stateJacobian[0][8] +=  daTerm*avV*overRT;
   
       // T
-      m_stateJacobian[3][7] +=  -daTerm*avV*pOverRTT;
+      m_stateJacobian[4][8] +=  -daTerm*avV*pOverRTT;
   
       // u
-      m_stateJacobian[1][7] +=  daTerm*rho*u/avV;
+      m_stateJacobian[1][8] +=  daTerm*rho*u/avV;
   
       // v
-      m_stateJacobian[2][7] +=  daTerm*rho*v/avV;
-  }
-  
-  if (m_isAxisymmetric)
-  { 
-      const CFreal rhovr = rho*v*m_overRadius;
-      const CFreal vrOverRT = v*m_overRadius*overRT;
-      const CFreal vrPOverRTT = v*m_overRadius*pOverRTT;
-      const CFreal rhor = m_overRadius*rho;
+      m_stateJacobian[2][8] +=  daTerm*rho*v/avV;
       
-      const CFreal coeffTauMuAS = coeffTauMu*(mu+mut);
-      
-      //rho
-      m_stateJacobian[0][0] += -vrOverRT;
-      m_stateJacobian[2][0] += -rhor;
-      m_stateJacobian[3][0] += vrPOverRTT;
-      
-      //rho u
-      m_stateJacobian[0][1] += -vrOverRT*u;
-      m_stateJacobian[2][1] += -rhor*u;
-      m_stateJacobian[3][1] += vrPOverRTT*u;
-      m_stateJacobian[1][1] += -rhovr;
-      
-      //rho v
-      m_stateJacobian[0][2] += -vrOverRT*v;
-      m_stateJacobian[2][2] += -2.0*rhovr-m_overRadius*m_overRadius*2.0*coeffTauMuAS;
-      m_stateJacobian[3][2] += vrPOverRTT*v;
-      
-      //rho e
-      const CFreal isentropicTerm = gammaIsentropic/(gammaIsentropic-1.0);
-      m_stateJacobian[0][3] += -isentropicTerm*m_vOverRadius-0.5*avV*avV*vrOverRT;
-      m_stateJacobian[2][3] += -isentropicTerm*p*m_overRadius-0.5*(avV*avV+2.0*v*v)*rho*m_overRadius - 4.0/3.0*m_overRadius*m_overRadius*coeffTauMuAS*v;
-      m_stateJacobian[3][3] += 0.5*avV*avV*vrPOverRTT;
-      m_stateJacobian[1][3] += -rhovr*u;
-      
-      //rho k
-      if (!m_blockDecoupled)
-      {
-        m_stateJacobian[0][4] += -vrOverRT*avK;
-        m_stateJacobian[2][4] += -rhor*avK;
-        m_stateJacobian[3][4] += vrPOverRTT*avK;
-      }
-      m_stateJacobian[4][4] += -rhovr;
-      
-      //rho logOmega
-      const CFreal logOmega = (*((*m_cellStates)[iState]))[5];
-      if (!m_blockDecoupled)
-      {
-        m_stateJacobian[0][5] += -vrOverRT*logOmega;
-        m_stateJacobian[2][5] += -rhor*logOmega;
-        m_stateJacobian[3][5] += vrPOverRTT*logOmega;
-      }
-      m_stateJacobian[5][5] += -rhovr;
-      
-      //rho gamma
-      if (!m_blockDecoupled)
-      {
-        m_stateJacobian[0][6] += -vrOverRT*avGa;
-        m_stateJacobian[2][6] += -rhor*avGa;
-        m_stateJacobian[3][6] += vrPOverRTT*avGa;
-      }
-      m_stateJacobian[6][6] += -rhovr;
-      
-      //rho alpha
-      if (!m_blockDecoupled)
-      {
-        m_stateJacobian[0][7] += -vrOverRT*avAlpha;
-        m_stateJacobian[2][7] += -rhor*avAlpha;
-        m_stateJacobian[3][7] += vrPOverRTT*avAlpha;
-      }
-      m_stateJacobian[7][7] += -rhovr;
+      // w
+      m_stateJacobian[3][8] +=  daTerm*rho*w/avV;
   }
 
   if (m_addUpdateCoeff)
@@ -1360,13 +1323,13 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   
     const CFreal Gk = pow(G,1.0/gamma);
   
-    const CFreal kUpdateTerm = (PkUpdate + DkUpdate)/max(avK,0.001)/(Gk-1) + m_stateJacobian[4][4];
+    const CFreal kUpdateTerm = (PkUpdate + DkUpdate)/max(avK,0.001)/(Gk-1) + m_stateJacobian[5][5];
   
     update = max(0.0,kUpdateTerm);
   
     //if (update>1000) CFLog(INFO,"kUpdate: " << update << "\n");
   
-    const CFreal logOmega = (*((*m_cellStates)[iState]))[5];
+    const CFreal logOmega = (*((*m_cellStates)[iState]))[6];
   
     const CFreal Gomega = pow(G,1.0/logOmega);
   
@@ -1374,7 +1337,7 @@ void  GammaAlpha3DSourceTerm::getSToStateJacobian(const CFuint iState)
   
     const CFreal DomegaUpdate = min(Domega,0.0);
   
-    const CFreal omegaUpdateTerm = (PomegaUpdate + DomegaUpdate)/max(logOmega,0.1)/(Gomega-1) + m_stateJacobian[5][5];
+    const CFreal omegaUpdateTerm = (PomegaUpdate + DomegaUpdate)/max(logOmega,0.1)/(Gomega-1) + m_stateJacobian[6][6];
   
     update = max(update,omegaUpdateTerm);
   
