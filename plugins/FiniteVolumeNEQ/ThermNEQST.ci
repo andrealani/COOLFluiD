@@ -444,35 +444,57 @@ void ThermNEQST<UPDATEVAR>::computePeDivV
   
   CFreal dudX = 0.;
   CFreal dvdY = 0.;
+  CFreal dwdZ = 0.;
   
-  const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
-  cf_assert(faces.size() == nbNodesInElem);
-  
-  for (CFuint i = 0; i < nbNodesInElem; ++i) {
-    // get the face normal
-    const CFuint faceID = faces[i]->getID();
-    const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
-    
+  if (this->m_useGradientLS && this->m_gradientsExist) {
+    const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
+    const CFuint elemID = currState->getLocalID();
+    const CFuint start = elemID*nbEqs + nbSpecies;
+    dudX = this->m_ux[start];
+    if (dim >= DIM_2D) {
+      dvdY = this->m_uy[start+1];
+      if (dim == DIM_3D) {
+	dwdZ = this->m_uz[start+2];
+      }
+    }
+    CFLog(DEBUG_MED, "ThermNEQST::computeSource() => LS gradient in cell [" << 
+	  elemID << " ] => dUdX = [" << dudX << "], dVdY = [" << dvdY << "], dWdZ = [" << dwdZ << "]\n");
+  }
+  else {
     // for now only 2D
-    CFreal nx = normals[startID];
-    CFreal ny = normals[startID + 1];
-    if (static_cast<CFuint>(isOutward[faceID]) != element->getID()) {
-      nx *= -1.;
-      ny *= -1.;
+    cf_assert(dim == DIM_2D);
+    const vector<GeometricEntity*>& faces = *element->getNeighborGeos();
+    cf_assert(faces.size() == nbNodesInElem);
+    
+    for (CFuint i = 0; i < nbNodesInElem; ++i) {
+      // get the face normal
+      const CFuint faceID = faces[i]->getID();
+      const CFuint startID = faceID*PhysicalModelStack::getActive()->getDim();
+      
+      // for now only 2D
+      CFreal nx = normals[startID];
+      CFreal ny = normals[startID + 1];
+      if (static_cast<CFuint>(isOutward[faceID]) != element->getID()) {
+	nx *= -1.;
+	ny *= -1.;
+      }
+      
+      CFuint iPlus1 = 0;
+      if (i < (nbNodesInElem - 1)) {
+	iPlus1 = i+1;
+      }
+      const RealVector& n1 = nstates[nodes[i]->getLocalID()];
+      const RealVector& n2 = nstates[nodes[iPlus1]->getLocalID()];
+      dudX += nx*(n1[nbSpecies] + n2[nbSpecies]);
+      dvdY += ny*(n1[nbSpecies+1] + n2[nbSpecies+1]);
     }
     
-    CFuint iPlus1 = 0;
-    if (i < (nbNodesInElem - 1)) {
-      iPlus1 = i+1;
-    }
-    const RealVector& n1 = nstates[nodes[i]->getLocalID()];
-    const RealVector& n2 = nstates[nodes[iPlus1]->getLocalID()];
-    dudX += nx*(n1[nbSpecies] + n2[nbSpecies]);
-    dvdY += ny*(n1[nbSpecies+1] + n2[nbSpecies+1]);
+    dudX *= 0.5; // take the average flux on each face
+    dvdY *= 0.5; // take the average flux on each face
   }
   
   //  VOLUME is OK for pe term
-  _divV = 0.5*(dudX + dvdY); // here 1./volume but after *volume so 1 in total 
+  _divV = dudX + dvdY + dwdZ; // here 1./volume but after *volume so 1 in total 
   
   // this electron pressure has been already calculated in ChemNEQST when calling computePhysicalData()
   _pe = this->_library->getElectronPress()/(*_refData)[UPDATEVAR::PTERM::P];
