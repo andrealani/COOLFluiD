@@ -60,6 +60,7 @@ bool NormCondition::isAchieved (const ConvergenceStatus& status)
     isFirstIter = false;
     return false;
   }
+  CFLog(VERBOSE, "NormCondition::isAchieved() => " << status.res << " < " << _valueNorm << "\n");
   return (status.res < _valueNorm);
 }
 
