@@ -1,4 +1,5 @@
 #include "PoissonNEQ/PoissonNEQTerm.hh"
+#include "Framework/MeshData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -87,6 +88,14 @@ RealVector& PoissonNEQDiffVarSet<BASEVS>::getFlux
       CFreal* tVec = &m_tVec[0];
       CFreal pdim = this->_library->pressure(rho, Tdim, tVec); 
       cf_assert(pdim > 0.01);
+      
+      const std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+      const std::string datahandleName = nsp + "_BfieldFaces";
+      DataHandle<CFreal> BfieldFaces = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
+      const CFuint startIdx = this->_entityID*DIM_3D;
+      const CFuint Bx = BfieldFaces[startIdx];
+      const CFuint By = BfieldFaces[startIdx+1];
+      const CFuint Bz = BfieldFaces[startIdx+2];
       nsData[sigmaID] = this->_library->sigma(Tdim, pdim, tVec);
       
       if (this->_setBackUpValues) {

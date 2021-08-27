@@ -144,6 +144,12 @@ public:
     _faceCoord = faceCoord; 
   }
   
+  /// Set the entity ID to be used in special cases for MHD
+  void setEntityID(CFuint entityID)
+  {
+    _entityID = entityID;
+  }
+  
 protected: // methods
 
   /// Set the list of the variable names
@@ -170,6 +176,9 @@ private: // methods
 
 protected:
 
+  /// the entity ID to be used in special cases related to MHD
+  CFuint _entityID;
+  
   /// list of the variables names
   std::vector<std::string> _varNames;
 

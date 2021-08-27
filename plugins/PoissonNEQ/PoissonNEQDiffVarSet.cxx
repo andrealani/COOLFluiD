@@ -28,13 +28,13 @@ Environment::ObjectProvider<PoissonNEQDiffVarSet
 			    <NavierStokesNEQRhoivt<NavierStokesTCNEQVarSet<NavierStokes2DVarSet> > >,
 			    DiffusiveVarSet, 
 			    PoissonNEQModule, 2> 
-poissonNEQ2DRhoivtTvDiffProvider("PoissonNEQNEQ2DRhoivtTv");
+poissonNEQ2DRhoivtTvDiffProvider("PoissonNEQ2DRhoivtTv");
 
 Environment::ObjectProvider<PoissonNEQDiffVarSet
 			    <NavierStokesNEQRhoivt<NavierStokesTCNEQVarSet<NavierStokes3DVarSet> > >,
 			    DiffusiveVarSet, 
 			    PoissonNEQModule, 2> 
-poissonNEQ3DRhoivtTvDiffProvider("PoissonNEQNEQ3DRhoivtTv");
+poissonNEQ3DRhoivtTvDiffProvider("PoissonNEQ3DRhoivtTv");
 
 //////////////////////////////////////////////////////////////////////////////
 

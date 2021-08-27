@@ -59,8 +59,8 @@ ComputeBField::ComputeBField(const std::string& name) :
   socket_states("states"),
   socket_gstates("gstates"),
   socket_faceCenters("faceCenters"),
-  socket_Bfield("socket_Bfield"),
-  socket_BfieldFaces("socket_BfieldFaces"),
+  socket_Bfield("Bfield"),
+  socket_BfieldFaces("BfieldFaces"),
   m_input()
 {
   this->addConfigOptionsTo(this);

@@ -21,6 +21,7 @@ DiffusiveVarSet::DiffusiveVarSet
   Common::OwnedObject(),
   Config::ConfigObject(name),
   Common::NullableObject(),
+  _entityID(0),
   _varNames(),
   _faceCoord(CFNULL),
   _flux(),

@@ -97,6 +97,8 @@ void NSFlux<DIFFVS>::computeFlux(RealVector& result)
   // compute the average values
   derivComputer->computeAverageValues(&geo, _states, _avState);
   
+  _diffVar->setEntityID(geo.getID());
+  
   _diffVar->setComposition(_avState, isPerturb, iPerturbVar);
   const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
   
