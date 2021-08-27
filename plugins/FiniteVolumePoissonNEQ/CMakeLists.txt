@@ -1,4 +1,6 @@
 LIST ( APPEND FiniteVolumePoissonNEQ_files
+ComputeBField.cxx
+ComputeBField.hh
 FiniteVolumePoissonNEQ.hh
 PoissonNEQBC.ci
 PoissonNEQBC.cxx
