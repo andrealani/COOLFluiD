@@ -18,6 +18,8 @@ WriteSolution.cxx
 WriteSolution.hh
 WriteSolutionHighOrder.cxx
 WriteSolutionHighOrder.hh
+WriteSolutionNoOverlap.cxx
+WriteSolutionNoOverlap.hh
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )
