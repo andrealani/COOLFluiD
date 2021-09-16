@@ -43,7 +43,7 @@ RealMatrix& DiffMFMHD3DVarSet::getFlux(const RealVector& state,
     const RealVector& gradT = *gradients[m_TID[i]];
     const CFreal avU = _gradState[m_uID[i]];
     const CFreal avV = _gradState[m_vID[i]];
-    const CFreal avW = _gradState[m_vID[i]];
+    const CFreal avW = _gradState[m_wID[i]];
     const CFreal tauXX = m_tau[i](XX, XX);
     const CFreal tauXY = m_tau[i](XX, YY);
     const CFreal tauXZ = m_tau[i](XX, ZZ);
