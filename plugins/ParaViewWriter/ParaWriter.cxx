@@ -52,7 +52,7 @@ ParaWriter::ParaWriter(const std::string& name)
   m_unSetupStr = "StdUnSetup";
   setParameter("UnSetupCom",&m_unSetupStr);
 
-  m_writeSolutionStr = "WriteSolution";
+  m_writeSolutionStr = "WriteSolutionNoOverlap"; // "WriteSolution";
   setParameter("WriteSol",&m_writeSolutionStr);
 }
 
