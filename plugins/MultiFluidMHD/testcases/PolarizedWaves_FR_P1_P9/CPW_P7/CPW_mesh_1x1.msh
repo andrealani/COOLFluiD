@@ -1,0 +1,24 @@
+$MeshFormat
+2.2 0 8
+$EndMeshFormat
+$PhysicalNames
+3
+1 1 "PeriodicX"
+1 2 "PeriodicY"
+2 3 "InField"
+$EndPhysicalNames
+$Nodes
+4
+1 -226221.28 -113110.64 0
+2 226221.28 -113110.64 0
+3 226221.28 113110.64 0
+4 -226221.28 113110.64 0
+$EndNodes
+$Elements
+5
+1 1 2 2 1 1 2
+2 1 2 1 2 2 3
+3 1 2 2 3 3 4
+4 1 2 1 4 4 1
+5 3 2 3 1 1 2 3 4
+$EndElements

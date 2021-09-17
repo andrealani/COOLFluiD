@@ -1,0 +1,413 @@
+#  Points to remember:
+# 1. Check the save rate of the output solution
+# 2. The mesh being used and whether it should use StdInitState or not
+# 3. Whether UpgradeInit is commented or not (uncomment if the desired solution is higher than the input mesh)
+# 4. Whether the option containing Gmsh2CFmesh is commented or not (uncomment if the file for the mesh is of the type msh)
+# 5. Whether the mesh file is correct
+# 6. Max number of steps
+# 7. VCJH parameter
+# 8. That the mesh filename ends in CFmesh and not in msh (the converter will create a CFmesh from the msh, and that will be used as the input for the simulation)
+# 9. The source terms for this which are named DriftWaves... must be only present in the FluxReconstructionMultiFluidMHD folder, and the names of these files must be mentioned in the CmakeLists.txt file.
+#10. To check whether the BCPeriodic boundary condition is matching the flux points correctly, go to the BCPeriodic.cxx file, and put print statements where it says "on the faceID ___, flux point 0 is linked to flux point 1 on the face with local ID ____". Then in the output log file, check the other face that this is linked to, and check the value of Bx in that. If the values of Bx are the same in both cases, then it is inferred that the flux points are being matched correctly.
+#11. To check the residual at desired coordinates and for the desired variables, go to the StdSoureTerms.cxx file in the FluxReconstructionMethod folder. Put print statements and conditionals in the appropriate places, to get the appropriate values for desired coordinates and variables.  
+
+
+
+
+# COOLFluiD Startfile
+# Comments begin with '#' 
+# Test file created by: N. Ozak, on: 2018-08-01
+# Info: Electron + ion fluid model of the circular polarized wave
+################################################################################ 
+# Assertion For Debugging
+#
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+#CFEnv.ExceptionAborts      = true
+#CFEnv.ExceptionDumps       = true
+#CFEnv.ExceptionOutputs     = true
+#CFEnv.RegistSignalHandlers = false
+#CFEnv.TraceToStdOut        = true
+#CFEnv.TraceActive          = true
+CFEnv.OnlyCPU0Writes       = false
+#
+# this will always fail with GAMBIT
+#CFEnv.ErrorOnUnusedConfig = true
+#
+################################################################################ 
+#
+# SubSystem Modules
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libNavierStokes libMaxwell libMultiFluidMHD libGambit2CFmesh libForwardEuler libPetscI libTecplotWriter libParaViewWriter libFluxReconstructionMethod libFluxReconstructionNavierStokes  libNewtonMethod libFluxReconstructionMultiFluidMHD libGmsh2CFmesh
+
+#SubSystem Parameters
+Simulator.Paths.WorkingDir       = ./
+Simulator.Paths.ResultsDir       = ./
+
+#SubSystem Parameters
+Simulator.SubSystem.InteractiveParamReader.FileName = ./TwoFluid_wave_P6_FR.inter
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+#
+################################################################################ 
+#
+# Physical Model
+# order of the reference values is Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoe, rhoi, ue, ve, we, ui, vi, wi, Te, Ti
+
+Simulator.SubSystem.Default.PhysicalModelType = MultiFluidMHD2D #You choose between 2D and 3D
+Simulator.SubSystem.MultiFluidMHD2D.refValues = 6e-09 6e-10 6e-10 6.03187489185e-05 6.03187489185e-05 6.03187489185e-05 0.000248312564516 6e-09 6.5336788193e-23 1.67262177774e-20 10271.0531054 10271.0531054 10271.0531054 1563.05016333 1563.05016333 1563.05016333 5187.39732495 5187.39732495 # Characteristic value of the solution for the computation of the numerical Jacobian of the convective Flux
+Simulator.SubSystem.MultiFluidMHD2D.refLength = 1.0 # Not changed
+Simulator.SubSystem.MultiFluidMHD2D.Is2DHalf  = true # true for 2.5D
+
+# Fluids Properties
+Simulator.SubSystem.MultiFluidMHD2D.nbSpecies = 2
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass1 = 6.5336788193e-30 # Electron mass
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.molecularMass2 = 1.67262177774e-27 # Ion Mass
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.gamma          = 1.66666666667
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.nonInducedElectromagnetic = 0.0 0.0 0.0 0.0 0.0 0.0 # Bx By Bz Ex Ey Ez 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divBCleaningConst  = 1.0
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.divECleaningConst  = 1.0
+#Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.nbSpecies         = 2
+#Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.dynViscosity      = 0. 0.
+#Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.thermConductivity = 0. 0. 
+#Simulator.SubSystem.MultiFluidMHD2D.DiffTerm.BraginskiiTransport = false 
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMax      = 413854.274193 # Tunning of the speed of light to speed up the numerical simulation
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.lightSpeedMF       = 413854.274193
+Simulator.SubSystem.MultiFluidMHD2D.ConvTerm.IsLeake            = false # Just when the first fluid is ions and the second is neutrals
+
+
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = MultiFluidMHD2D
+#Simulator.SubSysMesh.MeshNamespace.PhysicalModelName = MultiFluidMHD2D
+Simulator.SubSysMesh.MultiFluidMHD2D.nbSpecies = 2
+Simulator.SubSysMesh.MultiFluidMHD2D.Is2DHalf  = true # 
+Simulator.SubSysMesh.MeshMeshData.listTRS = PeriodicX PeriodicY
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = CPW_64x32_upgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = CPW_mesh_2x1.CFmesh # waveCoarser.CFmesh # Mesh_2x1_64x32_centered_periodic.CFmesh # 
+#Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+#Simulator.SubSysMesh.CFmeshFileReader.Data.ScalingFactor = 1000.
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P6
+#Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+
+
+
+
+################################################################################ 
+# Output
+
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot ParaView 
+Simulator.SubSystem.CFmesh.FileName     = Test-sol_FRP6_2x1_norm10.CFmesh 
+Simulator.SubSystem.CFmesh.SaveRate     = 2500
+Simulator.SubSystem.CFmesh.AppendTime   = true 
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName       = multiFluid_FRP6_mesh_2x1_norm10_BDF2_with_srcterms.plt # multiFluid_FRP1.plt 
+Simulator.SubSystem.Tecplot.Data.outputVar = RhoiViTi 
+Simulator.SubSystem.Tecplot.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate       = 2500
+Simulator.SubSystem.Tecplot.AppendTime     = false #false 
+Simulator.SubSystem.Tecplot.AppendIter     = true 
+
+Simulator.SubSystem.ParaView.FileName       = multiFluid_FRP6_mesh_2x1_norm10_BDF2_with_srcterms.vtu # multiFluid_FRP1.plt 
+Simulator.SubSystem.ParaView.Data.updateVar = RhoiViTi 
+Simulator.SubSystem.ParaView.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView.SaveRate       = 100
+Simulator.SubSystem.ParaView.AppendTime     = false #false 
+Simulator.SubSystem.ParaView.AppendIter     = true 
+
+################################################################################ 
+# Time Marching
+
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 1.0e-3
+#Simulator.SubSystem.SubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystem.SubSystemStatus.FunctionDT.Def = if(i<101,5.0e-3,if(i<111,1e-2,2e-2))
+
+# Stop Condition
+Simulator.SubSystem.StopCondition       = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 2500 # 500 # = 5 periods
+
+#Simulator.SubSystem.StopCondition   = MaxTime
+#Simulator.SubSystem.MaxTime.maxTime = 16
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -20.0
+
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 150
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+# Explicit Solver
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+#Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
+
+# Implicit first Order
+#Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.UpdateSol = StdUpdateSol
+Simulator.SubSystem.NewtonIterator.StdUpdateSol.Relaxation= 1.
+
+# CFL definition
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
+#Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def =\ 
+#if(i<160,1e4,if(i<250,1e5,if(i<670,1e6,if(i<2690,1e7,1e8))))
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Value = 1e4
+#Simulator.SubSystem.NewtonIterator.Data.CFL.Interactive.CFL = 1.0
+
+#First order in time
+#Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 30
+#Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 15
+#Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+#Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs = 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1 1
+#Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 10. 10.
+#Simulator.SubSystem.NewtonIterator.Data.Norm = -15
+
+# Implicit Second Order
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+Simulator.SubSystem.BDF2.Data.MaxSteps = 1000
+Simulator.SubSystem.BDF2.Data.PrintHistory = true
+Simulator.SubSystem.BDF2.Data.L2.GlobalRes = true
+#Simulator.SubSystem.BDF2.Data.L2.NormalizedRes = true
+#Simulator.SubSystem.BDF2.Data.L2.RefVals = 6e-09 6e-10 6e-10 6.03187489185e-05 6.03187489185e-05 6.03187489185e-05 0.000248312564516 6e-09 6.5336788193e-23 1.67262177774e-20 10271.0531054 10271.0531054 10271.0531054 1563.05016333 1563.05016333 1563.05016333 5187.39732495 5187.39732495 # Characteristic value of the solution for the computation of the numerical Jacobian of the convective Flux
+Simulator.SubSystem.BDF2.Data.Norm = -10
+Simulator.SubSystem.BDF2.ConvergenceFile = convergenceCPW.plt
+
+
+################################################################################ 
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = PeriodicX PeriodicY # x0 x1
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = CPW_64x32_upgraded.CFmesh # waveCoarser.CFmesh #
+#Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 4.42045054996e-06
+# Added for FR
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
+
+# Removed from FV
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+#Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh 
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+################################################################################ 
+# Space Method - Finite Volume
+#  Simulator.SubSystem.SpaceMethod = CellCenterFVM
+#  Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+
+# First Order Time stepping
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = PseudoSteadyTimeRhs
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+#Simulator.SubSystem.CellCenterFVM.PseudoSteadyTimeRhs.useGlobalDT = false
+
+# second order Time stepping
+#  Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+#  Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+#  Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+#  Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.zeroDiagValue = 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0
+
+### second order: uncomment this
+#  Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+#  Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+#  Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+#  Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+#  Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+
+## second order: uncomment this
+#  Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2DPeriodic
+#  Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.limitRes = -4.0
+#  Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.gradientFactor = 1.
+#  Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.PeriodicBCNames = Jet1 Jet2
+#  Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+#  Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.isMFMHD = true
+#  Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1.
+#  Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.length =72008.4712148
+#  Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.magnitudeValues = 6e-09 6e-10 6e-10 6.03187489185e-05 6.03187489185e-05 6.03187489185e-05 0.000248312564516 6e-09 6.5336788193e-23 1.67262177774e-20 104697.770068 104697.770068 104697.770068 1563.05016333 1563.05016333 1563.05016333 5187.39732495 5187.39732495 # 
+
+#  Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = AUSMPlusUpMultiFluid2D
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.useMacCormackScaling = false
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.choiceA12 = 1
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.machInf = 1. 1.
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Coeff = 1. #1.e4 
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Bdiss = 0.098174770424681035 
+#  Simulator.SubSystem.CellCenterFVM.Data.AUSMPlusUpMultiFluid2D.Ediss = 1. 
+
+#  Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = RhoiViTi
+#  Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+
+# Simulator.SubSystem.CellCenterFVM.Data.SourceTerm = DriftWaves2DHalfTwoFluid
+#  Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid.isCollisional = false
+#  Simulator.SubSystem.CellCenterFVM.Data.DriftWaves2DHalfTwoFluid.ElectricCharge = 1.60217662e-19
+
+
+
+###############################################################################
+# Space Method - Flux Reconstruction
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob #RHSMFMHD
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob #ConvRHSMFMHD
+#Simulator.SubSystem.FluxReconstruction.DiffSolveCom = Null #DiffRHSJacobMFMHD #DiffRHSMFMHD
+Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom = Null
+
+Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = true
+
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = BDF2_RHSJacob # PseudoSteadyTimeRHS # StdTimeRHSJacob #  BDF2_RHSJacob #   
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar   = RhoiViTi
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar   = Roe
+#Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar= RhoiViTi
+
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor =  1.22e-9 # 7.98e-17 # 9.5e-4 # 0.03 # 0.33 
+
+####### AUSM #######
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux = AUSMPlusUpFluxMultiFluidMHD2D 
+
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.useMacCormackScaling = false
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.choiceA12 = 1               
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.machInf = 1. 1.              
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.Coeff = 1. #1.e4 
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.Bdiss = 0.098174770424681035 
+Simulator.SubSystem.FluxReconstruction.Data.AUSMPlusUpFluxMultiFluidMHD2D.Ediss = 1.
+
+
+####### Src Terms #######
+Simulator.SubSystem.FluxReconstruction.SrcTermNames = DriftWaves2DHalfTwoFluid 
+Simulator.SubSystem.FluxReconstruction.SrcTermComds = DriftWaves2DHalfTwoFluid 
+Simulator.SubSystem.FluxReconstruction.DriftWaves2DHalfTwoFluid.isCollisional = false
+Simulator.SubSystem.FluxReconstruction.DriftWaves2DHalfTwoFluid.ElectricCharge = 1.60217662e-19
+
+Simulator.SubSystem.FluxReconstruction.DriftWaves2DHalfTwoFluid.AddJacob = true
+
+
+
+
+
+################################################################################ 
+# Initial Conditions Bx, By, Bz, Ex, Ey, Ez, Psi, Phi, rhoe, rhoi, ue, ve, we, ui, vi, wi, Te, Ti
+#order of species is first electrons then of ions!
+Simulator.SubSystem.FluxReconstruction.InitComds = StdInitState #InitStateAddVar 
+Simulator.SubSystem.FluxReconstruction.InitNames = InField 
+Simulator.SubSystem.FluxReconstruction.InField.applyTRS = InnerFaces 
+#Simulator.SubSystem.FluxReconstruction.InField.InitVars = x y 
+Simulator.SubSystem.FluxReconstruction.InField.Vars = x y #xStar Bpar Bperp Epar Eperp Uepar Ueperp Uipar Uiperp sinalpha cosalpha 
+#Simulator.SubSystem.FluxReconstruction.InField.InitDef = (x*sqrt(1./5.)+y*sqrt(4./5.))\ 
+                                            #6e-09\ 
+                                            #6e-10*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                            #0.\ 
+                                            #-6.03187489185e-05*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                            #0.\ 
+                                            #10271.0531054*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                            #0.\ 
+                                            #1563.05016333*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                            #sqrt(4./5.)\ 
+                                            #sqrt(1./5.) 
+Simulator.SubSystem.FluxReconstruction.InField.Def =\ 
+                                               6e-09*sqrt(1./5.)-6e-10*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(4./5.)\ 
+                                               6e-09*sqrt(4./5.)+6e-10*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(1./5.)\ 
+                                               6e-10*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                               6.03187489185e-05*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(4./5.)\ 
+                                               -6.03187489185e-05*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(1./5.)\ 
+                                               6.03187489185e-05*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                               0.0\ 
+                                               0.0\
+                                               6.5336788193e-23\ 
+                                               1.67262177774e-20\ 
+                                               -10271.0531054*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(4./5.)\ 
+                                               10271.0531054*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(1./5.)\ 
+                                               10271.0531054*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                               -1563.05016333*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(4./5.)\ 
+                                               1563.05016333*cos(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))*sqrt(1./5.)\ 
+                                               1563.05016333*sin(3.10528461412e-05*(x*sqrt(1./5.)+y*sqrt(4./5.)))\ 
+                                               5187.39732495\ 
+                                               5187.39732495
+
+################################################################################ 
+# Boundary Conditions
+
+# FV BC
+#  Simulator.SubSystem.FluxReconstruction.BcComds = BCPeriodicFVMCC BCPeriodicFVMCC ##periodic boundary conditions
+#  Simulator.SubSystem.FluxReconstruction.BcNames = Jet1 Jet2 
+
+# Bottom Condition(periodic)
+#  Simulator.SubSystem.FluxReconstruction.Jet1.applyTRS = PeriodicY
+#  Simulator.SubSystem.FluxReconstruction.Jet1.Threshold = 1
+#  Simulator.SubSystem.FluxReconstruction.Jet1.TranslationVector = 0. 226221.284165  
+#  Simulator.SubSystem.FluxReconstruction.Jet1.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+# Left Condition (periodic)
+#  Simulator.SubSystem.FluxReconstruction.Jet2.applyTRS = PeriodicX
+#  Simulator.SubSystem.FluxReconstruction.Jet2.Threshold = 1
+#  Simulator.SubSystem.FluxReconstruction.Jet2.TranslationVector = 452442.56833 0. 
+#  Simulator.SubSystem.FluxReconstruction.Jet2.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+# FR BC to be able to run (not the correct ones!!!!)
+Simulator.SubSystem.FluxReconstruction.BcNames = Jet1 Jet2
+Simulator.SubSystem.FluxReconstruction.Jet1.applyTRS = PeriodicX
+Simulator.SubSystem.FluxReconstruction.Jet2.applyTRS = PeriodicY
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Periodic Periodic #SuperOutlet SuperOutlet  #Periodic Periodic 
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = Jet1 Jet2 
+Simulator.SubSystem.FluxReconstruction.Data.Jet1.Threshold = 1
+Simulator.SubSystem.FluxReconstruction.Data.Jet2.TranslationVector = 0. 226221.284165  
+Simulator.SubSystem.FluxReconstruction.Data.Jet2.Threshold = 1
+Simulator.SubSystem.FluxReconstruction.Data.Jet1.TranslationVector = 452442.56833 0. 
+
+
+################################################################################ 
+# DataProcessing
+
+# Simulator.SubSystem.DataPostProcessing = DataProcessing
+# Simulator.SubSystem.DataProcessing.Data.updateVar = RhoiViTi
+# Simulator.SubSystem.DataProcessing.Comds = GridConvergenceTwoFluid
+# Simulator.SubSystem.DataProcessing.Names = GridConvergenceTwoFluid
+# Simulator.SubSystem.DataProcessing.GridConvergenceTwoFluid.IsTransversal = true
+# Simulator.SubSystem.DataProcessing.GridConvergenceTwoFluid.OutputFileError = ./Error.plt
+# Simulator.SubSystem.DataProcessing.ProcessRate = 1 
+#Simulator.SubSystem.DataProcessing.DivMonitoring.options = ./DivMonitoring.plt

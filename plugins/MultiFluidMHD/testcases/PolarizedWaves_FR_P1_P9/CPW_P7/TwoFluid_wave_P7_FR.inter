@@ -1,0 +1,3 @@
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00402538457182
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.LinearLS2DPeriodic.limitRes = -20.0

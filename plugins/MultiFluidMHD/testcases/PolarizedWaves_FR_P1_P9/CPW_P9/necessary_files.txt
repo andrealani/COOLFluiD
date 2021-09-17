@@ -1,0 +1,13 @@
+The following files are required to run a testcase.
+
+1. .CFcase file (eg. circularlyPolarized_P3_BDF2_3x3.CFcase)
+
+2. CPW_64x32_upgraded.CFmesh (will be overwritten when the simulation begins)
+
+3. .msh file (eg. CPW_mesh_3x3.msh) 
+
+4. .inter file (eg. TwoFluid_wave_P3_FR.inter)
+
+5. coolfluidsolver* files (using the command: ln -sf basebuild_dir/BUILD_MODE/apps/Solver/coolfluid-solver*). More details are on the page https://github.com/andrealani/COOLFluiD/wiki/HOWTO-run-a-testcase
+
+
