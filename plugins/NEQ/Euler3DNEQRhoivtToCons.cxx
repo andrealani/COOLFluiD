@@ -45,6 +45,7 @@ Euler3DNEQRhoivtToCons::~Euler3DNEQRhoivtToCons()
 
 void Euler3DNEQRhoivtToCons::transform(const State& state, State& result)
 {
+  //cout<<"Euler3DNEQRhoivtToCons\n";
   // find a way of storing this pointer (sdd setup() function)
   static Common::SafePtr<PhysicalChemicalLibrary> library =
     PhysicalModelStack::getActive()->getImplementor()->
@@ -68,7 +69,7 @@ void Euler3DNEQRhoivtToCons::transform(const State& state, State& result)
   
   const RealVector& refData =  _model->getReferencePhysicalData();
   CFreal rhoDim = rho*refData[EulerTerm::RHO];
-  CFreal T = state[nbSpecies + 2];
+  CFreal T = state[nbSpecies + 3]; // state[nbSpecies + 2]; // VS: this was 2 for 3d hence CNEQ3D didn't work, corrected to 3 for 3D
   CFreal Tdim = T*refData[EulerTerm::T];
   CFreal* rhoi = &const_cast<State&>(state)[0];
   library->setState(rhoi, &Tdim);
