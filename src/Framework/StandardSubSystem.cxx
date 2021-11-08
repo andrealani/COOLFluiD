@@ -539,19 +539,21 @@ void StandardSubSystem::setup()
     // reset to 0 the number of iterations and the residual
     subSysStatusVec[i]->resetResidual();
   }
-  
+ 
+  typedef std::vector<Common::SafePtr<Namespace> > NspVec;
   NamespaceSwitcher& nsw = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName());
-  const string sssName = nsw.getName(mem_fun<string,Namespace>(&Namespace::getSubSystemStatusName), true);
-  SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
-  cf_assert(currSSS.isNotNull());
-  
-  currSSS->setSetup(true);
-  
-  CFLog(VERBOSE, "StandardSubSystem::setup() => m_dataPreProcessing.apply()\n");
+  NspVec lst = nsw.getAllNamespaces();
+  cf_assert(!lst.empty()); // there should be some models
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp) {
+    const string sssName = (*nsp)->getSubSystemStatusName();
+    SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+    currSSS->setSetup(true);
+  }
+ 
   // pre-process the data
   m_dataPreProcessing.apply(mem_fun<void,DataProcessingMethod>
 			    (&DataProcessingMethod::processData));
-  
+ 
   // initialization has to be done after the creation of the normals
   // => after  m_spaceMethod->setMethod(), because some init
   // commands (init on the wall) need normals (init on the wall)
@@ -568,9 +570,13 @@ void StandardSubSystem::setup()
   
   CFLogInfo("Writing initial solution ... \n");
   writeSolution(true);
-  
-  currSSS->setSetup(false);
-  
+ 
+  for(NspVec::iterator nsp = lst.begin(); nsp != lst.end(); ++nsp) {
+    const string sssName = (*nsp)->getSubSystemStatusName();
+    SafePtr<SubSystemStatus> currSSS = SubSystemStatusStack::getInstance().getEntry(sssName);
+    currSSS->setSetup(false);
+  }
+ 
 #ifdef CF_HAVE_MPI
   const string ssGroupName = SubSystemStatusStack::getCurrentName();
   Group& group             = PE::GetPE().getGroup(ssGroupName);
