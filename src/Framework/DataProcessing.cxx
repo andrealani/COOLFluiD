@@ -109,6 +109,9 @@ void DataProcessing::unsetMethodImpl()
 void DataProcessing::processDataImpl()
 {
   CFAUTOTRACE;
+
+  CFLog(VERBOSE, "DataProcessing::processDataImpl() -> m_runAtSetup = " << m_runAtSetup << "\n");
+  CFLog(VERBOSE, "DataProcessing::processDataImpl() -> SubSystemStatusStack::getActive()->isSetup() = " << SubSystemStatusStack::getActive()->isSetup() << "\n");
   
   // AL: this is needed at least when calculating the distance to the wall
   if ((m_runAtSetup || m_runAtSetupAndAfter) && SubSystemStatusStack::getActive()->isSetup()) {
@@ -120,9 +123,8 @@ void DataProcessing::processDataImpl()
 
     if (m_runAtSetup) return;
   }
-    
+ 
   if ((!SubSystemStatusStack::getActive()->isSetup()) && (!m_runAtSetup)) {
-    // AL: big change here : tell Tiago!!!
     const CFuint rest = (SubSystemStatusStack::getActive()->getNbIter()-1) % m_processRate; 
     if ((SubSystemStatusStack::getActive()->getNbIter() == 0 && !m_skipFirstIteration) ||
 	(rest == 0 && SubSystemStatusStack::getActive()->getNbIter() > 1 && m_skipFirstIteration) ||

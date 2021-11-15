@@ -103,6 +103,7 @@ void DataProcessingMethod::processData()
   
   if (SubSystemStatusStack::getActive()->getNbIter() < m_stopIter 
       && SubSystemStatusStack::getActive()->getNbIter() >= m_startIter ) {
+    CFLog(VERBOSE, "DataProcessingMethod::processData() for [" << getName() << "]\n");
     processDataImpl();
   }
   

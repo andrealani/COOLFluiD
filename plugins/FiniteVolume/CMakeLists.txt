@@ -24,6 +24,8 @@ CellCenterFVM.hh
 CellData.hh
 CentredFlux.cxx
 CentredFlux.hh
+ComputeBFieldCom.cxx
+ComputeBFieldCom.hh
 ComputeDiffusiveFlux.cxx
 ComputeDiffusiveFlux.hh
 ComputeFaceBVertexNeighbors.cxx
