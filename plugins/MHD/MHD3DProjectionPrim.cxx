@@ -84,8 +84,9 @@ vector<std::string> MHD3DProjectionPrim::getExtraVarNames() const
   names[5] = "BzTotal";
   names[6] = "BTotal";
   names[7] = "rhoETotal";
-  names[8] = "divB";
-
+  //  names[8] = "divB";
+  names[8] = "T";
+  
   return names;
 }
 
@@ -530,14 +531,18 @@ void MHD3DProjectionPrim::setDimensionalValuesPlusExtraValues(const State& state
   extra[6] = sqrt(extra[3]*extra[3] + extra[4]*extra[4] + extra[5]*extra[5]);
   extra[7] = (state[7]/gammaMinus1) + 0.5*(rho*V2+sqB1) + B1dotB0 + 0.5*sqB0;
 
+  /*
+  // AL: this code is buggy assuming nodal divB while data here can be cell-centered, causing indexing to fail!!!    
   std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   std::string datahandleName = nsp + "_divBNodal";
-
   DataHandle<CFreal> divBNodal = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
-
   const CFuint stateID = state.getLocalID();
-
   extra[8] = divBNodal[stateID];
+  */
+
+  // calculate temperature here from perfect gas
+  extra[8] = 0.0 ; // 
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
