@@ -23,8 +23,13 @@
 #endif
 
 #ifdef CF_OS_MACOSX
-  #include "Common/ProcessInfoMacOSX.hh"
+#include "Common/ProcessInfoMacOSX.hh"
+#ifdef __x86_64__
   #include "Common/SignalHandlerMacOSX.hh"
+#endif
+#ifdef __arm__
+  #include "Common/SignalHandlerMacOSXarm.hh"
+#endif
 #endif
 
 #ifdef CF_OS_WINDOWS
@@ -62,7 +67,12 @@ OSystem::OSystem() :
 #else
 #ifdef CF_OS_MACOSX
     if ( m_process_info == CFNULL ) m_process_info = new ProcessInfoMacOSX();
-    if ( m_sig_handler == CFNULL )  m_sig_handler = new SignalHandlerMacOSX();
+    #ifdef __x86_64__
+        if ( m_sig_handler == CFNULL )  m_sig_handler = new SignalHandlerMacOSX();
+    #endif
+    #ifdef __arm__
+        if ( m_sig_handler == CFNULL )  m_sig_handler = new SignalHandlerMacOSXarm();
+    #endif
 #else
 #ifdef CF_OS_WINDOWS
     if ( m_process_info == CFNULL ) m_process_info = new ProcessInfoWin32();

@@ -247,7 +247,11 @@ IF (NOT CF_HAVE_ALLSTATIC )
 ENDIF()
 
   IF    ( CF_OS_MACOSX )
-    LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSX.cxx )
+    IF    ( CF_ARCH_ARM )
+        LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSXarm.cxx )
+    ELSE ()
+        LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSX.cxx )
+    ENDIF ()
     LIST ( APPEND Common_files ProcessInfoMacOSX.hh ProcessInfoMacOSX.cxx )
   ENDIF ()
 
