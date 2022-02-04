@@ -482,7 +482,7 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
   }
 
   // number of points needed for representing a polynomial of order degree solOrder
-  const CFuint nbrNodes1D = solOrder + 1;
+  const CFuint nbrNodes1D = 1*(solOrder + 1);
 
   switch (shape)
   {
@@ -513,12 +513,12 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
     {
       for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
       {
-        const CFreal ksi = -1.0 + iKsi*2.0/solOrder;
+        const CFreal ksi = -1.0 + iKsi*2.0/(nbrNodes1D-1);
         for (CFuint iEta = 0; iEta < nbrNodes1D; ++iEta)
         {
           RealVector coords(2);
           coords[KSI] = ksi;
-          coords[ETA] = -1.0 + iEta*2.0/solOrder;
+          coords[ETA] = -1.0 + iEta*2.0/(nbrNodes1D-1);
           nodeMappedCoords.push_back(coords);
         }
       }
@@ -594,7 +594,7 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
   }
 
   // number of points needed for representing a polynomial of order degree solOrder
-  const CFuint nbrNodes1D = solOrder + 1;
+  const CFuint nbrNodes1D = 1*(solOrder + 1);
 
   switch (shape)
   {
@@ -638,9 +638,9 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
     } break;
     case CFGeoShape::QUAD:
     {
-      for (CFuint iKsi = 0; iKsi < solOrder; ++iKsi)
+      for (CFuint iKsi = 0; iKsi < (nbrNodes1D-1); ++iKsi)
       {
-        for (CFuint iEta = 0; iEta < solOrder; ++iEta)
+        for (CFuint iEta = 0; iEta < (nbrNodes1D-1); ++iEta)
         {
           vector< CFuint > cellNodesConn(4);
           cellNodesConn[0] = (iKsi  )*nbrNodes1D + iEta  ;

@@ -147,7 +147,7 @@ void SetupExtra::createNormalSockets()
 
   // resize the datahandle for the face Jacobian vector sizes
   solPntNormals.resize(totNbrStates*dim*dim);
-
+  CFuint nbNegJacob = 0;
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
@@ -169,7 +169,13 @@ void SetupExtra::createNormalSockets()
       GeometricEntity *const cell = geoBuilder->buildGE();
       
       cellVolumes[elemIdx] = cell->computeVolume();
-      cf_assert(cellVolumes[elemIdx] > 0.0);
+      //cf_assert(cellVolumes[elemIdx] > 0.0);
+      if (cellVolumes[elemIdx] < 0.0)
+      {
+          CFLog(INFO, "WARNING: NEGATIVE VOLUME FOUND!\n");
+        cellVolumes[elemIdx] = -cellVolumes[elemIdx];
+        nbNegJacob++;
+      }
 
       // get the states in this cell
       vector< State* >* states = cell->getStates();
@@ -193,6 +199,7 @@ void SetupExtra::createNormalSockets()
       geoBuilder->releaseGE();
     }
   }
+  CFLog(INFO, "NB NEGATIVE VOLUMES: " << nbNegJacob << "\n");
 
   // get InnerFaces TopologicalRegionSet
   SafePtr<TopologicalRegionSet> faces = MeshDataStack::getActive()->getTrs("InnerFaces");

@@ -43,6 +43,7 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool >("AddUpdateCoeff","Add the ST time step restriction.");
  options.addConfigOption< bool,Config::DynamicOption<> >("AddDGamma","Add destruction terms for gamma and alpha.");
  options.addConfigOption< CFreal >("LimLambda","Limit Lambda pressure term.");
+ options.addConfigOption< CFreal >("CEg","CEg term to be used for gamma-alpha.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,6 +82,9 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
   
   m_lambdaLim = 0.04;
   setParameter("LimLambda",&m_lambdaLim);
+  
+  m_ceg = 20.0;
+  setParameter("CEg",&m_ceg);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -282,7 +286,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     
     const CFreal alphaMin = rhoInfLocal*uInfLocal*uInfLocal*0.2247/(std::sqrt(rhoInfLocal*muInfLocal*(1.0+0.38*pow(MInfLocal,0.6)))*4900.0);
     
-    const CFreal avAlpha    = std::max(m_solPhysData[iKPD+3],alphaMin);    
+    const CFreal avAlpha = std::max(m_solPhysData[iKPD+3],alphaMin);    
     
     CFreal ReThetat;
 
@@ -432,7 +436,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       lambda = -Rethetac*Rethetac*mu/(rho*rho*uInfLocal*uInfLocal*uInfLocal)*dpds;
     }
     
-    const CFreal nsigma = 1.25e-11*pow(TuInfLocal,7.0/4.0)*fk*fMnsigma;
+    const CFreal nsigma = 1.25e-11*pow(TuInfLocal,7.0/4.0)*fk*fMnsigma;///8.0;
     
     const CFreal beta = sqrt(nsigma)*uInfLocal*rhoInfLocal/muInfLocal;
     
@@ -440,9 +444,10 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     CFreal prodTerm_Ga = fOnset*2.0*fg*(1.0-avGa)*sqrt(-log(1.0-avGa))*beta*rho*avV;
     
     // compute dissipation term of gamma
-    const CFreal cEg = 20.0;
+    const CFreal cEg = m_ceg;//20.0;//10.0;//20.0;
+    const CFreal Cmg2 = 256.0;//1.0e-7;//
   
-    const CFreal fMuGamma = 1.0-exp(-256.0*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal));
+    const CFreal fMuGamma = 1.0-exp(-Cmg2*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iSol]*uInfLocal*rhoInfLocal/muInfLocal));
     const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));
   
     //const CFreal gammaLim = std::min(std::max(0.01,avGa),0.99);
@@ -1075,7 +1080,7 @@ void  GammaAlpha2DSourceTerm::getSToStateJacobian(const CFuint iState)
   }
   
   // D gamma
-  const CFreal cEg = 20.0/0.57;
+  const CFreal cEg = m_ceg/0.57;
   
   const CFreal fMuGamma = 1.0-exp(-256.0*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal)*(m_currWallDist[iState]*uInfLocal*rhoInfLocal/muInfLocal));
   const CFreal fMMuGamma = (1.0+0.26*(gammaIsentropic-1.0)/2.0*MInfLocal*MInfLocal)*sqrt(1+0.38*pow(MInfLocal,0.6));

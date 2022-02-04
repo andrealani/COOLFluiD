@@ -246,7 +246,7 @@ void StdSetup::computeStatesVolumes()
 
   // resize the vector for the cell volumes per state
   volumes.resize(totNbrStates);
-
+  CFuint nbNegJacob = 0;
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
@@ -279,9 +279,13 @@ void StdSetup::computeStatesVolumes()
 
         if (jacobDet[iSol] < 0.0)
         {
-          CFLog(INFO, "NEGATIVE JACOBIAN DETERMINANT FOUND: " << jacobDet[iSol] << ", in solID: " << solID << ", in coordinates: " << (*states)[iSol]->getCoordinates() << "\n");
+          CFLog(INFO, "NEGATIVE JACOBIAN DETERMINANT FOUND: " << jacobDet[iSol] << ", in solID: " << solID << ", in coordinates: " << (*states)[iSol]->getCoordinates() << ", phi = " << std::atan2((*states)[iSol]->getCoordinates()[ZZ],(*states)[iSol]->getCoordinates()[YY])*180/3.141593 << "\n");
           //const std::string message = "Negative Jacobian determinant (" + StringOps::to_str(jacobDet[iSol]) + ") in cell with ID " + StringOps::to_str(elemIdx);
           //throw BadFormatException (FromHere(),message);
+          
+          jacobDet[iSol] = -jacobDet[iSol];
+          
+          nbNegJacob++;
         }
         volumes[solID] = jacobDet[iSol];
       }
@@ -290,6 +294,7 @@ void StdSetup::computeStatesVolumes()
       geoBuilder->releaseGE();
     }
   }
+  CFLog(INFO, "NB NEGATIVE JACOB FOUND: " << nbNegJacob << "\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////

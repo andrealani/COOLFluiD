@@ -45,7 +45,8 @@ TensorProductGaussIntegrator::TensorProductGaussIntegrator(const CFDim dimension
   m_dimensionality  = dimensionality;
 
   // taking into account the contribution of the Jacobian
-  m_integratorOrder = static_cast<CFPolyOrder::Type>( integratorOrder + dimensionality - 1);
+  //m_integratorOrder = static_cast<CFPolyOrder::Type>( integratorOrder + dimensionality - 1);
+  m_integratorOrder = static_cast<CFPolyOrder::Type>( integratorOrder );
 
   resetQuadPntsMappedCoorAndWheights1D(m_integratorOrder);
   resetQuadPntsMappedCoorAndWheights  (m_dimensionality );
@@ -150,7 +151,6 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
   switch (integratorOrder)
   {
     case CFPolyOrder::ORDER0:
-    case CFPolyOrder::ORDER1:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 1;
@@ -166,8 +166,7 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [0] = 2.;
 
     } break;
-    case CFPolyOrder::ORDER2:
-    case CFPolyOrder::ORDER3:
+    case CFPolyOrder::ORDER1:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 2;
@@ -185,8 +184,7 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [1] = 1.0;
 
     } break;
-    case CFPolyOrder::ORDER4:
-    case CFPolyOrder::ORDER5:
+    case CFPolyOrder::ORDER2:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 3;
@@ -210,8 +208,7 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [2] = 5.0/9.0;
 
     } break;
-    case CFPolyOrder::ORDER6:
-    case CFPolyOrder::ORDER7:
+    case CFPolyOrder::ORDER3:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 4;
@@ -239,8 +236,7 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [3] = (18.-sqrt(30.))/36.;
 
     } break;
-    case CFPolyOrder::ORDER8:
-    case CFPolyOrder::ORDER9:
+    case CFPolyOrder::ORDER4:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 5;
@@ -272,7 +268,7 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [4] = (322.+13.*sqrt(70.))/900.;
 
     } break;
-    case CFPolyOrder::ORDER10:
+    case CFPolyOrder::ORDER5:
     {
       // Set the number of quadrature points
       m_nbrQuadPnts1D = 6;
@@ -301,6 +297,161 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
       m_quadPntsWheights1D  [4] = 0.3607615730481386;
       
       m_quadPntsWheights1D  [5] = 0.1713244923791704;
+
+    } break;
+    case CFPolyOrder::ORDER6:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 7;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -0.949107912342759;
+	m_quadPntsMappedCoor1D[1] = -0.741531185599394;
+	m_quadPntsMappedCoor1D[2] = -0.405845151377397;
+	m_quadPntsMappedCoor1D[3] = 0.0;
+	m_quadPntsMappedCoor1D[4] = 0.405845151377397;
+	m_quadPntsMappedCoor1D[5] = 0.741531185599394;
+	m_quadPntsMappedCoor1D[6] = 0.949107912342759;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = 0.1294849661688697;
+
+      m_quadPntsWheights1D  [1] = 0.2797053914892766;
+
+      m_quadPntsWheights1D  [2] = 0.3818300505051189;
+
+      m_quadPntsWheights1D  [3] = 0.4179591836734694;
+      
+      m_quadPntsWheights1D  [4] = 0.3818300505051189;
+      
+      m_quadPntsWheights1D  [5] = 0.2797053914892766;
+      
+      m_quadPntsWheights1D  [6] = 0.1294849661688697;
+
+    } break;
+    case CFPolyOrder::ORDER7:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 8;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -0.960289856497536;
+	m_quadPntsMappedCoor1D[1] = -0.796666477413627;
+	m_quadPntsMappedCoor1D[2] = -0.525532409916329;
+	m_quadPntsMappedCoor1D[3] = -0.183434642495650;
+	m_quadPntsMappedCoor1D[4] = 0.183434642495650;
+	m_quadPntsMappedCoor1D[5] = 0.525532409916329;
+	m_quadPntsMappedCoor1D[6] = 0.796666477413627;
+	m_quadPntsMappedCoor1D[7] = 0.960289856497536;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = 0.1012285362903763;
+
+      m_quadPntsWheights1D  [1] = 0.2223810344533745;
+
+      m_quadPntsWheights1D  [2] = 0.3137066458778873;
+
+      m_quadPntsWheights1D  [3] = 0.3626837833783620;
+      
+      m_quadPntsWheights1D  [4] = 0.3626837833783620;
+      
+      m_quadPntsWheights1D  [5] = 0.3137066458778873;
+      
+      m_quadPntsWheights1D  [6] = 0.2223810344533745;
+      
+      m_quadPntsWheights1D  [7] = 0.1012285362903763;
+      
+
+    } break;
+    case CFPolyOrder::ORDER8:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 9;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -0.968160239507626;
+	m_quadPntsMappedCoor1D[1] = -0.836031107326636;
+	m_quadPntsMappedCoor1D[2] = -0.613371432700590;
+	m_quadPntsMappedCoor1D[3] = -0.324253423403809;
+	m_quadPntsMappedCoor1D[4] = 0.0;
+	m_quadPntsMappedCoor1D[5] = 0.324253423403809;
+	m_quadPntsMappedCoor1D[6] = 0.613371432700590;
+	m_quadPntsMappedCoor1D[7] = 0.836031107326636;
+	m_quadPntsMappedCoor1D[8] = 0.968160239507626;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = 0.0812743883615744;
+
+      m_quadPntsWheights1D  [1] = 0.1806481606948574;
+
+      m_quadPntsWheights1D  [2] = 0.2606106964029354;
+
+      m_quadPntsWheights1D  [3] = 0.3123470770400029;
+      
+      m_quadPntsWheights1D  [4] = 0.3302393550012598;
+      
+      m_quadPntsWheights1D  [5] = 0.3123470770400029;
+      
+      m_quadPntsWheights1D  [6] = 0.2606106964029354;
+      
+      m_quadPntsWheights1D  [7] = 0.1806481606948574;
+      
+      m_quadPntsWheights1D  [8] = 0.0812743883615744;
+
+    } break;
+    case CFPolyOrder::ORDER9:
+    {
+      // Set the number of quadrature points
+      m_nbrQuadPnts1D = 10;
+
+      // resize the variables
+      m_quadPntsWheights1D  .resize(m_nbrQuadPnts1D);
+      m_quadPntsMappedCoor1D.resize(m_nbrQuadPnts1D);
+
+      // set the coordinates
+      m_quadPntsMappedCoor1D[0] = -0.973906528517172;
+	m_quadPntsMappedCoor1D[1] = -0.865063366688985;
+	m_quadPntsMappedCoor1D[2] = -0.679409568299024;
+	m_quadPntsMappedCoor1D[3] = -0.433395394129247;
+	m_quadPntsMappedCoor1D[4] = -0.148874338981631;
+	m_quadPntsMappedCoor1D[5] = 0.148874338981631;
+	m_quadPntsMappedCoor1D[6] = 0.433395394129247;
+	m_quadPntsMappedCoor1D[7] = 0.679409568299024;
+	m_quadPntsMappedCoor1D[8] = 0.865063366688985;
+	m_quadPntsMappedCoor1D[9] = 0.973906528517172;
+
+      // set the wheights
+      m_quadPntsWheights1D  [0] = 0.0666713443086881;
+
+      m_quadPntsWheights1D  [1] = 0.1494513491505806;
+
+      m_quadPntsWheights1D  [2] = 0.2190863625159820;
+
+      m_quadPntsWheights1D  [3] = 0.2692667193099963;
+      
+      m_quadPntsWheights1D  [4] = 0.2955242247147529;
+      
+      m_quadPntsWheights1D  [5] = 0.2955242247147529;
+      
+      m_quadPntsWheights1D  [6] = 0.2692667193099963;
+      
+      m_quadPntsWheights1D  [7] = 0.2190863625159820;
+      
+      m_quadPntsWheights1D  [8] = 0.1494513491505806;
+      
+      m_quadPntsWheights1D  [9] = 0.0666713443086881;
 
     } break;
     default:

@@ -273,6 +273,8 @@ void FluxReconstructionBuilder::createCellFaces()
 
     // loop over the elements of this type
     const CFuint nbElemPerType = (*elementType)[iType].getNbElems();
+    
+    CFLog(INFO, "nbElemTypes: " << nbElemPerType << "\n");
 
     for (CFuint iElem = 0; iElem < nbElemPerType; ++iElem, ++elemID)
     {
@@ -579,7 +581,7 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
   }
   ConnTable* faceToInFaceIdxOrientOrBCIdx = new ConnTable(dataSize);
 
-  // Get the number of different face types in mesh (their should only be one type for FluxReconstruction for now!!)
+  // Get the number of different face types in mesh (there should only be one type for FluxReconstruction for now!!)
   for (CFuint iFace = 0; iFace < nbInnerFaces; ++iFace)
   {
     bool isNewType = true;
@@ -591,6 +593,8 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
     if (isNewType)
       faceGeoTypes.push_back(faceGeoType);
   }
+  CFLog(INFO, "nbFaceTypes: " << faceGeoTypes.size() << "\n");
+  
   // Get vector containing the nodes connectivities for each orientation
   SafePtr<vector<ElementTypeData> > elementType = getCFmeshData().getElementTypeData();
   cf_assert(elementType->size() == 1); // there should be only one element type
@@ -739,9 +743,10 @@ void FluxReconstructionBuilder::reorderInnerFacesTRS()
   // assign end index of last range of faces and store the start indexes
   (*innerFacesStartIdxs)(nbrOrient,0) = faceIdx;
   MeshDataStack::getActive()->storeConnectivity("innerFacesStartIdxs", innerFacesStartIdxs);
-
+  CFLog(INFO, "nbInnerFaces: " << nbInnerFaces << ", last face idx: " << faceIdx << "\n");
   // Check if all faces have been assigned an orientation
-  cf_assert(faceIdx == nbInnerFaces);
+  //cf_assert(faceIdx == nbInnerFaces);
+  if (faceIdx != nbInnerFaces) CFLog(INFO, "WARNING: MESH PROBLEM DETECTED!\n");
   
   CFLog(VERBOSE,"Reordering inner faces TRS complete\n");
 }
