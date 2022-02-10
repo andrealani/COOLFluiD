@@ -51,6 +51,12 @@ convDiffRHSJacobPoissonFluxReconstructionProvider("ConvDiffRHSJacobPoisson");
   
 ConvDiffJacobFluxReconstructionPoisson::ConvDiffJacobFluxReconstructionPoisson(const std::string& name) :
   ConvDiffJacobFluxReconstructionNS(name),
+  socket_Bx("Bx"),
+  socket_By("By"),
+  socket_Bz("Bz"),
+  socket_Br("Br"),
+  socket_Btheta("Btheta"),
+  socket_Bphi("Bphi"),
   m_pData(),
   m_pData2()
 {
@@ -65,12 +71,17 @@ void ConvDiffJacobFluxReconstructionPoisson::configure ( Config::ConfigArgs& arg
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::vector< Common::SafePtr< BaseDataSocketSink > >
-    ConvDiffJacobFluxReconstructionPoisson::needsSockets()
+std::vector< Common::SafePtr< BaseDataSocketSource > >
+  ConvDiffJacobFluxReconstructionPoisson::providesSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSink > > result = ConvDiffJacobFluxReconstructionNS::needsSockets();
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result = ConvDiffJacobFluxReconstructionNS::providesSockets();
 
-  //result.push_back(&socket_wallDistance);
+  result.push_back(&socket_Bx);
+  result.push_back(&socket_By);
+  result.push_back(&socket_Bz);
+  result.push_back(&socket_Br);
+  result.push_back(&socket_Btheta);
+  result.push_back(&socket_Bphi);
 
   return result;
 }
@@ -547,12 +558,182 @@ void ConvDiffJacobFluxReconstructionPoisson::computeGradientFaceCorrections()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvDiffJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(const CFuint side)
+{
+  // get the sol pnt normals
+  DataHandle< CFreal > solPntNormals = socket_solPntNormals.getDataHandle();
+  
+  // get datahandle
+  DataHandle< CFreal > Bx = socket_Bx.getDataHandle();
+  DataHandle< CFreal > By = socket_By.getDataHandle();
+  DataHandle< CFreal > Bz = socket_Bz.getDataHandle();
+  DataHandle< CFreal > Br = socket_Br.getDataHandle();
+  DataHandle< CFreal > Btheta = socket_Btheta.getDataHandle();
+  DataHandle< CFreal > Bphi = socket_Bphi.getDataHandle();
+  
+  // store the sol pnt normals
+  for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+  {
+    const CFuint solID = (*(m_states[side]))[iState]->getLocalID();
+      
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      for (CFuint jDim = 0; jDim < m_dim; ++jDim)
+      {
+        m_cellFluxProjVects[iDim][iState][jDim] = solPntNormals[solID*m_dim*m_dim+iDim*m_dim+jDim];
+      }
+    }
+  }
+  
+  // reset the extrapolated fluxes
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrTotalFlxPnts; ++iFlxPnt)
+  {
+    m_extrapolatedFluxes[iFlxPnt] = 0.0;
+  }
+
+  // Loop over solution points to calculate the discontinuous flux.
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  { 
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      *(m_tempGrad[iVar]) = (*(m_cellGrads[side][iSolPnt]))[iVar];
+    }
+    
+    const CFuint stateLocalID = (((*(m_states[side]))[iSolPnt]))->getLocalID();
+    
+    Bx[stateLocalID] = (*(m_tempGrad[0]))[0];
+    By[stateLocalID] = (*(m_tempGrad[0]))[1];
+    if (m_dim == 3) Bz[stateLocalID] = (*(m_tempGrad[0]))[2];
+    
+    const CFreal x = ((((*(m_states[side]))[iSolPnt]))->getCoordinates())[0];
+    const CFreal y = ((((*(m_states[side]))[iSolPnt]))->getCoordinates())[1];
+    const CFreal z = (m_dim == 3) ? ((((*(m_states[side]))[iSolPnt]))->getCoordinates())[2] : 0.0;
+    const CFreal r = sqrt(x*x+y*y+z*z);
+    //const CFreal theta = atan2(y,x);
+    //const CFreal phi = acos(z/r);
+    //const CFreal ct = cos(theta);
+    //const CFreal st = sin(theta);
+    //const CFreal cp = cos(phi);
+    //const CFreal sp = sin(phi);
+    const CFreal Bxv = (*(m_tempGrad[0]))[0];
+    const CFreal Byv = (*(m_tempGrad[0]))[1];
+    const CFreal Bzv = (m_dim == 3) ? (*(m_tempGrad[0]))[2] : 0.0;
+    //const CFreal denom = ct*ct*cp*(cp + sp) + st*st;
+    //const CFreal denomLim = denom > 0.0 ? max(denom,1.0e-3) : min(denom,-1.0e-3);
+    
+    //Br[stateLocalID] = (sp*(Bxv*ct + Byv*st) + Bzv*cp)/denomLim;
+    
+    //Btheta[stateLocalID] = -r*sp*(Bxv*st - Byv*ct*cp*(cp+sp) - Bzv*ct*cp*st*(cp-sp))/denomLim;
+    
+    //Bphi[stateLocalID] = -r*(-Bxv*ct*cp - Byv*cp*st + Bzv*(ct*ct*cp + st*st*sp))/denomLim;  
+    
+    Br[stateLocalID] = x/r*Bxv + y/r*Byv + z/r*Bzv;
+    
+    Btheta[stateLocalID] = -y*Bxv + x*Byv;
+    
+    Bphi[stateLocalID] = z*x/r*Bxv + z*y/r*Byv - r*Bzv;
+  
+    m_updateVarSet->computePhysicalData(*((*(m_states[side]))[iSolPnt]), m_pData); 
+
+    m_avgSol = *((*(m_states[side]))[iSolPnt]->getData());
+
+    prepareFluxComputation();
+
+    // calculate the discontinuous flux projected on x, y, z-directions
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      // add diffusive part 
+      computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
+      
+      // add convective part
+      m_contFlx[iSolPnt][iDim] -= m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][iSolPnt]);
+    }
+
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+    {
+      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+      const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
+
+      m_extrapolatedFluxes[flxIdx] += (*m_solPolyValsAtFlxPnts)[flxIdx][iSolPnt]*(m_contFlx[iSolPnt][dim]);
+    }
+  }
+
+  // Loop over solution pnts to calculate the divergence of the discontinuous flux
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  {
+    // reset the divergence of FC
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] = 0.0;
+    }
+
+    // Loop over solution pnt to count factor of all sol pnt polys
+    for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
+    {
+      const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
+
+      // Loop over deriv directions and sum them to compute divergence
+      for (CFuint iDir = 0; iDir < m_dim; ++iDir)
+      {
+        const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolIdx]; 
+
+        // Loop over conservative fluxes 
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          // Store divFD in the vector that will be divFC
+          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+	}
+      }
+    }
+
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
+    {
+      const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
+
+      // get the divergence of the correction function
+      const CFreal divh = m_corrFctDiv[iSolPnt][flxIdx];
+  
+      // Fill in the corrections
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iVar] += -m_extrapolatedFluxes[flxIdx][iVar] * divh; 
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvDiffJacobFluxReconstructionPoisson::setup()
 {
   CFAUTOTRACE;
 
   // setup parent class
   ConvDiffJacobFluxReconstruction::setup();
+  
+  // get the elementTypeData
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  
+  // get the number of cells in the mesh
+  const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  // get datahandle
+  DataHandle< CFreal > Bx = socket_Bx.getDataHandle();
+  DataHandle< CFreal > By = socket_By.getDataHandle();
+  DataHandle< CFreal > Bz = socket_Bz.getDataHandle();
+  DataHandle< CFreal > Br = socket_Br.getDataHandle();
+  DataHandle< CFreal > Btheta = socket_Btheta.getDataHandle();
+  DataHandle< CFreal > Bphi = socket_Bphi.getDataHandle();
+  
+  const CFuint nbStates = nbrCells*m_nbrSolPnts;
+
+  // resize socket
+  Bx.resize(nbStates);
+  By.resize(nbStates);
+  Bz.resize(nbStates);
+  Br.resize(nbStates);
+  Btheta.resize(nbStates);
+  Bphi.resize(nbStates);
 
   // get damping coeff
   m_dampCoeffDiff = getMethodData().getDiffDampCoefficient();

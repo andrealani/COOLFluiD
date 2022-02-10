@@ -72,7 +72,7 @@ void PoissonConvVarSet::computeFlux (const RealVector& data,
 {
   CFLog(VERBOSE, "PoissonConvVarSet::computeFlux()\n"); //exit(1);
   
-  _fluxArray[0] = 0. ;
+  _fluxArray = 0. ;
 }
       
 //////////////////////////////////////////////////////////////////////////////

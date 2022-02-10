@@ -55,12 +55,10 @@ public: // functions
    */
   virtual void setup();
   
-  /**
-   * Returns the DataSocket's that this command needs as sinks
-   * @return a vector of SafePtr with the DataSockets
-   */
-  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
-      needsSockets();
+  /// Returns the DataSocket's that this command provides as sources
+  /// @return a vector of SafePtr with the DataSockets
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
+    providesSockets();
 
 protected: //functions
   
@@ -96,10 +94,36 @@ protected: //functions
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
+  /**
+   * compute the unperturbed cell diffusive residuals
+   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
+   * @pre setCellsData()
+   */
+  virtual void computeUnpertCellDiffResiduals(const CFuint side);
+  
 protected: // data
   
   Common::SafePtr<Physics::Poisson::PoissonDiffVarSet> m_diffVarSetPoisson;
   Common::SafePtr<Physics::Poisson::PoissonConvVarSet> m_convVarSetPoisson;
+  
+  /// storage for Bx
+  Framework::DataSocketSource<CFreal> socket_Bx;
+  
+  /// storage for By
+  Framework::DataSocketSource<CFreal> socket_By;
+  
+  /// storage for Bz
+  Framework::DataSocketSource<CFreal> socket_Bz;
+  
+  /// storage for Br
+  Framework::DataSocketSource<CFreal> socket_Br;
+  
+  /// storage for Btheta
+  Framework::DataSocketSource<CFreal> socket_Btheta;
+  
+  /// storage for Bphi
+  Framework::DataSocketSource<CFreal> socket_Bphi;
+  
   
   private:
 
