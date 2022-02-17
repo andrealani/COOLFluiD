@@ -70,7 +70,7 @@ void PoissonConvVarSet::computeEigenValues(const RealVector& data,
 void PoissonConvVarSet::computeFlux (const RealVector& data,
 				     const RealVector& normals)
 {
-  CFLog(VERBOSE, "PoissonConvVarSet::computeFlux()\n"); //exit(1);
+  CFLog(DEBUG_MAX, "PoissonConvVarSet::computeFlux()\n"); //exit(1);
   
   _fluxArray = 0. ;
 }

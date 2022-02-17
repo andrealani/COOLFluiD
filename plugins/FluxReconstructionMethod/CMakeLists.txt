@@ -316,6 +316,8 @@ BCDirichlet.cxx
 BCDirichlet.hh
 BCDirichletFromFile.cxx
 BCDirichletFromFile.hh
+BCNeumannFromFile.cxx
+BCNeumannFromFile.hh
 BCMirrorVelocity.cxx
 BCMirrorVelocity.hh
 BCPeriodic.cxx
