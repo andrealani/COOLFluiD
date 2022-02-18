@@ -103,38 +103,40 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
 Simulator.SubSystem.MaxNumberSteps.nbSteps = 1000
 
+## uncomment for Runge-Kutta
 #Simulator.SubSystem.ConvergenceMethod  = RKLS
 #Simulator.SubSystem.RKLS.ConvergenceFile = convergenceAccPulseFRP2.plt
 #Simulator.SubSystem.RKLS.ShowRate        = 10
 #Simulator.SubSystem.RKLS.ConvRate        = 50
-#Simulator.SubSystem.RKLS.Data.CFL.Value  = 0.2
+#Simulator.SubSystem.RKLS.Data.CFL.Value  = 10
 #Simulator.SubSystem.RKLS.Data.Order      = 3
 #Simulator.SubSystem.RKLS.Data.TimeAccurate = true
-#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.00025
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.0000004
 
-#Simulator.SubSystem.ConvergenceMethod = FwdEuler
-#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+## uncomment for crank-nicholson
+Simulator.SubSystem.ConvergenceMethod  = CrankNicholson
+Simulator.SubSystem.CrankNicholson.ShowRate        = 1
+Simulator.SubSystem.CrankNicholson.ConvergenceFile = convergenceAccPulseFRP2.plt
+Simulator.SubSystem.CrankNicholson.ConvRate        = 50
+Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 100
+Simulator.SubSystem.CrankNicholson.Data.Norm = -10.
+Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
+Simulator.SubSystem.CrankNicholson.Data.CFL.Value  = 1.0
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000005 #0.001
 
-#Simulator.SubSystem.ConvergenceMethod  = CrankNicholson
-#Simulator.SubSystem.CrankNicholson.ShowRate        = 1
-#Simulator.SubSystem.CrankNicholson.ConvergenceFile = convergenceAccPulseFRP2.plt
-#Simulator.SubSystem.CrankNicholson.ConvRate        = 50
-#Simulator.SubSystem.CrankNicholson.Data.MaxSteps = 100
-#Simulator.SubSystem.CrankNicholson.Data.Norm = -10.
-#Simulator.SubSystem.CrankNicholson.Data.PrintHistory = true
-#Simulator.SubSystem.CrankNicholson.Data.CFL.Value  = 1.0
-#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.001
+## uncomment for BDF2
+#Simulator.SubSystem.ConvergenceMethod  = BDF2
+#Simulator.SubSystem.BDF2.ShowRate        = 1
+#Simulator.SubSystem.BDF2.ConvergenceFile = convergenceAccPulseFRP2.plt
+#Simulator.SubSystem.BDF2.ConvRate        = 1
+#Simulator.SubSystem.BDF2.Data.MaxSteps = 10
+#Simulator.SubSystem.BDF2.Data.Norm = -10.
+#Simulator.SubSystem.BDF2.Data.PrintHistory = true
+#Simulator.SubSystem.BDF2.Data.CFL.Value  = 1.0
+#Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000005
 
-Simulator.SubSystem.ConvergenceMethod  = BDF2
-Simulator.SubSystem.BDF2.ShowRate        = 1
-Simulator.SubSystem.BDF2.ConvergenceFile = convergenceAccPulseFRP2.plt
-Simulator.SubSystem.BDF2.ConvRate        = 1
-Simulator.SubSystem.BDF2.Data.MaxSteps = 10
-Simulator.SubSystem.BDF2.Data.Norm = -10.
-Simulator.SubSystem.BDF2.Data.PrintHistory = true
-Simulator.SubSystem.BDF2.Data.CFL.Value  = 1.0
-Simulator.SubSystem.SubSystemStatus.TimeStep = 0.000005
 
+## uncomment for implicit schemes
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = BDFLSS
 Simulator.SubSystem.BDFLSS.Data.PCType = PCASM
@@ -155,13 +157,20 @@ Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 ###################################
 # choose which builder we use
 Simulator.SubSystem.FluxReconstruction.Builder = StdBuilder
-#Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
 
-Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob
+## Use this for explicit schemes
+#Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHS
+#Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHS
+
+## Use this for implicit schemes
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSRHSJacob
 Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
-#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob
-Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = BDF2_RHSJacob
 Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+
+# Use this for crank-Nicholson
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob
+# Use this for BDF2
+#Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom = BDF2_RHSJacob
 
 
 Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
