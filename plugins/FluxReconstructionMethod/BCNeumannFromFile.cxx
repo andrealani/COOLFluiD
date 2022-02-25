@@ -73,16 +73,13 @@ BCNeumannFromFile::BCNeumannFromFile(const std::string& name) :
   BCStateComputer(name),
   m_extractCoordZID(-1),
   m_flxPntsLocalCoords(),
-  m_allCellFlxPnts(),
   m_faceBuilder(),
   m_thisTRS(),
   m_flxLocalCoords(), 
   m_flxPntCoords(),
   m_nbrFaceFlxPnts(),
   m_dim(),      
-  m_orient(),      
-  m_intCell(),     
-  m_faceFlxPntConn(),
+  m_orient(),         
   _faceBuilder(),          
   m_globalToLocalTRSFaceID(),
   m_flxPntTws(),
@@ -186,11 +183,11 @@ void BCNeumannFromFile::computeGhostGradients(const std::vector< std::vector< Re
       
       if (m_addMinus) 
       {
-        varGradG = varGradI - 2.0*(m_flxPntTws[faceLocalID*nbrStateGrads + localFlxPntID] + nVarGrad)*normal;
+        varGradG = varGradI - 2.0*(m_flxPntTws[localFlxPntID] + nVarGrad)*normal;
       }
       else
       {
-        varGradG = varGradI + 2.0*(m_flxPntTws[faceLocalID*nbrStateGrads + localFlxPntID] - nVarGrad)*normal;
+        varGradG = varGradI + 2.0*(m_flxPntTws[localFlxPntID] - nVarGrad)*normal;
       }
     }
   }
@@ -270,9 +267,6 @@ void BCNeumannFromFile::setup()
   { 
     m_flxPntsLocalCoords[iFlx].resize(m_dim);
   }
-  
-  // get all flux points of a cell
-  m_allCellFlxPnts = frLocalData[0]->getFlxPntsLocalCoords();
   
   // get TRS list
   vector< SafePtr< TopologicalRegionSet > > trsList = MeshDataStack::getActive()->getTrsList();

@@ -51,9 +51,6 @@ class BCNeumannFromFile : public BCStateComputer {
 
 public:  // methods
     
-  typedef Common::CFMap<Framework::TopologicalRegionSet*, RealVector*> MapTrs2NodalValues;
-  typedef Common::CFMap<Framework::TopologicalRegionSet*, Common::CFMap<CFuint,CFuint>*> MapTrsNodeIDs;
-
   /**
    * Defines the Config Option's of this class
    * @param options a OptionList where to add the Option's
@@ -177,9 +174,6 @@ public:  // methods
     // flx pnt mapped coordinates
   std::vector< RealVector > m_flxPntsLocalCoords;
   
-  // All flux points of a cell
-  Common::SafePtr<std::vector< RealVector > > m_allCellFlxPnts;
-  
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
 
@@ -207,12 +201,6 @@ public:  // methods
 
   /// variable for current face orientation
   CFuint m_orient;
-
-  /// variable for current cell
-  Framework::GeometricEntity* m_intCell;
-
-  /// flx pnt - face connectivity
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
 
   /// face builder
   //Framework::GeometricEntityPool<Framework::FaceTrsGeoBuilder> _faceBuilder;
