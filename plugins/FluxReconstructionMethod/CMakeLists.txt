@@ -63,6 +63,8 @@ CentredFlux.cxx
 CentredFlux.hh
 #LaxFriedrichsFlux.cxx
 LaxFriedrichsFlux.hh
+HLLFlux.hh
+HLLFlux.cxx
 FluxReconstructionElementData.cxx
 FluxReconstructionElementData.hh
 QuadFluxReconstructionElementData.cxx

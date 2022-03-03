@@ -52,6 +52,14 @@ PoissonJacobBndGradientComputer::PoissonJacobBndGradientComputer(const std::stri
 
 //////////////////////////////////////////////////////////////////////////////
 
+void PoissonJacobBndGradientComputer::computeWaveSpeedUpdates(CFreal& waveSpeedUpd)
+{
+  // reset the wave speed update
+  waveSpeedUpd = 0.0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void PoissonJacobBndGradientComputer::computeGradientBndFaceCorrections()
 { 
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

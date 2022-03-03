@@ -48,6 +48,13 @@ protected: //functions
    */
   virtual void computeGradientBndFaceCorrections();
   
+  /**
+   * compute the wave speed updates for this face
+   * @pre reconstructFluxPntsStates(), reconstructFaceAvgState(),
+   *      setFaceTermData() and set the geometrical data of the face
+   */
+  void computeWaveSpeedUpdates(CFreal& waveSpeedUpd);
+  
 protected: //data
   
   /// diffusive variable set

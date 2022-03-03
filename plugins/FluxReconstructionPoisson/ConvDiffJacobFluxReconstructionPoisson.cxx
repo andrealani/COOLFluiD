@@ -223,7 +223,12 @@ void ConvDiffJacobFluxReconstructionPoisson::computeWaveSpeedUpdates(vector< CFr
   cf_assert(waveSpeedUpd.size() == 2);
   
   // here convective and artificial parts are added!
-  ConvDiffJacobFluxReconstruction::computeWaveSpeedUpdates(waveSpeedUpd);
+  //ConvDiffJacobFluxReconstruction::computeWaveSpeedUpdates(waveSpeedUpd);
+  
+  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  {
+    waveSpeedUpd[iSide] = 0.0;
+  }
           
   // now add diffusive part
   CFreal visc = 33.0;
@@ -609,6 +614,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(cons
     const CFreal y = ((((*(m_states[side]))[iSolPnt]))->getCoordinates())[1];
     const CFreal z = (m_dim == 3) ? ((((*(m_states[side]))[iSolPnt]))->getCoordinates())[2] : 0.0;
     const CFreal r = sqrt(x*x+y*y+z*z);
+    const CFreal r2D = sqrt(x*x+y*y);
     //const CFreal theta = atan2(y,x);
     //const CFreal phi = acos(z/r);
     //const CFreal ct = cos(theta);
@@ -631,7 +637,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(cons
     
     Btheta[stateLocalID] = -y*Bxv + x*Byv;
     
-    Bphi[stateLocalID] = z*x/r*Bxv + z*y/r*Byv - r*Bzv;
+    Bphi[stateLocalID] = z*x/r2D*Bxv + z*y/r2D*Byv - r2D*Bzv;
   
     m_updateVarSet->computePhysicalData(*((*(m_states[side]))[iSolPnt]), m_pData); 
 
