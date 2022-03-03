@@ -34,14 +34,15 @@ NSFlux<DIFFVS>::NSFlux(const std::string& name) :
   _states(),
   _values(),
   _gradients(),
-  _avState()
+  _avState(),
+  _avRadiusVec()
 {
   this->addConfigOptionsTo(this);
   
   _isRadiusNeeded = false;
   this->setParameter("isRadiusNeeded",&_isRadiusNeeded);
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DIFFVS>
@@ -72,6 +73,7 @@ void NSFlux<DIFFVS>::computeFlux(RealVector& result)
     setWallDistance();
   }
   
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   if (!isPerturb) { 
     // set the state values (pointers) corresponding to the
     // vertices of the control volume
@@ -80,9 +82,20 @@ void NSFlux<DIFFVS>::computeFlux(RealVector& result)
     
     _radius = 0.0;
     if (getMethodData().isAxisymmetric() || _isRadiusNeeded) {
-      const Node& node0 = *geo.getNode(0);
-      const Node& node1 = *geo.getNode(1);
-      _radius = 0.5*(node0[YY] + node1[YY]);
+      if (dim == DIM_2D) {
+	const Node& node0 = *geo.getNode(0);
+	const Node& node1 = *geo.getNode(1);
+	_radius = 0.5*(node0[YY] + node1[YY]);
+      }
+      if (dim == DIM_3D) {
+	_avRadiusVec = 0.;
+	const CFuint nbNodesInFace = geo.nbNodes();
+	for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
+	  _avRadiusVec += *geo.getNode(iNode);
+	}
+	_avRadiusVec /= nbNodesInFace;
+	_radius = _avRadiusVec.norm2();
+      }
     }
   }
     
@@ -103,7 +116,7 @@ void NSFlux<DIFFVS>::computeFlux(RealVector& result)
   const CFreal faceArea = this->socket_faceAreas.getDataHandle()[geo.getID()];
   
   // set the flux
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+ 
   CFreal *const faceCoord = &socket_faceCenters.getDataHandle()[geo.getID()*dim];
   _diffVar->setFluxCoord(faceCoord);
   result = _diffVar->getFlux(_avState, _gradients, getMethodData().getUnitNormal(), _radius);
@@ -180,13 +193,15 @@ void NSFlux<DIFFVS>::setup()
   const CFuint nbNodesInControlVolume = derivComputer->getMaxNbVerticesInControlVolume();
   _states.resize(nbNodesInControlVolume);
   _values.resize(nbEqs, nbNodesInControlVolume);
-  
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   _gradients.resize(nbEqs);
   for (CFuint i = 0; i< nbEqs; ++i) {
-    _gradients[i] = new RealVector(PhysicalModelStack::getActive()->getDim());
+    _gradients[i] = new RealVector(dim);
   }
   
   _avState.resize(PhysicalModelStack::getActive()->getNbEq());
+  _avRadiusVec.resize(dim);
   
   // set the diffusive flux jacobians to 0.
   _lFluxJacobian = 0.0;

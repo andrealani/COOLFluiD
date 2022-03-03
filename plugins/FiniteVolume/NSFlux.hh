@@ -127,7 +127,10 @@ protected: // data
   
   // array of average state in update variables
   RealVector _avState;
-    
+  
+  // average radius vector
+  RealVector _avRadiusVec;
+  
   /// flag telling if the radius is needed
   bool _isRadiusNeeded;
   
