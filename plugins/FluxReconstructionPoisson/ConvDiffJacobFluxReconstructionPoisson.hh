@@ -59,7 +59,10 @@ public: // functions
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
-
+  
+  /// Execute processing actions
+  virtual void execute();
+  
 protected: //functions
   
   /// compute the interface flux
@@ -100,6 +103,19 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
+  
+  /**
+   * compute the contribution of the diffusive face term to both Jacobians
+   */
+  void computeBothJacobsDiffFaceTerm();
+
+  /**
+   * compute the contribution of the diffusive face term to one Jacobians
+   */
+  void computeOneJacobDiffFaceTerm(const CFuint side);
+  
+  /// compute the cell flux jacobian numerically
+  virtual void computeCellFluxJacobianNum(const CFreal resFactor);
   
 protected: // data
   

@@ -55,6 +55,11 @@ protected: //functions
    */
   void computeWaveSpeedUpdates(CFreal& waveSpeedUpd);
   
+  /**
+   * Execute on the current TRS
+   */
+  virtual void executeOnTrs();
+  
 protected: //data
   
   /// diffusive variable set

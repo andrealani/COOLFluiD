@@ -60,6 +60,135 @@ void PoissonJacobBndGradientComputer::computeWaveSpeedUpdates(CFreal& waveSpeedU
 
 //////////////////////////////////////////////////////////////////////////////
 
+void PoissonJacobBndGradientComputer::executeOnTrs()
+{
+  CFAUTOTRACE;
+
+  // get InnerCells TopologicalRegionSet
+  SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  // get current bnd face TRS
+  SafePtr<TopologicalRegionSet> faceTrs = getCurrentTRS();
+  
+  CFLog(VERBOSE,"ConvBndCorrectionRHSJacobFluxReconstruction::executeOnTRS: " << faceTrs->getName() << "\n");
+
+  // get bndFacesStartIdxs from FluxReconstructionMethodData
+  map< std::string , vector< vector< CFuint > > >&
+    bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
+  vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[faceTrs->getName()];
+
+  // number of face orientations (should be the same for all TRs)
+  cf_assert(bndFacesStartIdxs.size() != 0);
+  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+
+  // number of TRs
+  const CFuint nbTRs = faceTrs->getNbTRs();
+  cf_assert(bndFacesStartIdxs.size() == nbTRs);
+
+  // get the geodata of the face builder and set the TRSs
+  FaceToCellGEBuilder::GeoData& geoData = m_faceBuilder->getDataGE();
+  geoData.cellsTRS = cellTrs;
+  geoData.facesTRS = faceTrs;
+  geoData.isBoundary = true;
+  
+  // boolean telling whether there is a diffusive term
+  const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
+  m_bcStateComputer->preProcess();
+  // loop over TRs
+  for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
+  {
+    // loop over different orientations
+    for (m_orient = 0; m_orient < nbOrients; ++m_orient)
+    {
+      CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
+      
+      // select the correct flx pnts on the face out of all cell flx pnts for the current orient
+      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+      {
+        m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
+      }
+      
+      // start and stop index of the faces with this orientation
+      const CFuint startFaceIdx = bndFacesStartIdxs[iTR][m_orient  ];
+      const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][m_orient+1];
+
+      // loop over faces with this orientation
+      for (CFuint faceID = startFaceIdx; faceID < stopFaceIdx; ++faceID)
+      {
+        // build the face GeometricEntity
+        geoData.idx = faceID;
+        m_face = m_faceBuilder->buildGE();
+
+        // get the neighbouring cell
+        m_intCell = m_face->getNeighborGeo(0);
+	
+	// get the states in the neighbouring cell
+        m_cellStates = m_intCell->getStates();
+	
+        CFLog(VERBOSE,"cellID: " << m_intCell->getID() << "\n");
+	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
+
+        // if cell is parallel updatable or the gradients have to be computed, compute the necessary data
+//        if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
+//        {  
+	  // set the bnd face data
+	  setBndFaceData(m_face->getID());//faceID
+	  
+	  // compute the perturbed states and ghost states in the flx pnts
+          computeFlxPntStates();
+//	}
+	
+//	// if the cell is parallel updatable, compute the flx correction
+//	if ((*m_cellStates)[0]->isParUpdatable())
+//	{
+//	  // compute FI-FD
+//          computeInterfaceFlxCorrection();
+//	  
+//          // compute the wave speed updates
+//          computeWaveSpeedUpdates(m_waveSpeedUpd);
+//      
+//          // update the wave speeds
+//          updateWaveSpeed();
+//       
+//	  // compute the correction -(FI-FD)divh of the bnd face for each sol pnt
+//          computeCorrection(m_corrections);
+//	  
+//	  // update the rhs
+//          updateRHS();
+//	}
+	  
+	// if there is a diffusive term, compute the gradients
+//        if (hasDiffTerm)
+//        {
+          computeGradientBndFaceCorrections();
+//        }
+        
+//        const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+//    
+//        const CFuint iterFreeze = getMethodData().getFreezeJacobIter();
+//    
+//        const CFuint interval = iter - iterFreeze;
+//      
+//        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+//        {
+//	
+//	  // if the cell is parallel updatable, compute the contribution to the numerical jacobian
+//	  if ((*m_cellStates)[0]->isParUpdatable())
+//	  {
+//	    // compute the convective boundary flux correction contribution to the jacobian
+//	    computeJacobConvBndCorrection();
+//          }
+//        }
+        
+        // release the face
+        m_faceBuilder->releaseGE();
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void PoissonJacobBndGradientComputer::computeGradientBndFaceCorrections()
 { 
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
