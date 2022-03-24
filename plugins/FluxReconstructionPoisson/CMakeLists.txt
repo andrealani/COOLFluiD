@@ -6,6 +6,10 @@ DiffBndCorrectionsRHSJacobFluxReconstructionPoisson.hh
 DiffBndCorrectionsRHSJacobFluxReconstructionPoisson.cxx
 PoissonJacobBndGradientComputer.hh
 PoissonJacobBndGradientComputer.cxx
+DiffRHSJacobFluxReconstructionPoisson.hh
+DiffRHSJacobFluxReconstructionPoisson.cxx
+PoissonJacobGradientComputer.hh
+PoissonJacobGradientComputer.cxx
 )
 
 LIST ( APPEND FluxReconstructionPoisson_requires_mods Poisson FluxReconstructionMethod )
