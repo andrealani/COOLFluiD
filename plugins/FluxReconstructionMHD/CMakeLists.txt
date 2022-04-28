@@ -1,0 +1,24 @@
+LIST( APPEND FluxReconstructionMHD_files
+FluxReconstructionMHD.hh
+DiffBndCorrectionsRHSFluxReconstructionMHD.hh
+DiffBndCorrectionsRHSFluxReconstructionMHD.cxx
+DiffBndCorrectionsRHSJacobFluxReconstructionMHD.hh
+DiffBndCorrectionsRHSJacobFluxReconstructionMHD.cxx
+MHDJacobBndGradientComputer.hh
+MHDJacobBndGradientComputer.cxx
+MHDJacobGradientComputer.hh
+MHDJacobGradientComputer.cxx
+MHDBndGradientComputer.hh
+MHDBndGradientComputer.cxx
+MHDGradientComputer.hh
+MHDGradientComputer.cxx
+DiffRHSFluxReconstructionMHD.hh
+DiffRHSFluxReconstructionMHD.cxx
+)
+
+LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )
+LIST ( APPEND FluxReconstructionMHD_cflibs Framework MHD FluxReconstructionMethod ) 
+
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionMHD )
+
+CF_WARN_ORPHAN_FILES()

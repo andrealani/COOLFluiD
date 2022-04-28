@@ -44,7 +44,6 @@ diffRHSJacobMFMHDFluxReconstructionProvider("DiffRHSJacobMFMHD");
 DiffRHSJacobFluxReconstructionMFMHD::DiffRHSJacobFluxReconstructionMFMHD(const std::string& name) :
   DiffRHSJacobFluxReconstruction(name)
 {
-  addConfigOptionsTo(this);
 }
   
 //////////////////////////////////////////////////////////////////////////////

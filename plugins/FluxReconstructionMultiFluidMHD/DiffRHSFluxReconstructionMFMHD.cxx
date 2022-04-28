@@ -43,7 +43,6 @@ diffRHSMFMHDFluxReconstructionProvider("DiffRHSMFMHD");
 DiffRHSFluxReconstructionMFMHD::DiffRHSFluxReconstructionMFMHD(const std::string& name) :
   DiffRHSFluxReconstruction(name)
 {
-  addConfigOptionsTo(this);
 }
   
 //////////////////////////////////////////////////////////////////////////////
