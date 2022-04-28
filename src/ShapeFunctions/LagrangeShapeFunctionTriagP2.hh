@@ -91,6 +91,7 @@ public:
 
     mappedCoords[5][KSI] = 0.  ;
     mappedCoords[5][ETA] = 0.5 ;
+    
   }
 
   /// Compute the shape functions corresponding to the given
@@ -144,7 +145,8 @@ public:
       const CFreal dN3deta = -4.*xi;
       const CFreal dN4deta = 4.*xi;
       const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
-
+      
+      
       const CFreal JXX = m_invJ(0,0);
       const CFreal JXY = m_invJ(0,1);
       const CFreal JYX = m_invJ(1,0);
@@ -186,8 +188,111 @@ public:
                                             const std::vector<Framework::Node*>& nodes,
                                             std::vector<RealVector>& normal)
   {
-    throw Common::NotImplementedException (FromHere(),getName() + "::computeMappedCoordPlaneNormal()");
+    const CFreal x0 = (*nodes[0])[XX];
+    const CFreal y0 = (*nodes[0])[YY];
+    
+    const CFreal x1 = (*nodes[1])[XX];
+    const CFreal y1 = (*nodes[1])[YY];
+
+    const CFreal x2 = (*nodes[2])[XX];
+    const CFreal y2 = (*nodes[2])[YY];
+
+    const CFreal x3 = (*nodes[3])[XX];
+    const CFreal y3 = (*nodes[3])[YY];
+    
+    const CFreal x4 = (*nodes[4])[XX];
+    const CFreal y4 = (*nodes[4])[YY];
+
+    const CFreal x5 = (*nodes[5])[XX];
+    const CFreal y5 = (*nodes[5])[YY];
+    
+    RealVector _shapeFunc;
+    
+    _shapeFunc.resize(9);
+    
+    for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
+    {
+      RealVector& pointNormal = normal[ip];
+      
+      const CFreal xi =  mappedCoord[ip][KSI];
+      const CFreal eta = mappedCoord[ip][ETA];
+      
+      if (planeIdx[ip] == 0)  // normal to face nb 1
+      {
+          const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1dxi = 4.*xi - 1.;
+      const CFreal dN2dxi = 0.;
+      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
+      const CFreal dN4dxi = 4.*eta;
+      const CFreal dN5dxi = -4.*eta;
+        
+        pointNormal[XX] = +(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
+        pointNormal[YY] = -(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
+        }
+      else if (planeIdx[ip] == 1) // normal to face nb 2
+      {
+        const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1deta = 0.;
+      const CFreal dN2deta = 4.*eta - 1.;
+      const CFreal dN3deta = -4.*xi;
+      const CFreal dN4deta = 4.*xi;
+      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
+
+        pointNormal[XX] = +(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
+        pointNormal[YY] = -(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
+        
+        const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1dxi = 4.*xi - 1.;
+      const CFreal dN2dxi = 0.;
+      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
+      const CFreal dN4dxi = 4.*eta;
+      const CFreal dN5dxi = -4.*eta;
+        
+        pointNormal[XX] += -(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
+        pointNormal[YY] += +(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
+      }
+      else if (planeIdx[ip] == 2) // normal to face nb 3
+      {
+      const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1deta = 0.;
+      const CFreal dN2deta = 4.*eta - 1.;
+      const CFreal dN3deta = -4.*xi;
+      const CFreal dN4deta = 4.*xi;
+      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
+
+        pointNormal[XX] = -(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
+        pointNormal[YY] = +(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
+      }
+      else if (planeIdx[ip] == 3) // vector ~ in the x direction
+      {
+      const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1deta = 0.;
+      const CFreal dN2deta = 4.*eta - 1.;
+      const CFreal dN3deta = -4.*xi;
+      const CFreal dN4deta = 4.*xi;
+      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
+
+        pointNormal[XX] = +(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
+        pointNormal[YY] = -(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
+        
+        }
+      else if (planeIdx[ip] == 4) // vector ~ in the y direction
+      {
+        const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1dxi = 4.*xi - 1.;
+      const CFreal dN2dxi = 0.;
+      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
+      const CFreal dN4dxi = 4.*eta;
+      const CFreal dN5dxi = -4.*eta;
+        
+        pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
+        pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
+      }
+      pointNormal *= 0.5;
+    }
   }
+
+  
 
   /// Compute the Jacobian
   static void computeJacobian(
@@ -208,8 +313,8 @@ public:
     dNdeta.resize(6);
 
     for(CFuint ip = 0; ip < x.size(); ++ip) {
-  	x[ip] = (*nodes[ip])[XX];
-  	y[ip] = (*nodes[ip])[YY];
+      x[ip] = (*nodes[ip])[XX];
+      y[ip] = (*nodes[ip])[YY];
 }
 
     for (CFuint ip = 0; ip < mappedCoord.size(); ++ip) {
@@ -238,10 +343,10 @@ CFreal dxdeta = 0.0;
 CFreal dydeta = 0.0;
 
 for(CFuint intp = 0; intp < x.size(); ++intp) {
-  	dxdxi += dNdxi[intp]*x[intp];
-  	dydxi += dNdxi[intp]*y[intp];
-  	dxdeta += dNdeta[intp]*x[intp];
-  	dydeta += dNdeta[intp]*y[intp];
+      dxdxi += dNdxi[intp]*x[intp];
+      dydxi += dNdxi[intp]*y[intp];
+      dxdeta += dNdeta[intp]*x[intp];
+      dydeta += dNdeta[intp]*y[intp];
 }
     }
 
@@ -274,8 +379,57 @@ for(CFuint intp = 0; intp < x.size(); ++intp) {
          const std::vector<Framework::Node*>& nodes,
                std::valarray<CFreal>& detJacobian)
   {
-    throw Common::NotImplementedException
-      (FromHere(), getName()+"::computeJacobianDeterminant()");
+        cf_assert(nodes.size() == getNbNodes());
+        
+    static RealVector x,y;
+
+    x.resize(6);
+    y.resize(6);
+
+    static RealVector dNdxi, dNdeta;
+    dNdxi.resize(6);
+    dNdeta.resize(6);
+    
+    for(CFuint ip = 0; ip < x.size(); ++ip) {
+          x[ip] = (*nodes[ip])[XX];
+          y[ip] = (*nodes[ip])[YY];
+      }
+    
+    for (CFuint ip = 0; ip < mappedCoord.size(); ++ip) {
+        const CFreal xi =  mappedCoord[ip][KSI];
+        const CFreal eta = mappedCoord[ip][ETA];
+        
+        dNdxi[0] = -3. + 4.*eta + 4.*xi;
+        dNdxi[1] = 4.*xi - 1.;
+        dNdxi[2] = 0.;
+        dNdxi[3] = 4. - 8.*xi - 4.*eta;
+        dNdxi[4] = 4.*eta;
+        dNdxi[5] = -4.*eta;
+        
+        dNdeta[0] = -3. + 4.*eta + 4.*xi;
+        dNdeta[1] = 0.;
+        dNdeta[2] = 4.*eta - 1.;
+        dNdeta[3] = -4.*xi;
+        dNdeta[4] = 4.*xi;
+        dNdeta[5] = 4. - 4.*xi - 8.*eta;
+        
+    CFreal dxdxi  = 0.0;
+    CFreal dydxi  = 0.0;
+
+    CFreal dxdeta = 0.0;
+    CFreal dydeta = 0.0;
+
+    for(CFuint intp = 0; intp < x.size(); ++intp) {
+          dxdxi += dNdxi[intp]*x[intp];
+          dydxi += dNdxi[intp]*y[intp];
+          dxdeta += dNdeta[intp]*x[intp];
+          dydeta += dNdeta[intp]*y[intp];
+    }
+    const CFreal jacob = (dxdxi*dydeta)-(dxdeta*dydxi);
+
+    detJacobian[ip] = jacob;
+    
+   }
   }
 
   /// Compute the jacobian determinant at the given

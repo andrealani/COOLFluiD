@@ -149,9 +149,71 @@ public:
                                             const std::vector<Framework::Node*>& nodes,
                                             std::vector<RealVector>& normal)
   {
-    throw Common::NotImplementedException (FromHere(),getName() + "::computeMappedCoordPlaneNormal()");
-  }
+      const CFreal x0 = (*nodes[0])[XX];
+      const CFreal y0 = (*nodes[0])[YY];
 
+      const CFreal x1 = (*nodes[1])[XX];
+      const CFreal y1 = (*nodes[1])[YY];
+
+      const CFreal x2 = (*nodes[2])[XX];
+      const CFreal y2 = (*nodes[2])[YY];
+
+      for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
+      {
+        RealVector& pointNormal = normal[ip];
+
+        const CFreal xi =  mappedCoord[ip][KSI];
+        const CFreal eta = mappedCoord[ip][ETA];
+        
+          if (planeIdx[ip] == 0)  // normal to face nb 1
+          {
+            const CFreal dN0dxi = 0.5;
+            const CFreal dN1dxi = -0.5;
+            const CFreal dN2dxi = 0.;
+            
+            pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
+            pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+          }
+          else if (planeIdx[ip] == 1) // normal to face nb 2
+          {
+            const CFreal dN0dxi = 0.;
+            const CFreal dN1dxi = 0.5;
+            const CFreal dN2dxi = -0.5;
+            
+            pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
+            pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+          }
+          else if (planeIdx[ip] == 2) // normal to face nb 3
+          {
+            const CFreal dN0dxi = -0.5;
+            const CFreal dN1dxi = 0.;
+            const CFreal dN2dxi = 0.5;
+            
+            pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
+            pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+          }
+          else if (planeIdx[ip] == 3) // vector ~ in the x direction
+          {
+            const CFreal dN0deta = -0.5;
+            const CFreal dN1deta = 0.;
+            const CFreal dN2deta = 0.5;
+
+            pointNormal[XX] = -(y0*dN0deta + y1*dN1deta + y2*dN2deta);
+            pointNormal[YY] = +(x0*dN0deta + x1*dN1deta + x2*dN2deta);
+          }
+          
+        else if (planeIdx[ip] == 4) // vector ~ in the y direction
+        {
+            const CFreal dN0dxi = -0.5;
+          const CFreal dN1dxi = 0.5;
+          const CFreal dN2dxi = 0.;
+          
+          pointNormal[XX] = +(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
+          pointNormal[YY] = -(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+        }
+          
+      }
+  }
   /// Compute the Jacobian
   static void computeJacobian(
          const std::vector<Framework::Node*>& nodes,
