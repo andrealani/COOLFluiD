@@ -76,6 +76,33 @@ private : // helper functions
   /// Compute the value of the derivative of the VCJH 1D correction function of order p and cfactor at the 1D coordinate ksi
   CFreal computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, CFreal ksi, CFreal cfactor);
 
+  /// Compute the rhs of the system of equations to be solved for Triangles correction function (for triag)
+  RealVector computeIntRHS(const CFPolyOrder::Type solOrder, CFuint f, CFuint j);
+
+  /// Compute the orthonormal dubiner basis in 2D (for triag)
+  RealVector computeDubiner(const CFPolyOrder::Type solOrder,CFreal ksi, CFreal eta);
+
+  /// Compute the orthonormal normalized jacobi poly (for triag)
+  CFreal ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x);
+
+  /// Compute the sigmas for building the div of the correction function on triangles (for triag)
+  RealVector computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint j, CFreal ksi, CFreal eta, CFreal cfactor);
+
+  /// Compute the divergence of the correction functions for a solution point (for triag)
+  RealMatrix computeTriagDivCorrFct(const CFPolyOrder::Type solOrder, CFreal cfactor, CFreal ksi, CFreal eta);
+
+  /// Compute the left hand side matrix of the system of equations to be solved (for triag)
+  RealMatrix computeLhs(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal eta);
+
+  /// Computes the factorial
+  CFreal factorial(CFreal n);
+
+  /// Compute inverse matrix
+  void InvertMatrix(RealMatrix A, RealMatrix& AI);
+
+  /// Swap rows
+  void SwapRows(RealMatrix& A, CFuint row1, CFuint row2);
+
 private : // private data
   /// Value of the C factor for VCJH 1D correction function
   CFreal  m_cfactor;

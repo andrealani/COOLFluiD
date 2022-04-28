@@ -116,7 +116,20 @@ void SetupExtra::createNormalSockets()
   CFuint totNbrStates = 0;
   CFuint totNbrCells = 0; 
   const CFuint nbrElemTypes = elemType->size();
-  
+    
+  //Setting ndimplus, needed for Triag (and tetra, prism)
+
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+  CFuint m_ndimplus;
+  if (elemShape == CFGeoShape::TRIAG)
+    {
+      m_ndimplus=3;	
+    }
+  else
+    {
+      m_ndimplus=0;
+    }
+
   std::vector< std::vector< std::vector< CFuint > > > dimList(nbrElemTypes);
   
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -127,8 +140,8 @@ void SetupExtra::createNormalSockets()
     totNbrCells += (*elemType)[iElemType].getNbElems();
   
     // create a list of the dimensions in which the deriv will be calculated
-    dimList[iElemType].resize(dim);
-    for (CFuint iDim = 0; iDim < dim; ++iDim)
+    dimList[iElemType].resize(dim+m_ndimplus);
+    for (CFuint iDim = 0; iDim < dim+m_ndimplus; ++iDim)
     {
       dimList[iElemType][iDim].resize(nbSolPnts);
       for (CFuint iSolPnt = 0; iSolPnt < nbSolPnts; ++iSolPnt)
@@ -146,7 +159,7 @@ void SetupExtra::createNormalSockets()
   cellVolumes.resize(totNbrCells);
 
   // resize the datahandle for the face Jacobian vector sizes
-  solPntNormals.resize(totNbrStates*dim*dim);
+  solPntNormals.resize(totNbrStates*(dim+m_ndimplus)*dim);
   CFuint nbNegJacob = 0;
   // loop over element types
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -180,7 +193,7 @@ void SetupExtra::createNormalSockets()
       // get the states in this cell
       vector< State* >* states = cell->getStates();
 
-      for (CFuint iDim = 0; iDim < dim; ++iDim)
+      for (CFuint iDim = 0; iDim < dim+m_ndimplus; ++iDim)
       {
         vector<RealVector> temp = cell->computeMappedCoordPlaneNormalAtMappedCoords(dimList[iElemType][iDim],*solPntsLocalCoords);
           
@@ -190,7 +203,7 @@ void SetupExtra::createNormalSockets()
             
           for (CFuint jDim = 0; jDim < dim; ++jDim)
           {
-            solPntNormals[solID*dim*dim+iDim*dim+jDim] = temp[iSol][jDim];
+            solPntNormals[solID*(dim+m_ndimplus)*dim+iDim*dim+jDim] = temp[iSol][jDim];
           }
         }
       }

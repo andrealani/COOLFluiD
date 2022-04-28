@@ -583,7 +583,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
     vector< RealVector >& temp = *(m_cellGrads[0][iSolPnt]);
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_contFlx[iSolPnt][iDim] = 0.0;
 
@@ -625,7 +625,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -1215,10 +1215,18 @@ void LLAVFluxReconstruction::setup()
   temp = 0.0;
   if (m_dim == 2)
   {
-    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-    {
-      temp(idx,idx) = 1.0;
+    if (m_ndimplus==3){  //if Triag
+      for (CFuint idx = 0; idx < (m_order)*(m_order)/2; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
     }
+    else{
+      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }  
   }
   else if (m_dim == 3)
   {

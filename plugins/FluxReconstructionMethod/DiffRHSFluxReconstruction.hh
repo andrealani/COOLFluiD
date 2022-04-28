@@ -321,6 +321,12 @@ protected: //data
   
   /// FR order
   CFuint m_order;
+
+  /// number of additionnal face normal directions for Triag (,terta and prism)
+  CFuint m_ndimplus;
+
+  /// Coeff (-1 or 1) indicating the direction of the computed mapped normals for Triag =-1 (normals pointing outwards)
+  CFreal m_mappedNormalDir;
   
   bool m_addRiemannToGradJacob;
   

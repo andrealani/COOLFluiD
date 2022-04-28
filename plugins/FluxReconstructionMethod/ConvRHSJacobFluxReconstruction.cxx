@@ -319,7 +319,14 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
       // dereference state
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
       
-      // Loop over flux points to determine which flx pnts are influenced by the pert
+    // Loop over flux points to determine which flx pnts are influenced by the pert
+    if (m_ndimplus == 3) //(elemShape == CFGeoShape::TRIAG)
+    {
+      m_influencedFlxPnt = 0;
+      m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;
+    }
+    else
+    {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         // get current flx pnt idx
@@ -330,10 +337,11 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
           if (currFlxIdx == (*m_solFlxDep)[m_pertSol][jFlxPnt])
           {
             m_influencedFlxPnt = iFlxPnt;
-            break;
+            m_NbInfluencedFlxPnts= iFlxPnt+1;
           }
         }
       }
+    }
 
       // loop over the variables in the state
       for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
@@ -459,17 +467,25 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
       
       // Loop over flux points to determine which flx pnts are influenced by the pert
-      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+      if (m_ndimplus == 3) //(elemShape == CFGeoShape::TRIAG)
       {
-        // get current flx pnt idx
-        const CFuint currFlxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlxPnt];
-    
-        for (CFuint jFlxPnt = 0; jFlxPnt < m_nbrFlxDep; ++jFlxPnt)
+        m_influencedFlxPnt = 0;
+        m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;
+      }
+      else
+      {
+        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
         {
-          if (currFlxIdx == (*m_solFlxDep)[m_pertSol][jFlxPnt])
+          // get current flx pnt idx
+          const CFuint currFlxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlxPnt];
+      
+          for (CFuint jFlxPnt = 0; jFlxPnt < m_nbrFlxDep; ++jFlxPnt)
           {
-            m_influencedFlxPnt = iFlxPnt;
-            break;
+            if (currFlxIdx == (*m_solFlxDep)[m_pertSol][jFlxPnt])
+            {
+              m_influencedFlxPnt = iFlxPnt;
+              m_NbInfluencedFlxPnts= iFlxPnt+1;
+            }
           }
         }
       }
@@ -527,19 +543,22 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
 
 void ConvRHSJacobFluxReconstruction::extrapolatePerturbedState()
 { 
-  // local flux point indices in the left and right cell
-  const CFuint flxPntIdx = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][m_influencedFlxPnt];
-    
-  // reset states in flx pnt
-  (*(m_cellStatesFlxPnt[m_pertSide][m_influencedFlxPnt]))[m_pertVar] = 0.0;
-
-  // extrapolate the left and right states to the flx pnts
-  for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   {
-    const CFuint solIdx = (*m_flxSolDep)[flxPntIdx][iSol];
- 
-    // add the contributions of the current sol pnt
-    (*(m_cellStatesFlxPnt[m_pertSide][m_influencedFlxPnt]))[m_pertVar] += (*m_solPolyValsAtFlxPnts)[flxPntIdx][solIdx]*(*((*(m_states[m_pertSide]))[solIdx]))[m_pertVar];
+    // local flux point indices in the left and right cell
+    const CFuint flxPntIdx = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlxPnt];
+      
+    // reset states in flx pnt
+    (*(m_cellStatesFlxPnt[m_pertSide][iFlxPnt]))[m_pertVar] = 0.0;
+
+    // extrapolate the left and right states to the flx pnts
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+    {
+      const CFuint solIdx = (*m_flxSolDep)[flxPntIdx][iSol];
+  
+      // add the contributions of the current sol pnt
+      (*(m_cellStatesFlxPnt[m_pertSide][iFlxPnt]))[m_pertVar] += (*m_solPolyValsAtFlxPnts)[flxPntIdx][solIdx]*(*((*(m_states[m_pertSide]))[solIdx]))[m_pertVar];
+    }
   }
 }
 
@@ -547,13 +566,14 @@ void ConvRHSJacobFluxReconstruction::extrapolatePerturbedState()
 
 void ConvRHSJacobFluxReconstruction::computePertInterfaceFlxCorrection()
 { 
-  // compute the riemann flux
-  m_cellFlx[RIGHT][m_influencedFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][m_influencedFlxPnt]),
-                        				             *(m_cellStatesFlxPnt[RIGHT][m_influencedFlxPnt]),
-			 					     m_unitNormalFlxPnts[m_influencedFlxPnt]);
-  // compute the interface flux in the mapped coord frame and store
-  m_cellFlx[LEFT][m_influencedFlxPnt] = (m_cellFlx[RIGHT][m_influencedFlxPnt])*m_faceJacobVecSizeFlxPnts[m_influencedFlxPnt][LEFT];
-  m_cellFlx[RIGHT][m_influencedFlxPnt] = (m_cellFlx[RIGHT][m_influencedFlxPnt])*m_faceJacobVecSizeFlxPnts[m_influencedFlxPnt][RIGHT];
+  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  {
+    // compute the riemann flux
+    m_cellFlx[RIGHT][iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[LEFT][iFlxPnt]),*(m_cellStatesFlxPnt[RIGHT][iFlxPnt]),m_unitNormalFlxPnts[iFlxPnt]);
+    // compute the interface flux in the mapped coord frame and store
+    m_cellFlx[LEFT][iFlxPnt] = (m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
+    m_cellFlx[RIGHT][iFlxPnt] = (m_cellFlx[RIGHT][iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -564,24 +584,27 @@ void ConvRHSJacobFluxReconstruction::computePertCorrection(CFuint side, RealVect
 
   // reset corrections
   corrections = 0.0;
-  
-  const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][m_influencedFlxPnt];  
 
-  // the current correction factor corresponding to the interface flux (stored in cellFlx)
-  const RealVector& currentCorrFactor = m_cellFlx[side][m_influencedFlxPnt];
-
-  // loop over sol pnts to compute the corrections
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   {
-    const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+    const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];  
 
-    // divergence of the correction function
-    const CFreal divh = m_corrFctDiv[solIdx][flxIdx];
+    // the current correction factor corresponding to the interface flux (stored in cellFlx)
+    const RealVector& currentCorrFactor = m_cellFlx[side][iFlxPnt];
 
-    // Fill in the corrections
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    // loop over sol pnts to compute the corrections
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
-      corrections[m_nbrEqs*solIdx+iVar] -= currentCorrFactor[iVar] * divh; 
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+
+      // divergence of the correction function
+      const CFreal divh = m_corrFctDiv[solIdx][flxIdx];
+
+      // Fill in the corrections
+      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+      {
+        corrections[m_nbrEqs*solIdx+iVar] -= currentCorrFactor[iVar] * divh; 
+      }
     }
   }
 }
@@ -609,10 +632,12 @@ void ConvRHSJacobFluxReconstruction::storeBackups()
 
 void ConvRHSJacobFluxReconstruction::restoreFromBackups()
 {
-  (*(m_cellStatesFlxPnt[m_pertSide][m_influencedFlxPnt]))[m_pertVar] = m_cellStatesFlxPntBackup[m_pertSide][m_influencedFlxPnt][m_pertVar];
-  m_cellFlx[LEFT][m_influencedFlxPnt] = m_flxPntRiemannFluxBackup[LEFT][m_influencedFlxPnt];
-  m_cellFlx[RIGHT][m_influencedFlxPnt] = m_flxPntRiemannFluxBackup[RIGHT][m_influencedFlxPnt];
-      
+  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  {
+    (*(m_cellStatesFlxPnt[m_pertSide][iFlxPnt]))[m_pertVar] = m_cellStatesFlxPntBackup[m_pertSide][iFlxPnt][m_pertVar];
+    m_cellFlx[LEFT][iFlxPnt] = m_flxPntRiemannFluxBackup[LEFT][iFlxPnt];
+    m_cellFlx[RIGHT][iFlxPnt] = m_flxPntRiemannFluxBackup[RIGHT][iFlxPnt];
+  }    
   const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][m_influencedFlxPnt];
   const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][m_influencedFlxPnt];
         
@@ -622,7 +647,7 @@ void ConvRHSJacobFluxReconstruction::restoreFromBackups()
     const CFuint solIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
     m_pertDivContFlx[LEFT][solIdxL] = m_divContFlxL[solIdxL];
     m_pertDivContFlx[RIGHT][solIdxR] = m_divContFlxR[solIdxR];
-  } 
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -637,7 +662,7 @@ void ConvRHSJacobFluxReconstruction::storeBackupsCell()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
 //    m_pertCorrections[iSol] = m_divContFlx[iSol];
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_contFlxBackup[iSol][iDim] = m_contFlx[iSol][iDim];
     }
@@ -660,7 +685,7 @@ void ConvRHSJacobFluxReconstruction::restoreFromBackupsCell()
 //    m_pertCorrections[iSol] = m_divContFlx[iSol];
 //  }
   
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_contFlx[m_pertSol][iDim] = m_contFlxBackup[m_pertSol][iDim];
   }
@@ -756,7 +781,7 @@ void ConvRHSJacobFluxReconstruction::computePertDivDiscontFlx(RealVector& residu
   m_updateVarSet->computePhysicalData(*(*m_cellStates)[m_pertSol], m_pData);
 
   // calculate the discontinuous flux projected on x, y, z-directions
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_contFlx[m_pertSol][iDim] = m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][m_pertSol]);
   }
@@ -796,7 +821,7 @@ void ConvRHSJacobFluxReconstruction::computePertDivDiscontFlx(RealVector& residu
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[m_nbrEqs*iSolIdx+iEq] -= polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          residuals[m_nbrEqs*iSolIdx+iEq] -= polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -876,9 +901,9 @@ void ConvRHSJacobFluxReconstruction::setup()
     m_pertCorrections[iSolPnt].resize(m_nbrEqs);
     m_pertDivContFlx [LEFT ][iSolPnt].resize(m_nbrEqs);
     m_pertDivContFlx [RIGHT][iSolPnt].resize(m_nbrEqs);
-    m_contFlxBackup[iSolPnt].resize(m_dim);
+    m_contFlxBackup[iSolPnt].resize(m_dim+m_ndimplus);
 
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_contFlxBackup[iSolPnt][iDim].resize(m_nbrEqs);
     }

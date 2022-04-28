@@ -139,6 +139,12 @@ protected: // data
   /// influenced flx pnt idx (by perturbation)
   CFuint m_influencedFlxPnt;
   
+  /// Number of influenced flx pnts (by perturbation)
+  CFuint m_NbInfluencedFlxPnts;
+  
+  /// Element shape
+  CFGeoShape::Type elemShape;
+
   /// backup of interface fluxes at the flux points of a face
   std::vector< RealVector> m_flxPntRiemannFluxBackup;
 

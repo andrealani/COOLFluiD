@@ -11,6 +11,8 @@
 #include "Common/SafePtr.hh"
 #include "MathTools/RealVector.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/BasePointDistribution.hh"
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -25,7 +27,7 @@ namespace COOLFluiD {
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen
- *
+ * @author Firas Ben Ameur
  */
 class TriagFluxReconstructionElementData : public FluxReconstructionElementData {
 public:
@@ -43,7 +45,7 @@ public:
   /**
    * Constructor initializing polyOrder, solution and flux point distribution
    */
-  TriagFluxReconstructionElementData(CFPolyOrder::Type polyOrder, Common::SafePtr< BasePointDistribution > solPntDist, 
+   TriagFluxReconstructionElementData(CFPolyOrder::Type polyOrder, Common::SafePtr< BasePointDistribution > solPntDist, 
 				    Common::SafePtr< BasePointDistribution > flxPntDist);
 
   /**
@@ -175,12 +177,43 @@ protected: // functions
    * Create the coefficients for the cell center derivatives
    */
   void createCellCenterDerivCoefs();
+
+   void createFlxSolDependencies();
   
   /**
    * create the dimensions on which the flux must be projected in the flux points
    */
-  void createFluxPntFluxDim() {}
+  void createFluxPntFluxDim();
 
+  void createVandermondeMatrix() ;
+
+private:
+
+  std::vector<std::vector < std::vector < CFreal> > > getLocalCoords2D(CFPolyOrder::Type solOrder);
+  std::vector<CFreal> getPercentage(CFPolyOrder::Type solOrder);
+
+  /// Compute the orthonormal normalized jacobi poly (for triag)
+  CFreal ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x);
+  
+  /// Computes the factorial
+  CFreal factorial(CFreal n);
+
+private:
+  
+  /// Distribution of flux points
+  Common::SafePtr<BasePointDistribution> flxPntDist;
+
+  /// solution point local coordinate in 2D
+  std::vector<std::vector < CFreal > > solPntsLocalCoord2D;
+
+  std::vector<CFreal> coordsFluxPointsInit;
+
+
+  /// flux point local coordinate in 2D
+  std::vector<std::vector < std::vector < CFreal> > > flxPntsLocalCoord2D;
+
+  /// Distribution of flux points
+  //Common::SafePtr<BasePointDistribution> m_flxPntDistribution;
 
 }; // end of class TriagFluxReconstructionElementData
 

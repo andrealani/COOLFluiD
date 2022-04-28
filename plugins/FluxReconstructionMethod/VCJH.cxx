@@ -1,10 +1,21 @@
 #include <iterator>
+#include <sstream>
+#include <fstream>
+#include <string>
+
+//#include <Common/Python.h>
+
+#include "Common/OSystem.hh"
+#include "Common/StringOps.hh" 
 
 #include "Framework/MethodStrategyProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/VCJH.hh"
+
+#include "MathTools/RealMatrix.hh"
+#include "MathTools/MathConsts.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,6 +39,7 @@ VCJHProvider("VCJH");
 void VCJH::defineConfigOptions(Config::OptionList& options)
 {
     options.addConfigOption< CFreal >("CFactor","Value of the C factor for VCJH 1D correction function");
+    //options.addConfigOption< CFreal >("kappa","Value of the k factor for VCJH 2D correction function");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -175,6 +187,7 @@ void VCJH::computeCorrectionFunction(const CFPolyOrder::Type solOrder, const CFr
         const CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
         const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();
         const CFuint dim = frElemData->getDimensionality();
+        
         std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
         cf_assert(corrfct.size() == nbrSolPnts);
 	
@@ -209,7 +222,6 @@ void VCJH::computeCorrectionFunction(const CFPolyOrder::Type solOrder, const CFr
 }
       
 //////////////////////////////////////////////////////////////////////////////
-
 void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionElementData > frElemData, std::vector< std::vector< CFreal > >& corrfct)
 {
     CFAUTOTRACE;
@@ -217,10 +229,39 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
     // get the element shape and order
     const CFGeoShape::Type elemShape = frElemData->getShape();
     const CFPolyOrder::Type solOrder = frElemData->getPolyOrder();
-    
+
+    std::stringstream ss;
+    ss << solOrder;
+    std::string p=ss.str();
     // compute corr fct for correct element shape
     switch(elemShape)
     {
+    case CFGeoShape::TRIAG:
+      {	
+      	CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+        const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();	
+        std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+        cf_assert(corrfct.size() == nbrSolPnts);
+
+        CFuint iFlx;
+        RealMatrix phi;
+        phi.resize(3,solOrder+1);
+        phi=0.;
+        for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+        {
+          iFlx = 0;
+          phi=computeTriagDivCorrFct(solOrder, m_cfactor, solPntsLocalCoord[iSol][0], solPntsLocalCoord[iSol][1]);
+          for (CFuint f = 0; f < 3; ++f)
+          {
+            for (CFuint j = 0; j < (solOrder+1); ++j, ++iFlx)
+            {
+                corrfct[iSol][iFlx] = phi(f,j);
+            }
+          }
+        }
+        break;	
+      }
+    
       case CFGeoShape::QUAD:
       {
         CFuint iSol = 0;
@@ -246,6 +287,7 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
         }
         break;
       }
+      
       case CFGeoShape::HEXA:
       {
         CFuint iSol = 0;
@@ -384,6 +426,494 @@ CFreal VCJH::computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, C
     return corrfct;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+RealVector VCJH::computeIntRHS(const CFPolyOrder::Type solOrder, CFuint f, CFuint j)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
+
+  RealVector flux_points, rhs;
+  RealVector weights;
+  RealVector G, ksi, eta;
+  RealVector dubasis;
+  flux_points.resize(solOrder+1);
+  weights.resize(solOrder+1);
+  dubasis.resize(nbrSolPnts);
+  rhs.resize(nbrSolPnts);
+  G.resize(3);
+  ksi.resize(3);
+  eta.resize(3);
+
+  switch(solOrder)
+    {
+      case 0:
+      {
+        flux_points[0]=0.;
+        weights[0]=2.;
+        break;
+      }
+      case 1:
+      {
+        flux_points[0]=-1./sqrt(3.);
+        weights[0]=1.;
+        flux_points[1]=1./sqrt(3);
+        weights[1]=1.;
+        break;
+      }
+      case 2:
+      {
+        flux_points[0]=-sqrt(3./5.);
+        weights[0]=5./9.;
+        flux_points[1]=0.;
+        weights[1]=8./9.;
+        flux_points[2]=sqrt(3./5.);
+        weights[2]=5./9.;
+        break;
+      }
+      case 3:
+      {
+        flux_points[0]=-sqrt((3./7.)+2./7.*sqrt(6./5.));
+        weights[0]=(18.-sqrt(30.))/36.;
+        flux_points[1]=-sqrt((3./7.)-2./7.*sqrt(6./5.));
+        weights[1]=(18.+sqrt(30.))/36.;
+        flux_points[2]=sqrt((3./7.)-2./7.*sqrt(6./5.));
+        weights[2]=(18.+sqrt(30.))/36.;
+        flux_points[3]=sqrt((3./7.)+2./7.*sqrt(6./5.));
+        weights[3]=(18.-sqrt(30.))/36.;
+        break;
+      }
+      case 4:
+      {
+        flux_points[0]=-0.9061798459386640;
+        weights[0]=0.2369268850561891;
+        flux_points[1]=-0.5384693101056831;
+        weights[1]=0.4786286704993665;
+        flux_points[2]=0.00000000000000;
+        weights[2]=0.5688888888888889;
+        flux_points[3]=0.5384693101056831;
+        weights[3]=0.4786286704993665;
+        flux_points[4]=0.9061798459386640;
+        weights[4]=0.2369268850561891;
+        break;
+      }
+      case 5:
+      {
+        flux_points[0]=-0.9324695142031521;
+        weights[0]=0.1713244923791704;
+        flux_points[1]=-0.6612093864662645;
+        weights[1]=0.3607615730481386;
+        flux_points[2]=-0.2386191860831969;
+        weights[2]=0.4679139345726910;
+        flux_points[3]=0.2386191860831969;
+        weights[3]=0.4679139345726910;
+        flux_points[4]=0.6612093864662645;
+        weights[4]=0.3607615730481386;
+        flux_points[5]=0.9324695142031521;
+        weights[5]=0.1713244923791704;
+        break;
+      }
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"VCJH Correction Functions not implemented for this order "
+                                               + StringOps::to_str(solOrder) + ".");
+      }
+    }
+
+  G[0]=0.5;
+  G[1]=sqrt(2.)/2.;
+  G[2]=0.5;
+
+  ksi[0]=(flux_points[j]+1.)/2.;
+  ksi[1]=(-flux_points[j]+1.)/2.;
+  ksi[2]=0.;
+
+  eta[0]= 0.;
+  eta[1]=(flux_points[j]+1.)/2.;
+  eta[2]=(-flux_points[j]+1.)/2.;
+
+  dubasis=computeDubiner(solOrder,ksi[f],eta[f]);
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)            
+    {
+      rhs[i]  = dubasis[i]*weights[j]*G[f]; //computeDubiner(P,ksi,eta) in which we define a=f(ksi,eta) b=f(ksi,eta)
+    }
+
+  return rhs;
+}
+//////////////////////////////////////////////////////////////////////////////
+RealVector VCJH::computeDubiner(const CFPolyOrder::Type solOrder,CFreal ksi, CFreal eta)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
+
+  RealVector mat_v, mat_w, Qav, Qbw, dubasis;
+  CFuint k;
+  CFreal A, B;
+  Qav.resize(nbrSolPnts+1);
+  Qbw.resize(nbrSolPnts+1);
+  mat_v.resize(nbrSolPnts+1);
+  mat_w.resize(nbrSolPnts+1);
+  dubasis.resize(nbrSolPnts);
+  //setup
+  for (CFuint w = 0; w < solOrder+1; ++w)
+  {
+    for (CFuint v = 0; v < solOrder+1; ++v)
+    {
+      if ((w+v) <= solOrder)
+      {
+        k=int(w+(solOrder+1)*v+1-(v*(v-1))/2.);
+        mat_v[k]=v;
+        mat_w[k]=w;
+    
+      }
+    }
+  }
+
+  A = ((2.*ksi)/(1.-eta))-1.;
+  B = 2.*eta-1.; 
+
+  //normalized nth order Jacobi polynomials
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      Qav[i] = ComputeJacobi(mat_v[i+1],  0.,  0. , A);
+      Qbw[i] = ComputeJacobi(mat_w[i+1],  2.*mat_v[i+1] +1.,  0. , B);
+    }
+  //the 2D orthonormal dubinner formula
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      dubasis[i] = Qav[i]*pow((1-B), mat_v[i+1])*Qbw[i]*sqrt(2.)*0.25;
+    }
+  return dubasis;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal VCJH::ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x)
+{
+  // Evaluate Jacobi Polynomial (normalized to be orthonormal) of type (alpha,beta) > -1
+  // (alpha+beta <> -1) at points x for order N   
+
+  RealVector PL;
+  CFreal gamma0, gamma1, aold, H, anew, bnew;
+
+  PL.resize(N+1);
+  // Initial values P_0(x) and P_1(x)
+  gamma0 = pow(2.,(alpha+beta+1.))/(alpha+beta+1.)*factorial(alpha)*factorial(beta)/factorial(alpha+beta);
+  PL[0] = 1.0/sqrt(gamma0);
+//  PL[N]=PL[0];
+  if (N>=1) {
+    gamma1 = (alpha+1.)*(beta+1.)/(alpha+beta+3.)*gamma0;
+    PL[1] = ((alpha+beta+2.)*x/2. + (alpha-beta)/2.)/sqrt(gamma1);
+  }
+  if (N>1) {
+    // Repeat value in recurrence.
+    aold = 2./(2.+alpha+beta)*sqrt((alpha+1.)*(beta+1.)/(alpha+beta+3.));
+    // Forward recurrence using the symmetry of the recurrence.
+    for (CFuint i = 0; i < N-1; ++i){
+        H = 2.*(i+1.)+alpha+beta;
+        anew = 2./(H+2.)*sqrt( ((i+1.)+1.)*((i+1.)+1.+alpha+beta)*((i+1.)+1.+alpha)*((i+1.)+1.+beta)/(H+1.)/(H+3.));
+        bnew = - (pow(alpha,2.)-pow(beta,2.))/H/(H+2);
+        PL[i+2] = 1./anew*( -aold*PL[i] + (x-bnew)*PL[i+1]);
+        aold =anew;
+    }
+  }
+  return PL[N];
+}
+//////////////////////////////////////////////////////////////////////////////
+RealVector VCJH::computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint j, CFreal ksi, CFreal eta, CFreal cfactor)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
+  RealMatrix L, LInv;
+  RealVector R, sigmas;
+  L.resize(nbrSolPnts,nbrSolPnts);
+  LInv.resize(nbrSolPnts,nbrSolPnts);
+  R.resize(nbrSolPnts);
+  sigmas.resize(nbrSolPnts);
+  LInv=0.;
+  sigmas=0.;
+  L=computeLhs(solOrder, ksi,eta);
+
+  //L = cfactor*lhs + I;
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      for (CFuint j = 0; j < nbrSolPnts; ++j)
+      {
+        L(i,j)= cfactor*L(i,j);
+      }
+      L(i,i) += 1.;
+    }
+  
+  R=computeIntRHS(solOrder, f, j);
+  InvertMatrix(L,LInv);
+  //sigmas=LInv*R;
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+  {
+    sigmas[i]=0.;
+    for (CFuint j = 0; j < nbrSolPnts; ++j)
+    {
+      sigmas[i]= sigmas[i] + LInv(i,j)*R[j];
+    }
+  }
+
+  return sigmas;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+RealMatrix VCJH::computeLhs(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal eta)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
+  RealMatrix lhs;
+  lhs.resize(nbrSolPnts,nbrSolPnts);
+  lhs=0.;
+  switch(solOrder)
+    {
+        case 0:
+        {
+            lhs(0,0) = 1./32;
+        } break;
+        case 1:
+        {
+          lhs(1,1) = 9./16.;
+          lhs(1,2) = (3.*sqrt(3.))/16.;
+          lhs(2,1) = (3.*sqrt(3.))/16.;
+          lhs(2,2) = 15./16.;
+        } break;
+        case 2:
+        {
+
+          lhs(2,2) = 75./2.;
+          lhs(2,4) = (75.*sqrt(3.))/4.;
+          lhs(2,5) = (15.*sqrt(5.))/4.;
+          lhs(4,2) = (75.*sqrt(3.))/4.;
+          lhs(4,4) = 675/8.;
+          lhs(4,5) = (105.*sqrt(15.))/8.;
+          lhs(5,2) = (15.*sqrt(5.))/4.;
+          lhs(5,4) = (105.*sqrt(15.))/8.;
+          lhs(5,5) = 825./8.;
+
+
+        } break;
+        case 3:
+        {
+          lhs(3,3) = 11025./2.;
+          lhs(3,6) = (6615.*sqrt(3.))/2.;
+          lhs(3,8) = (2205.*sqrt(5.))/2.;
+          lhs(3,9) = (315.*sqrt(7.))/2.;
+          lhs(6,3) = (6615.*sqrt(3.))/2.;
+          lhs(6,6) = 27783./2.;
+          lhs(6,8) = (6615.*sqrt(15.))/2.;
+          lhs(6,9) = (1701.*sqrt(21.))/2.;
+          lhs(8,3) = (2205.*sqrt(5.))/2.;
+          lhs(8,6) = (6615.*sqrt(15.))/2.;
+          lhs(8,8) = 55125./2.;
+          lhs(8,9) = (5355.*sqrt(35.))/2.;
+          lhs(9,3) = (315.*sqrt(7.))/2.;
+          lhs(9,6) = (1701.*sqrt(21.))/2.;
+          lhs(9,8) = (5355.*sqrt(35.))/2.;
+          lhs(9,9) = 47187./2.;
+           
+        } break;
+        case 4:
+        {
+          lhs(4,4) = 1428840.;
+          lhs(4,8) = 952560.*sqrt(3.);
+          lhs(4,11) = 408240.*sqrt(5.);
+          lhs(4,13) = 102060.*sqrt(7);
+          lhs(4,14) = 34020.;
+
+          lhs(8,4) = 952560.*sqrt(3.);
+          lhs(8,8) = 3810240.;
+          lhs(8,11) = 1088640.*sqrt(15.);
+          lhs(8,13) = 476280.*sqrt(21.);
+          lhs(8,14) = 249480.*sqrt(3.);
+
+          lhs(11,4) = 408240.*sqrt(5.);
+          lhs(11,8) = 1088640.*sqrt(15.);
+          lhs(11,11) = 9331200.;
+          lhs(11,13) = 1428840.*sqrt(35.);
+          lhs(11,14) = 1176120.*sqrt(5.);
+
+          lhs(13,4) = 102060.*sqrt(7.);
+          lhs(13,8) = 476280.*sqrt(21.);
+          lhs(13,11) = 1428840.*sqrt(35.);
+          lhs(13,13) = 14645610.;
+          lhs(13,14) = 2942730.*sqrt(7.);
+
+          lhs(14,4) = 34020.;
+          lhs(14,8) = 249480.*sqrt(3.);
+          lhs(14,11) = 1176120.*sqrt(5.);
+          lhs(14,13) = 2942730.*sqrt(7.);
+          lhs(14,14) = 9113310.;
+
+        } break;
+        case 5:
+        {
+          lhs(5,5)=576298800.;
+          lhs(5,10)=712984858.5293;
+          lhs(5,14)=460229747.197;
+          lhs(5,17)=181517060.1982;
+          lhs(5,19)=41164200.;
+          lhs(5,20)=4137157.7635;
+          lhs(10,5)=712984858.5293;
+          lhs(10,10)=1587762000;
+          lhs(10,14)=1935914598.5851;
+          lhs(10,17)=1302500907.2016;
+          lhs(10,19)=458347409.0545;
+          lhs(10,20)=66539269.1348;
+          lhs(14,5)=460229747.197;
+          lhs(14,10)=1935914598.5851;
+          lhs(14,14)=4336942500.;
+          lhs(14,17)=4841622079.1723;
+          lhs(14,19)=2597010716.3258;
+          lhs(14,20)=538538377.4382;
+          lhs(17,5)=181517060.1982;
+          lhs(17,10)=1302500907.2016;
+          lhs(17,14)=4841622079.1723;
+          lhs(17,17)=9136165500.;
+          lhs(17,19)=7766337075.6233;
+          lhs(17,20)=2375518871.6151;
+          lhs(19,5)=41164200.;
+          lhs(19,10)=458347409.0545;
+          lhs(19,14)=2597010716.3258;
+          lhs(19,17)=7766337075.6233;
+          lhs(19,19)=11264289300.;
+          lhs(19,20)=5517490900.1507;
+          lhs(20,5)=4137157.7635;
+          lhs(20,10)=66539269.1348;
+          lhs(20,14)=538538377.4382;
+          lhs(20,17)=2375518871.6151;
+          lhs(20,19)=5517490900.1507;
+          lhs(20,20)=5311399500.;
+
+        } break;
+        default:
+        {
+            throw Common::NotImplementedException (FromHere(),"computeLhs Correction Function not implemented for order " + StringOps::to_str(solOrder) + ".");
+        }
+    }
+  return lhs;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal VCJH::factorial(CFreal n)
+{
+  return (n==1. || n==0.) ? 1. : factorial(n-1.)*n;
+}
+//////////////////////////////////////////////////////////////////////////////
+RealMatrix VCJH::computeTriagDivCorrFct(const CFPolyOrder::Type solOrder, CFreal cfactor, CFreal ksi, CFreal eta)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
+  RealVector dubasis, sigmas;
+  RealMatrix  phi;
+  dubasis.resize(nbrSolPnts);
+  sigmas.resize(nbrSolPnts);
+  phi.resize(3,solOrder+1);
+  dubasis=computeDubiner(solOrder,ksi,eta);
+  for (CFuint f = 0; f < 3; ++f)
+    {
+			for (CFuint j = 0; j < solOrder+1; ++j)
+      {
+       /* if (f==0) {
+          sigmas=computeSigmas(solOrder,2, 2-j, eta,ksi, cfactor);
+          dubasis=computeDubiner(solOrder,eta,ksi);
+          for (CFuint k = 0; k < nbrSolPnts; ++k)
+          {
+            phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
+          }
+        }*/
+        //else
+        {
+          sigmas=computeSigmas(solOrder,f, j, ksi,eta, cfactor);
+            dubasis=computeDubiner(solOrder,ksi,eta);
+
+          for (CFuint k = 0; k < nbrSolPnts; ++k)
+          {
+            phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
+          }
+        }
+      }
+    }
+  return (phi*16*4);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+void VCJH::InvertMatrix(RealMatrix A, RealMatrix& AI)
+{
+  cf_assert(A.nbRows() == AI.nbRows());
+  cf_assert(A.nbCols() == AI.nbCols());
+  
+  const CFuint n = A.nbRows();
+
+  for (CFuint i = 0; i < n; ++i)
+  {
+    for (CFuint j = 0; j < n; ++j)
+    {
+      AI(i,j) = 0.;
+    }
+    AI(i,i) = 1.;
+  }
+
+  for (CFuint i = 0; i < n; ++i)
+  {
+    CFreal fac = fabs(A(i,i));
+    CFuint k = i;
+    for (CFuint j = i+1; j < n; ++j)
+    {
+      if (fabs(A(j,i)) > fac)
+      {
+        fac = fabs(A(j,i));
+        k = j;
+      }
+    }
+
+    if (fac < MathTools::MathConsts::CFrealEps()) throw MathTools::ZeroDeterminantException (FromHere(),"Matrix is singular to working precision!!!");
+
+    SwapRows(A ,i,k);
+    SwapRows(AI,i,k);
+
+    fac = 1./A(i,i);
+    A(i,i) = 1.;
+    for (CFuint j = i+1; j < n; ++j)
+    {
+      A(i,j) = A(i,j)*fac;
+    }
+    for (CFuint j = 0; j < n; ++j)
+    {
+      AI(i,j) = AI(i,j)*fac;
+    }
+    for (CFuint k = i+1; k < n; ++k)
+    {
+      fac = A(k,i);
+      for (CFuint j = i+1; j < n; ++j)
+      {
+        A(k,j) = A(k,j) - A(i,j)*fac;
+      }
+      for (CFuint j = 0; j < n; ++j)
+      {
+        AI(k,j) = AI(k,j) - AI(i,j)*fac;
+      }
+    }
+  }
+
+  for (CFuint i = 0; i < n-1; ++i)
+  {
+    const CFuint ii = n-2-i;
+    for (CFuint j = 0; j < n; ++j)
+    {
+      for (CFuint k = ii+1; k < n; ++k)
+      {
+        AI(ii,j) = AI(ii,j) - AI(k,j)*A(ii,k);
+      }
+    }
+  }
+}
+//////////////////////////////////////////////////////////////////////////////
+
+void VCJH::SwapRows(RealMatrix& A, CFuint row1, CFuint row2)
+{
+  RealVector swapRow = A.getRow<RealVector>(row1);
+  A.setRow(A.getRow<RealVector>(row2),row1);
+  A.setRow(swapRow,row2);
+}
 //////////////////////////////////////////////////////////////////////////////
 
 void VCJH::setup()

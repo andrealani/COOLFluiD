@@ -306,6 +306,9 @@ protected: //data
   
   /// FR order
   CFuint m_order;
+
+  /// number of additionnal face normal directions per element for Triag (,terta and prism)
+  CFuint m_ndimplus;
   
 }; // class Solve
 
