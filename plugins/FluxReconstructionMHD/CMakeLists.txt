@@ -1,5 +1,7 @@
 LIST( APPEND FluxReconstructionMHD_files
 FluxReconstructionMHD.hh
+ConvDiffJacobFluxReconstructionMHD.hh
+ConvDiffJacobFluxReconstructionMHD.cxx
 DiffBndCorrectionsRHSFluxReconstructionMHD.hh
 DiffBndCorrectionsRHSFluxReconstructionMHD.cxx
 DiffBndCorrectionsRHSJacobFluxReconstructionMHD.hh
