@@ -16,6 +16,10 @@ MHDGradientComputer.hh
 MHDGradientComputer.cxx
 DiffRHSFluxReconstructionMHD.hh
 DiffRHSFluxReconstructionMHD.cxx
+BCSuperOutletProj3DMHD.hh
+BCSuperOutletProj3DMHD.cxx
+BCSuperInletProjMHD.hh
+BCSuperInletProjMHD.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )
