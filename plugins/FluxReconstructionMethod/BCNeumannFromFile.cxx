@@ -238,7 +238,9 @@ void BCNeumannFromFile::setup()
   }
   
   vector<SurfaceData*> surfaces;
+  CFLog(INFO, "BCNeumannFromFile: setup: readSurfaceData => START\n");
   readSurfaceData(surfaces);
+  CFLog(INFO, "BCNeumannFromFile: setup: readSurfaceData => END\n");
   
   const CFuint nbSurf = surfaces.size();
   cf_assert(nbSurf >= 1);

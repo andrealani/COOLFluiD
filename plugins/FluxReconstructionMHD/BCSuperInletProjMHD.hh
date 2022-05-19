@@ -6,10 +6,16 @@
 #include "Framework/BaseMethodStrategyProvider.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+#include "Framework/FaceTrsGeoBuilder.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
+    
+  namespace Framework
+  {
+    class FaceToCellGEBuilder;
+  }
     
   namespace Physics {
     namespace MHD {
@@ -67,6 +73,12 @@ public:  // methods
                               std::vector< std::vector< RealVector* > >& ghostGrads,
                               const std::vector< RealVector >& normals,
                               const std::vector< RealVector >& coords);
+   
+   /**
+   * Set the B boundary values
+   */
+  virtual void preProcess();
+
 
 protected: // data
   
@@ -78,6 +90,39 @@ protected: // data
   
   ///bnd p value
   CFreal m_pBC;
+  
+  /// array specifying IDs of initial solution components that will be used as BC value
+  std::vector<CFuint> m_initialSolutionIDs;
+  
+  /// builder of faces
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
+  
+  /// variable for current internal cell
+  Framework::GeometricEntity* m_intCell;
+  
+  /// the states in the neighbouring cell
+  std::vector< Framework::State* >* m_cellStates;
+  
+  /// number of flux pnts on a face
+  CFuint m_nbrFaceFlxPnts;
+  
+  /// current face
+  Framework::GeometricEntity* m_currFace;
+  
+  /// variable for current face orientation
+  CFuint m_orient;
+  
+  /// extrapolated states in the flux points of the cell
+  std::vector< Framework::State* > m_cellStatesFlxPnt;
+  
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+  
+  /// flx pnt - face connectivity
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
+  
+  /// TRS in which this BC is defined
+  Common::SafePtr< Framework::TopologicalRegionSet > m_thisTRS;
 
 }; // class BCSuperInletProjMHD
 

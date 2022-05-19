@@ -20,6 +20,8 @@ BCSuperOutletProj3DMHD.hh
 BCSuperOutletProj3DMHD.cxx
 BCSuperInletProjMHD.hh
 BCSuperInletProjMHD.cxx
+MHDConsACASourceTerm.hh
+MHDConsACASourceTerm.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )

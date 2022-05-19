@@ -381,16 +381,16 @@ void BCSuperOutletProj3DMHD::setup()
   // no flux point coordinates required
   m_needsSpatCoord = true;
 
-  // get Euler 3D varset
-  m_varSet = getMethodData().getUpdateVar().d_castTo<MHD3DProjectionVarSet>();
-  if (m_varSet.isNull())
-  {
-    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MHD3DProjectionVarSet in BCSuperOutletProj3DMHD!");
-  }
-
-  // resize the physical data for internal and ghost solution points
-  m_varSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
-  m_varSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+//  // get MHD 3D varset
+//  m_varSet = getMethodData().getUpdateVar().d_castTo<MHD3DProjectionVarSet>();
+//  if (m_varSet.isNull())
+//  {
+//    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MHD3DProjectionVarSet in BCSuperOutletProj3DMHD!");
+//  }
+//
+//  // resize the physical data for internal and ghost solution points
+//  m_varSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
+//  m_varSet->getModel()->resizePhysicalData(m_intSolPhysData  );
   
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();

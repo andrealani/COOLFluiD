@@ -49,6 +49,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
+  options.addConfigOption< std::string >("PreProcessCom","Command to preprocess the solution.");
   options.addConfigOption< std::string >("PhysicalityCom","Command to enforce physical soundness of the solution.");
   options.addConfigOption< std::string >("ComputeErrorCom","Command to compute the error of the solution.");
   options.addConfigOption< std::string >("FinalizeRHSCom","Finilaze computation of the RHS.");
@@ -69,6 +70,7 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   m_diffSolve(),
   m_timeRHSJacob(),
   m_limiter(),
+  m_preprocess(),
   m_artificialVisc(),
   m_physicality(),
   m_computeError(),
@@ -99,6 +101,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_limiterStr = "Null";
   setParameter("LimiterCom", &m_limiterStr);
+  
+  m_preprocessStr = "Null";
+  setParameter("PreProcessCom", &m_preprocessStr);
   
   m_artificialViscStr = "Null";
   setParameter("ArtificialViscosityCom", &m_artificialViscStr);
@@ -206,6 +211,8 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
+    args, m_preprocess,m_preprocessStr,m_data );
+  configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_artificialVisc,m_artificialViscStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_physicality,m_physicalityStr,m_data );
@@ -229,6 +236,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   cf_assert(m_convSolve.isNotNull());
   cf_assert(m_diffSolve.isNotNull());
   cf_assert(m_limiter.isNotNull());
+  cf_assert(m_preprocess.isNotNull());
   cf_assert(m_artificialVisc.isNotNull());
   cf_assert(m_physicality.isNotNull());
   cf_assert(m_timeRHSJacob.isNotNull());
@@ -440,6 +448,10 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
   // apply a limiter to the solution
   cf_assert(m_limiter.isNotNull());
   m_limiter->execute();
+  
+  // apply preprocessor
+  cf_assert(m_preprocess.isNotNull());
+  m_preprocess->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////

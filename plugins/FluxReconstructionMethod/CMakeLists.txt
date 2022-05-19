@@ -357,6 +357,8 @@ MeshFittingAlgorithmFRQ2.hh
 MeshFittingAlgorithmFRQ2.cxx
 SimpleEdgeGraphFRQ2.cxx
 SimpleEdgeGraphFRQ2.hh
+ComputeFieldFromPotential.hh
+ComputeFieldFromPotential.cxx
 )
 
 IF (NOT CF_HAVE_CUDA)

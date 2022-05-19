@@ -3,6 +3,9 @@
 #include "FluxReconstructionMHD/FluxReconstructionMHD.hh"
 #include "FluxReconstructionMHD/BCSuperInletProjMHD.hh"
 
+#include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
+#include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+
 #include "Common/NotImplementedException.hh"
 
 #include "Framework/MapGeoToTrsAndIdx.hh"
@@ -30,7 +33,16 @@ Framework::MethodStrategyProvider<
 
 BCSuperInletProjMHD::BCSuperInletProjMHD(const std::string& name) :
   BCStateComputer(name),
-  m_initialSolutionMap()
+  m_initialSolutionMap(),
+  m_faceBuilder(CFNULL),
+  m_intCell(CFNULL),
+  m_cellStates(CFNULL),
+  m_currFace(CFNULL),
+  m_orient(),
+  m_cellStatesFlxPnt(),
+  m_solPolyValsAtFlxPnts(CFNULL),
+  m_faceFlxPntConn(CFNULL),
+  m_thisTRS()
 {
   CFAUTOTRACE;
   
@@ -41,6 +53,9 @@ BCSuperInletProjMHD::BCSuperInletProjMHD(const std::string& name) :
   
   m_pBC = 0.108;
   setParameter("pBC",&m_pBC);
+  
+  m_initialSolutionIDs = std::vector<CFuint>();
+  setParameter("InitialSolutionIDs",&m_initialSolutionIDs);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,6 +71,12 @@ BCSuperInletProjMHD::~BCSuperInletProjMHD()
       deletePtr(m_initialSolutionMap[i]);
     }
   }
+  
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    deletePtr(m_cellStatesFlxPnt[iFlx]);
+  }
+  m_cellStatesFlxPnt.clear();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,6 +85,126 @@ void BCSuperInletProjMHD::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal,Config::DynamicOption<> >("RhoBC","Boundary rho value.");
   options.addConfigOption< CFreal,Config::DynamicOption<> >("pBC","Boundary p value.");
+  options.addConfigOption< std::vector<CFuint> > ("InitialSolutionIDs", "IDs of initial solution components that will be used as BC value.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSuperInletProjMHD::preProcess()
+{  
+  const CFuint initialSSize = m_initialSolutionIDs.size();
+  
+  if (initialSSize > 0)// && this->getMethodData().isPreProcessedSolution()) 
+  {    
+    if (!m_initialSolutionMap.exists(m_thisTRS->getName()) && m_thisTRS->getLocalNbGeoEnts() > 0) 
+    {
+      CFLog(INFO, "BCSuperInletProjMHD::preProcess() => TRS[ " << m_thisTRS->getName() << " ] => START\n");	
+      
+      // get InnerCells TopologicalRegionSet
+      SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
+
+      // get bndFacesStartIdxs from SpectralFRMethodData
+      map< std::string , vector< vector< CFuint > > >& bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
+      vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[m_thisTRS->getName()];
+
+      // number of face orientations (should be the same for all TRs)
+      cf_assert(bndFacesStartIdxs.size() != 0);
+      const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+
+      // number of TRs
+      const CFuint nbTRs = m_thisTRS->getNbTRs();
+      cf_assert(bndFacesStartIdxs.size() == nbTRs);
+
+      // get the geodata of the face builder and set the TRSs
+      FaceToCellGEBuilder::GeoData& geoData = m_faceBuilder->getDataGE();
+      geoData.cellsTRS = cellTrs;
+      geoData.facesTRS = m_thisTRS;
+      geoData.isBoundary = true;
+      
+      const CFuint nbTrsFaces = m_thisTRS->getLocalNbGeoEnts();
+          
+      RealVector* initialState = new RealVector(nbTrsFaces*m_nbrFaceFlxPnts*initialSSize);
+      cf_assert(initialState != CFNULL);
+
+      // get the geodata of the cell builders and set the TRS
+      //CellToFaceGEBuilder::GeoData& geoDataCB = m_cellBuilder->getDataGE();
+      //geoDataCB.m_thisTRS = cellTrs;
+      
+      CFuint counter = 0;
+
+      // loop over TRs
+      for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
+      {
+        // loop over different orientations
+        for (m_orient = 0; m_orient < nbOrients; ++m_orient)
+        {
+          // start and stop index of the faces with this orientation
+          const CFuint startFaceIdx = bndFacesStartIdxs[iTR][m_orient  ];
+          const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][m_orient+1];
+
+          // loop over faces with this orientation
+          for (CFuint faceID = startFaceIdx; faceID < stopFaceIdx; ++faceID)
+          {
+	    // build the face GeometricEntity
+            geoData.idx = faceID;
+            m_currFace = m_faceBuilder->buildGE();
+
+            // GET THE NEIGHBOURING CELL
+            m_intCell = m_currFace->getNeighborGeo(0);
+
+            // GET THE STATES IN THE NEIGHBOURING CELL
+            m_cellStates = m_intCell->getStates();
+	
+            // BUILD THE CELL WITH CONNECTIVITY TO ITS FACES
+            //geoDataCB.idx = m_intCell->getID();
+            //m_intCell = m_cellBuilder->buildGE();
+
+	    const CFuint nbrStates = m_cellStates->size();
+  
+            // Loop over flux points to extrapolate the states and gradients to the flux points
+            for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+            {
+              // reset the states in flx pnts
+              *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
+
+              // index of current flx pnt
+              const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    
+              // Loop over sol points to add the contributions to each sol pnt
+              for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
+              {
+                *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*m_cellStates)[iSol]));
+              }
+              
+              for (CFuint i = 0; i < m_initialSolutionIDs.size(); ++i, ++counter) 
+              {
+	        const CFuint varID = m_initialSolutionIDs[i];
+	        cf_assert(counter < initialState->size());
+	  
+	        const State& innerState = *(m_cellStatesFlxPnt[iFlxPnt]);
+	        cf_assert(varID < innerState.size());
+	        (*initialState)[counter] = innerState[varID];
+	      }
+            }	
+
+	    // release the face and the cell
+            m_faceBuilder->releaseGE();
+            //m_cellBuilder->releaseGE();
+	
+          } 
+        }
+      }
+      
+      m_initialSolutionMap.insert(m_thisTRS->getName(), initialState);
+            
+      CFLog(INFO, "BCSuperInletProjMHD::preProcess() => TRS[ " << m_thisTRS->getName() << " ] => END\n");
+    }
+  }
+  else
+  {
+    CFLog(INFO,"BCSuperInletProjMHD::preProcess() => No variable IDs specified for potential field tranfer!\n");
+    cf_assert(false);
+  } 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,7 +219,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
   
-  bool is3D = (normals[0]).size()==3;
+  //bool is3D = (normals[0]).size()==3;
 
   // loop over the states
   for (CFuint iState = 0; iState < nbrStates; ++iState)
@@ -104,13 +245,14 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
       /// map faces to corresponding TRS and index inside that TRS
       SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
       const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(m_face->getID());
-      const string name = m_trsNames[0];//getCurrentTRS()->getName();
+      const string name = m_thisTRS->getName();
       SafePtr<RealVector> initialValues = m_initialSolutionMap.find(name);
-      const CFuint nbVars = is3D ? 3 : 2;//m_initialSolutionIDs.size();
-      const CFuint startID = faceIdx*nbVars;
+      const CFuint nbVars = m_initialSolutionIDs.size();//is3D ? 3 : 2;//
+      const CFuint startID = faceIdx*nbVars*m_nbrFaceFlxPnts + iState*nbVars;
+      
       for (CFuint i = 0; i < nbVars; ++i) 
       {
-        const CFuint varID = is3D ? i+4 : i+3;//m_initialSolutionIDs[i];
+        const CFuint varID = m_initialSolutionIDs[i];//is3D ? i+4 : i+3;//
         const CFuint idx = startID+i;
         cf_assert(idx < initialValues->size());
 
@@ -205,6 +347,42 @@ void BCSuperInletProjMHD::setup()
 
   // no flux point coordinates required
   m_needsSpatCoord = true;
+
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  cf_assert(frLocalData.size() > 0);
+  
+  // get face builder
+  m_faceBuilder = getMethodData().getFaceBuilder();
+
+  m_nbrFaceFlxPnts = frLocalData[0]->getFaceFlxPntsFaceLocalCoords()->size();
+
+  // get the face - flx pnt connectivity per orient
+  m_faceFlxPntConn = frLocalData[0]->getFaceFlxPntConn();
+
+  // get the coefs for extrapolation of the states to the flx pnts
+  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_cellStatesFlxPnt.push_back(new State());
+  }
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_cellStatesFlxPnt[iFlx]->setLocalID(iFlx);
+  }
+
+  vector< SafePtr< TopologicalRegionSet > > trsList = MeshDataStack::getActive()->getTrsList();
+
+  const CFuint nbTRSs = trsList.size();
+  for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
+  {
+    if (m_trsNames[0]==trsList[iTRS]->getName())
+    {
+      m_thisTRS = trsList[iTRS];
+      CFLog(INFO, "Inlet: Matching BC "<<m_trsNames[0]<<" with "<<m_thisTRS->getName() << "\n");
+    }
+  }
 
 //  // get MHD 3D varset
 //  m_varSet = getMethodData().getUpdateVar().d_castTo<MHD3DProjectionVarSet>();

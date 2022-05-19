@@ -173,6 +173,9 @@ private: // data
   /// Command used to limit a solution
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_limiter;
   
+  /// Command used to preprocess a solution
+  Common::SelfRegistPtr< FluxReconstructionSolverCom > m_preprocess;
+  
   /// Command used to add artificial viscosity
   Common::SelfRegistPtr< FluxReconstructionSolverCom > m_artificialVisc;
   
@@ -215,6 +218,9 @@ private: // data
   
   /// The string for configuration of the m_limiter command
   std::string m_limiterStr;
+  
+  /// The string for configuration of the m_preprocess command
+  std::string m_preprocessStr;
   
   /// The string for configuration of the m_artificialVisc command
   std::string m_artificialViscStr;
