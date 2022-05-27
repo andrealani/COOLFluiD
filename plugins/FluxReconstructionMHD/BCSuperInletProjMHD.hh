@@ -123,6 +123,9 @@ protected: // data
   
   /// TRS in which this BC is defined
   Common::SafePtr< Framework::TopologicalRegionSet > m_thisTRS;
+  
+  /// map that maps global topological region face ID to a local one in the topological region set
+  Common::CFMap<CFuint,CFuint> m_globalToLocalTRSFaceID;
 
 }; // class BCSuperInletProjMHD
 

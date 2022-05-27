@@ -42,7 +42,8 @@ BCSuperInletProjMHD::BCSuperInletProjMHD(const std::string& name) :
   m_cellStatesFlxPnt(),
   m_solPolyValsAtFlxPnts(CFNULL),
   m_faceFlxPntConn(CFNULL),
-  m_thisTRS()
+  m_thisTRS(),
+  m_globalToLocalTRSFaceID()
 {
   CFAUTOTRACE;
   
@@ -92,6 +93,11 @@ void BCSuperInletProjMHD::defineConfigOptions(Config::OptionList& options)
 
 void BCSuperInletProjMHD::preProcess()
 {  
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  
+  if (iter == 1)
+  {
+  
   const CFuint initialSSize = m_initialSolutionIDs.size();
   
   if (initialSSize > 0)// && this->getMethodData().isPreProcessedSolution()) 
@@ -130,7 +136,10 @@ void BCSuperInletProjMHD::preProcess()
       //CellToFaceGEBuilder::GeoData& geoDataCB = m_cellBuilder->getDataGE();
       //geoDataCB.m_thisTRS = cellTrs;
       
-      CFuint counter = 0;
+      //CFuint counter = 0;
+      CFuint localFaceID = 0;
+      
+      const CFuint nbVars = m_initialSolutionIDs.size();
 
       // loop over TRs
       for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
@@ -148,6 +157,11 @@ void BCSuperInletProjMHD::preProcess()
 	    // build the face GeometricEntity
             geoData.idx = faceID;
             m_currFace = m_faceBuilder->buildGE();
+            
+            const CFuint faceGlobalID = m_currFace->getID();
+            m_globalToLocalTRSFaceID.insert(faceGlobalID,localFaceID);
+            
+            //const CFuint faceID = m_currFace->getID();
 
             // GET THE NEIGHBOURING CELL
             m_intCell = m_currFace->getNeighborGeo(0);
@@ -166,6 +180,8 @@ void BCSuperInletProjMHD::preProcess()
             {
               // reset the states in flx pnts
               *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
+              
+              const CFuint startID = localFaceID*m_nbrFaceFlxPnts*nbVars + iFlxPnt*nbVars;
 
               // index of current flx pnt
               const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
@@ -176,14 +192,15 @@ void BCSuperInletProjMHD::preProcess()
                 *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][iSol]*(*((*m_cellStates)[iSol]));
               }
               
-              for (CFuint i = 0; i < m_initialSolutionIDs.size(); ++i, ++counter) 
+              const State& innerState = *(m_cellStatesFlxPnt[iFlxPnt]);
+                            
+              for (CFuint i = 0; i < nbVars; ++i)//, ++counter) 
               {
 	        const CFuint varID = m_initialSolutionIDs[i];
-	        cf_assert(counter < initialState->size());
+	        //cf_assert(counter < initialState->size());
 	  
-	        const State& innerState = *(m_cellStatesFlxPnt[iFlxPnt]);
 	        cf_assert(varID < innerState.size());
-	        (*initialState)[counter] = innerState[varID];
+	        (*initialState)[startID + i] = innerState[varID];
 	      }
             }	
 
@@ -191,6 +208,7 @@ void BCSuperInletProjMHD::preProcess()
             m_faceBuilder->releaseGE();
             //m_cellBuilder->releaseGE();
 	
+            localFaceID++;
           } 
         }
       }
@@ -205,6 +223,7 @@ void BCSuperInletProjMHD::preProcess()
     CFLog(INFO,"BCSuperInletProjMHD::preProcess() => No variable IDs specified for potential field tranfer!\n");
     cf_assert(false);
   } 
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -218,7 +237,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
   const CFuint nbrStates = ghostStates.size();
   cf_assert(nbrStates == intStates.size());
   cf_assert(nbrStates == normals.size());
-  
+
   //bool is3D = (normals[0]).size()==3;
 
   // loop over the states
@@ -243,17 +262,25 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     if (m_initialSolutionMap.size() > 0) 
     {
       /// map faces to corresponding TRS and index inside that TRS
-      SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
-      const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(m_face->getID());
-      const string name = m_thisTRS->getName();
-      SafePtr<RealVector> initialValues = m_initialSolutionMap.find(name);
-      const CFuint nbVars = m_initialSolutionIDs.size();//is3D ? 3 : 2;//
-      const CFuint startID = faceIdx*nbVars*m_nbrFaceFlxPnts + iState*nbVars;
+      //SafePtr<MapGeoToTrsAndIdx> mapGeoToTrs = MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
+
+      //const CFuint faceIdx = mapGeoToTrs->getIdxInTrs(m_face->getID());
       
+      // Get the localFaceID from the map, knowing the faceGlobalID
+      const CFuint faceLocalID = m_globalToLocalTRSFaceID.find(m_face->getID());
+
+      const string name = m_thisTRS->getName();
+
+      SafePtr<RealVector> initialValues = m_initialSolutionMap.find(name);
+
+      const CFuint nbVars = m_initialSolutionIDs.size();//is3D ? 3 : 2;//
+      const CFuint startID = faceLocalID*nbVars*m_nbrFaceFlxPnts + iState*nbVars;
+
       for (CFuint i = 0; i < nbVars; ++i) 
       {
         const CFuint varID = m_initialSolutionIDs[i];//is3D ? i+4 : i+3;//
         const CFuint idx = startID+i;
+
         cf_assert(idx < initialValues->size());
 
         // save the Poisson PFSS solution in a vector
@@ -270,7 +297,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     const CFreal yI_dimless = coords[iState][YY];
     const CFreal zI_dimless = coords[iState][ZZ];
     const CFreal rI_dimless = (coords[iState]).norm2();
-    
+
     // to be checked if imposed minimum is needed (suspected problems at poles otherwise)
     const CFreal rhoI_dimless = std::max(std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless),1.0e-4);
     

@@ -450,8 +450,8 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
   m_limiter->execute();
   
   // apply preprocessor
-  cf_assert(m_preprocess.isNotNull());
-  m_preprocess->execute();
+  //cf_assert(m_preprocess.isNotNull());
+  //m_preprocess->execute();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -462,6 +462,10 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   
   cf_assert(isConfigured());
   cf_assert(isSetup());
+  
+  // apply preprocessor
+  cf_assert(m_preprocess.isNotNull());
+  m_preprocess->execute();
   
   // set the residual factor in the MethodData
   m_data->setResFactor(factor);
