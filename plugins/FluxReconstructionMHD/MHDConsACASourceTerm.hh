@@ -85,6 +85,15 @@ private: //data
     
   /// socket for gravity values
   Framework::DataSocketSource<CFreal> socket_gravity;
+  
+  /// storage for Br
+  Framework::DataSocketSource<CFreal> socket_Br;
+  
+  /// storage for Btheta
+  Framework::DataSocketSource<CFreal> socket_Btheta;
+  
+  /// storage for Bphi
+  Framework::DataSocketSource<CFreal> socket_Bphi;
     
   bool  m_gravity;
   bool  m_PevtsovHeating;

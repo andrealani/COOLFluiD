@@ -142,6 +142,12 @@ protected: // data
 
   /// socket for nodes
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_otherStates;
+  
+  /// socket for state's
+  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
+  
+  /// storage of the past states
+  Framework::DataSocketSink< Framework::State*> socket_pastStates;
 
   /// flag telling whether to apply the post processing
   bool m_applyProcessing;
@@ -157,6 +163,9 @@ protected: // data
   
   /// distance within which points in the smaller mesh are selected
   CFreal m_deltaSelection;
+  
+  /// flag to use PFSS B as initialization
+  bool m_usePFSSBInit;
 
 }; // class ComputeFieldFromPotential
 

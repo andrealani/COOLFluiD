@@ -359,6 +359,8 @@ SimpleEdgeGraphFRQ2.cxx
 SimpleEdgeGraphFRQ2.hh
 ComputeFieldFromPotential.hh
 ComputeFieldFromPotential.cxx
+InitStateAddVar.hh
+InitStateAddVar.cxx
 )
 
 IF (NOT CF_HAVE_CUDA)

@@ -56,6 +56,9 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   StdSourceTerm(name),
   socket_updateCoeff("updateCoeff"),
   socket_gravity("gravity"),
+  socket_Br("Br"),
+  socket_Btheta("Btheta"),
+  socket_Bphi("Bphi"),
   m_order()
 { 
   addConfigOptionsTo(this);
@@ -131,6 +134,17 @@ void MHDConsACASourceTerm::setup()
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
   
   m_order = static_cast<CFuint>(order);
+  
+  DataHandle< CFreal > Br = socket_Br.getDataHandle();
+  DataHandle< CFreal > Btheta = socket_Btheta.getDataHandle();
+  DataHandle< CFreal > Bphi = socket_Bphi.getDataHandle();
+  
+  const CFuint nbStates = updateCoeff.size();
+
+  // resize socket
+  Br.resize(nbStates);
+  Btheta.resize(nbStates);
+  Bphi.resize(nbStates);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +161,9 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 {
   std::vector< Common::SafePtr< BaseDataSocketSource > > result = StdSourceTerm::providesSockets();
   result.push_back(&socket_gravity);
+  result.push_back(&socket_Br);
+  result.push_back(&socket_Btheta);
+  result.push_back(&socket_Bphi);
   return result;
 }
 
@@ -366,12 +383,31 @@ void MHDConsACASourceTerm::addSourceTerm(RealVector& resUpdates)
   
   
     // Set gravity socket
-    if (m_gravity && !m_isPerturbed)
+    if (!m_isPerturbed)
     {
-      socket_gravity.getDataHandle()[stateID*4]   = density_dimless*gx; //*volumes[elementID];	
-      socket_gravity.getDataHandle()[stateID*4+1] = density_dimless*gy; //*volumes[elementID];	
-      socket_gravity.getDataHandle()[stateID*4+2] = density_dimless*gz; //*volumes[elementID];
-      socket_gravity.getDataHandle()[stateID*4+3] = density_dimless*Vdotg; //*volumes[elementID];
+      if (m_gravity)
+      {
+        socket_gravity.getDataHandle()[stateID*4]   = density_dimless*gx; //*volumes[elementID];	
+        socket_gravity.getDataHandle()[stateID*4+1] = density_dimless*gy; //*volumes[elementID];	
+        socket_gravity.getDataHandle()[stateID*4+2] = density_dimless*gz; //*volumes[elementID];
+        socket_gravity.getDataHandle()[stateID*4+3] = density_dimless*Vdotg; //*volumes[elementID];
+      }
+      
+      DataHandle< CFreal > Br = socket_Br.getDataHandle();
+      DataHandle< CFreal > Btheta = socket_Btheta.getDataHandle();
+      DataHandle< CFreal > Bphi = socket_Bphi.getDataHandle();
+      
+      const CFreal r2D = sqrt(x_dimless*x_dimless+y_dimless*y_dimless);
+      
+      const CFreal Bxv = (*((*m_cellStates)[iSol]))[4];
+      const CFreal Byv = (*((*m_cellStates)[iSol]))[5];
+      const CFreal Bzv = (*((*m_cellStates)[iSol]))[6];
+      
+      Br[stateID] = x_dimless/r_dimless*Bxv + y_dimless/r_dimless*Byv + z_dimless/r_dimless*Bzv;
+    
+      Btheta[stateID] = (-y_dimless*Bxv + x_dimless*Byv)/r2D;
+    
+      Bphi[stateID] = (z_dimless*x_dimless/r2D*Bxv + z_dimless*y_dimless/r2D*Byv - r2D*Bzv)/r_dimless;
     }
   }
   

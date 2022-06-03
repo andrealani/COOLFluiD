@@ -38,6 +38,8 @@ void ComputeFieldFromPotential::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal > ("InterRadius", "Radius corresponding to the internal boundary between donor and current grids (<= 0 assumes one mesh).");
   
   options.addConfigOption< CFreal > ("DeltaSelection", "Distance within which points in the smaller mesh are selected.");
+  
+  options.addConfigOption< bool > ("UsePFSSBInit", "Flag to use the PFSS B solution as initialization for B (default true).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,6 +66,8 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
   socket_otherUY("By"),
   socket_otherUZ("Bz"),
   socket_otherStates("states"),
+  socket_states("states"),
+  socket_pastStates("pastStates"),
   m_applyProcessing(true)
 {
   addConfigOptionsTo(this);
@@ -79,6 +83,9 @@ ComputeFieldFromPotential::ComputeFieldFromPotential(const std::string& name) :
 
   m_deltaSelection = 0.0;
   setParameter("DeltaSelection", &m_deltaSelection);
+  
+  m_usePFSSBInit = true;
+  setParameter("UsePFSSBInit", &m_usePFSSBInit);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -105,7 +112,10 @@ void ComputeFieldFromPotential::configure ( Config::ConfigArgs& args )
 
 void ComputeFieldFromPotential::execute()
 {  
-  CFLog(VERBOSE, "ComputeFieldFromPotential::execute() => START\n");
+  if (m_applyProcessing)
+  {
+      
+  CFLog(INFO, "ComputeFieldFromPotential::execute() => START\n");
 
   // get the elementTypeData
   SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
@@ -118,6 +128,11 @@ void ComputeFieldFromPotential::execute()
   geoData.trs = cells;
   
   const CFuint nbrElemTypes = elemType->size();
+  
+  // get the state socket
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  
+  DataHandle<State*> pastStates = socket_pastStates.getDataHandle();
   
   // LOOP OVER ELEMENT TYPES
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -145,7 +160,7 @@ void ComputeFieldFromPotential::execute()
       // get the states in this cell
       m_cellStates = m_cell->getStates();
 
-      if (SubSystemStatusStack::getActive()->getNbIter() >= 1 && m_applyProcessing) 
+      if (SubSystemStatusStack::getActive()->getNbIter() >= 1) 
       {
         Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance(SubSystemStatusStack::getCurrentName()).getNamespace(m_otherNamespace);
         Common::SafePtr<SubSystemStatus> otherSubSystemStatus = SubSystemStatusStack::getInstance().getEntryByNamespace(nsp);
@@ -153,7 +168,7 @@ void ComputeFieldFromPotential::execute()
         DataHandle<CFreal> ux = socket_otherUX.getDataHandle();
         DataHandle<CFreal> uy = socket_otherUY.getDataHandle();
         DataHandle<CFreal> uz = socket_otherUZ.getDataHandle();
-    
+        
 //    // States on the extended corona MHD mesh
 //    DataHandle<State*, GLOBAL> states = socket_states.getDataHandle(); // LARGER mesh
 //    
@@ -173,17 +188,28 @@ void ComputeFieldFromPotential::execute()
         //Stopwatch<WallTime> stp;
         //stp.start();
     
-        if (m_interRadius <= 0.) 
+        if (m_interRadius <= 0.0) 
         {
-          CFLog(INFO, "ComputeFieldFromPotential::execute() => transferring field\n");
+          //CFLog(INFO, "ComputeFieldFromPotential::execute() => transferring field\n");
           
-          for (CFuint iSol = 1; iSol < m_nbrSolPnts; ++iSol)
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
           {
             const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
               
             (*(*m_cellStates)[iSol])[xVar] = ux[stateID];
             (*(*m_cellStates)[iSol])[yVar] = uy[stateID];
-            if (m_dim == 3) (*(*m_cellStates)[iSol])[zVar] = uz[stateID];
+            if (m_dim == 3) (*(*m_cellStates)[iSol])[zVar] = uz[stateID];    
+            
+            (*states[stateID])[xVar] = ux[stateID];
+            (*states[stateID])[yVar] = uy[stateID];
+            if (m_dim == 3) (*states[stateID])[zVar] = uz[stateID]; 
+            
+            if (m_usePFSSBInit)
+            {
+              (*pastStates[stateID])[xVar] = ux[stateID];
+              (*pastStates[stateID])[yVar] = uy[stateID];
+              if (m_dim == 3) (*pastStates[stateID])[zVar] = uz[stateID]; 
+            }
           }
         }
         else 
@@ -448,12 +474,13 @@ void ComputeFieldFromPotential::execute()
           m_applyProcessing = true;
         }
       } 
-    
-      CFLog(VERBOSE, "ComputeFieldFromPotential::execute() => END\n");
-
+      
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
+  }
+  
+  CFLog(INFO, "ComputeFieldFromPotential::execute() => END\n");
   }
 }
 
@@ -558,6 +585,8 @@ ComputeFieldFromPotential::needsSockets()
   result.push_back(&socket_otherUY);
   result.push_back(&socket_otherUZ);
   result.push_back(&socket_otherStates);
+  result.push_back(&socket_states);
+  result.push_back(&socket_pastStates);
   return result;
 }
 
