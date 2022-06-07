@@ -1,4 +1,4 @@
-// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
+// Copyright (C) 2022 KU Leuven CmPA, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).

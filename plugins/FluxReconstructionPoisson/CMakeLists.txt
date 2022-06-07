@@ -12,8 +12,8 @@ PoissonJacobGradientComputer.hh
 PoissonJacobGradientComputer.cxx
 )
 
-LIST ( APPEND FluxReconstructionPoisson_requires_mods Poisson FluxReconstructionMethod )
-LIST ( APPEND FluxReconstructionPoisson_cflibs Framework Poisson FluxReconstructionMethod ) 
+LIST ( APPEND FluxReconstructionPoisson_requires_mods Poisson FluxReconstructionMethod FluxReconstructionNavierStokes )
+LIST ( APPEND FluxReconstructionPoisson_cflibs Framework Poisson FluxReconstructionMethod FluxReconstructionNavierStokes ) 
 
 CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionPoisson )
 
