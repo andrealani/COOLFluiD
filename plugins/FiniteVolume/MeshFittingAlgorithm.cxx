@@ -1061,7 +1061,7 @@ void MeshFittingAlgorithm::computeMovingInBoundaryNodeNormals()
           }
         }
         averageNormal.normalize();
-        CFLog(NOTICE,"averageNormal  "<<averageNormal<< "/n");
+        CFLog(DEBUG_MED,"averageNormal  "<<averageNormal<< "/n");
         m_mapNodeIDNormal.insert(addPair);
       }
     }
