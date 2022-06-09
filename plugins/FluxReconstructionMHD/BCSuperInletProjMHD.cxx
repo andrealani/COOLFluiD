@@ -311,9 +311,9 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     ghostState[8] = intState[8];
     
     // V
-    ghostState[1] = -intState[1];
-    ghostState[2] = -intState[2];
-    ghostState[3] = -intState[3]; 
+    ghostState[1] = 0.0;//-intState[1];
+    ghostState[2] = 0.0;//-intState[2];
+    ghostState[3] = 0.0;//-intState[3]; 
     
     // B
     // Br bnd from PFSS solution

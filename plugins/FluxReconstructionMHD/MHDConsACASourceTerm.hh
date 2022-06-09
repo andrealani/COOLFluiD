@@ -94,6 +94,15 @@ private: //data
   
   /// storage for Bphi
   Framework::DataSocketSource<CFreal> socket_Bphi;
+  
+  /// storage for Vr
+  Framework::DataSocketSource<CFreal> socket_Vr;
+  
+  /// storage for Vtheta
+  Framework::DataSocketSource<CFreal> socket_Vtheta;
+  
+  /// storage for Vphi
+  Framework::DataSocketSource<CFreal> socket_Vphi;
     
   bool  m_gravity;
   bool  m_PevtsovHeating;

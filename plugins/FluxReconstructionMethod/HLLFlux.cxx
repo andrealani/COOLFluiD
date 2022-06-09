@@ -52,7 +52,7 @@ RealVector& HLLFlux::computeFlux(Framework::State& lState,
 {  
   SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVar();
   //vector<RealVector>& pdata = getMethodData().getPolyReconstructor()->getExtrapolatedPhysicaData();
-  
+
   // Set members to current left and right update state
   m_updateStates[LEFT]  = &lState;
   m_updateStates[RIGHT] = &rState;
@@ -61,12 +61,12 @@ RealVector& HLLFlux::computeFlux(Framework::State& lState,
   // compute physical data for the left and the right internal flux points
   updateVarSet->computePhysicalData(lState, m_pData[LEFT]);
   updateVarSet->computePhysicalData(rState, m_pData[RIGHT]);
-  
+
   // flux for the right and left state
   //const RealVector& unitNormal = getMethodData().getUnitNormal();
   m_rightFlux = updateVarSet->getFlux()(m_pData[RIGHT], normal);
   m_leftFlux = updateVarSet->getFlux()(m_pData[LEFT], normal);
-  
+
   // here put update variables
   updateVarSet->computeEigenValues(m_pData[RIGHT], normal, m_rightEv);
   updateVarSet->computeEigenValues(m_pData[LEFT], normal, m_leftEv);
@@ -93,17 +93,17 @@ RealVector& HLLFlux::computeFlux(Framework::State& lState,
   
   // transform from update states (which are stored) to solution states (in which the equations are written)
   m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]); 
-  
+
   const RealVector lSolState = *(m_solStates)[LEFT ];
   
   m_solStates[RIGHT] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[RIGHT]);
-  
+
   const RealVector rSolState = *(m_solStates)[RIGHT];
 
   m_rFlux = 0.5*(m_leftFlux + m_rightFlux -
 		(amax + amin)/(amax - amin) * (m_rightFlux - m_leftFlux) +
 		amax * amin/(amax - amin) * (rSolState - lSolState));
-  
+
   return m_rFlux;
 }
 

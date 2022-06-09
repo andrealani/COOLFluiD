@@ -564,17 +564,24 @@ void ConvBndCorrectionsRHSFluxReconstruction::setup()
     m_flxPntGhostSol.push_back(new State());
     m_cellStatesFlxPnt.push_back(new State());
   }
+  
+  // dimensionality and number of equations
+  m_dim   = PhysicalModelStack::getActive()->getDim();
+  m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
+  
+  RealVector dummyCoord;
+  dummyCoord.resize(m_dim);
+  dummyCoord = 0.0;
 
   // set an ID as initialization
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_flxPntGhostSol[iFlx]->setLocalID(iFlx);
     m_cellStatesFlxPnt[iFlx]->setLocalID(iFlx);
+    
+    m_flxPntGhostSol[iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
+    m_cellStatesFlxPnt[iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
   }
-
-  // dimensionality and number of equations
-  m_dim   = PhysicalModelStack::getActive()->getDim();
-  m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
 
   // resize the physical data temporary vector
   SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm(); 

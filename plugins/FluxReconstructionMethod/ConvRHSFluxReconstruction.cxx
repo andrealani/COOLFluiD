@@ -864,10 +864,17 @@ void ConvRHSFluxReconstruction::setup()
     m_cellStatesFlxPnt[RIGHT].push_back(new State());
   }
 
+  RealVector dummyCoord;
+  dummyCoord.resize(m_dim);
+  dummyCoord = 0.0;
+  
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_cellStatesFlxPnt[LEFT][iFlx]->setLocalID(iFlx);
     m_cellStatesFlxPnt[RIGHT][iFlx]->setLocalID(iFlx);
+    
+    m_cellStatesFlxPnt[LEFT][iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
+    m_cellStatesFlxPnt[RIGHT][iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
   }
   
   for (CFuint iFlxPnt = 0; iFlxPnt < m_flxPntsLocalCoords->size(); ++iFlxPnt)
