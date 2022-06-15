@@ -39,7 +39,11 @@ public: // methods
   template < typename PTYPE, typename FTYPE >
   void addListener ( const std::string& sname, PTYPE* ptr, FTYPE pfunc, const std::string& desc = "" )
   {
-    regist_signal ( sname , desc )->connect ( boost::bind ( pfunc, ptr, _1 ) );
+#ifdef CF_HAVE_BOOST_1_76
+    regist_signal ( sname , desc )->connect ( boost::bind ( pfunc, ptr, std::placeholders::_1 ) );
+#else
+    regist_signal ( sname , desc )->connect ( boost::bind ( pfunc, ptr, _1 ) ); 
+#endif
   }
 
 }; // class EventHandler
