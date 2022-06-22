@@ -39,7 +39,7 @@ public: // methods
   template < typename PTYPE, typename FTYPE >
   void addListener ( const std::string& sname, PTYPE* ptr, FTYPE pfunc, const std::string& desc = "" )
   {
-#ifdef CF_HAVE_BOOST_1_76
+#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79
     regist_signal ( sname , desc )->connect ( boost::bind ( pfunc, ptr, std::placeholders::_1 ) );
 #else
     regist_signal ( sname , desc )->connect ( boost::bind ( pfunc, ptr, _1 ) ); 

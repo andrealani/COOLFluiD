@@ -268,12 +268,14 @@ SET ( Boost_ADDITIONAL_VERSIONS  "1.70" "1.66" "1.60" "1.60.0" "1.59" "1.59.0" "
 #ELSE()
 #ENDIF()
 
-IF ("${Boost_LIB_VERSION}" STREQUAL "1_79" )
-LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework atomic )
-ELSE()
 LIST ( APPEND CF_Boost_COMPONENTS thread filesystem system regex unit_test_framework )
-ENDIF()
 FIND_PACKAGE( Boost COMPONENTS ${CF_Boost_COMPONENTS} )
+
+IF ("${Boost_LIB_VERSION}" STREQUAL "1_79" )
+SET ( Boost_LIBRARIES  "" )
+LIST ( APPEND CF_Boost_COMPONENTS atomic )
+FIND_PACKAGE( Boost COMPONENTS ${CF_Boost_COMPONENTS} )
+ENDIF()
 
 LOG ( "Boost include path [${Boost_INCLUDE_DIR}]" )
 LOG ( "Boost lib version  [${Boost_LIB_VERSION}]" )
