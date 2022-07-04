@@ -468,7 +468,7 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
     // Loop over gradient directions
     for (CFuint iDir = 0; iDir < m_dim; ++iDir)
     {
-      m_projectedCorrL = eps * m_neighbCellFluxProjVects[m_pertSide][iDir][m_pertSol];
+      m_projectedCorrL = eps * m_neighbCellFluxProjVects[m_pertSide][iDir+m_ndimplus][m_pertSol];
 	  
       // compute the grad updates
       (*m_cellGrads[side][iSolIdx])[m_pertVar] += (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][m_pertSol]*m_projectedCorrL*invJacobDet;
@@ -874,7 +874,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
     }
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     { 
       m_contFlx[iSolPnt][iDim] = 0.0;
     
@@ -916,7 +916,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -1137,7 +1137,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
       }
     
       // calculate the discontinuous flux projected on x, y, z-directions
-      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       { 
         m_contFlxNeighb[side][iSolPnt][iDim] = 0.0;
     
@@ -1183,7 +1183,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir][iEq]);
+          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -1770,12 +1770,20 @@ void LLAVJacobFluxReconstruction::setup()
   
   RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
   temp = 0.0;
-  if (m_dim == 2)
+if (m_dim == 2)
   {
-    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-    {
-      temp(idx,idx) = 1.0;
+    if (m_ndimplus==3){  //if Triag
+      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
     }
+    else{
+      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }  
   }
   else if (m_dim == 3)
   {

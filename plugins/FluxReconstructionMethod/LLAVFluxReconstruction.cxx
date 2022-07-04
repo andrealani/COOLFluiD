@@ -1216,7 +1216,7 @@ void LLAVFluxReconstruction::setup()
   if (m_dim == 2)
   {
     if (m_ndimplus==3){  //if Triag
-      for (CFuint idx = 0; idx < (m_order)*(m_order)/2; ++idx)
+      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
       {
         temp(idx,idx) = 1.0;
       }

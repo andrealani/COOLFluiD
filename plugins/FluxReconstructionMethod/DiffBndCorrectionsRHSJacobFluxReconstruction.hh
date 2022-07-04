@@ -226,6 +226,12 @@ protected: // data
   
   /// influenced flx pnt idx
   CFuint m_influencedFlxPnt;
+
+  /// Number of influenced flx pnts (by perturbation)
+  CFuint m_NbInfluencedFlxPnts;
+  
+  /// Element shape
+  CFGeoShape::Type elemShape;
   
   /// backup of interface fluxes at the flux points of a face
   std::vector< RealVector> m_flxPntRiemannFluxBackup;
@@ -280,6 +286,9 @@ protected: // data
   
   /// perturbations
   RealVector m_eps;
+
+  /// number of additionnal face normal directions for Triag (,terta and prism)
+  CFuint m_ndimplus;
 
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstruction
 

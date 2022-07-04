@@ -321,7 +321,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       acc.setRowColIndex(solIdx,(*m_states[m_pertSide])[iSol]->getLocalID());
     }
     
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_neighbCellFluxProjVects[m_pertSide][iDim] = m_cells[m_pertSide]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
     }
@@ -339,7 +339,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       prepareFluxComputation();
 
       // calculate the discontinuous flux projected on x, y, z-directions
-      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
         computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
         m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxNeighb[m_pertSide][m_pertSol][iDim];
@@ -548,7 +548,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             if (m_affectedSolPnts[iSide][iState])
             {
               // calculate the discontinuous flux projected on x, y, z-directions
-              for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+              for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
               {
                 m_contFlxNeighb[iSide][iState][iDim] = m_contFlxBackup[iSide][iState][iDim];
               }
@@ -599,7 +599,7 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
       acc.setRowColIndex(solIdx,(*m_states[m_pertSide])[iSol]->getLocalID());
     }
     
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_neighbCellFluxProjVects[m_pertSide][iDim] = m_cells[m_pertSide]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
     }
@@ -617,7 +617,7 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
       prepareFluxComputation();
 
       // calculate the discontinuous flux projected on x, y, z-directions
-      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
         computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
         m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxNeighb[m_pertSide][m_pertSol][iDim];
@@ -769,7 +769,7 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
             if (m_affectedSolPnts[iSide][iState])
             {
               // calculate the discontinuous flux projected on x, y, z-directions
-              for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+              for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
               {
                 m_contFlxNeighb[iSide][iState][iDim] = m_contFlxBackup[iSide][iState][iDim];
               }
@@ -869,7 +869,7 @@ void DiffRHSJacobFluxReconstruction::computePerturbedGradientsAnalytical(const C
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-        m_projectedCorrL = m_eps[iEq] * m_neighbCellFluxProjVects[m_pertSide][iDir][m_pertSol];
+        m_projectedCorrL = m_eps[iEq] * (m_neighbCellFluxProjVects[m_pertSide][iDir+m_ndimplus][m_pertSol]);
 	  
         // compute the grad updates
         (*m_cellGrads[side][iSolIdx])[iEq] += (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][m_pertSol]*m_projectedCorrL*invJacobDet;
@@ -1119,7 +1119,7 @@ void DiffRHSJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& resi
       prepareFluxComputation();
 
       // calculate the discontinuous flux projected on x, y, z-directions
-      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
 //       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
         computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSolPnt],0,m_contFlxNeighb[side][iSolPnt][iDim]);
@@ -1155,7 +1155,7 @@ void DiffRHSJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& resi
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir][iEq]);
+          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -1207,7 +1207,7 @@ void DiffRHSJacobFluxReconstruction::setOtherFacesLocalIdxs()
 void DiffRHSJacobFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint side)
 {
   // create a list of the dimensions in which the deriv will be calculated
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_cellFluxProjVects[iDim] = m_cells[side]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
   }
@@ -1429,7 +1429,7 @@ void DiffRHSJacobFluxReconstruction::setup()
   m_pertCorrections.resize(m_nbrSolPnts);
   m_cellGradFlxPntBackup.resize(m_nbrFaceFlxPnts);
 
-  m_dimList.resize(m_dim);
+  m_dimList.resize(m_dim+m_ndimplus);
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -1544,7 +1544,7 @@ void DiffRHSJacobFluxReconstruction::setup()
     }
   }
   
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_dimList[iDim].resize(m_nbrSolPnts);
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
@@ -1562,8 +1562,8 @@ void DiffRHSJacobFluxReconstruction::setup()
   m_projectedCorrR.resize(m_dim);
   m_eps.resize(m_nbrEqs);
   m_neighbCellFluxProjVects.resize(2);
-  m_neighbCellFluxProjVects[LEFT].resize(m_dim);
-  m_neighbCellFluxProjVects[RIGHT].resize(m_dim);
+  m_neighbCellFluxProjVects[LEFT].resize(m_dim+m_ndimplus);
+  m_neighbCellFluxProjVects[RIGHT].resize(m_dim+m_ndimplus);
   m_affectedSolPnts.resize(2);
   m_affectedSolPnts[LEFT].resize(m_nbrSolPnts);
   m_affectedSolPnts[RIGHT].resize(m_nbrSolPnts);
@@ -1588,7 +1588,7 @@ void DiffRHSJacobFluxReconstruction::setup()
     m_unpertAllCellDiffRes[iCell].resize(nbrCellResiduals);
   }
 
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_neighbCellFluxProjVects[LEFT][iDim].resize(m_nbrSolPnts);
     m_neighbCellFluxProjVects[RIGHT][iDim].resize(m_nbrSolPnts);
@@ -1601,12 +1601,12 @@ void DiffRHSJacobFluxReconstruction::setup()
   
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
-    m_contFlxBackup[LEFT][iSolPnt].resize(m_dim);
-    m_contFlxBackup[RIGHT][iSolPnt].resize(m_dim);
-    m_contFlxNeighb[LEFT][iSolPnt].resize(m_dim);
-    m_contFlxNeighb[RIGHT][iSolPnt].resize(m_dim);
+    m_contFlxBackup[LEFT][iSolPnt].resize(m_dim+m_ndimplus);
+    m_contFlxBackup[RIGHT][iSolPnt].resize(m_dim+m_ndimplus);
+    m_contFlxNeighb[LEFT][iSolPnt].resize(m_dim+m_ndimplus);
+    m_contFlxNeighb[RIGHT][iSolPnt].resize(m_dim+m_ndimplus);
     
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_contFlxBackup[LEFT][iSolPnt][iDim].resize(m_nbrEqs);
       m_contFlxBackup[RIGHT][iSolPnt][iDim].resize(m_nbrEqs);

@@ -61,6 +61,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTriagP3.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTriagP4.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTriagP5.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTriagP6.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -525,6 +526,15 @@ cellLagrangeHexaP2FluxReconstructionP10("CellHexaLagrangeP2FluxReconstructionP10
                           FluxReconstructionModule>
   cellLagrangeTriagP1FluxReconstructionP5("CellTriagLagrangeP1FluxReconstructionP5");
 
+     /**
+  * Flux Reconstruction Triangle Cell with P1 geometry and P6 solution.
+  */
+  GeometricEntityProvider<Cell,
+                          LagrangeShapeFunctionTriagP1,
+                          FluxReconstructionBaseFunctionTriagP6,
+                          FluxReconstructionModule>
+  cellLagrangeTriagP1FluxReconstructionP6("CellTriagLagrangeP1FluxReconstructionP6");
+
   /**
   * Flux Reconstruction Triangle Cell with P2 geometry and P0 solution.
   */
@@ -578,6 +588,15 @@ cellLagrangeHexaP2FluxReconstructionP10("CellHexaLagrangeP2FluxReconstructionP10
                           FluxReconstructionBaseFunctionTriagP5,
                           FluxReconstructionModule>
   cellLagrangeTriagP2FluxReconstructionP5("CellTriagLagrangeP2FluxReconstructionP5");  
+
+   /**
+  * Flux Reconstruction Triangle Cell with P2 geometry and P6 solution.
+  */
+  GeometricEntityProvider<Cell,
+                          LagrangeShapeFunctionTriagP2,
+                          FluxReconstructionBaseFunctionTriagP6,
+                          FluxReconstructionModule>
+  cellLagrangeTriagP2FluxReconstructionP6("CellTriagLagrangeP2FluxReconstructionP6");  
 //////////////////////////////////////////////////////////////////////////////
 
 /**
