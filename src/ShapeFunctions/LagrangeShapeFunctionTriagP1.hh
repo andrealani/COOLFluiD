@@ -167,36 +167,36 @@ public:
         
           if (planeIdx[ip] == 0)  // normal to face nb 1
           {
-            const CFreal dN0dxi = 0.5;
-            const CFreal dN1dxi = -0.5;
+            const CFreal dN0dxi = -1.;
+            const CFreal dN1dxi = 1.;
             const CFreal dN2dxi = 0.;
             
-            pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
-            pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+            pointNormal[XX] = +(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
+            pointNormal[YY] = -(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
           }
           else if (planeIdx[ip] == 1) // normal to face nb 2
           {
             const CFreal dN0dxi = 0.;
-            const CFreal dN1dxi = 0.5;
-            const CFreal dN2dxi = -0.5;
+            const CFreal dN1dxi = 1.;
+            const CFreal dN2dxi = -1.;
             
             pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
             pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
           }
           else if (planeIdx[ip] == 2) // normal to face nb 3
           {
-            const CFreal dN0dxi = -0.5;
-            const CFreal dN1dxi = 0.;
-            const CFreal dN2dxi = 0.5;
+            const CFreal dN0deta = -1.;
+            const CFreal dN1deta = 0.;
+            const CFreal dN2deta = 1.;
             
-            pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);
-            pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi  + x2*dN2dxi);
+            pointNormal[XX] = -(y0*dN0deta  + y1*dN1deta  + y2*dN2deta);
+            pointNormal[YY] = +(x0*dN0deta  + x1*dN1deta  + x2*dN2deta);
           }
           else if (planeIdx[ip] == 3) // vector ~ in the x direction
           {
-            const CFreal dN0deta = -0.5;
+            const CFreal dN0deta = -1.;
             const CFreal dN1deta = 0.;
-            const CFreal dN2deta = 0.5;
+            const CFreal dN2deta = 1.;
 
             pointNormal[XX] = +(y0*dN0deta + y1*dN1deta + y2*dN2deta);
             pointNormal[YY] = -(x0*dN0deta + x1*dN1deta + x2*dN2deta);
@@ -204,8 +204,8 @@ public:
           
         else if (planeIdx[ip] == 4) // vector ~ in the y direction
         {
-            const CFreal dN0dxi = -0.5;
-          const CFreal dN1dxi = 0.5;
+            const CFreal dN0dxi = -1.;
+          const CFreal dN1dxi = 1.;
           const CFreal dN2dxi = 0.;
           
           pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi  + y2*dN2dxi);

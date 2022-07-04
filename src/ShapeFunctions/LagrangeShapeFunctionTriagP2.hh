@@ -288,7 +288,6 @@ public:
         pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
         pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
       }
-      pointNormal *= 0.5;
     }
   }
 
