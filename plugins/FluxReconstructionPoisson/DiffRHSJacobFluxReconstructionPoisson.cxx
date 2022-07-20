@@ -81,6 +81,195 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
 
   return result;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffRHSJacobFluxReconstructionPoisson::execute()
+{
+  CFAUTOTRACE;
+  
+  CFLog(VERBOSE, "DiffRHSJacobFluxReconstructionPoisson::execute()\n");
+  
+  // get the elementTypeData
+  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+
+  // get InnerCells TopologicalRegionSet
+  SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  // get the geodata of the geometric entity builder and set the TRS
+  CellToFaceGEBuilder::GeoData& geoDataCell = m_cellBuilder->getDataGE();
+  geoDataCell.trs = cells;
+  
+  // reset cell flags
+  for (CFuint iCell = 0; iCell < m_cellFlags.size(); ++iCell)
+  {
+    m_cellFlags[iCell] = false;
+  }
+  
+  // get InnerFaces TopologicalRegionSet
+  SafePtr<TopologicalRegionSet> faces = MeshDataStack::getActive()->getTrs("InnerFaces");
+
+  // get the face start indexes
+  vector< CFuint >& innerFacesStartIdxs = getMethodData().getInnerFacesStartIdxs();
+
+  // get number of face orientations
+  const CFuint nbrFaceOrients = innerFacesStartIdxs.size()-1;
+
+  // get the geodata of the face builder and set the TRSs
+  FaceToCellGEBuilder::GeoData& geoDataFace = m_faceBuilder->getDataGE();
+  geoDataFace.cellsTRS = cells;
+  geoDataFace.facesTRS = faces;
+  geoDataFace.isBoundary = false;
+  
+  // get the geodata of the cell builders and set the TRS
+  CellToFaceGEBuilder::GeoData& geoDataCBL = m_cellBuilders[LEFT]->getDataGE();
+  geoDataCBL.trs = cells;
+  CellToFaceGEBuilder::GeoData& geoDataCBR = m_cellBuilders[RIGHT]->getDataGE();
+  geoDataCBR.trs = cells;
+  
+  //// Loop over faces to calculate fluxes and interface fluxes in the flux points
+  
+  // loop over different orientations
+  for (m_orient = 0; m_orient < nbrFaceOrients; ++m_orient)
+  {
+    CFLog(VERBOSE, "Orient = " << m_orient << "\n");
+    // start and stop index of the faces with this orientation
+    const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
+    const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
+
+    // loop over faces with this orientation
+    for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
+    {
+      // build the face GeometricEntity
+      geoDataFace.idx = faceID;
+      m_face = m_faceBuilder->buildGE();
+
+      // get the neighbouring cells
+      m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
+      m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
+
+      // get the states in the neighbouring cells
+      m_states[LEFT ] = m_cells[LEFT ]->getStates();
+      m_states[RIGHT] = m_cells[RIGHT]->getStates();
+      
+      // compute volume
+      m_cellVolume[LEFT] = m_cells[LEFT]->computeVolume();
+      m_cellVolume[RIGHT] = m_cells[RIGHT]->computeVolume();
+      
+      cf_assert(m_cellVolume[LEFT] > 0.0);
+      cf_assert(m_cellVolume[RIGHT] > 0.0);
+      
+      // if one of the neighbouring cells is parallel updatable, compute the correction flux
+      if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
+      {
+	// build the neighbouring cells
+        const CFuint cellIDL = m_face->getNeighborGeo(LEFT)->getID();
+        geoDataCBL.idx = cellIDL;
+        m_cells[LEFT] = m_cellBuilders[LEFT ]->buildGE();
+        const CFuint cellIDR = m_face->getNeighborGeo(RIGHT)->getID();
+        geoDataCBR.idx = cellIDR;
+        m_cells[RIGHT] = m_cellBuilders[RIGHT]->buildGE();
+
+	// set the face data
+	setFaceData(m_face->getID());//faceID
+
+	// compute the left and right states and gradients in the flx pnts
+	computeFlxPntStatesAndGrads();
+
+	// compute FI
+	computeInterfaceFlxCorrection();
+
+	// compute the wave speed updates
+        computeWaveSpeedUpdates(m_waveSpeedUpd);
+
+        // update the wave speed
+        updateWaveSpeed();
+
+	// compute the correction for the left neighbour
+	computeCorrection(LEFT, m_divContFlxL);
+	m_divContFlx = m_divContFlxL;
+
+	// update RHS
+	updateRHS();
+	
+	// compute the correction for the right neighbour
+	computeCorrection(RIGHT, m_divContFlxR);
+	m_divContFlx = m_divContFlxR;
+	
+	// update RHS
+	updateRHS();
+        
+        // compute needed cell contributions
+        if (!m_cellFlags[cellIDL])
+        {
+          computeUnpertCellDiffResiduals(LEFT);
+          m_unpertAllCellDiffRes[cellIDL] = m_unpertCellDiffRes[LEFT];
+
+	  // update RHS
+	  if ((*m_states[LEFT ])[0]->isParUpdatable()) updateRHSUnpertCell(LEFT);
+        }
+        if (!m_cellFlags[cellIDR])
+        {
+          computeUnpertCellDiffResiduals(RIGHT);
+          m_unpertAllCellDiffRes[cellIDR] = m_unpertCellDiffRes[RIGHT];
+
+	  // update RHS
+	  if ((*m_states[RIGHT])[0]->isParUpdatable()) updateRHSUnpertCell(RIGHT);
+        }
+
+	// get all the faces neighbouring the cells
+        m_faces[LEFT ] = m_cells[LEFT ]->getNeighborGeos();
+        m_faces[RIGHT] = m_cells[RIGHT]->getNeighborGeos();
+
+        // set the local indexes of the other faces than the current faces
+        setOtherFacesLocalIdxs();
+
+	// make a back up of the grads and put the perturbed and unperturbed corrections in the correct format
+        for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+        {
+          for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+          {
+            m_cellGradsBackUp[LEFT][iState][iVar] = (*m_cellGrads[LEFT][iState])[iVar];
+            m_cellGradsBackUp[RIGHT][iState][iVar] = (*m_cellGrads[RIGHT][iState])[iVar];
+            
+            m_resUpdates[LEFT][m_nbrEqs*iState+iVar] = m_divContFlxL[iState][iVar];
+            m_resUpdates[RIGHT][m_nbrEqs*iState+iVar] = m_divContFlxR[iState][iVar];
+          }
+        }
+
+	for (CFuint iSide = 0; iSide < 2; ++iSide)
+        {
+          // compute solution points Jacobian determinants
+          m_solJacobDet[iSide] = m_cells[iSide]->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+	}
+
+        // compute the diffusive face term contribution to the jacobian
+        if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeBothJacobsDiffFaceTerm();
+        }
+        else if ((*m_states[LEFT])[0]->isParUpdatable())
+        {
+          computeOneJacobDiffFaceTerm(LEFT );
+        }
+        else if ((*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeOneJacobDiffFaceTerm(RIGHT);
+        }
+
+        // release the cells
+        m_cellBuilders[LEFT ]->releaseGE();
+        m_cellBuilders[RIGHT]->releaseGE();
+        
+        m_cellFlags[cellIDL] = true;
+        m_cellFlags[cellIDR] = true;
+      }
+      
+      // release the GeometricEntity
+      m_faceBuilder->releaseGE();
+    }
+  }
+}
   
 //////////////////////////////////////////////////////////////////////////////
 

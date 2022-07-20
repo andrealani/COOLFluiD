@@ -94,7 +94,7 @@ void ConvDiffJacobFluxReconstructionPoisson::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "ConvDiffJacobFluxReconstructionPoisson::execute()\n");
-  
+  CFLog(INFO, "C++ version: " << __cplusplus << "\n");
   ////////////////////INITIALIZATION/////////////////////////
   
   // get the elementTypeData
@@ -284,21 +284,21 @@ void ConvDiffJacobFluxReconstructionPoisson::execute()
 	updateRHS();
         
         // compute needed cell contributions: what used to be cell loop is incorporated here!!
-        if (!m_cellFlags[cellIDL] && (*m_states[LEFT ])[0]->isParUpdatable())
+        if (!m_cellFlags[cellIDL])// && (*m_states[LEFT ])[0]->isParUpdatable())
         {
           // compute cell contribution 
           computeUnpertCellDiffResiduals(LEFT);
           
 	  // update RHS
-	  updateRHSUnpertCell(LEFT);
+	  if ((*m_states[LEFT ])[0]->isParUpdatable()) updateRHSUnpertCell(LEFT);
         }
-        if (!m_cellFlags[cellIDR] && (*m_states[RIGHT])[0]->isParUpdatable())
+        if (!m_cellFlags[cellIDR])// && (*m_states[RIGHT])[0]->isParUpdatable())
         {
           // compute cell contribution 
           computeUnpertCellDiffResiduals(RIGHT);
 
 	  // update RHS
-	  updateRHSUnpertCell(RIGHT);
+	  if ((*m_states[RIGHT])[0]->isParUpdatable()) updateRHSUnpertCell(RIGHT);
         }
 
 	// get all the faces neighbouring the cells
@@ -1087,6 +1087,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                   // (b)
                   for (CFuint jDim = 0; jDim < m_dim; ++jDim)
                   {
+                    // should be zero for P0
                     m_tempFlux += m_gradientFluxJacobian[m_pertSide][kSolIdx][iEq][jDim][iDim] * m_gradientStateJacobian[m_pertSide][kSolIdx][m_pertSide][m_pertSol][jDim] * dgradVar_du_dl;
 //if (m_cells[LEFT]->getID() == 1 && jSolIdx+pertSideTerm==0 && m_pertSol+pertSideTerm==0 && m_pertVar==3) CFLog(INFO, "j: " << m_tempFlux << ", l: " << (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][kSolIdx] << ", dFdq: " << m_gradientFluxJacobian[m_pertSide][kSolIdx][iEq][jDim][iDim] 
 //        << ", dqdu: " << m_gradientStateJacobian[m_pertSide][m_pertSol][m_pertSide][m_pertSol][0] << ", dudu: " << m_gradVarsToStateJacobian[m_pertSide][m_pertSol][m_pertVar][iEq] << "\n");
@@ -1094,6 +1095,8 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                 }
               }
             }
+            
+            //if (abs(m_tempFlux[0])>1.0e-8) CFLog(INFO, "Jeq: " << m_tempFlux << "\n");//
             
             acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
 //            if (m_cells[LEFT]->getID() == 1 && jSolIdx+pertSideTerm==0 && m_pertSol+pertSideTerm == 0 && m_pertVar==3) CFLog(INFO, "adding: " << m_tempFlux << "\n");
@@ -1153,11 +1156,16 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                   // (p)
                   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
                   {
+                    // should cancel each other out for P0
                     m_tempFlux += divh_l_dqdu * m_gradientFluxJacobian[m_pertSide][kSolIdx][iEq][jDim][dim] * m_gradVarsToStateJacobian[m_pertSide][m_pertSol][m_pertVar][iEq];
+                    
+                    //CFLog(INFO, "iFlx: " << iFlxPnt << "divh: " << divh << ", l: " << (*m_solPolyValsAtFlxPnts)[iFlxPnt][kSolIdx] << ", dqdu: " << m_gradientStateJacobian[m_pertSide][kSolIdx][m_pertSide][m_pertSol][jDim] << ", dFdq: "
+                    //        << m_gradientFluxJacobian[m_pertSide][kSolIdx][iEq][jDim][dim] << ", dgvdu: " << m_gradVarsToStateJacobian[m_pertSide][m_pertSol][m_pertVar][iEq] << "\n");
                   }
                 }
               }
-              
+              //if (abs(m_tempFlux[0])>1.0e-2) CFLog(INFO, "JfqD: " << m_tempFlux << "\n");             
+              //CFLog(INFO, "JfqD: " << m_tempFlux[0] << "\n");
               acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
             }
           }
@@ -1216,6 +1224,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
             // add part on this side of face
             m_tempFlux = dFIduJL * divh;
               
+            // should only be non-zero for LA
             acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           
             // get the divergence of the correction function on other side
@@ -1224,6 +1233,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
             // add cross-cell part 
             m_tempFlux = dFIduJLOther * divh;   
               
+            // should only be non-zero for LA
             acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
         }
@@ -1268,12 +1278,18 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                 for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
                 {
                   m_tempFlux += m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * divh_halfFaceJacob_l_dqdu;
-                    
+                   //++ 
                   m_tempFlux += m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * divh_halfFaceJacob_l_dqduOther;
+                  
+                  const CFreal dFIdqJf = m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim][0]*halfFaceJacob;
+                  //CFLog(INFO, "dfIdq Jf: " << dFIdqJf << ", dfIdq: " << m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim][0] << "\n");
+                  //        << ", dqdu other: " << m_gradientStateJacobian[iOtherSide][kSolIdxOther][m_pertSide][pertSolIdx][iDim] << "\n");
                 }
               }         
             }
-              
+            
+            //CFLog(INFO, "JfqI: " << m_tempFlux[0] << "\n");
+            //if (abs(m_tempFlux[0])>1.0e-2) CFLog(INFO, "JfqI: " << m_tempFlux << "\n");  
             acc.addValues(jSolIdxThis+pertSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
             }
           
@@ -1306,12 +1322,13 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                 for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
                 {
                   m_tempFlux += m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * divh_halfFaceJacobOther_lThis_dqduThis;
-                    
+                  //++  
                   m_tempFlux += m_riemannFluxGradJacobian[iFlxPnt][iEq][iDim] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * divh_halfFaceJacobOther_lOther_dqduOther;
                 }
               }         
             }
-            
+            //CFLog(INFO, "JfqI cross: " << m_tempFlux[0] << "\n");
+            //if (abs(m_tempFlux[0])>1.0e-2) CFLog(INFO, "JfqI cross: " << m_tempFlux << "\n"); 
             acc.addValues(jSolIdxOther+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
             }
           }
@@ -1352,6 +1369,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                   
                   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
                   {
+                    // should cancel each other out for P0
                     m_tempFlux += m_gradientFluxJacobian[iOtherSide][kSolIdxOther][iEq][jDim][dimOther] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * divh_l_dqduOther;
                   }
                 }
@@ -1372,12 +1390,13 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
                   
                   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
                   {
+                    // should be zero for P0
                     m_tempFlux += m_gradientFluxJacobian[iOtherSide][kSolIdxOther][iEq][jDim][iDim] * m_gradVarsToStateJacobian[m_pertSide][pertSolIdx][m_pertVar][iEq] * l_dqduOther;
                   }
                 }
               }
             }
-            
+            //if (abs(m_tempFlux[0])>1.0e-2) CFLog(INFO, "JfqD cross: " << m_tempFlux[0] << "\n");
             acc.addValues(jSolPnt+otherSideTerm,pertSolIdx+pertSideTerm,m_pertVar,&m_tempFlux[0]);
           }
         }

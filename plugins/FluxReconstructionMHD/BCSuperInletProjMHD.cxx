@@ -317,7 +317,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     
     // B
     // Br bnd from PFSS solution
-    const CFreal BrBoundary_dimless = xI_dimless/rhoI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
+    const CFreal BrBoundary_dimless = xI_dimless/rI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
 
     const CFreal BxI_dimless = intState[4];
     const CFreal ByI_dimless = intState[5];

@@ -53,6 +53,9 @@ public: // functions
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
+  
+  /// Execute processing actions
+  virtual void execute();
 
 protected: //functions
 
