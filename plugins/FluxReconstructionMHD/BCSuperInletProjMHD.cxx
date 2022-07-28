@@ -55,6 +55,12 @@ BCSuperInletProjMHD::BCSuperInletProjMHD(const std::string& name) :
   m_pBC = 0.108;
   setParameter("pBC",&m_pBC);
   
+  m_VrBC = 1935.07; //848.15;
+  setParameter("VrBC",&m_VrBC);
+  
+  m_rotation = false; 
+  setParameter("Rotation",&m_rotation);
+  
   m_initialSolutionIDs = std::vector<CFuint>();
   setParameter("InitialSolutionIDs",&m_initialSolutionIDs);
 }
@@ -86,6 +92,8 @@ void BCSuperInletProjMHD::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal,Config::DynamicOption<> >("RhoBC","Boundary rho value.");
   options.addConfigOption< CFreal,Config::DynamicOption<> >("pBC","Boundary p value.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("VrBC","radial velocity at the boundary");
+  options.addConfigOption< bool >("Rotation","rotation");
   options.addConfigOption< std::vector<CFuint> > ("InitialSolutionIDs", "IDs of initial solution components that will be used as BC value.");
 }
 
@@ -310,11 +318,6 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     // phi
     ghostState[8] = intState[8];
     
-    // V
-    ghostState[1] = 0.0;//-intState[1];
-    ghostState[2] = 0.0;//-intState[2];
-    ghostState[3] = 0.0;//-intState[3]; 
-    
     // B
     // Br bnd from PFSS solution
     const CFreal BrBoundary_dimless = xI_dimless/rI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
@@ -334,6 +337,53 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     ghostState[4] = 2.0*BxBoundary_dimless - BxI_dimless;
     ghostState[5] = 2.0*ByBoundary_dimless - ByI_dimless;
     ghostState[6] = 2.0*BzBoundary_dimless - BzI_dimless;
+    
+    // V
+    //ghostState[1] = 0.0;//-intState[1];
+    //ghostState[2] = 0.0;//-intState[2];
+    //ghostState[3] = 0.0;//-intState[3]; 
+    
+    const CFreal BxB = BxBoundary_dimless;
+    const CFreal ByB = ByBoundary_dimless;
+    const CFreal BzB = BzBoundary_dimless; 
+    const CFreal BBmag = std::sqrt(BxB*BxB + ByB*ByB + BzB*BzB);
+    const CFreal VBmag = m_VrBC/(2.2e-4/sqrt(1.2566e-6*1.67e-13)); //1935.07/(2.2e-4/sqrt(1.2566e-6*1.67e-13));
+    const CFreal BxuB = BxB/BBmag;
+    const CFreal ByuB = ByB/BBmag;
+    const CFreal BzuB = BzB/BBmag;
+    CFreal VxBB = BxuB * VBmag;
+    CFreal VyBB = ByuB * VBmag;
+    CFreal VzBB = BzuB * VBmag;
+    
+    CFreal VrBB = xI_dimless/rI_dimless*VxBB + yI_dimless/rI_dimless*VyBB + zI_dimless/rI_dimless*VzBB;
+
+    //If the radial component would indicate inflow, switch the orientation
+    if (VrBB < 0.0)
+    {
+      VxBB = -VxBB;
+      VyBB = -VyBB;
+      VzBB = -VzBB;
+    }
+
+    //With the fixed-orientation components, recalculate the spherical components
+    VrBB = xI_dimless/rI_dimless*VxBB + yI_dimless/rI_dimless*VyBB + zI_dimless/rI_dimless*VzBB;
+    CFreal VthetaBB = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VxBB + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VyBB - rhoI_dimless/rI_dimless*VzBB;
+    CFreal VphiBB = -yI_dimless/rhoI_dimless*VxBB + xI_dimless/rhoI_dimless*VyBB;
+
+    //Add the rotation motion
+    if (m_rotation == 1)
+    {
+      VphiBB += rI_dimless*std::sin(BthetaI_dimless)*3.86e-3;
+    } 
+
+    //Recompute Cartesian components
+    const CFreal VxBBR = xI_dimless/rI_dimless*VrBB - yI_dimless/rhoI_dimless*VphiBB + xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VthetaBB;
+    const CFreal VyBBR = yI_dimless/rI_dimless*VrBB + xI_dimless/rhoI_dimless*VphiBB + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VthetaBB;
+    const CFreal VzBBR = zI_dimless/rI_dimless*VrBB - rhoI_dimless/rI_dimless*VthetaBB;  
+
+    ghostState[1] = 2.0*VxBBR - intState[1];
+    ghostState[2] = 2.0*VyBBR - intState[2];
+    ghostState[3] = 2.0*VzBBR - intState[3];
   }
 }
 

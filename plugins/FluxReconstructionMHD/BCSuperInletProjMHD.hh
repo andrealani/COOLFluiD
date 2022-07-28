@@ -91,6 +91,12 @@ protected: // data
   ///bnd p value
   CFreal m_pBC;
   
+  ///bnd Vr value
+  CFreal m_VrBC;
+  
+  /// flag to set rotation
+  bool m_rotation;
+  
   /// array specifying IDs of initial solution components that will be used as BC value
   std::vector<CFuint> m_initialSolutionIDs;
   

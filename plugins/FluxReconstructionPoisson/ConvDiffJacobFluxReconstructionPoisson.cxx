@@ -94,7 +94,7 @@ void ConvDiffJacobFluxReconstructionPoisson::execute()
   CFAUTOTRACE;
   
   CFLog(VERBOSE, "ConvDiffJacobFluxReconstructionPoisson::execute()\n");
-  CFLog(INFO, "C++ version: " << __cplusplus << "\n");
+
   ////////////////////INITIALIZATION/////////////////////////
   
   // get the elementTypeData
