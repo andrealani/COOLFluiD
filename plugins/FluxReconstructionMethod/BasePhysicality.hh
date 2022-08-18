@@ -58,7 +58,7 @@ public:
   
   /// Returns the DataSocket's that this command needs as sinks
   /// @return a vector of SafePtr with the DataSockets
-  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
     needsSockets();
     
   /// Returns the DataSocket's that this command provides as sources

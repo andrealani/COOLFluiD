@@ -22,6 +22,8 @@ BCSuperInletProjMHD.hh
 BCSuperInletProjMHD.cxx
 MHDConsACASourceTerm.hh
 MHDConsACASourceTerm.cxx
+PositivityPreservationMHD3D.hh
+PositivityPreservationMHD3D.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )

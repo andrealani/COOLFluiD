@@ -371,7 +371,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     CFreal VphiBB = -yI_dimless/rhoI_dimless*VxBB + xI_dimless/rhoI_dimless*VyBB;
 
     //Add the rotation motion
-    if (m_rotation == 1)
+    if (m_rotation)
     {
       VphiBB += rI_dimless*std::sin(BthetaI_dimless)*3.86e-3;
     } 
