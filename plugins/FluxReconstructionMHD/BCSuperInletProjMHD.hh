@@ -97,6 +97,12 @@ protected: // data
   /// flag to set rotation
   bool m_rotation;
   
+  /// flag to enforce full B_in instead of only B_r
+  bool m_enforceFullB;
+  
+  /// flag to enforce analytical dipole B_in
+  bool m_enforeDipoleB;
+  
   /// array specifying IDs of initial solution components that will be used as BC value
   std::vector<CFuint> m_initialSolutionIDs;
   

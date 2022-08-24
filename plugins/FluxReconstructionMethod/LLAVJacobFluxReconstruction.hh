@@ -91,7 +91,7 @@ protected: //functions
   /**
    * Set the data for the current cell necessary to calculate the residual update
    */
-  void setCellData(const CFuint side);
+  virtual void setCellData(const CFuint side);
   
   /**
    * Compute the projected states on order P-1

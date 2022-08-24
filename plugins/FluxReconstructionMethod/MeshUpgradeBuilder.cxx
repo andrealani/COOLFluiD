@@ -1152,7 +1152,7 @@ void MeshUpgradeBuilder::divideElements()
 void MeshUpgradeBuilder::upgradeStateConnectivity()
 {
   CFAUTOTRACE;
-
+  CFLog(VERBOSE, "upgradeStateConnectivity start\n");
   // get the element type data
   SafePtr< vector< ElementTypeData > > elementType = getCFmeshData().getElementTypeData();
   vector< ElementTypeData >::iterator type_itr;
@@ -1170,7 +1170,6 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   const CFuint nbElems = getNbElements();
   
   const CFuint oldNbStatesPerElem = std::max((oldStates.size())/nbElems,(CFuint) 1);
-
   
   cout<<" oldStates.size() "<< oldStates.size() << endl;
  cout<<" oldNbStatesPerElem below "<< oldNbStatesPerElem << endl;
@@ -1185,7 +1184,7 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   m_elemFirstStateLocalID.resize(0);
 
   const CFuint oldMaxGlobalID = oldStates.getGlobalSize();
-  
+
   // loop on all the elements to store which old states are parallel updatable
   for (type_itr = elementType->begin(); type_itr != elementType->end(); ++type_itr)
   {
@@ -1239,7 +1238,7 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   cellStates->resize(columnPattern);
   SafePtr< vector< RealVector > > newSolPntCoords;
   std::vector< std::vector< CFreal > > solPolyValsOld;
-  
+
   if (m_upgradeInit) 
   {
     FluxReconstructionElementData* frElemData;
@@ -1342,6 +1341,7 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
 	m_elemIDOfState.push_back(globalIdx);
 	m_elemLocalIDOfState.push_back(jState);
 	m_updatables.push_back(updatablesElems[globalIdx]);
+
 	if (jState == 0)
 	{
 	  m_globalIDs.push_back(globalIDsTemp[globalIdx][0]);
@@ -1356,6 +1356,7 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
   updatablesElems.resize(0);
   globalIDsTemp.resize(0);
   cf_assert(stateID == columnPattern.sum());
+  CFLog(VERBOSE, "upgradeStateConnectivity end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1363,7 +1364,7 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
 void MeshUpgradeBuilder::recreateStates()
 {
   CFAUTOTRACE;
-
+CFLog(VERBOSE, "recreateStates start\n");
   SafePtr<MeshData::ConnTable> cellStates = MeshDataStack::getActive()->getConnectivity("cellStates_InnerCells");
 
   //DataHandle < Framework::State*, Framework::GLOBAL > states = getCFmeshData().getStatesHandle();
@@ -1465,6 +1466,8 @@ void MeshUpgradeBuilder::recreateStates()
 // 
 //       
 //     }
+  
+  CFLog(VERBOSE, "recreateStates end\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

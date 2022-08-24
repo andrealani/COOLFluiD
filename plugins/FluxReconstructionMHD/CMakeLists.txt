@@ -22,6 +22,8 @@ BCSuperInletProjMHD.hh
 BCSuperInletProjMHD.cxx
 MHDConsACASourceTerm.hh
 MHDConsACASourceTerm.cxx
+LLAVJacobFluxReconstructionMHD.hh
+LLAVJacobFluxReconstructionMHD.cxx
 PositivityPreservationMHD3D.hh
 PositivityPreservationMHD3D.cxx
 )
