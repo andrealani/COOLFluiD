@@ -1,0 +1,1434 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, MHD3D, Backward Euler, mesh with curved quads, 
+# Lax-Friedrichs, HLL scheme, wall BCs and Dirichlet BC 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = false
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libFluxReconstructionPoisson libFluxReconstructionMHD libBackwardEuler libPetscI libGmsh2CFmesh libMeshToolsFR libNewtonMethod libMeshToolsFVM libPoisson libMHD libForwardEuler
+
+###################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/Dipole3D
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/Dipole3D
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace #EMNamespace #
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = MHD3DProjection #Poisson3D #
+Simulator.SubSysMesh.MeshMeshData.listTRS = Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = dipoleUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace #EMNamespace #
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = dipoleMeshFREqRef.CFmesh #starry4.CFmesh #dipoleMeshFR11kFinerFEH.CFmesh #dipole1999lmax10-11kP0.CFmesh #dipoleMHD2kP1VCJH0CFL10k.CFmesh #dipoleMHD2kP1.CFmesh #dipoleMHD11kP1.CFmesh #dipoleFRMHD28kP0.CFmesh #dipoleFRMHD11kP1.CFmesh #dipoleFRMHD2kP0.CFmesh #dipoleP1Inter.CFmesh #dipole1999-11kP0lmax50.CFmesh #dipoleFR2kP1.CFmesh #dipole1999-11kP1lmax50.CFmesh #dipoleMeshFR11k.CFmesh #DipoleUV.CFmesh #dipoleMeshFR2k.CFmesh #dipoleFRPoisson2kP3.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoissonP1.CFmesh #dipoleFRUniformPoissonP1.CFmesh #dipoleMeshFR.CFmesh #forRay_hexas.CFmesh #DipoleUV.CFmesh #cylP1RANSRestart.CFmesh #cylMesh.CFmesh #CylinderNSQuadCurved_16_5.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace #EMNamespace #
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+#Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace #EMNamespace #
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace
+
+# Poisson model settings
+Simulator.SubSystem.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystem.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystem.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystem.EMNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSystem.EMNamespace.PhysicalModelName = Poisson3D
+Simulator.SubSystem.Poisson3D.refValues    = 1.0
+Simulator.SubSystem.Poisson3D.refLength    = 1.0
+
+Simulator.SubSystem.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystem.FlowMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.FlowMeshData.Namespaces = FlowNamespace
+Simulator.SubSystem.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystem.FlowNamespace.PhysicalModelType = MHD3DProjection
+Simulator.SubSystem.FlowNamespace.PhysicalModelName = MHD3DProjection
+Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.05
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.potentialBType = Dipole
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mX = 0.0
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mY = 0.0
+#Simulator.SubSystem.MHD3DProjection.ConvTerm.mZ = 0.0
+Simulator.SubSystem.MHD3DProjection.ConvTerm.refSpeed = 1.0
+
+###################################
+####Outputs####
+###################################
+Simulator.SubSystem.OutputFormat        = CFmesh Tecplot Tecplot #ParaView ParaView
+Simulator.SubSystem.OutputFormatNames   = CFmesh2 Tecplot1 Tecplot2 #ParaView1 ParaView2
+Simulator.SubSystem.CFmesh2.FileName     = dipoleFRMHD.CFmesh
+Simulator.SubSystem.CFmesh2.SaveRate = 100
+Simulator.SubSystem.CFmesh2.AppendTime = false
+Simulator.SubSystem.CFmesh2.AppendIter = true
+Simulator.SubSystem.CFmesh2.ParWriteSol = ParWriteSolution
+#Simulator.SubSystem.CFmesh2.Namespace = EMNamespace
+#Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = EM
+Simulator.SubSystem.CFmesh2.Namespace = FlowNamespace
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.Tecplot1.FileName    = dipoleFRMHD.plt
+Simulator.SubSystem.Tecplot1.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot1.SaveRate    = 100
+#Simulator.SubSystem.Tecplot1.Data.printExtraValues = true
+#Simulator.SubSystem.Tecplot1.Data.SurfaceTRS = Inlet Outlet
+Simulator.SubSystem.Tecplot1.AppendTime = false
+Simulator.SubSystem.Tecplot1.AppendIter = true #false
+Simulator.SubSystem.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystem.Tecplot1.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot1.Data.CollaboratorNames = Flow
+Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.SocketNames = Br Btheta Bphi Vr Vtheta Vphi
+Simulator.SubSystem.Tecplot1.Data.DataHandleOutput.VariableNames = Br Btheta Bphi Vr Vtheta Vphi
+
+Simulator.SubSystem.ParaView1.FileName    = dipoleFRMHD.vtu
+Simulator.SubSystem.ParaView1.WriteSol    = WriteSolution
+Simulator.SubSystem.ParaView1.Data.updateVar = Prim
+Simulator.SubSystem.ParaView1.SaveRate = 50000
+Simulator.SubSystem.ParaView1.AppendTime = false
+Simulator.SubSystem.ParaView1.AppendIter = false
+Simulator.SubSystem.ParaView1.Namespace = FlowNamespace
+Simulator.SubSystem.ParaView1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystem.ParaView2.FileName    = dipoleFRPoisson.vtu
+Simulator.SubSystem.ParaView2.Data.updateVar = Cons
+Simulator.SubSystem.ParaView2.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView2.SaveRate = 50000
+Simulator.SubSystem.ParaView2.AppendTime = false
+Simulator.SubSystem.ParaView2.AppendIter = false
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.SocketNames = uR uTheta uPhi uX uY uZ
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.VariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.ParaView2.Namespace = EMNamespace
+Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.Tecplot2.FileName    = dipoleFRPoisson.plt
+Simulator.SubSystem.Tecplot2.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot2.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot2.SaveRate = 100
+Simulator.SubSystem.Tecplot2.AppendTime = false
+Simulator.SubSystem.Tecplot2.AppendIter = false
+Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+#Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1 
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.SocketNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.VariableNames = Br Btheta Bphi Bx By Bz
+
+###############################################################################
+# Time Marching
+
+# Stop Condition
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 1000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -16
+
+Simulator.SubSystem.StopConditionSubSystemStatus = FlowSubSystemStatus 
+
+#Simulator.SubSystem.StopCondition = Norm #
+#Simulator.SubSystem.Norm.valueNorm = -3
+
+
+###############################################################################
+# Linear System
+
+Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystem.LSSNames = FlowLSS EMLSS
+
+# Flow
+Simulator.SubSystem.FlowLSS.Data.PCType = PCASM #PCBJACOBI #
+Simulator.SubSystem.FlowLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.FlowLSS.Data.MaxIter = 1000
+Simulator.SubSystem.FlowLSS.Data.NbKrylovSpaces = 150
+Simulator.SubSystem.FlowLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.FlowLSS.Namespace = FlowNamespace
+Simulator.SubSystem.FlowLSS.Data.CollaboratorNames = Flow
+
+# EM
+Simulator.SubSystem.EMLSS.Data.KSPType = KSPGMRES #KSPBICG
+Simulator.SubSystem.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.EMLSS.Data.MaxIter = 5000
+Simulator.SubSystem.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.EMLSS.Data.PCType = PCASM #PCBJACOBI #PCHYPRE #PCASM
+#Simulator.SubSystem.EMLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.EMLSS.Data.UseAIJ = true
+#Simulator.SubSystem.EMLSS.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.EMLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.EMLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystem.EMLSS.Namespace = EMNamespace
+Simulator.SubSystem.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+# Implicit time integration
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator NewtonIterator
+Simulator.SubSystem.ConvergenceMethodNames = EMIterator FlowIterator # This order decides whether EM comes before Flow
+
+# EM
+Simulator.SubSystem.EMIterator.Namespace = EMNamespace
+Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 15 #15 #
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -10.
+Simulator.SubSystem.EMIterator.Data.PrintHistory = true
+Simulator.SubSystem.EMIterator.Data.SolvingRate = 100000000
+Simulator.SubSystem.EMIterator.ConvRate = 100
+Simulator.SubSystem.EMIterator.ShowRate = 100
+
+Simulator.SubSystem.EMIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.EMIterator.Data.CFL.Function.Def = min(50,0.5*1.5^max(i-1,0)) #5000.0 #P1 dipole: 15000 #P2 dipole: min(300,0.5*1.5^max(i-1,0)) #P0: min(1000,0.5*1.5^max(i-1,0)) #20000.0 #min(150,0.5*1.05^max(i-1,0))
+Simulator.SubSystem.EMIterator.ConvergenceFile = convergenceDipoleFRPoisson.plt
+
+# Flow
+Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
+Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
+Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.FlowIterator.StdUpdateSol.Relaxation= 1.
+# CFL definition
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+
+Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = min(10,0.5*1.05^max(i-1,0)) #0.1 #min(10,0.5*1.01^max(i-1,0)) #if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258))))) #min(100,0.5*1.5^max(i-1,0)) #P0: min(2000,0.5*1.5^max(i-1,0)) #
+
+Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 7
+Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
+# stop after initialization
+#Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 0
+#Simulator.SubSystem.FlowIterator.Data.OnlyPreprocessSolution = true
+Simulator.SubSystem.FlowIterator.ConvergenceFile = convergenceDipoleFRMHD.plt
+
+###################################
+# Mesh Reader
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystem.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
+
+# Meshes read by the two namespaces NEED to be same mesh AND same order!
+Simulator.SubSystem.CFmeshFileReader1.Namespace = EMNamespace
+Simulator.SubSystem.CFmeshFileReader1.Data.CollaboratorNames = EM
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = dipolePoisson17kEqRef.CFmesh #dipole1999lmax10-11kP1.CFmesh #dipoleFRPoisson17kP1.CFmesh #dipolePoisson15kFEHP1lm10.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoisson11kP1yzSwitch.CFmesh #dipole1999lmax10-11kP0.CFmesh #dipolePoisson35kP1.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFRPoisson28kP1.CFmesh #dipoleFR2kP1.CFmesh #dipolePoisson28kP1.CFmesh #dipoleFR2kP1.CFmesh #dipoleFRMHD11kP1.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFR2kP1.CFmesh #dipoleFRPoisson2kP1.CFmesh #dipoleFRPoisson11kP2.CFmesh #dipoleFRPoissonP1.CFmesh #
+Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1.0 
+
+Simulator.SubSystem.CFmeshFileReader0.Namespace = FlowNamespace
+Simulator.SubSystem.CFmeshFileReader0.Data.CollaboratorNames = Flow
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = dipoleUpgraded.CFmesh #dipole1999lmax10-11kP1.CFmesh #dipoleFRPoisson17kP1.CFmesh #dipoleFRMHD-iter_5000.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoisson11kP1yzSwitch.CFmesh #dipoleFRMHD11kP1Vin.CFmesh #dipoleFRMHD-iter_5000.CFmesh #dipoleUpgraded.CFmesh #dipole1999lmax10-11kP0.CFmesh #dipolePoisson35kP1.CFmesh #dipoleMHD28kP1VCJH0CFL10k.CFmesh #dipoleFRMHD-iter_5000.CFmesh #dipoleFR2kP1.CFmesh #dipoleMHD35kP1VCJH0CFL1k.CFmesh #dipoleFRPoisson28kP1.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFRMHD11kP1.CFmesh #dipoleFRMHD28kP1b.CFmesh #dipoleFRPoisson28kP0.CFmesh #dipoleFRMHD11kP1.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleMHDP1Inter.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoisson2kP0.CFmesh #dipoleFRMHD2kP0.CFmesh #dipoleFRPoisson2kP0.CFmesh #dipoleFRPoisson2kP0.CFmesh #dipoleFR2kP1.CFmesh #dipole1999lmax10-11kP0.CFmesh #dipoleUpgraded.CFmesh #dipole1999lmax10-11kP0.CFmesh #
+Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
+
+#Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 #3
+#Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 #3
+
+# name of the file where to put interactive settings
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Dipole3D/dipoleMHD.inter
+# how often the interactive file is read
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+###################################
+# FR Solver
+
+Simulator.SubSystem.SpaceMethod = FluxReconstruction FluxReconstruction
+Simulator.SubSystem.SpaceMethodNames = Flow EM
+
+# these 2 were SpaceMethod instead of EM!!
+Simulator.SubSystem.EM.Namespace = EMNamespace
+Simulator.SubSystem.EM.Data.CollaboratorNames = EMLSS EMIterator
+
+
+Simulator.SubSystem.EM.Data.UpdateVar   = Cons
+Simulator.SubSystem.EM.Data.SolutionVar = Cons
+#Simulator.SubSystem.EM.Data.LinearVar   = Roe
+Simulator.SubSystem.EM.Data.DiffusiveVar= Cons
+
+Simulator.SubSystem.Flow.Namespace = FlowNamespace
+Simulator.SubSystem.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
+
+Simulator.SubSystem.Flow.Data.UpdateVar   = Prim
+Simulator.SubSystem.Flow.Data.SolutionVar = Cons
+Simulator.SubSystem.Flow.Data.LinearVar   = Roe
+#Simulator.SubSystem.Flow.Data.DiffusiveVar= Cons
+
+
+###################################
+# EM Solver
+
+Simulator.SubSystem.EM.Builder = StdBuilder
+Simulator.SubSystem.EM.SpaceRHSJacobCom = RHSJacobPoisson #RHSNS #
+Simulator.SubSystem.EM.ConvSolveCom = ConvDiffRHSJacobPoisson #ConvRHSJacobPoisson #ConvRHSNS #
+Simulator.SubSystem.EM.DiffSolveCom = Null #DiffRHSJacobPoisson #DiffRHSNS #
+Simulator.SubSystem.EM.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob #Null #
+Simulator.SubSystem.EM.JacobianSparsity = CellCentered
+Simulator.SubSystem.EM.FinalizeRHSCom = Null
+
+Simulator.SubSystem.EM.SetupCom = SetupExtra
+Simulator.SubSystem.EM.ExtrapolateCom = Null
+Simulator.SubSystem.EM.Data.RiemannFlux = LaxFriedrichsFlux #HLLFlux #
+Simulator.SubSystem.EM.Data.DiffFluxDamping = 1.0 #0.0 #
+
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddRiemannToGradJacob = true #false #THIS ONE NEEDED
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddRiemannToGradCrossCellJacob = false #true #THIS ONE OK W/O
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddFluxToGradCrossCellJacob = true #false #THIS ONE NEEDED
+
+Simulator.SubSystem.EM.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.EM.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.EM.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.EM.Data.VCJH.CFactor = 0.33 #1.6e-5 #9.5e-4 #0.033 #0.033 #0.03 #0.03
+
+Simulator.SubSystem.EM.Data.FreezeJacob = false #true #
+Simulator.SubSystem.EM.Data.FreezeJacobIter = 2
+Simulator.SubSystem.EM.Data.FreezeJacobInterval = 2
+
+###################################
+# Flow Solver
+
+Simulator.SubSystem.Flow.Builder = StdBuilder
+Simulator.SubSystem.Flow.SpaceRHSJacobCom = RHSJacob #RHSJacobMHD #RHSNS #
+Simulator.SubSystem.Flow.ConvSolveCom = ConvRHSJacobAna #ConvRHSJacobAna #ConvRHSJacobMHD #ConvRHSJacobPoisson #ConvRHSNS #
+#Simulator.SubSystem.Flow.DiffSolveCom = Null #DiffRHSJacobPoisson #DiffRHSNS #
+Simulator.SubSystem.Flow.TimeRHSJacobCom = PseudoSteadyTimeRHS #StdTimeRHSJacob #Null #
+Simulator.SubSystem.Flow.JacobianSparsity = CellCentered
+Simulator.SubSystem.Flow.FinalizeRHSCom = Null
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.AddJacob = true #false #
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.AnalyticalJacob = true #false #
+
+Simulator.SubSystem.Flow.SetupCom = SetupExtra
+Simulator.SubSystem.Flow.ExtrapolateCom = Null
+Simulator.SubSystem.Flow.Data.RiemannFlux = HLLFlux #LaxFriedrichsFlux #
+#Simulator.SubSystem.Flow.Data.DiffFluxDamping = 1.0 #0.0 #
+
+Simulator.SubSystem.Flow.SrcTermNames = MHDConsACASourceTerm
+Simulator.SubSystem.Flow.SrcTermComds = MHDConsACASourceTerm
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.Gravity = true #false #
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.PevtsovHeating = false
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.PevtsovHeatingFactor = 1.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.Manchester = false
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.ManchesterHeatingAmplitude = 0.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.ManchesterSigma = 100.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.DivQ = false
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.DivQConductivity = 0.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.DivQalphaCollisionless = 0.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.ViscosityAndResistivity = false
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.Viscosity = 0.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.Resistivity = 0.0
+Simulator.SubSystem.Flow.MHDConsACASourceTerm.RadiativeLossTerm = false
+
+#Simulator.SubSystem.Flow.ConvDiffRHSJacobPoisson.AddRiemannToGradJacob = true #false #THIS ONE NEEDED
+#Simulator.SubSystem.Flow.ConvDiffRHSJacobPoisson.AddRiemannToGradCrossCellJacob = false #true #THIS ONE OK W/O
+#Simulator.SubSystem.Flow.ConvDiffRHSJacobPoisson.AddFluxToGradCrossCellJacob = true #false #THIS ONE NEEDED
+
+Simulator.SubSystem.Flow.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.Flow.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.Flow.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.Flow.Data.VCJH.CFactor = 0.0 #1.6e-5 #9.5e-4 #0.033 #0.033 #0.03 #0.03
+
+Simulator.SubSystem.Flow.Data.FreezeJacob = false #true #
+Simulator.SubSystem.Flow.Data.FreezeJacobIter = 2
+Simulator.SubSystem.Flow.Data.FreezeJacobInterval = 2
+
+######## LLAV ###############
+Simulator.SubSystem.Flow.Data.AddArtificialViscosity = true
+Simulator.SubSystem.Flow.ArtificialViscosityCom = LLAVJacobMHD
+Simulator.SubSystem.Flow.LLAVJacobMHD.S0 = -0.5
+Simulator.SubSystem.Flow.LLAVJacobMHD.Kappa = 1.0 # 1 # P2 4.0 P2 4.0
+Simulator.SubSystem.Flow.LLAVJacobMHD.Peclet = 10.0 # 5.0 #P2 40.0 P2 20.0
+Simulator.SubSystem.Flow.LLAVJacobMHD.FreezeLimiterIter = 100000
+Simulator.SubSystem.Flow.LLAVJacobMHD.MonitoredVar = 0 #7 #25 # 21
+Simulator.SubSystem.Flow.LLAVJacobMHD.ShowRate = 1 #00
+
+######## Positivity Preservation ###############
+Simulator.SubSystem.Flow.PhysicalityCom = PositivityPreservationMHD3D
+Simulator.SubSystem.Flow.PositivityPreservationMHD3D.CheckInternal = false #true #
+Simulator.SubSystem.Flow.PositivityPreservationMHD3D.MinPressure = 1.0e-7 
+Simulator.SubSystem.Flow.PositivityPreservationMHD3D.MinDensity = 1.0e-6
+Simulator.SubSystem.Flow.PositivityPreservationMHD3D.ShowRate = 1 #100
+
+####### Set PFSS solution as BC Inlet and option to use PFSS as initial B field ############
+Simulator.SubSystem.Flow.PreProcessCom = ComputeFieldFromPotential
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.VariableIDs = 4 5 6
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.OtherNamespace = EMNamespace
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.InterRadius = -1.0 # 15e9 #2.5 # -1
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.DeltaSelection = 1000.0 #1e-4
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.ProcessRate = 100000000
+Simulator.SubSystem.Flow.ComputeFieldFromPotential.UsePFSSBInit = false #true #
+
+###################################
+# BC
+
+# EM
+Simulator.SubSystem.EM.Data.BcTypes = NeumannFromFile  Dirichlet #SuperOutlet
+Simulator.SubSystem.EM.Data.BcNames = Inlet               Outlet 
+
+Simulator.SubSystem.EM.BcNames = Inlet Outlet
+Simulator.SubSystem.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.EM.Outlet.applyTRS = Outlet
+
+Simulator.SubSystem.EM.BcNamesDiff = InletDiff OutletDiff
+Simulator.SubSystem.EM.InletDiff.applyTRS = Inlet
+Simulator.SubSystem.EM.OutletDiff.applyTRS = Outlet
+
+Simulator.SubSystem.EM.Data.Inlet.TRSName = Inlet
+Simulator.SubSystem.EM.Data.Inlet.FileNameTw = ./dipole.dat #./map_dkist99_lmax10.dat #
+Simulator.SubSystem.EM.Data.Inlet.NbClosestPoints = 8
+Simulator.SubSystem.EM.Data.Inlet.AddMinusConvention = true ##needed because Br in data file is positive along positive r axis, while in FR bnd gradient is positive along bnd normal, pointing outward of the element.
+
+Simulator.SubSystem.EM.Data.Outlet.Vars = x y z
+Simulator.SubSystem.EM.Data.Outlet.Def = 0.0
+
+# Flow
+Simulator.SubSystem.Flow.Data.BcTypes = SuperInletProjMHD  SuperOutletProj3DMHD
+Simulator.SubSystem.Flow.Data.BcNames = Inlet               Outlet 
+
+Simulator.SubSystem.Flow.BcNames = Inlet Outlet
+Simulator.SubSystem.Flow.Inlet.applyTRS = Inlet
+Simulator.SubSystem.Flow.Outlet.applyTRS = Outlet
+
+#Simulator.SubSystem.Flow.BcNamesDiff = InletDiff OutletDiff
+#Simulator.SubSystem.Flow.InletDiff.applyTRS = Inlet
+#Simulator.SubSystem.Flow.OutletDiff.applyTRS = Outlet
+
+Simulator.SubSystem.Flow.Data.Inlet.TRSName = Inlet
+Simulator.SubSystem.Flow.Data.Inlet.RhoBC = 1.0 #1.2 #4.0 #
+Simulator.SubSystem.Flow.Data.Inlet.pBC = 0.108 #0.432 #0.08450745431 
+Simulator.SubSystem.Flow.Data.Inlet.VrBC = 1935.07 #15000.0 #48 25 30
+Simulator.SubSystem.Flow.Data.Inlet.Rotation = false #true #
+Simulator.SubSystem.Flow.Data.Inlet.InitialSolutionIDs = 4 5 6
+Simulator.SubSystem.Flow.Data.Inlet.EnforceFullB = false
+Simulator.SubSystem.Flow.Data.Inlet.EnforceDipoleB = true
+
+Simulator.SubSystem.Flow.Data.Outlet.refPhi = 0.0
+Simulator.SubSystem.Flow.Data.Outlet.ImposeBDecay = true #false #
+
+###################################
+# Initialization
+
+# EM
+Simulator.SubSystem.EM.InitComds = Null #StdInitState #
+Simulator.SubSystem.EM.InitNames = InField
+
+Simulator.SubSystem.EM.InField.applyTRS = InnerCells
+Simulator.SubSystem.EM.InField.Vars = x y z
+Simulator.SubSystem.EM.InField.Def = 0.0 #
+
+# Flow
+Simulator.SubSystem.Flow.InitComds = InitStateAddVar #Null #
+Simulator.SubSystem.Flow.InitNames = InField
+Simulator.SubSystem.Flow.InField.applyTRS = InnerCells
+Simulator.SubSystem.Flow.InField.InitVars = x y z
+Simulator.SubSystem.Flow.InField.Vars = x y z r
+Simulator.SubSystem.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
+
+#Simulator.SubSystem.Flow.InField.Def = 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.108 0.0 
+Simulator.SubSystem.Flow.InField.Def = \ 
+if(r<1.001000000,9.96338e-01,\ 
+if(r<1.002034976,9.88936e-01,\ 
+if(r<1.003106150,9.81346e-01,\ 
+if(r<1.004214789,9.73565e-01,\ 
+if(r<1.005362203,9.65592e-01,\ 
+if(r<1.006549749,9.57424e-01,\ 
+if(r<1.007778830,9.49058e-01,\ 
+if(r<1.009050899,9.40494e-01,\ 
+if(r<1.010367458,9.31730e-01,\ 
+if(r<1.011730066,9.22765e-01,\ 
+if(r<1.013140331,9.13597e-01,\ 
+if(r<1.014599920,9.04225e-01,\ 
+if(r<1.016110560,8.94650e-01,\ 
+if(r<1.017674035,8.84869e-01,\ 
+if(r<1.019292194,8.74885e-01,\ 
+if(r<1.020966948,8.64696e-01,\ 
+if(r<1.022700278,8.54303e-01,\ 
+if(r<1.024494232,8.43708e-01,\ 
+if(r<1.026350930,8.32912e-01,\ 
+if(r<1.028272567,8.21915e-01,\ 
+if(r<1.030261415,8.10721e-01,\ 
+if(r<1.032319823,7.99332e-01,\ 
+if(r<1.034450225,7.87751e-01,\ 
+if(r<1.036655140,7.75981e-01,\ 
+if(r<1.038937172,7.64026e-01,\ 
+if(r<1.041299020,7.51890e-01,\ 
+if(r<1.043743474,7.39578e-01,\ 
+if(r<1.046273424,7.27096e-01,\ 
+if(r<1.048891861,7.14449e-01,\ 
+if(r<1.051601879,7.01643e-01,\ 
+if(r<1.054406681,6.88686e-01,\ 
+if(r<1.057309582,6.75584e-01,\ 
+if(r<1.060314014,6.62346e-01,\ 
+if(r<1.063423528,6.48980e-01,\ 
+if(r<1.066641798,6.35494e-01,\ 
+if(r<1.069972629,6.21899e-01,\ 
+if(r<1.073419958,6.08205e-01,\ 
+if(r<1.076987859,5.94421e-01,\ 
+if(r<1.080680548,5.80559e-01,\ 
+if(r<1.084502392,5.66631e-01,\ 
+if(r<1.088457906,5.52648e-01,\ 
+if(r<1.092551767,5.38623e-01,\ 
+if(r<1.096788812,5.24567e-01,\ 
+if(r<1.101174050,5.10496e-01,\ 
+if(r<1.105712665,4.96421e-01,\ 
+if(r<1.110410019,4.82357e-01,\ 
+if(r<1.115271666,4.68319e-01,\ 
+if(r<1.120303352,4.54319e-01,\ 
+if(r<1.125511023,4.40373e-01,\ 
+if(r<1.130900835,4.26495e-01,\ 
+if(r<1.136479159,4.12700e-01,\ 
+if(r<1.142252588,3.99002e-01,\ 
+if(r<1.148227945,3.85417e-01,\ 
+if(r<1.154412293,3.71958e-01,\ 
+if(r<1.160812942,3.58640e-01,\ 
+if(r<1.167437457,3.45478e-01,\ 
+if(r<1.174293668,3.32486e-01,\ 
+if(r<1.181389678,3.19676e-01,\ 
+if(r<1.188733875,3.07062e-01,\ 
+if(r<1.196334939,2.94657e-01,\ 
+if(r<1.204201854,2.82473e-01,\ 
+if(r<1.212343918,2.70522e-01,\ 
+if(r<1.220770755,2.58814e-01,\ 
+if(r<1.229492325,2.47361e-01,\ 
+if(r<1.238518937,2.36171e-01,\ 
+if(r<1.247861259,2.25254e-01,\ 
+if(r<1.257530333,2.14618e-01,\ 
+if(r<1.267537589,2.04269e-01,\ 
+if(r<1.277894853,1.94215e-01,\ 
+if(r<1.288614367,1.84461e-01,\ 
+if(r<1.299708803,1.75011e-01,\ 
+if(r<1.311191271,1.65869e-01,\ 
+if(r<1.323075346,1.57038e-01,\ 
+if(r<1.335375071,1.48519e-01,\ 
+if(r<1.348104986,1.40314e-01,\ 
+if(r<1.361280136,1.32423e-01,\ 
+if(r<1.374916094,1.24844e-01,\ 
+if(r<1.389028976,1.17576e-01,\ 
+if(r<1.403635464,1.10616e-01,\ 
+if(r<1.418752821,1.03961e-01,\ 
+if(r<1.434398915,9.76075e-02,\ 
+if(r<1.450592239,9.15497e-02,\ 
+if(r<1.467351934,8.57826e-02,\ 
+if(r<1.484697807,8.03000e-02,\ 
+if(r<1.502650361,7.50954e-02,\ 
+if(r<1.521230814,7.01616e-02,\ 
+if(r<1.540461129,6.54911e-02,\ 
+if(r<1.560364034,6.10760e-02,\ 
+if(r<1.580963053,5.69079e-02,\ 
+if(r<1.602282533,5.29784e-02,\ 
+if(r<1.624347673,4.92786e-02,\ 
+if(r<1.647184552,4.57998e-02,\ 
+if(r<1.670820163,4.25328e-02,\ 
+if(r<1.695282442,3.94687e-02,\ 
+if(r<1.720600301,3.65983e-02,\ 
+if(r<1.746803666,3.39125e-02,\ 
+if(r<1.773923506,3.14025e-02,\ 
+if(r<1.801991877,2.90594e-02,\ 
+if(r<1.831041954,2.68744e-02,\ 
+if(r<1.861108071,2.48391e-02,\ 
+if(r<1.892225767,2.29451e-02,\ 
+if(r<1.924431820,2.11844e-02,\ 
+if(r<1.957764296,1.95492e-02,\ 
+if(r<1.992262593,1.80318e-02,\ 
+if(r<2.027967485,1.66250e-02,\ 
+if(r<2.064921174,1.53219e-02,\ 
+if(r<2.103167337,1.41157e-02,\ 
+if(r<2.142751180,1.30001e-02,\ 
+if(r<2.183719487,1.19690e-02,\ 
+if(r<2.226120682,1.10166e-02,\ 
+if(r<2.270004881,1.01374e-02,\ 
+if(r<2.315423952,9.32638e-03,\ 
+if(r<2.362431578,8.57857e-03,\ 
+if(r<2.411083320,7.88939e-03,\ 
+if(r<2.461436682,7.25455e-03,\ 
+if(r<2.513551178,6.67001e-03,\ 
+if(r<2.567488405,6.13199e-03,\ 
+if(r<2.623312115,5.63695e-03,\ 
+if(r<2.681088287,5.18161e-03,\ 
+if(r<2.740885210,4.76290e-03,\ 
+if(r<2.802773562,4.37797e-03,\ 
+if(r<2.866826490,4.02415e-03,\ 
+if(r<2.933119702,3.69901e-03,\ 
+if(r<3.001731553,3.40025e-03,\ 
+if(r<3.072743139,3.12578e-03,\ 
+if(r<3.146238392,2.87363e-03,\ 
+if(r<3.222304178,2.64202e-03,\ 
+if(r<3.301030405,2.42928e-03,\ 
+if(r<3.382510121,2.23388e-03,\ 
+if(r<3.466839632,2.05440e-03,\ 
+if(r<3.554118611,1.88955e-03,\ 
+if(r<3.644450218,1.73813e-03,\ 
+if(r<3.737941218,1.59904e-03,\ 
+if(r<3.834702114,1.47127e-03,\ 
+if(r<3.934847271,1.35388e-03,\ 
+if(r<4.038495057,1.24603e-03,\ 
+if(r<4.145767977,1.14694e-03,\ 
+if(r<4.256792823,1.05587e-03,\ 
+if(r<4.371700819,9.72172e-04,\ 
+if(r<4.490627781,8.95240e-04,\ 
+if(r<4.613714275,8.24517e-04,\ 
+if(r<4.741105782,7.59493e-04,\ 
+if(r<4.872952872,6.99702e-04,\ 
+if(r<5.009411381,6.44713e-04,\ 
+if(r<5.150642597,5.94133e-04,\ 
+if(r<5.296813447,5.47603e-04,\ 
+if(r<5.448096697,5.04791e-04,\ 
+if(r<5.604671156,4.65394e-04,\ 
+if(r<5.766721887,4.29134e-04,\ 
+if(r<5.934440426,3.95757e-04,\ 
+if(r<6.108025006,3.65028e-04,\ 
+if(r<6.287680795,3.36732e-04,\ 
+if(r<6.473620138,3.10673e-04,\ 
+if(r<6.666062805,2.86671e-04,\ 
+if(r<6.865236252,2.64559e-04,\ 
+if(r<7.071375893,2.44186e-04,\ 
+if(r<7.284725373,2.25412e-04,\ 
+if(r<7.505536861,2.08108e-04,\ 
+if(r<7.734071343,1.92158e-04,\ 
+if(r<7.970598936,1.77453e-04,\ 
+if(r<8.215399202,1.63894e-04,\ 
+if(r<8.468761483,1.51390e-04,\ 
+if(r<8.730985240,1.39857e-04,\ 
+if(r<9.002380407,1.29218e-04,\ 
+if(r<9.283267758,1.19403e-04,\ 
+if(r<9.573979289,1.10346e-04,\ 
+if(r<9.874858604,1.01989e-04,\ 
+if(r<10.186261327,9.42744e-05,\ 
+if(r<10.508555520,8.71535e-05,\ 
+if(r<10.842122117,8.05795e-05,\ 
+if(r<11.187355377,7.45094e-05,\ 
+if(r<11.544663347,6.89040e-05,\ 
+if(r<11.914468346,6.37271e-05,\ 
+if(r<12.297207464,5.89453e-05,\ 
+if(r<12.693333079,5.45279e-05,\ 
+if(r<13.103313390,5.04467e-05,\ 
+if(r<13.527632972,4.66756e-05,\ 
+if(r<13.966793349,4.31907e-05,\ 
+if(r<14.421313584,3.99698e-05,\ 
+if(r<14.891730898,3.69927e-05,\ 
+if(r<15.378601298,3.42406e-05,\ 
+if(r<15.882500240,3.16962e-05,\ 
+if(r<16.404023305,2.93436e-05,\ 
+if(r<16.943786906,2.71681e-05,\ 
+if(r<17.502429016,2.51561e-05,\ 
+if(r<18.080609919,2.32952e-05,\ 
+if(r<18.679012996,2.15738e-05,\ 
+if(r<19.298345526,1.99813e-05,\ 
+if(r<19.939339529,1.85080e-05,\ 
+if(r<20.602752625,1.71448e-05,\ 
+if(r<21.289368934,1.58832e-05,\ 
+if(r<22.000000000,1.47157e-05,1.47157e-05\ 
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) \ 
+if(r<1.001000000,4.06764e-01*(x/r)/100.0,\ 
+if(r<1.002034976,4.09512e-01*(x/r)/100.0,\ 
+if(r<1.003106150,4.11813e-01*(x/r)/100.0,\ 
+if(r<1.004214789,4.14203e-01*(x/r)/100.0,\ 
+if(r<1.005362203,4.16686e-01*(x/r)/100.0,\ 
+if(r<1.006549749,4.19267e-01*(x/r)/100.0,\ 
+if(r<1.007778830,4.21948e-01*(x/r)/100.0,\ 
+if(r<1.009050899,4.24735e-01*(x/r)/100.0,\ 
+if(r<1.010367458,4.27631e-01*(x/r)/100.0,\ 
+if(r<1.011730066,4.30643e-01*(x/r)/100.0,\ 
+if(r<1.013140331,4.33774e-01*(x/r)/100.0,\ 
+if(r<1.014599920,4.37030e-01*(x/r)/100.0,\ 
+if(r<1.016110560,4.40416e-01*(x/r)/100.0,\ 
+if(r<1.017674035,4.43939e-01*(x/r)/100.0,\ 
+if(r<1.019292194,4.47604e-01*(x/r)/100.0,\ 
+if(r<1.020966948,4.51417e-01*(x/r)/100.0,\ 
+if(r<1.022700278,4.55386e-01*(x/r)/100.0,\ 
+if(r<1.024494232,4.59517e-01*(x/r)/100.0,\ 
+if(r<1.026350930,4.63818e-01*(x/r)/100.0,\ 
+if(r<1.028272567,4.68296e-01*(x/r)/100.0,\ 
+if(r<1.030261415,4.72960e-01*(x/r)/100.0,\ 
+if(r<1.032319823,4.77818e-01*(x/r)/100.0,\ 
+if(r<1.034450225,4.82880e-01*(x/r)/100.0,\ 
+if(r<1.036655140,4.88154e-01*(x/r)/100.0,\ 
+if(r<1.038937172,4.93651e-01*(x/r)/100.0,\ 
+if(r<1.041299020,4.99382e-01*(x/r)/100.0,\ 
+if(r<1.043743474,5.05357e-01*(x/r)/100.0,\ 
+if(r<1.046273424,5.11589e-01*(x/r)/100.0,\ 
+if(r<1.048891861,5.18089e-01*(x/r)/100.0,\ 
+if(r<1.051601879,5.24872e-01*(x/r)/100.0,\ 
+if(r<1.054406681,5.31950e-01*(x/r)/100.0,\ 
+if(r<1.057309582,5.39339e-01*(x/r)/100.0,\ 
+if(r<1.060314014,5.47054e-01*(x/r)/100.0,\ 
+if(r<1.063423528,5.55111e-01*(x/r)/100.0,\ 
+if(r<1.066641798,5.63527e-01*(x/r)/100.0,\ 
+if(r<1.069972629,5.72321e-01*(x/r)/100.0,\ 
+if(r<1.073419958,5.81512e-01*(x/r)/100.0,\ 
+if(r<1.076987859,5.91121e-01*(x/r)/100.0,\ 
+if(r<1.080680548,6.01168e-01*(x/r)/100.0,\ 
+if(r<1.084502392,6.11678e-01*(x/r)/100.0,\ 
+if(r<1.088457906,6.22673e-01*(x/r)/100.0,\ 
+if(r<1.092551767,6.34180e-01*(x/r)/100.0,\ 
+if(r<1.096788812,6.46226e-01*(x/r)/100.0,\ 
+if(r<1.101174050,6.58839e-01*(x/r)/100.0,\ 
+if(r<1.105712665,6.72050e-01*(x/r)/100.0,\ 
+if(r<1.110410019,6.85892e-01*(x/r)/100.0,\ 
+if(r<1.115271666,7.00398e-01*(x/r)/100.0,\ 
+if(r<1.120303352,7.15605e-01*(x/r)/100.0,\ 
+if(r<1.125511023,7.31550e-01*(x/r)/100.0,\ 
+if(r<1.130900835,7.48276e-01*(x/r)/100.0,\ 
+if(r<1.136479159,7.65825e-01*(x/r)/100.0,\ 
+if(r<1.142252588,7.84243e-01*(x/r)/100.0,\ 
+if(r<1.148227945,8.03579e-01*(x/r)/100.0,\ 
+if(r<1.154412293,8.23885e-01*(x/r)/100.0,\ 
+if(r<1.160812942,8.45214e-01*(x/r)/100.0,\ 
+if(r<1.167437457,8.67625e-01*(x/r)/100.0,\ 
+if(r<1.174293668,8.91180e-01*(x/r)/100.0,\ 
+if(r<1.181389678,9.15944e-01*(x/r)/100.0,\ 
+if(r<1.188733875,9.41986e-01*(x/r)/100.0,\ 
+if(r<1.196334939,9.69380e-01*(x/r)/100.0,\ 
+if(r<1.204201854,9.98203e-01*(x/r)/100.0,\ 
+if(r<1.212343918,1.02854e+00*(x/r)/100.0,\ 
+if(r<1.220770755,1.06047e+00*(x/r)/100.0,\ 
+if(r<1.229492325,1.09410e+00*(x/r)/100.0,\ 
+if(r<1.238518937,1.12951e+00*(x/r)/100.0,\ 
+if(r<1.247861259,1.16682e+00*(x/r)/100.0,\ 
+if(r<1.257530333,1.20613e+00*(x/r)/100.0,\ 
+if(r<1.267537589,1.24757e+00*(x/r)/100.0,\ 
+if(r<1.277894853,1.29124e+00*(x/r)/100.0,\ 
+if(r<1.288614367,1.33728e+00*(x/r)/100.0,\ 
+if(r<1.299708803,1.38583e+00*(x/r)/100.0,\ 
+if(r<1.311191271,1.43703e+00*(x/r)/100.0,\ 
+if(r<1.323075346,1.49104e+00*(x/r)/100.0,\ 
+if(r<1.335375071,1.54800e+00*(x/r)/100.0,\ 
+if(r<1.348104986,1.60810e+00*(x/r)/100.0,\ 
+if(r<1.361280136,1.67151e+00*(x/r)/100.0,\ 
+if(r<1.374916094,1.73840e+00*(x/r)/100.0,\ 
+if(r<1.389028976,1.80899e+00*(x/r)/100.0,\ 
+if(r<1.403635464,1.88346e+00*(x/r)/100.0,\ 
+if(r<1.418752821,1.96204e+00*(x/r)/100.0,\ 
+if(r<1.434398915,2.04494e+00*(x/r)/100.0,\ 
+if(r<1.450592239,2.13239e+00*(x/r)/100.0,\ 
+if(r<1.467351934,2.22464e+00*(x/r)/100.0,\ 
+if(r<1.484697807,2.32193e+00*(x/r)/100.0,\ 
+if(r<1.502650361,2.42453e+00*(x/r)/100.0,\ 
+if(r<1.521230814,2.53270e+00*(x/r)/100.0,\ 
+if(r<1.540461129,2.64671e+00*(x/r)/100.0,\ 
+if(r<1.560364034,2.76686e+00*(x/r)/100.0,\ 
+if(r<1.580963053,2.89343e+00*(x/r)/100.0,\ 
+if(r<1.602282533,3.02673e+00*(x/r)/100.0,\ 
+if(r<1.624347673,3.16705e+00*(x/r)/100.0,\ 
+if(r<1.647184552,3.31472e+00*(x/r)/100.0,\ 
+if(r<1.670820163,3.47004e+00*(x/r)/100.0,\ 
+if(r<1.695282442,3.63333e+00*(x/r)/100.0,\ 
+if(r<1.720600301,3.80492e+00*(x/r)/100.0,\ 
+if(r<1.746803666,3.98514e+00*(x/r)/100.0,\ 
+if(r<1.773923506,4.17430e+00*(x/r)/100.0,\ 
+if(r<1.801991877,4.37272e+00*(x/r)/100.0,\ 
+if(r<1.831041954,4.58073e+00*(x/r)/100.0,\ 
+if(r<1.861108071,4.79864e+00*(x/r)/100.0,\ 
+if(r<1.892225767,5.02675e+00*(x/r)/100.0,\ 
+if(r<1.924431820,5.26537e+00*(x/r)/100.0,\ 
+if(r<1.957764296,5.51479e+00*(x/r)/100.0,\ 
+if(r<1.992262593,5.77528e+00*(x/r)/100.0,\ 
+if(r<2.027967485,6.04711e+00*(x/r)/100.0,\ 
+if(r<2.064921174,6.33052e+00*(x/r)/100.0,\ 
+if(r<2.103167337,6.62575e+00*(x/r)/100.0,\ 
+if(r<2.142751180,6.93302e+00*(x/r)/100.0,\ 
+if(r<2.183719487,7.25250e+00*(x/r)/100.0,\ 
+if(r<2.226120682,7.58438e+00*(x/r)/100.0,\ 
+if(r<2.270004881,7.92880e+00*(x/r)/100.0,\ 
+if(r<2.315423952,8.28589e+00*(x/r)/100.0,\ 
+if(r<2.362431578,8.65574e+00*(x/r)/100.0,\ 
+if(r<2.411083320,9.03842e+00*(x/r)/100.0,\ 
+if(r<2.461436682,9.43397e+00*(x/r)/100.0,\ 
+if(r<2.513551178,9.84242e+00*(x/r)/100.0,\ 
+if(r<2.567488405,1.02638e+01*(x/r)/100.0,\ 
+if(r<2.623312115,1.06979e+01*(x/r)/100.0,\ 
+if(r<2.681088287,1.11449e+01*(x/r)/100.0,\ 
+if(r<2.740885210,1.16045e+01*(x/r)/100.0,\ 
+if(r<2.802773562,1.20767e+01*(x/r)/100.0,\ 
+if(r<2.866826490,1.25613e+01*(x/r)/100.0,\ 
+if(r<2.933119702,1.30581e+01*(x/r)/100.0,\ 
+if(r<3.001731553,1.35669e+01*(x/r)/100.0,\ 
+if(r<3.072743139,1.40876e+01*(x/r)/100.0,\ 
+if(r<3.146238392,1.46198e+01*(x/r)/100.0,\ 
+if(r<3.222304178,1.51634e+01*(x/r)/100.0,\ 
+if(r<3.301030405,1.57179e+01*(x/r)/100.0,\ 
+if(r<3.382510121,1.62832e+01*(x/r)/100.0,\ 
+if(r<3.466839632,1.68589e+01*(x/r)/100.0,\ 
+if(r<3.554118611,1.74446e+01*(x/r)/100.0,\ 
+if(r<3.644450218,1.80400e+01*(x/r)/100.0,\ 
+if(r<3.737941218,1.86448e+01*(x/r)/100.0,\ 
+if(r<3.834702114,1.92586e+01*(x/r)/100.0,\ 
+if(r<3.934847271,1.98810e+01*(x/r)/100.0,\ 
+if(r<4.038495057,2.05117e+01*(x/r)/100.0,\ 
+if(r<4.145767977,2.11502e+01*(x/r)/100.0,\ 
+if(r<4.256792823,2.17961e+01*(x/r)/100.0,\ 
+if(r<4.371700819,2.24491e+01*(x/r)/100.0,\ 
+if(r<4.490627781,2.31088e+01*(x/r)/100.0,\ 
+if(r<4.613714275,2.37747e+01*(x/r)/100.0,\ 
+if(r<4.741105782,2.44465e+01*(x/r)/100.0,\ 
+if(r<4.872952872,2.51238e+01*(x/r)/100.0,\ 
+if(r<5.009411381,2.58062e+01*(x/r)/100.0,\ 
+if(r<5.150642597,2.64933e+01*(x/r)/100.0,\ 
+if(r<5.296813447,2.71848e+01*(x/r)/100.0,\ 
+if(r<5.448096697,2.78802e+01*(x/r)/100.0,\ 
+if(r<5.604671156,2.85792e+01*(x/r)/100.0,\ 
+if(r<5.766721887,2.92814e+01*(x/r)/100.0,\ 
+if(r<5.934440426,2.99865e+01*(x/r)/100.0,\ 
+if(r<6.108025006,3.06942e+01*(x/r)/100.0,\ 
+if(r<6.287680795,3.14040e+01*(x/r)/100.0,\ 
+if(r<6.473620138,3.21158e+01*(x/r)/100.0,\ 
+if(r<6.666062805,3.28291e+01*(x/r)/100.0,\ 
+if(r<6.865236252,3.35437e+01*(x/r)/100.0,\ 
+if(r<7.071375893,3.42592e+01*(x/r)/100.0,\ 
+if(r<7.284725373,3.49754e+01*(x/r)/100.0,\ 
+if(r<7.505536861,3.56920e+01*(x/r)/100.0,\ 
+if(r<7.734071343,3.64088e+01*(x/r)/100.0,\ 
+if(r<7.970598936,3.71254e+01*(x/r)/100.0,\ 
+if(r<8.215399202,3.78416e+01*(x/r)/100.0,\ 
+if(r<8.468761483,3.85573e+01*(x/r)/100.0,\ 
+if(r<8.730985240,3.92721e+01*(x/r)/100.0,\ 
+if(r<9.002380407,3.99858e+01*(x/r)/100.0,\ 
+if(r<9.283267758,4.06982e+01*(x/r)/100.0,\ 
+if(r<9.573979289,4.14092e+01*(x/r)/100.0,\ 
+if(r<9.874858604,4.21186e+01*(x/r)/100.0,\ 
+if(r<10.186261327,4.28261e+01*(x/r)/100.0,\ 
+if(r<10.508555520,4.35316e+01*(x/r)/100.0,\ 
+if(r<10.842122117,4.42349e+01*(x/r)/100.0,\ 
+if(r<11.187355377,4.49358e+01*(x/r)/100.0,\ 
+if(r<11.544663347,4.56343e+01*(x/r)/100.0,\ 
+if(r<11.914468346,4.63302e+01*(x/r)/100.0,\ 
+if(r<12.297207464,4.70234e+01*(x/r)/100.0,\ 
+if(r<12.693333079,4.77136e+01*(x/r)/100.0,\ 
+if(r<13.103313390,4.84009e+01*(x/r)/100.0,\ 
+if(r<13.527632972,4.90851e+01*(x/r)/100.0,\ 
+if(r<13.966793349,4.97660e+01*(x/r)/100.0,\ 
+if(r<14.421313584,5.04437e+01*(x/r)/100.0,\ 
+if(r<14.891730898,5.11180e+01*(x/r)/100.0,\ 
+if(r<15.378601298,5.17888e+01*(x/r)/100.0,\ 
+if(r<15.882500240,5.24561e+01*(x/r)/100.0,\ 
+if(r<16.404023305,5.31198e+01*(x/r)/100.0,\ 
+if(r<16.943786906,5.37798e+01*(x/r)/100.0,\ 
+if(r<17.502429016,5.44360e+01*(x/r)/100.0,\ 
+if(r<18.080609919,5.50884e+01*(x/r)/100.0,\ 
+if(r<18.679012996,5.57370e+01*(x/r)/100.0,\ 
+if(r<19.298345526,5.63817e+01*(x/r)/100.0,\ 
+if(r<19.939339529,5.70224e+01*(x/r)/100.0,\ 
+if(r<20.602752625,5.76592e+01*(x/r)/100.0,\ 
+if(r<21.289368934,5.82919e+01*(x/r)/100.0,\ 
+if(r<22.000000000,5.89206e+01*(x/r)/100.0,5.89206e+01*(x/r)/100.0\ 
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) \ 
+if(r<1.001000000,4.06764e-01*(y/r)/100.0,\ 
+if(r<1.002034976,4.09512e-01*(y/r)/100.0,\ 
+if(r<1.003106150,4.11813e-01*(y/r)/100.0,\ 
+if(r<1.004214789,4.14203e-01*(y/r)/100.0,\ 
+if(r<1.005362203,4.16686e-01*(y/r)/100.0,\ 
+if(r<1.006549749,4.19267e-01*(y/r)/100.0,\ 
+if(r<1.007778830,4.21948e-01*(y/r)/100.0,\ 
+if(r<1.009050899,4.24735e-01*(y/r)/100.0,\ 
+if(r<1.010367458,4.27631e-01*(y/r)/100.0,\ 
+if(r<1.011730066,4.30643e-01*(y/r)/100.0,\ 
+if(r<1.013140331,4.33774e-01*(y/r)/100.0,\ 
+if(r<1.014599920,4.37030e-01*(y/r)/100.0,\ 
+if(r<1.016110560,4.40416e-01*(y/r)/100.0,\ 
+if(r<1.017674035,4.43939e-01*(y/r)/100.0,\ 
+if(r<1.019292194,4.47604e-01*(y/r)/100.0,\ 
+if(r<1.020966948,4.51417e-01*(y/r)/100.0,\ 
+if(r<1.022700278,4.55386e-01*(y/r)/100.0,\ 
+if(r<1.024494232,4.59517e-01*(y/r)/100.0,\ 
+if(r<1.026350930,4.63818e-01*(y/r)/100.0,\ 
+if(r<1.028272567,4.68296e-01*(y/r)/100.0,\ 
+if(r<1.030261415,4.72960e-01*(y/r)/100.0,\ 
+if(r<1.032319823,4.77818e-01*(y/r)/100.0,\ 
+if(r<1.034450225,4.82880e-01*(y/r)/100.0,\ 
+if(r<1.036655140,4.88154e-01*(y/r)/100.0,\ 
+if(r<1.038937172,4.93651e-01*(y/r)/100.0,\ 
+if(r<1.041299020,4.99382e-01*(y/r)/100.0,\ 
+if(r<1.043743474,5.05357e-01*(y/r)/100.0,\ 
+if(r<1.046273424,5.11589e-01*(y/r)/100.0,\ 
+if(r<1.048891861,5.18089e-01*(y/r)/100.0,\ 
+if(r<1.051601879,5.24872e-01*(y/r)/100.0,\ 
+if(r<1.054406681,5.31950e-01*(y/r)/100.0,\ 
+if(r<1.057309582,5.39339e-01*(y/r)/100.0,\ 
+if(r<1.060314014,5.47054e-01*(y/r)/100.0,\ 
+if(r<1.063423528,5.55111e-01*(y/r)/100.0,\ 
+if(r<1.066641798,5.63527e-01*(y/r)/100.0,\ 
+if(r<1.069972629,5.72321e-01*(y/r)/100.0,\ 
+if(r<1.073419958,5.81512e-01*(y/r)/100.0,\ 
+if(r<1.076987859,5.91121e-01*(y/r)/100.0,\ 
+if(r<1.080680548,6.01168e-01*(y/r)/100.0,\ 
+if(r<1.084502392,6.11678e-01*(y/r)/100.0,\ 
+if(r<1.088457906,6.22673e-01*(y/r)/100.0,\ 
+if(r<1.092551767,6.34180e-01*(y/r)/100.0,\ 
+if(r<1.096788812,6.46226e-01*(y/r)/100.0,\ 
+if(r<1.101174050,6.58839e-01*(y/r)/100.0,\ 
+if(r<1.105712665,6.72050e-01*(y/r)/100.0,\ 
+if(r<1.110410019,6.85892e-01*(y/r)/100.0,\ 
+if(r<1.115271666,7.00398e-01*(y/r)/100.0,\ 
+if(r<1.120303352,7.15605e-01*(y/r)/100.0,\ 
+if(r<1.125511023,7.31550e-01*(y/r)/100.0,\ 
+if(r<1.130900835,7.48276e-01*(y/r)/100.0,\ 
+if(r<1.136479159,7.65825e-01*(y/r)/100.0,\ 
+if(r<1.142252588,7.84243e-01*(y/r)/100.0,\ 
+if(r<1.148227945,8.03579e-01*(y/r)/100.0,\ 
+if(r<1.154412293,8.23885e-01*(y/r)/100.0,\ 
+if(r<1.160812942,8.45214e-01*(y/r)/100.0,\ 
+if(r<1.167437457,8.67625e-01*(y/r)/100.0,\ 
+if(r<1.174293668,8.91180e-01*(y/r)/100.0,\ 
+if(r<1.181389678,9.15944e-01*(y/r)/100.0,\ 
+if(r<1.188733875,9.41986e-01*(y/r)/100.0,\ 
+if(r<1.196334939,9.69380e-01*(y/r)/100.0,\ 
+if(r<1.204201854,9.98203e-01*(y/r)/100.0,\ 
+if(r<1.212343918,1.02854e+00*(y/r)/100.0,\ 
+if(r<1.220770755,1.06047e+00*(y/r)/100.0,\ 
+if(r<1.229492325,1.09410e+00*(y/r)/100.0,\ 
+if(r<1.238518937,1.12951e+00*(y/r)/100.0,\ 
+if(r<1.247861259,1.16682e+00*(y/r)/100.0,\ 
+if(r<1.257530333,1.20613e+00*(y/r)/100.0,\ 
+if(r<1.267537589,1.24757e+00*(y/r)/100.0,\ 
+if(r<1.277894853,1.29124e+00*(y/r)/100.0,\ 
+if(r<1.288614367,1.33728e+00*(y/r)/100.0,\ 
+if(r<1.299708803,1.38583e+00*(y/r)/100.0,\ 
+if(r<1.311191271,1.43703e+00*(y/r)/100.0,\ 
+if(r<1.323075346,1.49104e+00*(y/r)/100.0,\ 
+if(r<1.335375071,1.54800e+00*(y/r)/100.0,\ 
+if(r<1.348104986,1.60810e+00*(y/r)/100.0,\ 
+if(r<1.361280136,1.67151e+00*(y/r)/100.0,\ 
+if(r<1.374916094,1.73840e+00*(y/r)/100.0,\ 
+if(r<1.389028976,1.80899e+00*(y/r)/100.0,\ 
+if(r<1.403635464,1.88346e+00*(y/r)/100.0,\ 
+if(r<1.418752821,1.96204e+00*(y/r)/100.0,\ 
+if(r<1.434398915,2.04494e+00*(y/r)/100.0,\ 
+if(r<1.450592239,2.13239e+00*(y/r)/100.0,\ 
+if(r<1.467351934,2.22464e+00*(y/r)/100.0,\ 
+if(r<1.484697807,2.32193e+00*(y/r)/100.0,\ 
+if(r<1.502650361,2.42453e+00*(y/r)/100.0,\ 
+if(r<1.521230814,2.53270e+00*(y/r)/100.0,\ 
+if(r<1.540461129,2.64671e+00*(y/r)/100.0,\ 
+if(r<1.560364034,2.76686e+00*(y/r)/100.0,\ 
+if(r<1.580963053,2.89343e+00*(y/r)/100.0,\ 
+if(r<1.602282533,3.02673e+00*(y/r)/100.0,\ 
+if(r<1.624347673,3.16705e+00*(y/r)/100.0,\ 
+if(r<1.647184552,3.31472e+00*(y/r)/100.0,\ 
+if(r<1.670820163,3.47004e+00*(y/r)/100.0,\ 
+if(r<1.695282442,3.63333e+00*(y/r)/100.0,\ 
+if(r<1.720600301,3.80492e+00*(y/r)/100.0,\ 
+if(r<1.746803666,3.98514e+00*(y/r)/100.0,\ 
+if(r<1.773923506,4.17430e+00*(y/r)/100.0,\ 
+if(r<1.801991877,4.37272e+00*(y/r)/100.0,\ 
+if(r<1.831041954,4.58073e+00*(y/r)/100.0,\ 
+if(r<1.861108071,4.79864e+00*(y/r)/100.0,\ 
+if(r<1.892225767,5.02675e+00*(y/r)/100.0,\ 
+if(r<1.924431820,5.26537e+00*(y/r)/100.0,\ 
+if(r<1.957764296,5.51479e+00*(y/r)/100.0,\ 
+if(r<1.992262593,5.77528e+00*(y/r)/100.0,\ 
+if(r<2.027967485,6.04711e+00*(y/r)/100.0,\ 
+if(r<2.064921174,6.33052e+00*(y/r)/100.0,\ 
+if(r<2.103167337,6.62575e+00*(y/r)/100.0,\ 
+if(r<2.142751180,6.93302e+00*(y/r)/100.0,\ 
+if(r<2.183719487,7.25250e+00*(y/r)/100.0,\ 
+if(r<2.226120682,7.58438e+00*(y/r)/100.0,\ 
+if(r<2.270004881,7.92880e+00*(y/r)/100.0,\ 
+if(r<2.315423952,8.28589e+00*(y/r)/100.0,\ 
+if(r<2.362431578,8.65574e+00*(y/r)/100.0,\ 
+if(r<2.411083320,9.03842e+00*(y/r)/100.0,\ 
+if(r<2.461436682,9.43397e+00*(y/r)/100.0,\ 
+if(r<2.513551178,9.84242e+00*(y/r)/100.0,\ 
+if(r<2.567488405,1.02638e+01*(y/r)/100.0,\ 
+if(r<2.623312115,1.06979e+01*(y/r)/100.0,\ 
+if(r<2.681088287,1.11449e+01*(y/r)/100.0,\ 
+if(r<2.740885210,1.16045e+01*(y/r)/100.0,\ 
+if(r<2.802773562,1.20767e+01*(y/r)/100.0,\ 
+if(r<2.866826490,1.25613e+01*(y/r)/100.0,\ 
+if(r<2.933119702,1.30581e+01*(y/r)/100.0,\ 
+if(r<3.001731553,1.35669e+01*(y/r)/100.0,\ 
+if(r<3.072743139,1.40876e+01*(y/r)/100.0,\ 
+if(r<3.146238392,1.46198e+01*(y/r)/100.0,\ 
+if(r<3.222304178,1.51634e+01*(y/r)/100.0,\ 
+if(r<3.301030405,1.57179e+01*(y/r)/100.0,\ 
+if(r<3.382510121,1.62832e+01*(y/r)/100.0,\ 
+if(r<3.466839632,1.68589e+01*(y/r)/100.0,\ 
+if(r<3.554118611,1.74446e+01*(y/r)/100.0,\ 
+if(r<3.644450218,1.80400e+01*(y/r)/100.0,\ 
+if(r<3.737941218,1.86448e+01*(y/r)/100.0,\ 
+if(r<3.834702114,1.92586e+01*(y/r)/100.0,\ 
+if(r<3.934847271,1.98810e+01*(y/r)/100.0,\ 
+if(r<4.038495057,2.05117e+01*(y/r)/100.0,\ 
+if(r<4.145767977,2.11502e+01*(y/r)/100.0,\ 
+if(r<4.256792823,2.17961e+01*(y/r)/100.0,\ 
+if(r<4.371700819,2.24491e+01*(y/r)/100.0,\ 
+if(r<4.490627781,2.31088e+01*(y/r)/100.0,\ 
+if(r<4.613714275,2.37747e+01*(y/r)/100.0,\ 
+if(r<4.741105782,2.44465e+01*(y/r)/100.0,\ 
+if(r<4.872952872,2.51238e+01*(y/r)/100.0,\ 
+if(r<5.009411381,2.58062e+01*(y/r)/100.0,\ 
+if(r<5.150642597,2.64933e+01*(y/r)/100.0,\ 
+if(r<5.296813447,2.71848e+01*(y/r)/100.0,\ 
+if(r<5.448096697,2.78802e+01*(y/r)/100.0,\ 
+if(r<5.604671156,2.85792e+01*(y/r)/100.0,\ 
+if(r<5.766721887,2.92814e+01*(y/r)/100.0,\ 
+if(r<5.934440426,2.99865e+01*(y/r)/100.0,\ 
+if(r<6.108025006,3.06942e+01*(y/r)/100.0,\ 
+if(r<6.287680795,3.14040e+01*(y/r)/100.0,\ 
+if(r<6.473620138,3.21158e+01*(y/r)/100.0,\ 
+if(r<6.666062805,3.28291e+01*(y/r)/100.0,\ 
+if(r<6.865236252,3.35437e+01*(y/r)/100.0,\ 
+if(r<7.071375893,3.42592e+01*(y/r)/100.0,\ 
+if(r<7.284725373,3.49754e+01*(y/r)/100.0,\ 
+if(r<7.505536861,3.56920e+01*(y/r)/100.0,\ 
+if(r<7.734071343,3.64088e+01*(y/r)/100.0,\ 
+if(r<7.970598936,3.71254e+01*(y/r)/100.0,\ 
+if(r<8.215399202,3.78416e+01*(y/r)/100.0,\ 
+if(r<8.468761483,3.85573e+01*(y/r)/100.0,\ 
+if(r<8.730985240,3.92721e+01*(y/r)/100.0,\ 
+if(r<9.002380407,3.99858e+01*(y/r)/100.0,\ 
+if(r<9.283267758,4.06982e+01*(y/r)/100.0,\ 
+if(r<9.573979289,4.14092e+01*(y/r)/100.0,\ 
+if(r<9.874858604,4.21186e+01*(y/r)/100.0,\ 
+if(r<10.186261327,4.28261e+01*(y/r)/100.0,\ 
+if(r<10.508555520,4.35316e+01*(y/r)/100.0,\ 
+if(r<10.842122117,4.42349e+01*(y/r)/100.0,\ 
+if(r<11.187355377,4.49358e+01*(y/r)/100.0,\ 
+if(r<11.544663347,4.56343e+01*(y/r)/100.0,\ 
+if(r<11.914468346,4.63302e+01*(y/r)/100.0,\ 
+if(r<12.297207464,4.70234e+01*(y/r)/100.0,\ 
+if(r<12.693333079,4.77136e+01*(y/r)/100.0,\ 
+if(r<13.103313390,4.84009e+01*(y/r)/100.0,\ 
+if(r<13.527632972,4.90851e+01*(y/r)/100.0,\ 
+if(r<13.966793349,4.97660e+01*(y/r)/100.0,\ 
+if(r<14.421313584,5.04437e+01*(y/r)/100.0,\ 
+if(r<14.891730898,5.11180e+01*(y/r)/100.0,\ 
+if(r<15.378601298,5.17888e+01*(y/r)/100.0,\ 
+if(r<15.882500240,5.24561e+01*(y/r)/100.0,\ 
+if(r<16.404023305,5.31198e+01*(y/r)/100.0,\ 
+if(r<16.943786906,5.37798e+01*(y/r)/100.0,\ 
+if(r<17.502429016,5.44360e+01*(y/r)/100.0,\ 
+if(r<18.080609919,5.50884e+01*(y/r)/100.0,\ 
+if(r<18.679012996,5.57370e+01*(y/r)/100.0,\ 
+if(r<19.298345526,5.63817e+01*(y/r)/100.0,\ 
+if(r<19.939339529,5.70224e+01*(y/r)/100.0,\ 
+if(r<20.602752625,5.76592e+01*(y/r)/100.0,\ 
+if(r<21.289368934,5.82919e+01*(y/r)/100.0,\ 
+if(r<22.000000000,5.89206e+01*(y/r)/100.0,5.89206e+01*(y/r)/100.0\ 
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) \ 
+if(r<1.001000000,4.06764e-01*(z/r)/100.0,\ 
+if(r<1.002034976,4.09512e-01*(z/r)/100.0,\ 
+if(r<1.003106150,4.11813e-01*(z/r)/100.0,\ 
+if(r<1.004214789,4.14203e-01*(z/r)/100.0,\ 
+if(r<1.005362203,4.16686e-01*(z/r)/100.0,\ 
+if(r<1.006549749,4.19267e-01*(z/r)/100.0,\ 
+if(r<1.007778830,4.21948e-01*(z/r)/100.0,\ 
+if(r<1.009050899,4.24735e-01*(z/r)/100.0,\ 
+if(r<1.010367458,4.27631e-01*(z/r)/100.0,\ 
+if(r<1.011730066,4.30643e-01*(z/r)/100.0,\ 
+if(r<1.013140331,4.33774e-01*(z/r)/100.0,\ 
+if(r<1.014599920,4.37030e-01*(z/r)/100.0,\ 
+if(r<1.016110560,4.40416e-01*(z/r)/100.0,\ 
+if(r<1.017674035,4.43939e-01*(z/r)/100.0,\ 
+if(r<1.019292194,4.47604e-01*(z/r)/100.0,\ 
+if(r<1.020966948,4.51417e-01*(z/r)/100.0,\ 
+if(r<1.022700278,4.55386e-01*(z/r)/100.0,\ 
+if(r<1.024494232,4.59517e-01*(z/r)/100.0,\ 
+if(r<1.026350930,4.63818e-01*(z/r)/100.0,\ 
+if(r<1.028272567,4.68296e-01*(z/r)/100.0,\ 
+if(r<1.030261415,4.72960e-01*(z/r)/100.0,\ 
+if(r<1.032319823,4.77818e-01*(z/r)/100.0,\ 
+if(r<1.034450225,4.82880e-01*(z/r)/100.0,\ 
+if(r<1.036655140,4.88154e-01*(z/r)/100.0,\ 
+if(r<1.038937172,4.93651e-01*(z/r)/100.0,\ 
+if(r<1.041299020,4.99382e-01*(z/r)/100.0,\ 
+if(r<1.043743474,5.05357e-01*(z/r)/100.0,\ 
+if(r<1.046273424,5.11589e-01*(z/r)/100.0,\ 
+if(r<1.048891861,5.18089e-01*(z/r)/100.0,\ 
+if(r<1.051601879,5.24872e-01*(z/r)/100.0,\ 
+if(r<1.054406681,5.31950e-01*(z/r)/100.0,\ 
+if(r<1.057309582,5.39339e-01*(z/r)/100.0,\ 
+if(r<1.060314014,5.47054e-01*(z/r)/100.0,\ 
+if(r<1.063423528,5.55111e-01*(z/r)/100.0,\ 
+if(r<1.066641798,5.63527e-01*(z/r)/100.0,\ 
+if(r<1.069972629,5.72321e-01*(z/r)/100.0,\ 
+if(r<1.073419958,5.81512e-01*(z/r)/100.0,\ 
+if(r<1.076987859,5.91121e-01*(z/r)/100.0,\ 
+if(r<1.080680548,6.01168e-01*(z/r)/100.0,\ 
+if(r<1.084502392,6.11678e-01*(z/r)/100.0,\ 
+if(r<1.088457906,6.22673e-01*(z/r)/100.0,\ 
+if(r<1.092551767,6.34180e-01*(z/r)/100.0,\ 
+if(r<1.096788812,6.46226e-01*(z/r)/100.0,\ 
+if(r<1.101174050,6.58839e-01*(z/r)/100.0,\ 
+if(r<1.105712665,6.72050e-01*(z/r)/100.0,\ 
+if(r<1.110410019,6.85892e-01*(z/r)/100.0,\ 
+if(r<1.115271666,7.00398e-01*(z/r)/100.0,\ 
+if(r<1.120303352,7.15605e-01*(z/r)/100.0,\ 
+if(r<1.125511023,7.31550e-01*(z/r)/100.0,\ 
+if(r<1.130900835,7.48276e-01*(z/r)/100.0,\ 
+if(r<1.136479159,7.65825e-01*(z/r)/100.0,\ 
+if(r<1.142252588,7.84243e-01*(z/r)/100.0,\ 
+if(r<1.148227945,8.03579e-01*(z/r)/100.0,\ 
+if(r<1.154412293,8.23885e-01*(z/r)/100.0,\ 
+if(r<1.160812942,8.45214e-01*(z/r)/100.0,\ 
+if(r<1.167437457,8.67625e-01*(z/r)/100.0,\ 
+if(r<1.174293668,8.91180e-01*(z/r)/100.0,\ 
+if(r<1.181389678,9.15944e-01*(z/r)/100.0,\ 
+if(r<1.188733875,9.41986e-01*(z/r)/100.0,\ 
+if(r<1.196334939,9.69380e-01*(z/r)/100.0,\ 
+if(r<1.204201854,9.98203e-01*(z/r)/100.0,\ 
+if(r<1.212343918,1.02854e+00*(z/r)/100.0,\ 
+if(r<1.220770755,1.06047e+00*(z/r)/100.0,\ 
+if(r<1.229492325,1.09410e+00*(z/r)/100.0,\ 
+if(r<1.238518937,1.12951e+00*(z/r)/100.0,\ 
+if(r<1.247861259,1.16682e+00*(z/r)/100.0,\ 
+if(r<1.257530333,1.20613e+00*(z/r)/100.0,\ 
+if(r<1.267537589,1.24757e+00*(z/r)/100.0,\ 
+if(r<1.277894853,1.29124e+00*(z/r)/100.0,\ 
+if(r<1.288614367,1.33728e+00*(z/r)/100.0,\ 
+if(r<1.299708803,1.38583e+00*(z/r)/100.0,\ 
+if(r<1.311191271,1.43703e+00*(z/r)/100.0,\ 
+if(r<1.323075346,1.49104e+00*(z/r)/100.0,\ 
+if(r<1.335375071,1.54800e+00*(z/r)/100.0,\ 
+if(r<1.348104986,1.60810e+00*(z/r)/100.0,\ 
+if(r<1.361280136,1.67151e+00*(z/r)/100.0,\ 
+if(r<1.374916094,1.73840e+00*(z/r)/100.0,\ 
+if(r<1.389028976,1.80899e+00*(z/r)/100.0,\ 
+if(r<1.403635464,1.88346e+00*(z/r)/100.0,\ 
+if(r<1.418752821,1.96204e+00*(z/r)/100.0,\ 
+if(r<1.434398915,2.04494e+00*(z/r)/100.0,\ 
+if(r<1.450592239,2.13239e+00*(z/r)/100.0,\ 
+if(r<1.467351934,2.22464e+00*(z/r)/100.0,\ 
+if(r<1.484697807,2.32193e+00*(z/r)/100.0,\ 
+if(r<1.502650361,2.42453e+00*(z/r)/100.0,\ 
+if(r<1.521230814,2.53270e+00*(z/r)/100.0,\ 
+if(r<1.540461129,2.64671e+00*(z/r)/100.0,\ 
+if(r<1.560364034,2.76686e+00*(z/r)/100.0,\ 
+if(r<1.580963053,2.89343e+00*(z/r)/100.0,\ 
+if(r<1.602282533,3.02673e+00*(z/r)/100.0,\ 
+if(r<1.624347673,3.16705e+00*(z/r)/100.0,\ 
+if(r<1.647184552,3.31472e+00*(z/r)/100.0,\ 
+if(r<1.670820163,3.47004e+00*(z/r)/100.0,\ 
+if(r<1.695282442,3.63333e+00*(z/r)/100.0,\ 
+if(r<1.720600301,3.80492e+00*(z/r)/100.0,\ 
+if(r<1.746803666,3.98514e+00*(z/r)/100.0,\ 
+if(r<1.773923506,4.17430e+00*(z/r)/100.0,\ 
+if(r<1.801991877,4.37272e+00*(z/r)/100.0,\ 
+if(r<1.831041954,4.58073e+00*(z/r)/100.0,\ 
+if(r<1.861108071,4.79864e+00*(z/r)/100.0,\ 
+if(r<1.892225767,5.02675e+00*(z/r)/100.0,\ 
+if(r<1.924431820,5.26537e+00*(z/r)/100.0,\ 
+if(r<1.957764296,5.51479e+00*(z/r)/100.0,\ 
+if(r<1.992262593,5.77528e+00*(z/r)/100.0,\ 
+if(r<2.027967485,6.04711e+00*(z/r)/100.0,\ 
+if(r<2.064921174,6.33052e+00*(z/r)/100.0,\ 
+if(r<2.103167337,6.62575e+00*(z/r)/100.0,\ 
+if(r<2.142751180,6.93302e+00*(z/r)/100.0,\ 
+if(r<2.183719487,7.25250e+00*(z/r)/100.0,\ 
+if(r<2.226120682,7.58438e+00*(z/r)/100.0,\ 
+if(r<2.270004881,7.92880e+00*(z/r)/100.0,\ 
+if(r<2.315423952,8.28589e+00*(z/r)/100.0,\ 
+if(r<2.362431578,8.65574e+00*(z/r)/100.0,\ 
+if(r<2.411083320,9.03842e+00*(z/r)/100.0,\ 
+if(r<2.461436682,9.43397e+00*(z/r)/100.0,\ 
+if(r<2.513551178,9.84242e+00*(z/r)/100.0,\ 
+if(r<2.567488405,1.02638e+01*(z/r)/100.0,\ 
+if(r<2.623312115,1.06979e+01*(z/r)/100.0,\ 
+if(r<2.681088287,1.11449e+01*(z/r)/100.0,\ 
+if(r<2.740885210,1.16045e+01*(z/r)/100.0,\ 
+if(r<2.802773562,1.20767e+01*(z/r)/100.0,\ 
+if(r<2.866826490,1.25613e+01*(z/r)/100.0,\ 
+if(r<2.933119702,1.30581e+01*(z/r)/100.0,\ 
+if(r<3.001731553,1.35669e+01*(z/r)/100.0,\ 
+if(r<3.072743139,1.40876e+01*(z/r)/100.0,\ 
+if(r<3.146238392,1.46198e+01*(z/r)/100.0,\ 
+if(r<3.222304178,1.51634e+01*(z/r)/100.0,\ 
+if(r<3.301030405,1.57179e+01*(z/r)/100.0,\ 
+if(r<3.382510121,1.62832e+01*(z/r)/100.0,\ 
+if(r<3.466839632,1.68589e+01*(z/r)/100.0,\ 
+if(r<3.554118611,1.74446e+01*(z/r)/100.0,\ 
+if(r<3.644450218,1.80400e+01*(z/r)/100.0,\ 
+if(r<3.737941218,1.86448e+01*(z/r)/100.0,\ 
+if(r<3.834702114,1.92586e+01*(z/r)/100.0,\ 
+if(r<3.934847271,1.98810e+01*(z/r)/100.0,\ 
+if(r<4.038495057,2.05117e+01*(z/r)/100.0,\ 
+if(r<4.145767977,2.11502e+01*(z/r)/100.0,\ 
+if(r<4.256792823,2.17961e+01*(z/r)/100.0,\ 
+if(r<4.371700819,2.24491e+01*(z/r)/100.0,\ 
+if(r<4.490627781,2.31088e+01*(z/r)/100.0,\ 
+if(r<4.613714275,2.37747e+01*(z/r)/100.0,\ 
+if(r<4.741105782,2.44465e+01*(z/r)/100.0,\ 
+if(r<4.872952872,2.51238e+01*(z/r)/100.0,\ 
+if(r<5.009411381,2.58062e+01*(z/r)/100.0,\ 
+if(r<5.150642597,2.64933e+01*(z/r)/100.0,\ 
+if(r<5.296813447,2.71848e+01*(z/r)/100.0,\ 
+if(r<5.448096697,2.78802e+01*(z/r)/100.0,\ 
+if(r<5.604671156,2.85792e+01*(z/r)/100.0,\ 
+if(r<5.766721887,2.92814e+01*(z/r)/100.0,\ 
+if(r<5.934440426,2.99865e+01*(z/r)/100.0,\ 
+if(r<6.108025006,3.06942e+01*(z/r)/100.0,\ 
+if(r<6.287680795,3.14040e+01*(z/r)/100.0,\ 
+if(r<6.473620138,3.21158e+01*(z/r)/100.0,\ 
+if(r<6.666062805,3.28291e+01*(z/r)/100.0,\ 
+if(r<6.865236252,3.35437e+01*(z/r)/100.0,\ 
+if(r<7.071375893,3.42592e+01*(z/r)/100.0,\ 
+if(r<7.284725373,3.49754e+01*(z/r)/100.0,\ 
+if(r<7.505536861,3.56920e+01*(z/r)/100.0,\ 
+if(r<7.734071343,3.64088e+01*(z/r)/100.0,\ 
+if(r<7.970598936,3.71254e+01*(z/r)/100.0,\ 
+if(r<8.215399202,3.78416e+01*(z/r)/100.0,\ 
+if(r<8.468761483,3.85573e+01*(z/r)/100.0,\ 
+if(r<8.730985240,3.92721e+01*(z/r)/100.0,\ 
+if(r<9.002380407,3.99858e+01*(z/r)/100.0,\ 
+if(r<9.283267758,4.06982e+01*(z/r)/100.0,\ 
+if(r<9.573979289,4.14092e+01*(z/r)/100.0,\ 
+if(r<9.874858604,4.21186e+01*(z/r)/100.0,\ 
+if(r<10.186261327,4.28261e+01*(z/r)/100.0,\ 
+if(r<10.508555520,4.35316e+01*(z/r)/100.0,\ 
+if(r<10.842122117,4.42349e+01*(z/r)/100.0,\ 
+if(r<11.187355377,4.49358e+01*(z/r)/100.0,\ 
+if(r<11.544663347,4.56343e+01*(z/r)/100.0,\ 
+if(r<11.914468346,4.63302e+01*(z/r)/100.0,\ 
+if(r<12.297207464,4.70234e+01*(z/r)/100.0,\ 
+if(r<12.693333079,4.77136e+01*(z/r)/100.0,\ 
+if(r<13.103313390,4.84009e+01*(z/r)/100.0,\ 
+if(r<13.527632972,4.90851e+01*(z/r)/100.0,\ 
+if(r<13.966793349,4.97660e+01*(z/r)/100.0,\ 
+if(r<14.421313584,5.04437e+01*(z/r)/100.0,\ 
+if(r<14.891730898,5.11180e+01*(z/r)/100.0,\ 
+if(r<15.378601298,5.17888e+01*(z/r)/100.0,\ 
+if(r<15.882500240,5.24561e+01*(z/r)/100.0,\ 
+if(r<16.404023305,5.31198e+01*(z/r)/100.0,\ 
+if(r<16.943786906,5.37798e+01*(z/r)/100.0,\ 
+if(r<17.502429016,5.44360e+01*(z/r)/100.0,\ 
+if(r<18.080609919,5.50884e+01*(z/r)/100.0,\ 
+if(r<18.679012996,5.57370e+01*(z/r)/100.0,\ 
+if(r<19.298345526,5.63817e+01*(z/r)/100.0,\ 
+if(r<19.939339529,5.70224e+01*(z/r)/100.0,\ 
+if(r<20.602752625,5.76592e+01*(z/r)/100.0,\ 
+if(r<21.289368934,5.82919e+01*(z/r)/100.0,\ 
+if(r<22.000000000,5.89206e+01*(z/r)/100.0,5.89206e+01*(z/r)/100.0\ 
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) \ 
+0.666*x*z/r/r/r/r/r 0.666*y*z/r/r/r/r/r 0.666*z*z/r/r/r/r/r-0.666/3.0/r/r/r \ 
+if(r<1.001000000,1.07434e-01,\ 
+if(r<1.002034976,1.06596e-01,\ 
+if(r<1.003106150,1.05738e-01,\ 
+if(r<1.004214789,1.04858e-01,\ 
+if(r<1.005362203,1.03956e-01,\ 
+if(r<1.006549749,1.03033e-01,\ 
+if(r<1.007778830,1.02088e-01,\ 
+if(r<1.009050899,1.01121e-01,\ 
+if(r<1.010367458,1.00132e-01,\ 
+if(r<1.011730066,9.91201e-02,\ 
+if(r<1.013140331,9.80863e-02,\ 
+if(r<1.014599920,9.70301e-02,\ 
+if(r<1.016110560,9.59515e-02,\ 
+if(r<1.017674035,9.48504e-02,\ 
+if(r<1.019292194,9.37270e-02,\ 
+if(r<1.020966948,9.25812e-02,\ 
+if(r<1.022700278,9.14132e-02,\ 
+if(r<1.024494232,9.02232e-02,\ 
+if(r<1.026350930,8.90113e-02,\ 
+if(r<1.028272567,8.77778e-02,\ 
+if(r<1.030261415,8.65230e-02,\ 
+if(r<1.032319823,8.52472e-02,\ 
+if(r<1.034450225,8.39508e-02,\ 
+if(r<1.036655140,8.26342e-02,\ 
+if(r<1.038937172,8.12980e-02,\ 
+if(r<1.041299020,7.99426e-02,\ 
+if(r<1.043743474,7.85687e-02,\ 
+if(r<1.046273424,7.71769e-02,\ 
+if(r<1.048891861,7.57680e-02,\ 
+if(r<1.051601879,7.43427e-02,\ 
+if(r<1.054406681,7.29018e-02,\ 
+if(r<1.057309582,7.14463e-02,\ 
+if(r<1.060314014,6.99770e-02,\ 
+if(r<1.063423528,6.84950e-02,\ 
+if(r<1.066641798,6.70013e-02,\ 
+if(r<1.069972629,6.54971e-02,\ 
+if(r<1.073419958,6.39836e-02,\ 
+if(r<1.076987859,6.24619e-02,\ 
+if(r<1.080680548,6.09334e-02,\ 
+if(r<1.084502392,5.93993e-02,\ 
+if(r<1.088457906,5.78612e-02,\ 
+if(r<1.092551767,5.63203e-02,\ 
+if(r<1.096788812,5.47782e-02,\ 
+if(r<1.101174050,5.32363e-02,\ 
+if(r<1.105712665,5.16963e-02,\ 
+if(r<1.110410019,5.01596e-02,\ 
+if(r<1.115271666,4.86278e-02,\ 
+if(r<1.120303352,4.71026e-02,\ 
+if(r<1.125511023,4.55856e-02,\ 
+if(r<1.130900835,4.40784e-02,\ 
+if(r<1.136479159,4.25826e-02,\ 
+if(r<1.142252588,4.10998e-02,\ 
+if(r<1.148227945,3.96317e-02,\ 
+if(r<1.154412293,3.81799e-02,\ 
+if(r<1.160812942,3.67459e-02,\ 
+if(r<1.167437457,3.53312e-02,\ 
+if(r<1.174293668,3.39373e-02,\ 
+if(r<1.181389678,3.25658e-02,\ 
+if(r<1.188733875,3.12179e-02,\ 
+if(r<1.196334939,2.98950e-02,\ 
+if(r<1.204201854,2.85984e-02,\ 
+if(r<1.212343918,2.73293e-02,\ 
+if(r<1.220770755,2.60888e-02,\ 
+if(r<1.229492325,2.48779e-02,\ 
+if(r<1.238518937,2.36976e-02,\ 
+if(r<1.247861259,2.25487e-02,\ 
+if(r<1.257530333,2.14321e-02,\ 
+if(r<1.267537589,2.03484e-02,\ 
+if(r<1.277894853,1.92981e-02,\ 
+if(r<1.288614367,1.82817e-02,\ 
+if(r<1.299708803,1.72995e-02,\ 
+if(r<1.311191271,1.63520e-02,\ 
+if(r<1.323075346,1.54391e-02,\ 
+if(r<1.335375071,1.45609e-02,\ 
+if(r<1.348104986,1.37174e-02,\ 
+if(r<1.361280136,1.29085e-02,\ 
+if(r<1.374916094,1.21339e-02,\ 
+if(r<1.389028976,1.13933e-02,\ 
+if(r<1.403635464,1.06862e-02,\ 
+if(r<1.418752821,1.00122e-02,\ 
+if(r<1.434398915,9.37073e-03,\ 
+if(r<1.450592239,8.76105e-03,\ 
+if(r<1.467351934,8.18248e-03,\ 
+if(r<1.484697807,7.63427e-03,\ 
+if(r<1.502650361,7.11558e-03,\ 
+if(r<1.521230814,6.62553e-03,\ 
+if(r<1.540461129,6.16322e-03,\ 
+if(r<1.560364034,5.72770e-03,\ 
+if(r<1.580963053,5.31799e-03,\ 
+if(r<1.602282533,4.93310e-03,\ 
+if(r<1.624347673,4.57202e-03,\ 
+if(r<1.647184552,4.23373e-03,\ 
+if(r<1.670820163,3.91721e-03,\ 
+if(r<1.695282442,3.62144e-03,\ 
+if(r<1.720600301,3.34541e-03,\ 
+if(r<1.746803666,3.08812e-03,\ 
+if(r<1.773923506,2.84858e-03,\ 
+if(r<1.801991877,2.62583e-03,\ 
+if(r<1.831041954,2.41892e-03,\ 
+if(r<1.861108071,2.22694e-03,\ 
+if(r<1.892225767,2.04900e-03,\ 
+if(r<1.924431820,1.88423e-03,\ 
+if(r<1.957764296,1.73181e-03,\ 
+if(r<1.992262593,1.59095e-03,\ 
+if(r<2.027967485,1.46089e-03,\ 
+if(r<2.064921174,1.34090e-03,\ 
+if(r<2.103167337,1.23028e-03,\ 
+if(r<2.142751180,1.12839e-03,\ 
+if(r<2.183719487,1.03461e-03,\ 
+if(r<2.226120682,9.48342e-04,\ 
+if(r<2.270004881,8.69041e-04,\ 
+if(r<2.315423952,7.96187e-04,\ 
+if(r<2.362431578,7.29292e-04,\ 
+if(r<2.411083320,6.67901e-04,\ 
+if(r<2.461436682,6.11586e-04,\ 
+if(r<2.513551178,5.59949e-04,\ 
+if(r<2.567488405,5.12622e-04,\ 
+if(r<2.623312115,4.69259e-04,\ 
+if(r<2.681088287,4.29541e-04,\ 
+if(r<2.740885210,3.93171e-04,\ 
+if(r<2.802773562,3.59875e-04,\ 
+if(r<2.866826490,3.29401e-04,\ 
+if(r<2.933119702,3.01513e-04,\ 
+if(r<3.001731553,2.75996e-04,\ 
+if(r<3.072743139,2.52652e-04,\ 
+if(r<3.146238392,2.31297e-04,\ 
+if(r<3.222304178,2.11763e-04,\ 
+if(r<3.301030405,1.93896e-04,\ 
+if(r<3.382510121,1.77553e-04,\ 
+if(r<3.466839632,1.62606e-04,\ 
+if(r<3.554118611,1.48934e-04,\ 
+if(r<3.644450218,1.36428e-04,\ 
+if(r<3.737941218,1.24988e-04,\ 
+if(r<3.834702114,1.14523e-04,\ 
+if(r<3.934847271,1.04949e-04,\ 
+if(r<4.038495057,9.61884e-05,\ 
+if(r<4.145767977,8.81723e-05,\ 
+if(r<4.256792823,8.08363e-05,\ 
+if(r<4.371700819,7.41218e-05,\ 
+if(r<4.490627781,6.79755e-05,\ 
+if(r<4.613714275,6.23485e-05,\ 
+if(r<4.741105782,5.71961e-05,\ 
+if(r<4.872952872,5.24777e-05,\ 
+if(r<5.009411381,4.81560e-05,\ 
+if(r<5.150642597,4.41971e-05,\ 
+if(r<5.296813447,4.05700e-05,\ 
+if(r<5.448096697,3.72463e-05,\ 
+if(r<5.604671156,3.42001e-05,\ 
+if(r<5.766721887,3.14079e-05,\ 
+if(r<5.934440426,2.88480e-05,\ 
+if(r<6.108025006,2.65007e-05,\ 
+if(r<6.287680795,2.43481e-05,\ 
+if(r<6.473620138,2.23736e-05,\ 
+if(r<6.666062805,2.05622e-05,\ 
+if(r<6.865236252,1.89001e-05,\ 
+if(r<7.071375893,1.73749e-05,\ 
+if(r<7.284725373,1.59750e-05,\ 
+if(r<7.505536861,1.46899e-05,\ 
+if(r<7.734071343,1.35101e-05,\ 
+if(r<7.970598936,1.24266e-05,\ 
+if(r<8.215399202,1.14316e-05,\ 
+if(r<8.468761483,1.05176e-05,\ 
+if(r<8.730985240,9.67799e-06,\ 
+if(r<9.002380407,8.90649e-06,\ 
+if(r<9.283267758,8.19753e-06,\ 
+if(r<9.573979289,7.54593e-06,\ 
+if(r<9.874858604,6.94697e-06,\ 
+if(r<10.186261327,6.39631e-06,\ 
+if(r<10.508555520,5.89000e-06,\ 
+if(r<10.842122117,5.42440e-06,\ 
+if(r<11.187355377,4.99618e-06,\ 
+if(r<11.544663347,4.60228e-06,\ 
+if(r<11.914468346,4.23991e-06,\ 
+if(r<12.297207464,3.90650e-06,\ 
+if(r<12.693333079,3.59970e-06,\ 
+if(r<13.103313390,3.31734e-06,\ 
+if(r<13.527632972,3.05746e-06,\ 
+if(r<13.966793349,2.81822e-06,\ 
+if(r<14.421313584,2.59798e-06,\ 
+if(r<14.891730898,2.39518e-06,\ 
+if(r<15.378601298,2.20844e-06,\ 
+if(r<15.882500240,2.03645e-06,\ 
+if(r<16.404023305,1.87804e-06,\ 
+if(r<16.943786906,1.73212e-06,\ 
+if(r<17.502429016,1.59769e-06,\ 
+if(r<18.080609919,1.47382e-06,\ 
+if(r<18.679012996,1.35969e-06,\ 
+if(r<19.298345526,1.25450e-06,\ 
+if(r<19.939339529,1.15756e-06,\ 
+if(r<20.602752625,1.06820e-06,\ 
+if(r<21.289368934,9.85831e-07,\ 
+if(r<22.000000000,9.09887e-07,9.09887e-07\ 
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) \ 
+0.  

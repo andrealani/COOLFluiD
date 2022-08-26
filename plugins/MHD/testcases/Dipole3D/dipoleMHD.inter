@@ -1,0 +1,5 @@
+Simulator.SubSystem.Flow.LLAVJacobMHD.S0 = -0.5
+Simulator.SubSystem.Flow.LLAVJacobMHD.Kappa = 1.0 # 1 # P2 4.0 P2 4.0
+Simulator.SubSystem.Flow.LLAVJacobMHD.Peclet = 10.0 # 5.0 #P2 40.0 P2 20.0
+Simulator.SubSystem.Flow.LLAVJacobMHD.FreezeLimiterIter = 100000
+Simulator.SubSystem.Flow.LLAVJacobMHD.MonitoredVar = 0 #7 #25 # 21

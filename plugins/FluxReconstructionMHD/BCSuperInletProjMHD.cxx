@@ -64,8 +64,8 @@ BCSuperInletProjMHD::BCSuperInletProjMHD(const std::string& name) :
   m_enforceFullB = false;
   setParameter("EnforceFullB",&m_enforceFullB);
   
-  m_enforeDipoleB = false;
-  setParameter("EnforceDipoleB",&m_enforeDipoleB);
+  m_enforceDipoleB = false;
+  setParameter("EnforceDipoleB",&m_enforceDipoleB);
   
   m_initialSolutionIDs = std::vector<CFuint>();
   setParameter("InitialSolutionIDs",&m_initialSolutionIDs);
@@ -330,7 +330,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     // Br bnd from PFSS solution
     CFreal BrBoundary_dimless = xI_dimless/rI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
 
-    if (m_enforeDipoleB) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
+    if (m_enforceDipoleB) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
     
     const CFreal BxI_dimless = intState[4];
     const CFreal ByI_dimless = intState[5];
@@ -339,13 +339,26 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     
     CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
     
-    if (m_enforceFullB) BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*B_PFSS_dimless[0] + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*B_PFSS_dimless[1] - rhoI_dimless/rI_dimless*B_PFSS_dimless[2];
-    if (m_enforeDipoleB) BthetaI_dimless = 0.666/3.0*rhoI_dimless;
+    if (m_enforceDipoleB && m_enforceFullB) 
+    {
+      BthetaI_dimless = 0.666/3.0*rhoI_dimless;
+    }
+    else if (m_enforceFullB) 
+    {
+      BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*B_PFSS_dimless[0] + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*B_PFSS_dimless[1] - rhoI_dimless/rI_dimless*B_PFSS_dimless[2];
+    }
     
     CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
     
-    if (m_enforceFullB) BphiI_dimless = -yI_dimless/rhoI_dimless*B_PFSS_dimless[0] + xI_dimless/rhoI_dimless*B_PFSS_dimless[1];
-    if (m_enforeDipoleB) BphiI_dimless = 0.0;
+    if (m_enforceDipoleB && m_enforceFullB) 
+    {
+      BphiI_dimless = 0.0;
+    }
+    else if (m_enforceFullB) 
+    {
+      BphiI_dimless = -yI_dimless/rhoI_dimless*B_PFSS_dimless[0] + xI_dimless/rhoI_dimless*B_PFSS_dimless[1];
+    }
+    
 
     // B bnd, Btheta and Bphi bnd are set equal to inner values
     const CFreal BxBoundary_dimless = xI_dimless/rI_dimless*BrBoundary_dimless - yI_dimless/rhoI_dimless*BphiI_dimless + xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaI_dimless;

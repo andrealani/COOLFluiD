@@ -101,7 +101,7 @@ protected: // data
   bool m_enforceFullB;
   
   /// flag to enforce analytical dipole B_in
-  bool m_enforeDipoleB;
+  bool m_enforceDipoleB;
   
   /// array specifying IDs of initial solution components that will be used as BC value
   std::vector<CFuint> m_initialSolutionIDs;

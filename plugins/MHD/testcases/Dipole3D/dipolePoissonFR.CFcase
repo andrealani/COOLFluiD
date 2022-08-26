@@ -1,0 +1,257 @@
+
+
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# FR, VCJH, Poisson3D, Backward Euler, mesh with curved quads, 
+# Lax-Friedrichs, HLL scheme, wall BCs and Dirichlet BC 
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = false
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = false
+CFEnv.ExceptionOutputs     = false
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes = false
+
+#CFEnv.TraceToStdOut = true
+
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libParaViewWriter libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libFluxReconstructionPoisson libBackwardEuler libPetscI libGmsh2CFmesh libMeshToolsFR libGReKO libFluxReconstructionGReKO libNewtonMethod libKOmega libFluxReconstructionKOmega libMeshToolsFVM libPoisson libMHD libForwardEuler
+
+###################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/Dipole3D
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/Dipole3D
+
+##################################################################
+## SubSystemMesh only creates the mesh and upgrades it serially ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+Simulator.SubSysMesh.Namespaces = MeshNamespace #EMNamespace #
+Simulator.SubSysMesh.Ranks = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSysMesh.MeshMeshData.listTRS = Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+#Simulator.SubSysMesh.EMNamespace.MeshData = EMMeshData
+#Simulator.SubSysMesh.EMMeshData.listTRS = Inlet Outlet
+#Simulator.SubSysMesh.EMMeshData.Namespaces = EMNamespace
+#Simulator.SubSysMesh.EMNamespace.SubSystemStatus = EMSubSystemStatus
+#Simulator.SubSysMesh.EMNamespace.PhysicalModelType = Poisson3D
+#Simulator.SubSysMesh.EMNamespace.PhysicalModelName = Poisson3D
+
+Simulator.SubSysMesh.OutputFormat = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName = dipoleUpgraded.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace #EMNamespace #
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = dipoleMeshFREqRef.CFmesh #dipoleMeshFR11kFinerFEH.CFmesh #dipoleMeshFREqRefPolar.CFmesh #dipoleMeshFR11kyzSwitch.CFmesh #dipolePoisson35kP1.CFmesh #dipoleMeshFR35k.CFmesh #dipoleFRPoisson28kP1.CFmesh #dipoleMeshFR.CFmesh #dipole1999lmax10-11kP3.CFmesh #dipole1999lmax10P3.CFmesh #dipoleMeshFR11k.CFmesh #dipole1999lmax10P3.CFmesh #dipoleMeshFR2k.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFRPoisson2kP2.CFmesh #dipoleFR2kP1.CFmesh #dipoleFRPoisson11kP1.CFmesh #dipoleFRPoissonP1.CFmesh #dipoleMeshFR11k.CFmesh #dipoleFRUniformPoissonP1.CFmesh #forRay_hexas.CFmesh #DipoleUV.CFmesh #
+Simulator.SubSysMesh.CFmeshFileReader.Namespace = MeshNamespace #EMNamespace #
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+#Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace #EMNamespace #
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
+Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
+
+Simulator.SubSystem.Namespaces = EMNamespace
+
+# Poisson model settings
+Simulator.SubSystem.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystem.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystem.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystem.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystem.EMNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSystem.EMNamespace.PhysicalModelName = Poisson3D
+Simulator.SubSystem.Poisson3D.refValues    = 1.0
+Simulator.SubSystem.Poisson3D.refLength    = 1.0
+
+###################################
+####Outputs####
+###################################
+Simulator.SubSystem.OutputFormat        = CFmesh  Tecplot #ParaView
+Simulator.SubSystem.OutputFormatNames   = CFmesh2  Tecplot2 #ParaView2
+Simulator.SubSystem.CFmesh2.FileName     = dipoleFR.CFmesh
+Simulator.SubSystem.CFmesh2.SaveRate = 500 #50 #
+Simulator.SubSystem.CFmesh2.AppendTime = false
+Simulator.SubSystem.CFmesh2.AppendIter = true
+Simulator.SubSystem.CFmesh2.ParWriteSol = ParWriteSolution
+Simulator.SubSystem.CFmesh2.Namespace = EMNamespace
+Simulator.SubSystem.CFmesh2.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.ParaView2.FileName    = dipoleFR.vtu
+Simulator.SubSystem.ParaView2.Data.updateVar = Cons
+Simulator.SubSystem.ParaView2.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.ParaView2.SaveRate = 100
+Simulator.SubSystem.ParaView2.AppendTime = false
+Simulator.SubSystem.ParaView2.AppendIter = false
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.SocketNames = uR uTheta uPhi uX uY uZ
+#Simulator.SubSystem.ParaView2.Data.DataHandleOutput.VariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.ParaView2.Namespace = EMNamespace
+Simulator.SubSystem.ParaView2.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.Tecplot2.FileName    = dipoleFR.plt
+Simulator.SubSystem.Tecplot2.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot2.WriteSol = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot2.SaveRate = 100
+Simulator.SubSystem.Tecplot2.AppendTime = false
+Simulator.SubSystem.Tecplot2.AppendIter = false
+Simulator.SubSystem.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystem.Tecplot2.Data.CollaboratorNames = EM
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.SocketNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystem.Tecplot2.Data.DataHandleOutput.VariableNames = Br Btheta Bphi Bx By Bz
+
+
+###############################################################################
+
+# Time Marching
+
+# Stop Condition
+Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100000
+Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -2
+
+#Simulator.SubSystem.StopCondition = Norm #
+#Simulator.SubSystem.Norm.valueNorm = -4
+
+
+###############################################################################
+
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = EMLSS
+
+Simulator.SubSystem.EMLSS.Data.KSPType = KSPGMRES #KSPBICG
+Simulator.SubSystem.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.EMLSS.Data.MaxIter = 500
+Simulator.SubSystem.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystem.EMLSS.Data.PCType = PCBJACOBI #PCASM #PCHYPRE #PCASM
+#Simulator.SubSystem.EMLSS.Data.PCType = PCGAMG
+#Simulator.SubSystem.EMLSS.Data.UseAIJ = true
+#Simulator.SubSystem.EMLSS.JacobianSparsity = FVMCellCenteredNoBlock
+#Simulator.SubSystem.EMLSS.Data.PreconditionerRate = 5
+Simulator.SubSystem.EMLSS.Data.NbKrylovSpaces = 80 #10 #
+Simulator.SubSystem.EMLSS.Namespace = EMNamespace
+Simulator.SubSystem.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Implicit time integration
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.ConvergenceMethodNames = EMIterator
+
+Simulator.SubSystem.EMIterator.Namespace = EMNamespace
+Simulator.SubSystem.EMIterator.Data.CollaboratorNames = EM EMLSS
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 1 #15 #
+Simulator.SubSystem.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -10.
+Simulator.SubSystem.EMIterator.Data.PrintHistory = true
+
+Simulator.SubSystem.EMIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.EMIterator.Data.CFL.Function.Def = min(300,0.5*1.5^max(i-1,0)) #min(20,0.5*1.5^max(i-1,0)) #min(30,0.5*1.5^max(i-1,0)) #min(30,0.5*1.5^max(i-1,0)) #5000.0 #P1 dipole: min(500,0.5*1.5^max(i-1,0)) #P2 dipole: min(300,0.5*1.5^max(i-1,0)) #P4: min(40,0.5*1.5^max(i-1,0)) #P5: min(20,0.5*1.5^max(i-1,0)) #20000.0 #min(150,0.5*1.05^max(i-1,0))
+Simulator.SubSystem.EMIterator.ConvergenceFile = convergencePoissonFR.plt
+
+###################################
+
+# Mesh Reader
+
+Simulator.SubSystem.MeshCreator      = CFmeshFileReader
+
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = dipoleUpgraded.CFmesh #dipolePoisson15kFEHP1lm10.CFmesh #dipoleFR-iter_4850.CFmesh #dipole1999-11kP4lmax30.CFmesh #dipole1999-11kP4lmax50.CFmesh #dipoleFRP4-iter_700.CFmesh #dipole1999lmax30-11kP4.CFmesh #dipole1999lmax10P4b.CFmesh #dipole1999lmax50P4.CFmesh #dipoleFR-iter_100.CFmesh #dipole1999lmax10P4.CFmesh #dipoleFR2kP0.CFmesh #dipoleFRPoisson2kP4.CFmesh #dipoleFRPoisson2kP3.CFmesh #dipoleFR-iter_100.CFmesh #dipoleFRPoisson2kP4.CFmesh #dipoleFRPoisson11kP2.CFmesh #dipoleFRPoissonP1.CFmesh #
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = EM
+
+Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
+
+###################################
+
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+Simulator.SubSystem.SpaceMethodNames = EM
+
+Simulator.SubSystem.SpaceMethod.Namespace = EMNamespace
+Simulator.SubSystem.SpaceMethod.Data.CollaboratorNames = EMLSS EMIterator
+Simulator.SubSystem.EM.Data.UpdateVar   = Cons
+Simulator.SubSystem.EM.Data.SolutionVar = Cons
+#Simulator.SubSystem.EM.Data.LinearVar   = Roe
+Simulator.SubSystem.EM.Data.DiffusiveVar= Cons
+
+
+###################################
+# choose which builder we use
+Simulator.SubSystem.EM.Builder = StdBuilder
+Simulator.SubSystem.EM.SpaceRHSJacobCom = RHSJacobPoisson #RHSNS #
+Simulator.SubSystem.EM.ConvSolveCom = ConvDiffRHSJacobPoisson #ConvRHSJacobPoisson #ConvRHSNS #
+Simulator.SubSystem.EM.DiffSolveCom = Null #DiffRHSJacobPoisson #DiffRHSNS #
+Simulator.SubSystem.EM.TimeRHSJacobCom = PseudoSteadyTimeRHS #Null #StdTimeRHSJacob
+Simulator.SubSystem.EM.JacobianSparsity = CellCentered
+Simulator.SubSystem.EM.FinalizeRHSCom = Null
+
+Simulator.SubSystem.EM.SetupCom = SetupExtra
+Simulator.SubSystem.EM.ExtrapolateCom = Null
+Simulator.SubSystem.EM.Data.RiemannFlux = LaxFriedrichsFlux #HLLFlux #
+Simulator.SubSystem.EM.Data.DiffFluxDamping = 1.0 #0.0 #
+
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddRiemannToGradJacob = true #false #THIS ONE NEEDED
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddRiemannToGradCrossCellJacob = false #true #THIS ONE OK W/O
+Simulator.SubSystem.EM.ConvDiffRHSJacobPoisson.AddFluxToGradCrossCellJacob = true #false #THIS ONE NEEDED
+
+Simulator.SubSystem.EM.Data.SolutionPointDistribution = GaussLegendre
+Simulator.SubSystem.EM.Data.FluxPointDistribution = GaussLegendre
+
+Simulator.SubSystem.EM.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.EM.Data.VCJH.CFactor = 0.33 #1.6e-5 #9.5e-4 #0.033 #0.033 #1.7e-7 #0.033 #0.033 #0.03 #0.03
+
+Simulator.SubSystem.EM.Data.FreezeJacob = false #true #
+Simulator.SubSystem.EM.Data.FreezeJacobIter = 2
+Simulator.SubSystem.EM.Data.FreezeJacobInterval = 2
+
+###################################
+Simulator.SubSystem.EM.InitComds = StdInitState #Null #
+Simulator.SubSystem.EM.InitNames = InField
+
+Simulator.SubSystem.EM.InField.applyTRS = InnerCells
+Simulator.SubSystem.EM.InField.Vars = x y z
+Simulator.SubSystem.EM.InField.Def = 0.0
+
+Simulator.SubSystem.EM.Data.BcTypes = NeumannFromFile  Dirichlet #SuperOutlet
+Simulator.SubSystem.EM.Data.BcNames = Inlet               Outlet 
+
+Simulator.SubSystem.EM.BcNames = Inlet Outlet
+Simulator.SubSystem.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystem.EM.Outlet.applyTRS = Outlet
+
+Simulator.SubSystem.EM.BcNamesDiff = InletDiff OutletDiff
+Simulator.SubSystem.EM.InletDiff.applyTRS = Inlet
+Simulator.SubSystem.EM.OutletDiff.applyTRS = Outlet
+
+Simulator.SubSystem.EM.Data.Inlet.TRSName = Inlet
+Simulator.SubSystem.EM.Data.Inlet.FileNameTw = ./dipole.dat #./map_dkist99_lmax10.dat #./map_dkist99_lmax30.dat #
+Simulator.SubSystem.EM.Data.Inlet.NbClosestPoints = 8
+Simulator.SubSystem.EM.Data.Inlet.AddMinusConvention = true ##needed because Br in data file is positive along positive r axis, while in FR bnd gradient is positive along bnd normal, pointing outward of the element.
+
+Simulator.SubSystem.EM.Data.Outlet.Vars = x y z
+Simulator.SubSystem.EM.Data.Outlet.Def = 0.0
+
+###################################
