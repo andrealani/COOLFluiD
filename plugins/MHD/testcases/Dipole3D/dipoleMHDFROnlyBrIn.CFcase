@@ -232,7 +232,7 @@ Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
 
-Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = min(10,0.5*1.05^max(i-1,0)) #0.1 #min(10,0.5*1.01^max(i-1,0)) #if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258))))) #min(100,0.5*1.5^max(i-1,0)) #P0: min(2000,0.5*1.5^max(i-1,0)) #
+Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = min(10,0.5*1.1^max(i-1,0)) #0.1 #min(10,0.5*1.01^max(i-1,0)) #if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258))))) #min(100,0.5*1.5^max(i-1,0)) #P0: min(2000,0.5*1.5^max(i-1,0)) #
 
 Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 7
 Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
@@ -262,6 +262,10 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet
 
 #Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 #3
 #Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 #3
+
+Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2 #3
+Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2 #3
+
 
 # name of the file where to put interactive settings
 Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/Dipole3D/dipoleMHD.inter
@@ -365,7 +369,7 @@ Simulator.SubSystem.Flow.Data.SolutionPointDistribution = GaussLegendre
 Simulator.SubSystem.Flow.Data.FluxPointDistribution = GaussLegendre
 
 Simulator.SubSystem.Flow.Data.CorrectionFunctionComputer = VCJH
-Simulator.SubSystem.Flow.Data.VCJH.CFactor = 0.0 #1.6e-5 #9.5e-4 #0.033 #0.033 #0.03 #0.03
+Simulator.SubSystem.Flow.Data.VCJH.CFactor = 0.5 #1.6e-5 #9.5e-4 #0.033 #0.033 #0.03 #0.03
 
 Simulator.SubSystem.Flow.Data.FreezeJacob = false #true #
 Simulator.SubSystem.Flow.Data.FreezeJacobIter = 2
@@ -413,7 +417,7 @@ Simulator.SubSystem.EM.InletDiff.applyTRS = Inlet
 Simulator.SubSystem.EM.OutletDiff.applyTRS = Outlet
 
 Simulator.SubSystem.EM.Data.Inlet.TRSName = Inlet
-Simulator.SubSystem.EM.Data.Inlet.FileNameTw = ./dipole.dat #./map_dkist99_lmax10.dat #
+Simulator.SubSystem.EM.Data.Inlet.FileNameTw = ./map_dkist99_lmax10.dat #./dipole.dat #
 Simulator.SubSystem.EM.Data.Inlet.NbClosestPoints = 8
 Simulator.SubSystem.EM.Data.Inlet.AddMinusConvention = true ##needed because Br in data file is positive along positive r axis, while in FR bnd gradient is positive along bnd normal, pointing outward of the element.
 
