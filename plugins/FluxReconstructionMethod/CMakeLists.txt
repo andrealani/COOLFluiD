@@ -371,6 +371,8 @@ ComputeFieldFromPotential.hh
 ComputeFieldFromPotential.cxx
 InitStateAddVar.hh
 InitStateAddVar.cxx
+MeshFittingAlgorithmFRQ2Quads.cxx
+MeshFittingAlgorithmFRQ2Quads.hh
 )
 
 IF (NOT CF_HAVE_CUDA)
