@@ -42,10 +42,7 @@ void PhysicalityEuler2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("CheckInternal","Boolean to tell wether to also check internal solution for physicality.");
   options.addConfigOption< bool >("LimCompleteState","Boolean to tell wether to limit complete state or single variable.");
   options.addConfigOption< bool >("ExpLim","Boolean to tell wether to use the experimental limiter.");
-  options.addConfigOption< bool >("GammaClipping","Boolean to tell wether to clip gamma.");
   options.addConfigOption< std::vector<CFreal> >("MinTurbVars","Minimum K, Omega,... values");
-  options.addConfigOption< CFreal >("MinGamma","Minimum clipping value for gamma.");
-  options.addConfigOption< CFreal >("MaxGamma","Maximum clipping value for gamma.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -83,17 +80,8 @@ PhysicalityEuler2D::PhysicalityEuler2D(const std::string& name) :
   m_expLim = true;
   setParameter( "ExpLim", &m_expLim );
   
-  m_clipGamma = false;
-  setParameter( "GammaClipping", &m_clipGamma );
-  
   m_minTurbVars = vector<CFreal>();
   setParameter("MinTurbVars",&m_minTurbVars);
-  
-  m_minGamma = 0.01;
-  setParameter( "MinGamma", &m_minGamma );
-  
-  m_maxGamma = 0.99;
-  setParameter( "MaxGamma", &m_maxGamma );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -118,8 +106,9 @@ bool PhysicalityEuler2D::checkPhysicality()
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "BSLPuvt" || getMethodData().getUpdateVarStr() == "SSTPuvt";
   const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
-  //const bool hasArtVisc = getMethodData().hasArtificialViscosity();
-  //DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
+  const bool RhoiViTi = getMethodData().getUpdateVarStr() == "RhoiViTi";
+  const bool hasArtVisc = getMethodData().hasArtificialViscosity();
+  DataHandle< CFreal > posPrev = socket_posPrev.getDataHandle();
   DataHandle< CFreal > output = socket_outputPP.getDataHandle();
   const CFuint cellID = m_cell->getID();
   
@@ -174,13 +163,13 @@ bool PhysicalityEuler2D::checkPhysicality()
 	CFreal rho  = m_cellStatesFlxPnt[iFlx][i];
 	if (rho < m_minDensity && i != 2 && i != 4)
 	  {
-	    //cout<< " rho  "<< rho << endl;
+	    cout<< " rho  "<< rho << endl;
 	    physical = false;
 	    break;
 	  }	
 	  if (rho < m_minDensity && (i == 2 || i == 4))
 	  {
-	    //cout<< " rho  "<< rho << endl;
+	    cout<< " rho  "<< rho << endl;
 	    physical = false;
 	    break;
 	  }
@@ -195,6 +184,40 @@ bool PhysicalityEuler2D::checkPhysicality()
 	}	
       }
       
+    }
+    
+    else if (RhoiViTi)
+    {
+      if (m_nbSpecies ==2){
+      // this is to check if positivity is violated at any flux point 
+        if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][16] < m_minTemperature || m_cellStatesFlxPnt[iFlx][9] < m_minDensity || m_cellStatesFlxPnt[iFlx][17] < m_minTemperature)
+      {
+	physical = false;
+      }
+      
+      if (hasArtVisc)
+      {
+	posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][8]/m_minDensity,posPrev[cellID]);
+	posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][16]/m_minTemperature,posPrev[cellID]);
+        posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][9]/m_minDensity,posPrev[cellID]);
+	posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][17]/m_minTemperature,posPrev[cellID]);
+      }
+      }
+      ////////////
+      if (m_nbSpecies ==1){
+      // this is to check if positivity is violated at any flux point 
+        if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][11] < m_minTemperature)
+      {
+  physical = false;
+      }
+      
+      if (hasArtVisc)
+      {
+  posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][8]/m_minDensity,posPrev[cellID]);
+  posPrev[cellID] = min(m_cellStatesFlxPnt[iFlx][11]/m_minTemperature,posPrev[cellID]);
+      }
+      }
+      ////////////
     }
     //cout << "here1 Bis2"<<endl;
   }
@@ -257,21 +280,26 @@ bool PhysicalityEuler2D::checkPhysicality()
 	  }
 	}
       }
-    }
-  }
-  
-  // clip gamma if needed (default false, only activate in GReKO or gamma-alpha) 
-  if (Puvt && m_clipGamma)
-  {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      if ((*((*m_cellStates)[iSol]))[6] < m_minGamma)
+      else if (RhoiViTi)
       {
-	(*((*m_cellStates)[iSol]))[6] = m_minGamma;
+         if (m_nbSpecies ==2) {
+        // check if positivity is violated at solution point
+        //cout << "Puvt"<<endl;
+	if ((*((*m_cellStates)[iSol]))[8] < m_minDensity || (*((*m_cellStates)[iSol]))[16] < m_minTemperature || (*((*m_cellStates)[iSol]))[9] < m_minDensity || (*((*m_cellStates)[iSol]))[17] < m_minTemperature)
+        {
+	  physical = false;
+        }
       }
-      else if ((*((*m_cellStates)[iSol]))[6] > m_maxGamma)
-      {
-        (*((*m_cellStates)[iSol]))[6] = m_maxGamma; 
+
+         if (m_nbSpecies ==1) {
+        // check if positivity is violated at solution point
+        //cout << "Puvt"<<endl;
+  if ((*((*m_cellStates)[iSol]))[8] < m_minDensity || (*((*m_cellStates)[iSol]))[11] < m_minTemperature)
+        {
+    physical = false;
+        }
+      }
+
       }
     }
   }
@@ -286,6 +314,7 @@ void PhysicalityEuler2D::enforcePhysicality()
   const bool Puvt = getMethodData().getUpdateVarStr() == "Puvt" || getMethodData().getUpdateVarStr() == "BSLPuvt" || getMethodData().getUpdateVarStr() == "SSTPuvt";
   const bool Cons = getMethodData().getUpdateVarStr() == "Cons";
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  const bool RhoiViTi = getMethodData().getUpdateVarStr() == "RhoiViTi";
   bool needsLim = false;
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   DataHandle< CFreal > output = socket_outputPP.getDataHandle();
@@ -346,6 +375,22 @@ void PhysicalityEuler2D::enforcePhysicality()
       }
     } 
   }
+  
+  else if (RhoiViTi)
+    { //setting flag at every cell
+         //CFLog(INFO,"sets the limit flag\n");
+        //CFLog(INFO,"case1");
+         if (m_nbSpecies ==2){
+      if (m_cellAvgState[8] < m_minDensity || m_cellAvgState[16] < m_minTemperature || m_cellAvgState[9] < m_minDensity || m_cellAvgState[17] < m_minTemperature) needsLim = true;
+      //CFLog(INFO,"case2");
+      //CFLog(INFO,m_cellAvgState[8]<<"\n"<<m_cellAvgState[9]<<"\n"<<m_cellAvgState[16]<<"\n"<<m_cellAvgState[17]<<"\n");
+             //cout<< " rho1  "<< m_cellAvgState[8] << endl;
+         }
+
+      if (m_nbSpecies ==1){
+      if (m_cellAvgState[8] < m_minDensity || m_cellAvgState[11] < m_minTemperature) needsLim = true;
+         }
+    }
   
   // if average state is unphysical, modify the unphysical variable
   if (needsLim)
@@ -417,6 +462,48 @@ void PhysicalityEuler2D::enforcePhysicality()
 	  //cout << " enforce T   " <<  m_cellAvgState[i] << endl;
 	}
       }
+    }
+    
+    else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      //cout<<"This runs - updating the variable"<<endl;
+      //cout<<"Before update"<<m_cellAvgState[8]<<" "<< m_cellAvgState[9]<<endl;
+        CFLog(VERBOSE,"Tani nachi ke Tani Gaayi ke\n");
+        if (m_cellAvgState[8] < m_minDensity)
+      {
+        m_cellAvgState[8] = 1.1*m_minDensity;
+      }
+      if (m_cellAvgState[16] < m_minTemperature)
+      {
+	m_cellAvgState[16] = 1.1*m_minTemperature;
+      }
+        if (m_cellAvgState[9] < m_minDensity)
+      {
+        m_cellAvgState[9] = 1.1*m_minDensity;
+      }
+      if (m_cellAvgState[17] < m_minTemperature)
+      {
+	m_cellAvgState[17] = 1.1*m_minTemperature;
+      }
+    }
+
+       if (m_nbSpecies ==1){
+      //cout<<"This runs - updating the variable"<<endl;
+      //cout<<"Before update"<<m_cellAvgState[8]<<" "<< m_cellAvgState[9]<<endl;
+        
+        if (m_cellAvgState[8] < m_minDensity)
+      {
+        m_cellAvgState[8] = 1.1*m_minDensity;
+      }
+      if (m_cellAvgState[11] < m_minTemperature)
+      {
+  m_cellAvgState[11] = 1.1*m_minTemperature;
+      }
+
+    }
+
+      //  cout<<"after update"<<m_cellAvgState[8]<<" "<< m_cellAvgState[9]<<endl;
     }
 
     // compute the new states
@@ -497,7 +584,31 @@ void PhysicalityEuler2D::enforcePhysicality()
 	}	
       }
     }
-    
+    else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      //cout<<"Needslim Flag runs"<<endl;
+      if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][16] < m_minTemperature || m_cellStatesFlxPnt[iFlx][9] < m_minDensity || m_cellStatesFlxPnt[iFlx][17] < m_minTemperature)
+      {
+	needsLim = true;
+	needsLimFlags[8] = m_cellStatesFlxPnt[iFlx][8] < m_minDensity;
+	needsLimFlags[16] = m_cellStatesFlxPnt[iFlx][16] < m_minTemperature;
+        needsLimFlags[9] = m_cellStatesFlxPnt[iFlx][9] < m_minDensity;
+	needsLimFlags[17] = m_cellStatesFlxPnt[iFlx][17] < m_minTemperature;
+      }
+       }
+
+
+              if (m_nbSpecies ==1){
+      //cout<<"Needslim Flag runs"<<endl;
+      if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][11] < m_minTemperature)
+      {
+  needsLim = true;
+  needsLimFlags[8] = m_cellStatesFlxPnt[iFlx][8] < m_minDensity;
+  needsLimFlags[11] = m_cellStatesFlxPnt[iFlx][11] < m_minTemperature;
+      }
+       }
+    }
     // if needed, limit states
     if (needsLim)
     {
@@ -578,6 +689,31 @@ void PhysicalityEuler2D::enforcePhysicality()
 	    }	
 	  } 
 	}
+        else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      //cout<<"sets limit flag on variable index"<<endl;
+      if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][16] < m_minTemperature || m_cellStatesFlxPnt[iFlx][9] < m_minDensity || m_cellStatesFlxPnt[iFlx][17] < m_minTemperature)
+      {
+	needsLim = true;
+	needsLimFlags[8] = m_cellStatesFlxPnt[iFlx][8] < m_minDensity;
+	needsLimFlags[16] = m_cellStatesFlxPnt[iFlx][16] < m_minTemperature;
+        needsLimFlags[9] = m_cellStatesFlxPnt[iFlx][9] < m_minDensity;
+	needsLimFlags[17] = m_cellStatesFlxPnt[iFlx][17] < m_minTemperature;
+      }
+       }
+
+       if (m_nbSpecies ==1){
+      //cout<<"sets limit flag on variable index"<<endl;
+      if (m_cellStatesFlxPnt[iFlx][8] < m_minDensity || m_cellStatesFlxPnt[iFlx][11] < m_minTemperature )
+      {
+  needsLim = true;
+  needsLimFlags[8] = m_cellStatesFlxPnt[iFlx][8] < m_minDensity;
+  needsLimFlags[11] = m_cellStatesFlxPnt[iFlx][11] < m_minTemperature;
+      }
+       }
+
+    }      
 	// break if the states are physical
 	if(!needsLim) 
 	{
@@ -677,20 +813,18 @@ void PhysicalityEuler2D::enforcePhysicality()
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
 	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
-	  CFLog(VERBOSE, "state " << iSol << " : "<< (*((*m_cellStates)[iSol])) << ", coord: " << (*((*m_cellStates)[iSol])).getCoordinates() << "\n");
+
 	  CFreal p = m_gammaMinusOne*((*((*m_cellStates)[iSol]))[3] - 0.5*(pow((*((*m_cellStates)[iSol]))[1],2)+pow((*((*m_cellStates)[iSol]))[2],2))/(*((*m_cellStates)[iSol]))[0]);
-	  CFLog(VERBOSE, "p " << iSol << " : "<< p << "\n");
-          CFLog(VERBOSE, "T " << iSol << " : "<< p/((*((*m_cellStates)[iSol]))[0]*287.046) << "\n");
-	  CFLog(VERBOSE, "u " << iSol << " : "<< (*((*m_cellStates)[iSol]))[1]/(*((*m_cellStates)[iSol]))[0] << ", v " << iSol << " : "<< (*((*m_cellStates)[iSol]))[2]/(*((*m_cellStates)[iSol]))[0] << "\n");
+
+        
+	 
 	  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
           {
             (*((*m_cellStates)[iSol]))[iEq] = (1.0-t)*m_cellAvgState[iEq] + t*((*((*m_cellStates)[iSol]))[iEq]);
           }
-          CFLog(VERBOSE, "state2 " << iSol << " : "<< (*((*m_cellStates)[iSol])) << "\n");
+          
 	  p = m_gammaMinusOne*((*((*m_cellStates)[iSol]))[3] - 0.5*(pow((*((*m_cellStates)[iSol]))[1],2)+pow((*((*m_cellStates)[iSol]))[2],2))/(*((*m_cellStates)[iSol]))[0]);
-	  CFLog(VERBOSE, "p2 " << iSol << " : "<< p << "\n");
-          CFLog(VERBOSE, "T2 " << iSol << " : "<< p/((*((*m_cellStates)[iSol]))[0]*287.046) << "\n");
-	  CFLog(VERBOSE, "u2 " << iSol << " : "<< (*((*m_cellStates)[iSol]))[1]/(*((*m_cellStates)[iSol]))[0] << ", v2 " << iSol << " : "<< (*((*m_cellStates)[iSol]))[2]/(*((*m_cellStates)[iSol]))[0] << "\n");
+
         }
 
       }
@@ -761,6 +895,141 @@ void PhysicalityEuler2D::enforcePhysicality()
           }
         } 
       }
+    }
+    else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+
+      CFreal rhoAv0 = m_cellAvgState[8];
+      CFreal TAv0 = m_cellAvgState[16];
+      CFreal rhoAv1 = m_cellAvgState[9];
+      CFreal TAv1 = m_cellAvgState[17];
+      
+      CFreal rhoMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][8]);
+      }
+    
+      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+        }
+      }
+      
+      rhoMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][9]);
+      }
+    
+      coeff = min((rhoAv1-m_minDensity)/(rhoAv1-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[9] = (1.0-coeff)*m_cellAvgState[9] + coeff*((*((*m_cellStates)[iSol]))[9]);
+        }
+      }
+      
+      CFreal TMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        TMin = min(TMin,m_cellStatesFlxPnt[iFlx][16]);
+      }
+    
+      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[16] = (1.0-coeff)*m_cellAvgState[16] + coeff*((*((*m_cellStates)[iSol]))[16]);
+        }
+      }
+      TMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        TMin = min(TMin,m_cellStatesFlxPnt[iFlx][17]);
+      }
+    
+      coeff = min((TAv1-m_minTemperature)/(TAv1-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[17] = (1.0-coeff)*m_cellAvgState[17] + coeff*((*((*m_cellStates)[iSol]))[17]);
+        }
+      }
+    }
+    ////////////////////////////////////////////
+       if (m_nbSpecies ==1){
+
+      CFreal rhoAv0 = m_cellAvgState[8];
+      CFreal TAv0 = m_cellAvgState[11];
+      
+      CFreal rhoMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][8]);
+      }
+    
+      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+    //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+        }
+      }
+      
+      rhoMin = 1.0e13;
+    
+      
+      CFreal TMin = 1.0e13;
+    
+      for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
+      {  
+        TMin = min(TMin,m_cellStatesFlxPnt[iFlx][11]);
+      }
+    
+      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+    //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[11] = (1.0-coeff)*m_cellAvgState[11] + coeff*((*((*m_cellStates)[iSol]))[11]);
+        }
+      }
+    }
+    computeFlxPntStates(m_cellStatesFlxPnt);
+
+    /////////////////////////////////////////
     }
     else if (RhoivtTv)
     {
@@ -1020,6 +1289,19 @@ void PhysicalityEuler2D::enforcePhysicality()
 	  needsLimFlags[3] = (*((*m_cellStates)[iSol]))[3] < m_minTemperature;
         }
       }
+      else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      if ((*((*m_cellStates)[iSol]))[8] < m_minDensity || (*((*m_cellStates)[iSol]))[16] < m_minTemperature || (*((*m_cellStates)[iSol]))[9] < m_minDensity || (*((*m_cellStates)[iSol]))[17] < m_minTemperature)
+        {
+	  needsLim = true;
+	  needsLimFlags[8] = (*((*m_cellStates)[iSol]))[8] < m_minDensity;
+	  needsLimFlags[16] = (*((*m_cellStates)[iSol]))[16] < m_minTemperature;
+          needsLimFlags[9] = (*((*m_cellStates)[iSol]))[9] < m_minDensity;
+	  needsLimFlags[17] = (*((*m_cellStates)[iSol]))[17] < m_minTemperature;
+        }
+       }
+    }      
       else if (Cons)
       {
         CFreal rho  = (*((*m_cellStates)[iSol]))[0];
@@ -1088,6 +1370,30 @@ void PhysicalityEuler2D::enforcePhysicality()
 	      needsLimFlags[3] = (*((*m_cellStates)[iSol]))[3] < m_minTemperature;
             }
           }
+          else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      if ((*((*m_cellStates)[iSol]))[8] < m_minDensity || (*((*m_cellStates)[iSol]))[16] < m_minTemperature || (*((*m_cellStates)[iSol]))[9] < m_minDensity || (*((*m_cellStates)[iSol]))[17] < m_minTemperature)
+        {
+	  needsLim = true;
+	  needsLimFlags[8] = (*((*m_cellStates)[iSol]))[8] < m_minDensity;
+	  needsLimFlags[16] = (*((*m_cellStates)[iSol]))[16] < m_minTemperature;
+          needsLimFlags[9] = (*((*m_cellStates)[iSol]))[9] < m_minDensity;
+	  needsLimFlags[17] = (*((*m_cellStates)[iSol]))[17] < m_minTemperature;
+        }
+    }
+
+       if (m_nbSpecies ==1){
+      if ((*((*m_cellStates)[iSol]))[8] < m_minDensity || (*((*m_cellStates)[iSol]))[11] < m_minTemperature )
+        {
+    needsLim = true;
+    needsLimFlags[8] = (*((*m_cellStates)[iSol]))[8] < m_minDensity;
+    needsLimFlags[11] = (*((*m_cellStates)[iSol]))[11] < m_minTemperature;
+        }
+    }
+
+
+    }    
           else if (Cons)
           {
             CFreal rho  = (*((*m_cellStates)[iSol]))[0];
@@ -1298,6 +1604,137 @@ void PhysicalityEuler2D::enforcePhysicality()
         } 
       }
     }
+    else if (RhoiViTi)
+    {
+       if (m_nbSpecies ==2){
+      CFreal rhoAv0= m_cellAvgState[8];
+      CFreal TAv0 = m_cellAvgState[16];
+      CFreal rhoAv1= m_cellAvgState[9];
+      CFreal TAv1 = m_cellAvgState[17];
+      
+      CFreal rhoMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[0]);
+      }
+    
+      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+        }
+      }
+      
+      rhoMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[0]);
+      }
+    
+      coeff = min((rhoAv1-m_minDensity)/(rhoAv1-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[9] = (1.0-coeff)*m_cellAvgState[9] + coeff*((*((*m_cellStates)[iSol]))[9]);
+        }
+      }
+      
+      CFreal TMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        TMin = min(TMin,(*((*m_cellStates)[iSol]))[3]);
+      }
+    
+      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[16] = (1.0-coeff)*m_cellAvgState[16] + coeff*((*((*m_cellStates)[iSol]))[16]);
+        }
+      }
+      TMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        TMin = min(TMin,(*((*m_cellStates)[iSol]))[3]);
+      }
+    
+      coeff = min((TAv1-m_minTemperature)/(TAv1-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+	  output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+	  //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[17] = (1.0-coeff)*m_cellAvgState[17] + coeff*((*((*m_cellStates)[iSol]))[17]);
+        }
+      }
+    }
+    //////////////////////////////
+     if (m_nbSpecies ==1){
+      CFreal rhoAv0= m_cellAvgState[8];
+      CFreal TAv0 = m_cellAvgState[11];
+      
+      CFreal rhoMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[8]);  //why its 0
+      }
+    
+      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+    //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+        }
+      }
+      
+      
+      CFreal TMin = 1.0e13;
+    
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {  
+        TMin = min(TMin,(*((*m_cellStates)[iSol]))[11]); //why it's 3??
+      }
+    
+      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+    
+      if (coeff < 1.0)
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+    output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
+    //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
+          (*((*m_cellStates)[iSol]))[11] = (1.0-coeff)*m_cellAvgState[11] + coeff*((*((*m_cellStates)[iSol]))[11]);
+        }
+      }
+    }
+
+
+    ////////////////////////////////
+    }
     else if (RhoivtTv)
     {
       CFreal rhoAvMin = 1.0e13;
@@ -1384,10 +1821,13 @@ void PhysicalityEuler2D::setup()
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
+  const bool RhoiViTi = getMethodData().getUpdateVarStr() == "RhoiViTi";
 
   m_cellAvgSolCoefs = frLocalData[0]->getCellAvgSolCoefs();
   
   // get Euler 2D varset
+  if(!RhoiViTi){
+     
 if(!RhoivtTv){
   m_eulerVarSet = getMethodData().getUpdateVar().d_castTo<Euler2DVarSet>();
   if (m_eulerVarSet.isNull())
@@ -1409,6 +1849,8 @@ else{
   // To be changed
   m_gammaMinusOne = .4;   //m_eulerVarSetMS->getModel()->getGamma()-1.0;
 }
+     
+  }
   m_cellAvgState.resize(m_nbrEqs);
 }
 
