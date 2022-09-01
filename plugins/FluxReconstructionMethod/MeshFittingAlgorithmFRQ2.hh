@@ -6,14 +6,16 @@
 #include "Framework/DataProcessingData.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/CellTrsGeoBuilder.hh"
-#include "Framework/TRSDistributeData.hh"
 
+#include "Framework/TRSDistributeData.hh"
 #include "SimpleEdgeGraphFRQ2.hh"
+#include "MeshTools/ComputeWallDistanceVectorFRMPI.hh"
+
 
 #include "Common/CFMultiMap.hh"
 #include "Framework/GeometricEntityPool.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
-#include "FluxReconstructionMethod/FluxReconstructionSolver.hh" 
+#include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -43,8 +45,7 @@ struct SpringTrucationData{
  * This class implements a r-refinement mesh algorithm to
  * redistribute mesh points close to shocks for FR
  *
- * @authors Firas Ben Ameur
- *          Joachim Balis
+ * @author Firas Ben Ameur
  *
  */
 class MeshFittingAlgorithmFRQ2 : public Framework::DataProcessingCom {
@@ -107,6 +108,8 @@ private:
    */
   void  createNodalConnectivity();
 
+  void createNodeFaceConnectivity();
+
 
   /**
    * Find boundary nodes
@@ -138,6 +141,15 @@ private:
    * computes the spring constant between two nodes
    */
   CFreal computeSpringConstant(const Framework::Node* const firstNode, 
+                               const Framework::Node* const secondNode) ;
+
+  CFreal computeSpringConstantInnerFace(const Framework::Node* const firstNode, 
+                               const Framework::Node* const secondNode) ;
+
+  CFreal computeSpringConstantBoundaryFace(const Framework::Node* const firstNode, 
+                               const Framework::Node* const secondNode) ;
+
+  CFreal computeSpringConstantCenter(const Framework::Node* const firstNode, 
                                const Framework::Node* const secondNode) ;
   
 
@@ -215,7 +227,7 @@ private:
   /**
    * Queries if the node is inside the region 
    */
-  //bool insideRegion(Framework::Node* node);
+  bool insideRegion(Framework::Node* node);
   
   /**
    * Compute the area of a quadrilateral element 
@@ -274,12 +286,33 @@ private:
 
   void findCenterNodes();
   bool isBoundaryNode( Framework::Node* node);
-  bool isInSideCell( Framework::Node* node);
+  bool isInSideCell(const Framework::Node* node);
   void nbOfConnectedFacesToaNode();
+
+  void determineIsNodeAD();
   
+  CFuint getFaceInCommonID(const  Framework::Node* const  node1, const  Framework::Node* const node2);
+
+  RealVector findSolution(std::vector< RealVector > coeff);
+
+  CFreal determinantOfMatrix(std::vector< RealVector > mat); 
+
 private: //data
   /// the socket of the nodes connectivity for 2D quadrilatral mesh
   Common::CFMultiMap <CFuint , CFuint>  m_mapNodeNode1;
+ 
+
+  Common::CFMultiMap <CFuint , CFuint>  m_mapNodeFace1;
+
+
+  Common::CFMultiMap <CFuint , CFuint>  m_mapFaceNode1;
+
+   Common::CFMultiMap <CFuint , CFuint>  m_mapNodeTRS1;
+
+  Common::CFMultiMap <CFuint , CFuint>  m_mapNodeFaceTRS1;
+
+  /// the socket of the node-cell connectivity 
+  Common::CFMultiMap <CFuint , CFuint>  m_mapNodeCell1;
   
   /// the socket to the data handle of the nodal stiffness
   Framework::DataSocketSource < CFreal > socket_stiffness;
@@ -320,6 +353,9 @@ private: //data
   /// builder of faces
   Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
 
+    Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder1;
+
+
   // physical data array
   RealVector m_pdata;
  
@@ -357,7 +393,7 @@ private: //data
 
   /// Set of Boundary Nodes
   std::set< Framework::Node* > m_boundaryNodes;
-  std::set< Framework::Node* > m_CenterNodes;
+  std::set< CFuint > m_CenterNodes;
 
   /// Map node ID to normal vector
   std::map<CFuint, RealVector> m_mapNodeIDNormal;
@@ -384,13 +420,165 @@ private: //data
   //Simple edge graph 
   FluxReconstructionMethod::SimpleEdgeGraphFRQ2 m_edgeGraph; 
 
+  FluxReconstructionMethod::SimpleEdgeGraphFRQ2 m_edgeGraphN;
+
   std::vector< CFuint > m_nbOfNeighborCellsToaNode;
 
   std::vector< CFuint > nbOfConnectedFaces;
 
+  /// handle to the wall distance
+  Framework::DataSocketSink<CFreal> socket_wallDistance;
+
+  /// socket for size of projection vector in face flux points
+  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
+
+
+  /// socket for the wallDistance storage
+  //Framework::DataSocketSink<CFreal> socket_wallDistance;
+
+  /// socket for the node inside Region 
+  // True if node is inside region 
+  // False if the node is outside the region 
+  Framework::DataSocketSink<bool> socket_nodeisAD; 
+ 
+  Framework::DataSocketSink<CFreal> socket_nodeDistance;
+
+  /// number of face flx pnts
+  CFuint m_nbrFaceFlxPnts;
+
+  /// variable for current face
+  Framework::GeometricEntity* m_face;
+  
+  /// variable for current neighbouring cells
+  std::vector< Framework::GeometricEntity* > m_cells;
+
+
+  /// variable for the states in the left and right cell
+  std::vector< std::vector< Framework::State* >* > m_states;
+
+  /// flx pnt - face connectivity per orient
+  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
+
+  /// flx pnt - face connectivity
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
+
+  /// variable for current face orientation
+  CFuint m_orient;
+
+  /// extrapolated states in the flux points of the cell
+  std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
+
+  /// nbr of sol pnts on which a flx pnt is dependent
+  CFuint m_nbrSolDep;
+
+  /// dependencies of flx pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
+
+  /// coefs to extrapolate the states to the flx pnts
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
+    /// face connectivity per orient
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
+
+   /// number of equations in the physical model
+  CFuint m_nbrEqs;
+  
+  /// number of dimensions in the physical model
+  CFuint m_dim;
+
+  /// flux point coordinates
+  std::vector< RealVector > m_flxPntCoords;
+
+  /// face local coordinates of the flux points on one face
+  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+
+  /// the BCStateComputer for this BC
+  Common::SafePtr< BCStateComputer > m_bcStateComputer;
+
+  // flx pnt mapped coordinates
+  std::vector< RealVector > m_flxPntsLocalCoords;
+
+   /// vector for the face jacobian vectors
+  std::vector< RealVector > m_faceJacobVecs;
+
+  /// face Jacobian vector sizes
+  std::vector< CFreal > m_faceJacobVecSizeFlxPnts;
+
+  /// face Jacobian vector sizes (abs)
+  std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
+
+  /// unit normal vector in flux points
+  std::vector< RealVector > m_unitNormalFlxPnts;
+
+  // All flux points of a cell
+  Common::SafePtr<std::vector< RealVector > > m_allCellFlxPnts;
+
+  /// local cell face - mapped coordinate direction per orientation
+  Common::SafePtr< std::vector< CFint > > m_faceMappedCoordDir;
+
+  /// face Jacobian vector sizes (abs)
+  std::vector< CFreal > m_normalsAMR;
+
+  /// number of orientations of a face
+  std::vector< CFuint> m_orientsAMR;
+
+  /// variable for current cell
+  Framework::GeometricEntity* m_intCell;
+
+  // the states in the neighbouring cell
+  std::vector< Framework::State* >* m_cellStates;
+
+  /// extrapolated states in the flux points of the cell
+  std::vector< Framework::State* > m_cellStatesFlxPntBnd;
+
+  #ifdef CF_HAVE_MPI
+  /// communicator
+  MPI_Comm m_comm;
+  #endif
+
+   /// rank of this processor
+  CFuint m_myRank;
+
+  /// number for processors
+  CFuint m_nbProc;
+
+  // Hybrid spring analogy
+  CFreal m_acceptableDistanceQ2;
+
+  // ST based on the middle angle for quad meshes
+  bool  m_thetaMid;
+  bool m_interpolateState;
+  bool m_smoothSpringNetwork;
+  bool m_smoothNodalDisp;
+  RealVector oldStates;
+
+  RealVector oldCoordinates;
+
+   /// index of element type
+  CFuint m_iElemType;
+
+    /// variable for cell
+  Framework::GeometricEntity* m_cell;
+
+  std::vector< CFreal>  m_firstLeftState;
+  std::vector< CFreal>  m_secondLeftState;
+  std::vector< CFreal>  m_firstRightState;
+  std::vector< CFreal>  m_secondRightState;
+
+  std::vector< CFreal>  m_firstState;
+  std::vector< CFreal>  m_secondState;
+
+  std::vector< std::vector< Framework::State* > > m_actualStatesFlxPnt;
+
+  std::vector< Framework::State* >m_actualStatesFlxPntBnd;
+
   std::vector< RealVector > m_vecNodeCoords;
 
   RealVector m_NodeCoords;
+
+   std::vector< std::vector< Framework::State* > > m_nodalCellStates;
+
+  std::vector< CFreal > DistanceFirstNodeFlux;
+ 
 }; // end of class MeshFittingAlgorithm
       
 //////////////////////////////////////////////////////////////////////////////
@@ -402,4 +590,4 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FR_MeshFittingAlgorithmFRQ2_hh
+#endif // COOLFluiD_Numerics_FR_MeshFittingAlgorithmFR_hh
