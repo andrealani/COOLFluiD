@@ -317,7 +317,7 @@ void MeshFittingAlgorithmFRQ2Quads::setup()
   m_nbrNodesElem = m_solPolyValsAtNodes->size();
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
 
-  m_cellBuilder = m_frData->getCellBuilder();om
+  m_cellBuilder = m_frData->getCellBuilder();
   m_geoBuilder =  m_frData->getStdTrsGeoBuilder();
   m_faceBuilder = m_frData->getFaceBuilder();
 
