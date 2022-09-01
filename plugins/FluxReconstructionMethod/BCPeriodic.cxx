@@ -79,8 +79,8 @@ BCPeriodic::BCPeriodic(const std::string& name) :
 //  socket_states("states"),
 //  socket_gstates("gstates"),
 //  socket_nodes("nodes"),
-    _localConnectivityMap(),
-  _translationVector()
+  _translationVector(),
+  _localConnectivityMap()
 {
   CFAUTOTRACE;
   addConfigOptionsTo(this);
@@ -124,13 +124,18 @@ void BCPeriodic::computeGhostStates(const vector< State* >& intStates,
   faceData.facesTRS = m_thisTRS; 
   faceData.isBoundary = true;
   //CFLog(VERBOSE, "BCPeriodic - Preparing face builder.. \n");
-  
+  //cout <<"HERE 1 face id: "<< m_face->getID()<<endl;
+
   // Get the localFaceID from the map, knowing the faceGlobalID
   const CFuint faceLocalID = _globalToLocalTRSFaceID.find(m_face->getID());
 //CFLog(VERBOSE,"here3\n");
   // If we assume that all flux point of this face are connected to same face at the other side, we
   // can do this outside the flux points loop
+  //cout <<"HERE 2 "<<endl;
+
   const CFuint otherFaceLocalID = _faceConnectivityMap[faceLocalID*nbrStates];
+  //cout <<"HERE 3 "<<endl;
+
  //CFLog(VERBOSE,"here3.1\n");
   //CFLog(VERBOSE, "BCPeriodic - We are studying face "<<m_face->getID()<<" with faceLocalID "<<faceLocalID<<" linked to "<<otherFaceLocalID<<"\n");
   // If we take this assumption further, we could store the _faceConnectivityMap only for the faces,
@@ -204,7 +209,7 @@ void BCPeriodic::computeGhostStates(const vector< State* >& intStates,
        (*ghostStates[iState])[i]= (*intStates[iState])[i] - 2.0*vn*normals[iState][jxx]/area2;
        jxx++;
      }
-     // if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
+     // if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(VERBOSE, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
    }
    
    //CFLog(DEBUG_MAX, "Periodic::setGhostState() => ghostState = " << *ghostState << "\n"); 
@@ -257,7 +262,7 @@ void BCPeriodic::computeGhostStates(const vector< State* >& intStates,
   _faceBuilder->releaseGE();
   
   }
- CFLog(VERBOSE,"else here 7\n");
+//  CFLog(VERBOSE,"End here\n");
 
 
 }
@@ -277,15 +282,15 @@ void BCPeriodic::computeGhostGradients
  const std::vector< RealVector >& coords)
 {
 
-  CFLog(INFO, "BCPeriodic - Computing ghost gradients.. CAUTION! This has not been tested yet!\n");
+  //CFLog(VERBOSE, "BCPeriodic - Computing ghost gradients.. CAUTION! This has not been tested yet!\n");
   SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
 
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
   const CFuint nbrGradVars = intGrads[0].size();
   const CFuint nbrStateGrads = intGrads.size();
   const CFuint nbrStates = m_cellStates->size();
-  cf_assert(nbrStates == ghostGrads.size());
-  cf_assert(nbrStates == normals.size());
+  cf_assert(nbrStateGrads == ghostGrads.size());
+  cf_assert(nbrStateGrads == normals.size());
 
   // we prepare the face builder
   FaceToCellGEBuilder::GeoData& faceData = _faceBuilder->getDataGE();
@@ -293,9 +298,10 @@ void BCPeriodic::computeGhostGradients
   faceData.facesTRS = m_thisTRS; //store both references as protecteed values
   faceData.isBoundary = true;
   //CFLog(VERBOSE, "BCPeriodic - (grads) Preparing face builder.. \n");
-
+//cout <<"HERE 1 "<<endl;
   // Get the localFaceID from the map, knowing the faceGlobalID
   const CFuint faceLocalID = _globalToLocalTRSFaceID.find(m_face->getID());
+//cout <<"HERE 2 "<<endl;
 
   // If we assume that all flux point of this face are connected to same face at the other side, we
   // can do this outside the flux points loop
@@ -359,6 +365,7 @@ void BCPeriodic::computeGhostGradients
   _faceBuilder->releaseGE();
  // CFLog(VERBOSE, "BCPeriodic - (grads) Computing BC at FlxPnt END \n");
 
+//cout <<"HERE 3 "<<endl;
 
 
 /*
@@ -458,11 +465,11 @@ void BCPeriodic::createFaceOrientationStartIndexes()
 {
   CFAUTOTRACE;
    MPI_Barrier(_comm);//the processing of a an individual processor is paused temporarily till all the processors compute till some certain values
-  CFLog(INFO,"here\n");
+  //CFLog(VERBOSE,"here\n");
   MPI_Allgather(&nbGeoEnts, 1, MPIStructDef::getMPIType(&nbGeoEnts), 
 	&_nbFacesPerProcess[0], 1, MPIStructDef::getMPIType(&nbGeoEnts), _comm);
 
-  CFLog(INFO, "\n\n createFaceOrientationStartIndexes() \n\n");
+  CFLog(VERBOSE, "\n\n createFaceOrientationStartIndexes() \n\n");
 
   // START INDEXES FOR INNER CFGeoEnt::CELLS
   // get the face start indexes
@@ -537,6 +544,7 @@ void BCPeriodic::createFaceOrientationStartIndexes()
       ++iBndTRS;
     } 
   }
+
 }
 
 
@@ -555,14 +563,14 @@ void BCPeriodic::setup()
   setParameter("Threshold",&_threshold);
   setParameter("TranslationVector",&_translationVector);
 */
-  CFLog(INFO, "BCPeriodic::setup 1 \n");
 
 
   // setup of the parent class
   BCStateComputer::setup();
   
   // no flux point coordinates required
-  m_needsSpatCoord = false;
+  // Set this to false once the BC is working
+  m_needsSpatCoord = false;// true; //
   
   _faceBuilder = getMethodData().getSecondFaceBuilder();
   
@@ -571,13 +579,13 @@ void BCPeriodic::setup()
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   cf_assert(frLocalData.size() > 0);
-  CFLog(INFO, "BCPeriodic::setup 2 \n");
+  CFLog(VERBOSE, "BCPeriodic::setup 2 \n");
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = m_flxLocalCoords->size();
   m_dim   = PhysicalModelStack::getActive()->getDim();
-CFLog(INFO, "BCPeriodic::here 1 \n");
+CFLog(VERBOSE, "BCPeriodic::here 1 \n");
 
   // get the face - flx pnt connectivity per orient (ConvBnd) 
   m_faceFlxPntConn = frLocalData[0]->getFaceFlxPntConn();
@@ -586,19 +594,19 @@ CFLog(INFO, "BCPeriodic::here 1 \n");
   m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
 
   m_nbrSolDep = ((*m_flxSolDep)[0]).size();
-CFLog(INFO, "BCPeriodic::here 2 \n");
+CFLog(VERBOSE, "BCPeriodic::here 2 \n");
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_flxPntCoords[iFlx].resize(m_dim);
   }
-  CFLog(INFO, "BCPeriodic::setup 3 - "<<m_dim<<" "<<m_nbrFaceFlxPnts<<"\n");
+  CFLog(VERBOSE, "BCPeriodic::setup 3 - "<<m_dim<<" "<<m_nbrFaceFlxPnts<<"\n");
 
   //from ConvBnd to include in preProcess done for parallelization (Copying from FV)
   
   m_faceBuilder = getMethodData().getFaceBuilder();
   
-  //CFLog(INFO,"here 1");
+  //CFLog(VERBOSE,"here 1");
   // create internal and ghost states
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -607,14 +615,14 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
   }
 
   // set an ID as initialization
-  //CFLog(INFO,"here 2");
+  //CFLog(VERBOSE,"here 2");
    
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     
     m_cellStatesFlxPnt[iFlx]->setLocalID(iFlx);
   }
-  //CFLog(INFO,"here 3");
+  //CFLog(VERBOSE,"here 3");
   
   m_flxPntsLocalCoords.resize(m_nbrFaceFlxPnts);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
@@ -623,7 +631,7 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
     
   }
   
-  //CFLog(INFO,"here 4");
+  //CFLog(VERBOSE,"here 4");
   // get all flux points of a cell
   m_allCellFlxPnts = frLocalData[0]->getFlxPntsLocalCoords();
   
@@ -645,7 +653,7 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
   }
 //till here
   
-  //CFLog(INFO,"here 5");
+  //CFLog(VERBOSE,"here 5");
   /* Check if translation vector has right dimension */
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   cf_assert(_translationVector.size()==dim);
@@ -653,12 +661,12 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
   /* Convert std::vector<CFreal> to RealVector version */
   RealVector translationVector(dim);
   RealVector backTranslationVector(dim);
-  CFLog(INFO, "BCPeriodic::setup 4 dim "<<dim<<" \n");
+  CFLog(VERBOSE, "BCPeriodic::setup 4 dim "<<dim<<" \n");
   for(CFuint iDim=0; iDim<dim; ++iDim) {
     translationVector[iDim] = _translationVector[iDim];
     backTranslationVector[iDim] = -translationVector[iDim];
   }
-  CFLog(INFO, " ==> translationVector = " << translationVector << " \n");
+  CFLog(VERBOSE, " ==> translationVector = " << translationVector << " \n");
 
   // get TRS list
   vector< SafePtr< TopologicalRegionSet > > trsList = MeshDataStack::getActive()->getTrsList();
@@ -674,10 +682,10 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
   const CFuint nbTRSs = trsList.size();
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
   {
-    CFLog(INFO, "iTRS "<< iTRS << " \n");
+    CFLog(VERBOSE, "iTRS "<< iTRS << " \n");
     if (m_trsNames[0]==trsList[iTRS]->getName() ){
        m_thisTRS = trsList[iTRS];
-       CFLog(INFO, "Matching BC "<<m_trsNames[0]<<" with "<<m_thisTRS->getName() << "\n");
+       CFLog(VERBOSE, "Matching BC "<<m_trsNames[0]<<" with "<<m_thisTRS->getName() << "\n");
     }
    /*
     for (CFuint iBCTRS = 0; iBCTRS < nbrBCTRSs; ++iBCTRS)
@@ -696,7 +704,7 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
     }
    */
   }
-  CFLog(INFO,"End of TRS loop \n");
+  CFLog(VERBOSE,"End of TRS loop \n");
 
   // Loop over the boundary TRS
   //for (CFuint iBCTRS=0; iBCTRS < nbrBCTRSs; iBCTRS++){
@@ -719,7 +727,7 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
 
      // We get the number of faces in this TRS
   nbGeoEnts = m_thisTRS->getLocalNbGeoEnts();  //getNbTRs();
-  CFLog(INFO, "BCPeriodic::setup 5 nbGeoEnts - "<<nbGeoEnts<<"\n");
+  CFLog(VERBOSE, "BCPeriodic::setup 5 nbGeoEnts - "<<nbGeoEnts<<"\n");
      // We get the number of equations
   NbEqs = PhysicalModelStack::getActive()->getNbEq();
 
@@ -733,7 +741,7 @@ CFLog(INFO, "BCPeriodic::here 2 \n");
   std::vector<FlxPntStruct> eastFaces;
   eastFaces.reserve(nbGeoEnts); // oversized to avoid frequent memory reallocation
 
-  CFLog(INFO, "BCPeriodic::setup 5.1\n");
+  CFLog(VERBOSE, "BCPeriodic::setup 5.1\n");
   //_localWestEastMap.reserve(nbGeoEnts);
 
   RealVector faceNormal(dim);
@@ -748,30 +756,30 @@ createFaceOrientationStartIndexes();
       bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
     vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[m_thisTRS->getName()];
 
-  //CFLog(INFO, "BCPeriodic::setup 5.2 - "<<bndFacesStartIdxsPerTRS<<"\n");
+  //CFLog(VERBOSE, "BCPeriodic::setup 5.2 - "<<bndFacesStartIdxsPerTRS<<"\n");
   cf_assert(bndFacesStartIdxs.size() != 0);
-  const CFuint nbOrients = 4;//bndFacesStartIdxs[0].size()-1; 
-  CFLog(INFO, "BCPeriodic::setup 5.3\n");
+  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;//4;// 
+  CFLog(VERBOSE, "BCPeriodic::setup 5.3\n");
   const CFuint nbTRs = m_thisTRS->getNbTRs();
-  CFLog(INFO, "BCPeriodic::setup 5.4\n");
+  CFLog(VERBOSE, "BCPeriodic::setup 5.4\n");
   // loop over TRs
   CFuint localFaceID = 0;
   bool isFirstOrientation = true;
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
-    CFLog(INFO, "BCPeriodic::setup 6 - nbTRs "<< nbTRs << "\n");
+    CFLog(VERBOSE, "BCPeriodic::setup 6 - nbTRs "<< nbTRs << "\n");
     for (m_orient = 0; m_orient < nbOrients; ++m_orient){
        // start and stop index of the faces with this orientation
        const CFuint startFaceIdx = bndFacesStartIdxs[iTR][m_orient  ];
        const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][m_orient+1];
 
-       CFLog(INFO, "startFaceIdx "<<startFaceIdx<<"/ stopFaceIdx "<<stopFaceIdx<<" with orientation "<<m_orient<<"\n");
+       CFLog(VERBOSE, "startFaceIdx "<<startFaceIdx<<"/ stopFaceIdx "<<stopFaceIdx<<" with orientation "<<m_orient<<"\n");
        // loop over faces with this orientation
        for (CFuint iFace = startFaceIdx; iFace < stopFaceIdx; ++iFace){
 
   //   for (CFuint iFace = 0; iFace<nbTRs; iFace++){
     
-          //CFLog(INFO, "BCPeriodic::setup 6.0 - "<<iFace<<"\n");
+          //CFLog(VERBOSE, "BCPeriodic::setup 6.0 - "<<iFace<<"\n");
           /* Face setup */
           faceData.idx = iFace;
           GeometricEntity *const face = _faceBuilder->buildGE();
@@ -804,13 +812,13 @@ createFaceOrientationStartIndexes();
          m_faceJacobVecs = face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
          
          
-         //CFLog(INFO,"here I am\n");
+         //CFLog(VERBOSE,"here I am\n");
          // get face Jacobian vector sizes in the flux points
          DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
-         //CFLog(INFO," size of faceJacobVecSizeFaceFlxPnts = "<<faceJacobVecSizeFaceFlxPnts.size()<<"\n");
+         //CFLog(VERBOSE," size of faceJacobVecSizeFaceFlxPnts = "<<faceJacobVecSizeFaceFlxPnts.size()<<"\n");
           for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
           {
-           //  CFLog(INFO,"here I am 2\n");
+           //  CFLog(VERBOSE,"here I am 2\n");
 
              /* Load this flux point in a structure */
              thisFlxPnt.setCentreCoordinates(m_flxPntCoords[iFlx]);
@@ -818,7 +826,7 @@ createFaceOrientationStartIndexes();
              thisFlxPnt.setLocalFaceID(localFaceID);
              thisFlxPnt.setLocalFluxID(iFlx);
              thisFlxPnt.setOrient(m_orient);
-             //CFLog(INFO,"here I am 3\n");
+             //CFLog(VERBOSE,"here I am 3\n");
              //IA: How to get access to normals in setup of the BC with FR? Can I also use sockets?
              //  In that case, the normals are stored for each face or flux point?
              //
@@ -836,7 +844,7 @@ createFaceOrientationStartIndexes();
              for(CFuint iDim=0; iDim<dim; ++iDim) {
                 faceNormal[iDim]=normals[startID+iDim];
              }
-             CFLog(INFO, "normal "<<faceNormal<<" --- Vector "<<translationVector<<"\n");
+             CFLog(VERBOSE, "normal "<<faceNormal<<" --- Vector "<<translationVector<<"\n");
              CFreal proj = MathTools::MathFunctions::innerProd(translationVector, faceNormal);
              if (proj > 0) {
                 eastFaces.push_back(thisFlxPnt);
@@ -858,18 +866,18 @@ createFaceOrientationStartIndexes();
              else{
              
                  // get face Jacobian vector size
-               //  CFLog(INFO,"here I am 2\n");
-                 //CFLog(INFO,"size of m_faceJacobVecAbsSizeFlxPnts = "<< m_faceJacobVecAbsSizeFlxPnts.size()<<" size of faceJacobVecSizeFaceFlxPnts = "<<faceJacobVecSizeFaceFlxPnts.size()<<" faceGlobalID = "<<faceGlobalID<<" iFlx = "<<iFlx<<"\n");
+               //  CFLog(VERBOSE,"here I am 2\n");
+                 //CFLog(VERBOSE,"size of m_faceJacobVecAbsSizeFlxPnts = "<< m_faceJacobVecAbsSizeFlxPnts.size()<<" size of faceJacobVecSizeFaceFlxPnts = "<<faceJacobVecSizeFaceFlxPnts.size()<<" faceGlobalID = "<<faceGlobalID<<" iFlx = "<<iFlx<<"\n");
     m_faceJacobVecAbsSizeFlxPnts[iFlx] = faceJacobVecSizeFaceFlxPnts[faceGlobalID][iFlx];
-    //CFLog(INFO,"here I am 4\n");
+    //CFLog(VERBOSE,"here I am 4\n");
     // set face Jacobian vector size with sign depending on mapped coordinate direction
     m_faceJacobVecSizeFlxPnts[iFlx] = m_faceJacobVecAbsSizeFlxPnts[iFlx]*(*m_faceMappedCoordDir)[m_orient];
-    //CFLog(INFO,"here I am 5\n");
+    //CFLog(VERBOSE,"here I am 5\n");
     // set unit normal vector
     m_unitNormalFlxPnts[iFlx] = m_faceJacobVecs[iFlx]/m_faceJacobVecAbsSizeFlxPnts[iFlx];
-      //       CFLog(INFO,"here I am 6\n");
+      //       CFLog(VERBOSE,"here I am 6\n");
     CFreal proj = MathTools::MathFunctions::innerProd(translationVector, m_unitNormalFlxPnts[iFlx]);
-    //CFLog(INFO,"here I am 7\n");
+    //CFLog(VERBOSE,"here I am 7\n");
              if (proj>0){
                 eastFaces.push_back(thisFlxPnt);
              }else if(proj < 0){
@@ -888,7 +896,7 @@ createFaceOrientationStartIndexes();
   } // End of the TR loop
   //_localWestEastMap.sortKeys();
       
-  CFLog(INFO, "BCPeriodic::setup 6.2\n");
+  CFLog(VERBOSE, "BCPeriodic::setup 6.2\n");
 
     //IA: Now we should have classified the flux points of the TRS in west and east types
     // Now we have to match them using the user-defined translation vector.
@@ -908,13 +916,13 @@ createFaceOrientationStartIndexes();
     
 
 
- CFLog(INFO,"here6.2.1");
+ CFLog(VERBOSE,"here6.2.1");
   CFuint nbWestFaces = westFaces.size();
   CFuint nbEastFaces = eastFaces.size();
-  CFLog(INFO,"here6.2.1");
+  CFLog(VERBOSE,"here6.2.1");
   std::vector<CFuint> nbWestFacesPerProcess(_nbProcesses,0);
   std::vector<CFuint> nbEastFacesPerProcess(_nbProcesses,0);
-  CFLog(INFO,"here6.2.2");
+  CFLog(VERBOSE,"here6.2.2");
   MPI_Allgather(&nbWestFaces, 1, MPIStructDef::getMPIType(&nbWestFaces), 
 	&nbWestFacesPerProcess[0], 1, MPIStructDef::getMPIType(&nbWestFaces), _comm);
   MPI_Allgather(&nbEastFaces, 1, MPIStructDef::getMPIType(&nbEastFaces), 
@@ -922,28 +930,28 @@ createFaceOrientationStartIndexes();
   
   CFuint totalNbWestFaces = 0;
   CFuint totalNbEastFaces = 0;
-  CFLog(INFO,"here6.2.3");
+  CFLog(VERBOSE,"here6.2.3");
   if (_nbProcesses > 1) {
-    CFLog(INFO, " ==> number of west faces on each processor: \n");
+    CFLog(VERBOSE, " ==> number of west faces on each processor: \n");
     for(CFuint iP=0; iP<_nbProcesses; ++iP) {
-      CFLog(INFO, "     "<<iP<<" --> " << nbWestFacesPerProcess[iP] << " \n");
+      CFLog(VERBOSE, "     "<<iP<<" --> " << nbWestFacesPerProcess[iP] << " \n");
       totalNbWestFaces += nbWestFacesPerProcess[iP];
     }
-    CFLog(INFO, "     sum = " << totalNbWestFaces << " \n");
-    CFLog(INFO, " ==> number of east faces on each processor: \n");
+    CFLog(VERBOSE, "     sum = " << totalNbWestFaces << " \n");
+    CFLog(VERBOSE, " ==> number of east faces on each processor: \n");
     for(CFuint iP=0; iP<_nbProcesses; ++iP) {
-      CFLog(INFO, "     "<<iP<<" --> " << nbEastFacesPerProcess[iP] << " \n");
+      CFLog(VERBOSE, "     "<<iP<<" --> " << nbEastFacesPerProcess[iP] << " \n");
       totalNbEastFaces += nbEastFacesPerProcess[iP];
     }
-    CFLog(INFO, "     sum = " << totalNbEastFaces << " \n");
+    CFLog(VERBOSE, "     sum = " << totalNbEastFaces << " \n");
   }
   else{
-    CFLog(INFO, " ==> number of west faces: " << nbWestFaces << " \n");
-    CFLog(INFO, " ==> number of east faces: " << nbEastFaces << " \n");
+    CFLog(VERBOSE, " ==> number of west faces: " << nbWestFaces << " \n");
+    CFLog(VERBOSE, " ==> number of east faces: " << nbEastFaces << " \n");
   }
 /* Definition of MPI struct */
   FaceMPIStruct faceMPIStruct;
- // CFLog(INFO, "nbWestFaces " << nbWestFaces << " nbEastFaces " << nbEastFaces << "\n");
+ // CFLog(VERBOSE, "nbWestFaces " << nbWestFaces << " nbEastFaces " << nbEastFaces << "\n");
   _faceConnectivityMap.resize(nbGeoEnts*m_nbrFaceFlxPnts);
   _fluxPointConnectivityMap.resize(nbGeoEnts*m_nbrFaceFlxPnts);
   _orientMap.resize(nbGeoEnts*m_nbrFaceFlxPnts);
@@ -976,7 +984,7 @@ createFaceOrientationStartIndexes();
      if (found != eastFaces.end()) {
         //if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
         //_localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,westFace.getLocalFaceID()));
-        CFLog(INFO, "a - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
+        CFLog(VERBOSE, "a - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
         _faceConnectivityMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getLocalFaceID();
         _fluxPointConnectivityMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getLocalFluxID();
         _orientMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getOrient();
@@ -984,7 +992,7 @@ createFaceOrientationStartIndexes();
      }else{
         std::vector<FlxPntStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,backTranslationVector,_threshold));
         if (found != eastFaces.end()) {
-           CFLog(INFO, "b - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
+           CFLog(VERBOSE, "b - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
            _faceConnectivityMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getLocalFaceID();
            _fluxPointConnectivityMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getLocalFluxID();
            _orientMap[westFace.getLocalFaceID()*m_nbrFaceFlxPnts + westFace.getLocalFluxID()] = found->getOrient();
@@ -1011,7 +1019,7 @@ createFaceOrientationStartIndexes();
      if (found != westFaces.end()) {
         //if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
         //_localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()));
-        CFLog(INFO, "a - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
+        CFLog(VERBOSE, "a - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
         _faceConnectivityMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getLocalFaceID();
         _fluxPointConnectivityMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getLocalFluxID();
         _orientMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getOrient();
@@ -1021,7 +1029,7 @@ createFaceOrientationStartIndexes();
         if (found != westFaces.end()) {
            //if (_localConnectivityMap[found->getLocalFaceID()].size() == 0)   matches++;
            //_localConnectivityMap[found->getLocalFaceID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()));
-           CFLog(INFO, "b - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
+           CFLog(VERBOSE, "b - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
            _faceConnectivityMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getLocalFaceID();
            _fluxPointConnectivityMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getLocalFluxID();
            _orientMap[eastFace.getLocalFaceID()*m_nbrFaceFlxPnts + eastFace.getLocalFluxID()] = found->getOrient();
@@ -1165,15 +1173,15 @@ createFaceOrientationStartIndexes();
 	/* Find eastFace corresponding to this westFace */
 	std::vector<FlxPntStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,translationVector,_threshold));
 	if (found != eastFaces.end()) {
-          CFLog(INFO, "a - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");  
+          CFLog(VERBOSE, "a - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
 	  if (_localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].size() == 0)   matches++;
 	  _localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].push_back(PairStruct(iP,westFace.getLocalFaceID()*m_nbrFaceFlxPnts+westFace.getLocalFluxID()));
-          CFLog(INFO,"found local face id = "<<found->getLocalFaceID()<<" westFace local Face id = "<<westFace.getLocalFaceID()<<"\n");
-          //CFLog(INFO,"coordintes of found = ")
+          CFLog(VERBOSE,"found local face id = "<<found->getLocalFaceID()<<" westFace local Face id = "<<westFace.getLocalFaceID()<<"\n");
+          //CFLog(VERBOSE,"coordintes of found = ")
 	}else{
              std::vector<FlxPntStruct>::iterator found = std::find_if(eastFaces.begin(), eastFaces.end(), findTranslated(westFace,backTranslationVector,_threshold));
              if (found != eastFaces.end()) {
-          CFLog(INFO, "b - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");  
+          CFLog(VERBOSE, "b - westFace "<<westFace.getGlobalFaceID()<<" has been matched with east "<<found->getGlobalFaceID()<<"\n");
 	  if (_localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].size() == 0)   matches++;
 	  _localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].push_back(PairStruct(iP,westFace.getLocalFaceID()*m_nbrFaceFlxPnts+westFace.getLocalFluxID()));
 	}
@@ -1183,20 +1191,20 @@ createFaceOrientationStartIndexes();
       /* Find eastFace connectivity */
       const CFuint nbE = nbEastFacesPerProcess[iP];
       for(CFuint iFace=0; iFace<nbE; iFace++) {
-	//CFLog(INFO,"iD = "<<displsE[iP] + iFace <<"\n");
+	//CFLog(VERBOSE,"iD = "<<displsE[iP] + iFace <<"\n");
 	FlxPntStruct eastFace = totalEastFaces[displsE[iP] + iFace]; 
 	
 	/* Find westFace corresponding to this eastFace */
 	std::vector<FlxPntStruct>::iterator found = std::find_if(westFaces.begin(), westFaces.end(), findTranslated(eastFace,backTranslationVector,_threshold));
 	if (found != westFaces.end()) {
-          CFLog(INFO, "a - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");  
+          CFLog(VERBOSE, "a - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
 	  if (_localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].size() == 0)   matches++;
 	  _localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()*m_nbrFaceFlxPnts+eastFace.getLocalFluxID()));
-          CFLog(INFO,"found local face id = "<<found->getLocalFaceID()<<" eastFace local Face id = "<<eastFace.getLocalFaceID()<<"\n");
+          CFLog(VERBOSE,"found local face id = "<<found->getLocalFaceID()<<" eastFace local Face id = "<<eastFace.getLocalFaceID()<<"\n");
 	}else{
             std::vector<FlxPntStruct>::iterator found = std::find_if(westFaces.begin(), westFaces.end(), findTranslated(eastFace,translationVector,_threshold));
 	if (found != westFaces.end()) {
-          CFLog(INFO, "b - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");  
+          CFLog(VERBOSE, "b - eastFace "<<eastFace.getGlobalFaceID()<<" has been matched with west "<<found->getGlobalFaceID()<<"\n");
 	  if (_localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].size() == 0)   matches++;
 	  _localConnectivityMap[found->getLocalFaceID()*m_nbrFaceFlxPnts+found->getLocalFluxID()].push_back(PairStruct(iP,eastFace.getLocalFaceID()*m_nbrFaceFlxPnts+eastFace.getLocalFluxID()));
 	}
@@ -1207,16 +1215,16 @@ createFaceOrientationStartIndexes();
     MPI_Barrier(_comm);    
   }
   
- // CFLog(INFO,"BCPeriodic::setup() => step 3 took " << stp.read() << "s\n");
+ // CFLog(VERBOSE,"BCPeriodic::setup() => step 3 took " << stp.read() << "s\n");
   
   if(matches!=m_nbrFaceFlxPnts*nbGeoEnts)
-    CFLog(INFO, "Only " << matches << "/"<< m_nbrFaceFlxPnts*nbGeoEnts << " matches found. Wrong TranslationVector or try increasing Threshold \n");  
+    CFLog(VERBOSE, "Only " << matches << "/"<< m_nbrFaceFlxPnts*nbGeoEnts << " matches found. Wrong TranslationVector or try increasing Threshold \n");
   
   CFLog(VERBOSE, "BCPeriodic::setup() => end\n");
 
 
-   CFLog(INFO, "matches "<<matches<<"\n");
-   CFLog(INFO, "END BCPeriodic::setup \n");
+   CFLog(VERBOSE, "matches "<<matches<<"\n");
+   CFLog(VERBOSE, "END BCPeriodic::setup \n");
 
 }
 
@@ -1232,12 +1240,12 @@ void BCPeriodic::setupMPI()
   _periodicState = new Framework::State;
   _periodicState->resize(NbEqs);
 //_periodicState->resize(_nE);
-  CFLog(INFO,"_nbFacesPerProcess = "<<_nbFacesPerProcess[1]<<"\n");
+  CFLog(VERBOSE,"_nbFacesPerProcess = "<<_nbFacesPerProcess[1]<<"\n");
   MPI_Barrier(_comm);//the processing of a an individual processor is paused temporarily till all the processors compute till some certain values
-  CFLog(INFO,"here\n");
+  CFLog(VERBOSE,"here\n");
   MPI_Allgather(&nbGeoEnts, 1, MPIStructDef::getMPIType(&nbGeoEnts), 
 	&_nbFacesPerProcess[0], 1, MPIStructDef::getMPIType(&nbGeoEnts), _comm);//gathers data from all processors
-CFLog(INFO,"_nbFacesPerProcess = "<<_nbFacesPerProcess[1]<<"\n");
+CFLog(VERBOSE,"_nbFacesPerProcess = "<<_nbFacesPerProcess[1]<<"\n");
   //MPI_Allgather(&_nbTrsFaces, 1, MPIStructDef::getMPIType(&_nbTrsFaces), 
 	//&_nbFacesPerProcess[0], 1, MPIStructDef::getMPIType(&_nbTrsFaces), _comm);//gathers data from all processors
 
