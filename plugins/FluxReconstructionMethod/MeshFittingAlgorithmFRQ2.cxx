@@ -60,7 +60,7 @@ namespace COOLFluiD {
 MethodCommandProvider<MeshFittingAlgorithmFRQ2, 
 		      DataProcessingData,
 		      FluxReconstructionModule>
-MeshFittingAlgorithmQ2FRFluxReconstructionProvider("MeshFittingAlgorithmFRQ2");
+MeshFittingAlgorithmFRQ2FluxReconstructionProvider("MeshFittingAlgorithmFRQ2");
 
 ///////////////////////////////////////////////////////////////////
 
