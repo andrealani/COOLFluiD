@@ -38,12 +38,12 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
 {
   addConfigOptionsTo(this);
 
-  _gravity = 0; 
+  // _gravity = 0; 
   setParameter("gravity",&_gravity);
   setParameter("PevtsovHeating",&_PevtsovHeating);
   setParameter("PevtsovHeatingFactor",&_PevtsovHeatingFactor);
 
-  _Manchester = 0;
+  //_Manchester = 0;
   setParameter("Manchester",&_Manchester);
   setParameter("ManchesterHeatingAmplitude",&_ManchesterHeatingAmplitude);
   setParameter("ManchesterSigma",&_ManchesterSigma);
@@ -54,7 +54,7 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   setParameter("Viscosity",&_Viscosity);
   setParameter("Resistivity",&_Resistivity);
   
-  _RadiativeLossTerm = 0;
+  //_RadiativeLossTerm = 0;
   setParameter("RadiativeLossTerm",&_RadiativeLossTerm);
 
   
@@ -125,7 +125,6 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
 
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
- 
   for (CFuint i = 0; i < (nbEqs-1); ++i) {
     source[i] = 0.0;
   }
@@ -147,6 +146,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   }
 
   //std::cout << "SOURCE TERM" << endl;
+
   //std::cout << "ST activated" << endl;
   CFreal RSun = 6.9551e8; // m
   CFreal x = currState->getCoordinates()[XX]*RSun;
@@ -321,9 +321,16 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
 	source[1] += (*currState)[0]*gx*volumes[elementID];
 	source[2] += (*currState)[0]*gy*volumes[elementID];
 	source[3] += (*currState)[0]*gz*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx; //*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy; //*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz; //*volumes[elementID];
+
+    CFreal gtot = std::sqrt(gx*gx+gy*gy+gz*gz);
+	//socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx*volumes[elementID]; // comment out *vol... to print the force density
+	//socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy*volumes[elementID];
+	//socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz*volumes[elementID];
+
+	socket_gravity.getDataHandle()[elementID*4]   = gtot; // Just a test
+	socket_gravity.getDataHandle()[elementID*4+1] = gtot*volumes[elementID];
+	socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gtot;
+    socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*gtot*volumes[elementID]; // remove vol...
       }
       
       source[4] = 0.0;
@@ -340,7 +347,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       if (_gravity == 1){
         source[7] += (*currState)[0]*Vdotg*volumes[elementID];
 	
-	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg; //*volumes[elementID];
+	
       }
       
       if (_Manchester == 1) {

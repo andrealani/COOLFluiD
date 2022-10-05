@@ -79,6 +79,9 @@ private: //data
   /// physical model data
   RealVector _dataGhostState;
 
+  /// flag telling if the treatment for coronal BC is applied
+  bool _coronalBC; 
+
 }; // end of class SuperOutletMHD3DProjection
 
 //////////////////////////////////////////////////////////////////////////////
