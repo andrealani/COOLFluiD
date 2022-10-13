@@ -89,7 +89,10 @@ private: //data
   CFint _pressure_Neumann;
   CFint _JensRhoIni;
   CFint _JensPIni;
-  
+  CFreal _pBC;
+  CFreal _rhoBC;
+  CFreal _VrBC;  
+  CFint _rotation;
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;
   
