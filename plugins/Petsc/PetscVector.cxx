@@ -81,7 +81,7 @@ void PetscVector::initialize(MPI_Comm comm,
   PetscBool flg;
   
   // AL: this needs to be checked for PETSC 3.6.3
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
   flg = PETSC_FALSE;
 #else
   CF_CHKERRCONTINUE( PetscOptionsHasName(PETSC_NULL,"-random_exact_sol",&flg) );

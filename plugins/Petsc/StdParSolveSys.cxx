@@ -114,7 +114,7 @@ stopTimer.start();
   }
  
   // reuse te preconditioner
-#if PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
+#if PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
   PetscBool reusePC = ((nbIter-1)%getMethodData().getPreconditionerRate() == 0) ?
      PETSC_FALSE : PETSC_TRUE;
   CFLog(VERBOSE, "StdParSolveSys::execute() => reusePC [" << reusePC <<"]\n");
@@ -123,7 +123,7 @@ stopTimer.start();
   CHKERRCONTINUE(PCSetReusePreconditioner(pc,reusePC));
 #endif
  
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
   CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
 #else
   CFuint ierr = KSPSetOperators
@@ -141,7 +141,7 @@ stopTimer.start();
   ierr = KSPSetUp(ksp);
   CHKERRCONTINUE(ierr);
 
-#if PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
+#if PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
   if (getMethodData().getPCType()==PCBJACOBI && getMethodData().useGPU()) {
     PetscInt its,nlocal,first;
     KSP* subksp;

@@ -71,7 +71,7 @@ void TwoLayerSeqSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
   
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
   CFuint ierr = KSPSetOperators(ksp, mat.getMat(), mat.getMat());
 #else
   CFuint ierr = KSPSetOperators(ksp,
