@@ -2,8 +2,8 @@ module load CMake/3.20.1-GCCcore-10.3.0
 module load Boost/1.76.0-GCC-10.3.0
 module load ParMETIS/4.0.3-gompi-2021a
 
-export TOP_DIR="${VSC_SCRATCH_PROJECTS_BASE}/starting_2022_028/bperri/COCONUT/"
-export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Hortense"
+export TOP_DIR="/readonly${VSC_SCRATCH_PROJECTS_BASE}/starting_2022_028/bperri/COCONUT"
+export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Hortense_2021a"
 
 export BUILD_MODE=optim
 export CONF_FILE="COOLFluid_Hortense_nocuda.conf"
