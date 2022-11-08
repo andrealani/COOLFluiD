@@ -90,7 +90,7 @@ void ParMFSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
   
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==18
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==15 || PETSC_VERSION_MINOR==18
   CFuint ierr = KSPSetOperators(ksp, jfMat.getMat(), precMat.getMat());
 #else
   // once you use a Petsc matrix as preconditioner matrix, you can choose standard preconditioners from Petsc 

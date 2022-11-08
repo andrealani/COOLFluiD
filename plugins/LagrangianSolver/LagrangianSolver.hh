@@ -228,13 +228,13 @@ void LagrangianSolver<UserData,PARTICLE_TRACKING>::setupParticleDatatype(MPI_Dat
     MPI_Datatype typeList[2] = {commonDataType.type, ptrUserDatatype};
     
     displacements[0] =0;
-    MPI_Address(&particle.commonData, &start_address);
+    MPI_Get_address(&particle.commonData, &start_address);
 
-    MPI_Address(&particle.userData, &address);
+    MPI_Get_address(&particle.userData, &address);
     displacements[1] = address - start_address;
 
     //create derived datatype
-    MPI_Type_struct(2, block_lengths, displacements, typeList, &m_particleDataType);
+    MPI_Type_create_struct(2, block_lengths, displacements, typeList, &m_particleDataType);
 
     // commit new datatype
     MPI_Type_commit( &m_particleDataType );

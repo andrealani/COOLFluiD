@@ -22,9 +22,9 @@ if [ -z "$2" ] ; then
 fi
 
 module purge
-module load CMake/3.16.4-GCCcore-9.3.0
-module load Boost/1.72.0-gompi-2020a
-module load ParMETIS/4.0.3-gompi-2020a
+module load CMake/3.20.1-GCCcore-10.3.0
+module load Boost/1.76.0-GCC-10.3.0
+module load ParMETIS/4.0.3-gompi-2021a
 
 #export TOP_DIR="${VSC_SCRATCH}"
 export TOP_DIR="${VSC_SCRATCH_PROJECTS_BASE}/starting_2022_028/bperri/COCONUT/"
@@ -42,25 +42,25 @@ if [ "$1" == "DEBUG_CUDA" ] ; then
 # with debugging
 export BUILD_MODE=geniuscuda
 export CONF_FILE="COOLFluid_Genius_debug.conf"
-module load PETSc/3.12.4-foss-2020a-Python-3.8.2
+module load PETSc/3.15.1-foss-2021a
 
 elif [ "$1" == "OPTIM_CUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=geniuscudafast
 export CONF_FILE="COOLFluid_Genius_optim.conf"
-module load PETSc/3.12.4-foss-2020a-Python-3.8.2
+module load PETSc/3.15.1-foss-2021a
 
 elif [ "$1" == "DEBUG_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=optim
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
-module load PETSc/3.12.4-foss-2020a-Python-3.8.2
+module load PETSc/3.15.1-foss-2021a
 
 elif [ "$1" == "OPTIM_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=release
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
-module load PETSc/3.12.4-foss-2020a-Python-3.8.2
+module load PETSc/3.15.1-foss-2021a
 
 
 fi
