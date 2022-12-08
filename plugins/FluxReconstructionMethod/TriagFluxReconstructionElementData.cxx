@@ -393,12 +393,12 @@ TriagFluxReconstructionElementData::TriagFluxReconstructionElementData(CFPolyOrd
 
         case CFPolyOrder::ORDER8:
       {
-                        coords[0][0] = 0.0000000000000;
-                        coords[0][1] = 1.0000000000000; 
-                        coords[1][0] = 1.0000000000000;
-                        coords[1][1] = 0.0000000000000; 
-                        coords[2][0] = 0.0000000000000;
-                        coords[2][1] = 0.0000000000000;
+                        coords[0][0] = 0.0000000000001;
+                        coords[0][1] = 0.9999999999999; 
+                        coords[1][0] = 0.9999999999999;
+                        coords[1][1] = 0.0000000000001; 
+                        coords[2][0] = 0.0000000000001;
+                        coords[2][1] = 0.0000000000001;
                         coords[3][0] = 0.0573330873026;
                         coords[3][1] = 0.0151382269814;
                         coords[4][0] = 0.0573330873026;
@@ -486,12 +486,12 @@ TriagFluxReconstructionElementData::TriagFluxReconstructionElementData(CFPolyOrd
       } break;
           case CFPolyOrder::ORDER9:
       {
-                        coords[0][0] = 1.0000000000000;
-                        coords[0][1] = 0.0000000000000; 
-                        coords[1][0] = 0.0000000000000;
-                        coords[1][1] = 1.0000000000000; 
-                        coords[2][0] = 0.0000000000000;
-                        coords[2][1] = 0.0000000000000;
+                        coords[0][0] = 0.9999999999999;
+                        coords[0][1] = 0.0000000000001; 
+                        coords[1][0] = 0.0000000000001;
+                        coords[1][1] = 0.9999999999999; 
+                        coords[2][0] = 0.0000000000001;
+                        coords[2][1] = 0.0000000000001;
                         coords[3][0] = 0.9398863583577;
                         coords[3][1] = 0.0049848744634;
                         coords[4][0] =0.0543806683058;
@@ -1092,12 +1092,12 @@ switch(polyOrder)
 
         case CFPolyOrder::ORDER8:
       {
-                        coords[0][0] = 0.0000000000000;
-                        coords[0][1] = 1.0000000000000; 
-                        coords[1][0] = 1.0000000000000;
-                        coords[1][1] = 0.0000000000000; 
-                        coords[2][0] = 0.0000000000000;
-                        coords[2][1] = 0.0000000000000;
+                        coords[0][0] = 0.0000000000001;
+                        coords[0][1] = 0.9999999999999; 
+                        coords[1][0] = 0.9999999999999;
+                        coords[1][1] = 0.0000000000001; 
+                        coords[2][0] = 0.0000000000001;
+                        coords[2][1] = 0.0000000000001;
                         coords[3][0] = 0.0573330873026;
                         coords[3][1] = 0.0151382269814;
                         coords[4][0] = 0.0573330873026;
@@ -1185,12 +1185,12 @@ switch(polyOrder)
       } break;
           case CFPolyOrder::ORDER9:
       {
-                        coords[0][0] = 1.0000000000000;
-                        coords[0][1] = 0.0000000000000; 
-                        coords[1][0] = 0.0000000000000;
-                        coords[1][1] = 1.0000000000000; 
-                        coords[2][0] = 0.0000000000000;
-                        coords[2][1] = 0.0000000000000;
+                        coords[0][0] = 0.9999999999999;
+                        coords[0][1] = 0.0000000000001; 
+                        coords[1][0] = 0.0000000000001;
+                        coords[1][1] = 0.9999999999999; 
+                        coords[2][0] = 0.0000000000001;
+                        coords[2][1] = 0.0000000000001;
                         coords[3][0] = 0.9398863583577;
                         coords[3][1] = 0.0049848744634;
                         coords[4][0] =0.0543806683058;
@@ -2196,7 +2196,7 @@ void TriagFluxReconstructionElementData::createFluxPntFluxDim()
           m_cellAvgSolCoefs[6] = 0.112098412070887;
           m_cellAvgSolCoefs[7] = 0.112098412070887;
           m_cellAvgSolCoefs[8] = 0.112098412070887;
-          m_cellAvgSolCoefs[9] = 0.112098412070887;
+          m_cellAvgSolCoefs[9] = 0.201542988584730;
           
         } break;
         case CFPolyOrder::ORDER4:
@@ -2245,6 +2245,41 @@ void TriagFluxReconstructionElementData::createFluxPntFluxDim()
         } break;
         case CFPolyOrder::ORDER6:
         {
+          m_cellAvgSolCoefs[0] = 0.083608212215637;
+
+          m_cellAvgSolCoefs[1] = 0.005272170280495;
+          m_cellAvgSolCoefs[2] = 0.005272170280495;
+          m_cellAvgSolCoefs[3] = 0.005272170280495;
+
+          m_cellAvgSolCoefs[4] = 0.044552936679504;
+          m_cellAvgSolCoefs[5] = 0.044552936679504;
+          m_cellAvgSolCoefs[6] = 0.044552936679504;
+
+          m_cellAvgSolCoefs[7] = 0.033815712804198;
+          m_cellAvgSolCoefs[8] = 0.033815712804198;
+          m_cellAvgSolCoefs[9] = 0.033815712804198;
+
+          m_cellAvgSolCoefs[10] = 0.015710461340183;
+          m_cellAvgSolCoefs[11] = 0.015710461340183;
+          m_cellAvgSolCoefs[12] = 0.015710461340183;
+          m_cellAvgSolCoefs[13] = 0.015710461340183;
+          m_cellAvgSolCoefs[14] = 0.015710461340183;
+          m_cellAvgSolCoefs[15] = 0.015710461340183;
+
+          m_cellAvgSolCoefs[16] = 0.028205136280616;
+          m_cellAvgSolCoefs[17] = 0.028205136280616;
+          m_cellAvgSolCoefs[18] = 0.028205136280616;
+          m_cellAvgSolCoefs[19] = 0.028205136280616;
+          m_cellAvgSolCoefs[20] = 0.028205136280616;
+          m_cellAvgSolCoefs[21] = 0.028205136280616;
+
+
+          m_cellAvgSolCoefs[22] = 0.066995957127830;
+          m_cellAvgSolCoefs[23] = 0.066995957127830;
+          m_cellAvgSolCoefs[24] = 0.066995957127830;
+          m_cellAvgSolCoefs[25] = 0.066995957127830;
+          m_cellAvgSolCoefs[26] = 0.066995957127830;
+          m_cellAvgSolCoefs[27] = 0.066995957127830;
 
         } break;
         case CFPolyOrder::ORDER7:
