@@ -3622,10 +3622,18 @@ if (m_dim == 2)
   }
   else if (m_dim == 3)
   {
-    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-    {
-      temp(idx,idx) = 1.0;
+    if (m_ndimplus==4){  //if Tetra
+      for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
     }
+    else{
+       for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }  
   }
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

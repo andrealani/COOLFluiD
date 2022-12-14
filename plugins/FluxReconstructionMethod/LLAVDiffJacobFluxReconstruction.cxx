@@ -485,13 +485,13 @@ void LLAVDiffJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >&
     prepareFluxComputation();
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
        DiffRHSJacobFluxReconstruction::computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
     }
     
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     { 
       for (CFuint iDim2 = 0; iDim2 < m_dim; ++iDim2)
       {
@@ -531,7 +531,7 @@ void LLAVDiffJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >&
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -784,7 +784,7 @@ void LLAVDiffJacobFluxReconstruction::computeUnpertCellDiffResiduals()
     }
 
     // create a list of the dimensions in which the deriv will be calculated
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_cellFluxProjVects[iDim] = m_cells[iSide]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
     }
@@ -896,7 +896,7 @@ void LLAVDiffJacobFluxReconstruction::computePertCellDiffResiduals(const CFuint 
   }
   
   // create a list of the dimensions in which the deriv will be calculated
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_cellFluxProjVects[iDim] = m_cells[side]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
   }

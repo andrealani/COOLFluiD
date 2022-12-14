@@ -837,11 +837,11 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
   {
     const CFuint solID = (*(m_states[side]))[iState]->getLocalID();
       
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       for (CFuint jDim = 0; jDim < m_dim; ++jDim)
       {
-        m_cellFluxProjVects[iDim][iState][jDim] = solPntNormals[solID*m_dim*m_dim+iDim*m_dim+jDim];
+        m_cellFluxProjVects[iDim][iState][jDim] = solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+iDim*m_dim+jDim];
       }
     }
   }
@@ -893,7 +893,7 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
     prepareFluxComputation();
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       // add diffusive part 
       computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlxWoLLAV[iSolPnt][iDim]);
@@ -985,7 +985,7 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
@@ -1124,7 +1124,7 @@ void ConvDiffLLAVFluxReconstruction::computeGradients()
         for (CFuint jDir = 0; jDir < m_dim; ++jDir)
         {
 	  // project the state on a normal and reuse a RealVector variable of the class to store
-	  m_projectedCorrL[jDir] = ((*(*m_cellStates)[iSolPnt])[iEq]) * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
+	  m_projectedCorrL[jDir] = ((*(*m_cellStates)[iSolPnt])[iEq]) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDir+m_ndimplus)*m_dim+jDir];
         }
 	
         // Loop over solution pnts to count factor of all sol pnt polys
@@ -1546,8 +1546,8 @@ void ConvDiffLLAVFluxReconstruction::setup()
     temp = 0.0;
     m_statesPMinOne.push_back(temp);
     
-    m_contFlxWoLLAV[iSol].resize(m_dim);
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    m_contFlxWoLLAV[iSol].resize(m_dim+m_ndimplus);
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       m_contFlxWoLLAV[iSol][iDim].resize(m_nbrEqs);
     }
@@ -1575,17 +1575,33 @@ void ConvDiffLLAVFluxReconstruction::setup()
   temp = 0.0;
   if (m_dim == 2)
   {
-    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-    {
-      temp(idx,idx) = 1.0;
+    if (m_ndimplus==3){  //if Triag
+      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
     }
+    else{
+      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }  
   }
   else if (m_dim == 3)
   {
-    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-    {
-      temp(idx,idx) = 1.0;
+    if (m_ndimplus==4){  //if Tetra
+      for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
     }
+    else{
+       for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }  
   }
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

@@ -407,7 +407,7 @@ void LLAVDiffFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resi
     m_avgSol = *((*m_cellStates)[iSolPnt]->getData());
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       // add diff part
       computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
@@ -452,7 +452,7 @@ void LLAVDiffFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resi
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
 	}
       }
     }
