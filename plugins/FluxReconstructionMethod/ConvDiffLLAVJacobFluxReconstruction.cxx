@@ -523,7 +523,7 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
             {
               for (CFuint jDim = 0; jDim < m_dim; ++jDim)
               {
-                m_neighbCellFluxProjVects[iSide][iDim][iSol][jDim] = solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDim*m_ndimplus)*m_dim+jDim];
+                m_neighbCellFluxProjVects[iSide][iDim][iSol][jDim] = solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDim+m_ndimplus)*m_dim+jDim];
               }
             }
           }
