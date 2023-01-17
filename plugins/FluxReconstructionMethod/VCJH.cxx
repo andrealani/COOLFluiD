@@ -317,6 +317,31 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
         }
         break;
       }
+      case CFGeoShape::TETRA:
+      {	
+      	CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+        const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();	
+        std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+        cf_assert(corrfct.size() == nbrSolPnts);
+
+        CFuint iFlx;
+        RealMatrix phi;
+        phi.resize(4,(solOrder+1)*(solOrder+2)/2);
+        phi=0.;
+        for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+        {
+          iFlx = 0;
+          phi=computeTetraDivCorrFct(solOrder, m_cfactor, solPntsLocalCoord[iSol][0], solPntsLocalCoord[iSol][1], solPntsLocalCoord[iSol][2]);
+          for (CFuint f = 0; f < 4; ++f)
+          {
+            for (CFuint j = 0; j < (solOrder+1)*(solOrder+2)/2; ++j, ++iFlx)
+            {
+              corrfct[iSol][iFlx] = phi(f,j);
+            }
+          }
+        }
+        break;	
+      }
       default:
       {
         throw Common::NotImplementedException (FromHere(),"Divergence of VCJH Correction Functions not implemented for elements of type "
@@ -426,7 +451,7 @@ CFreal VCJH::computeDerivativeCorrectionFunction1D(CFPolyOrder::Type solOrder, C
 }
 
 //////////////////////////////////////////////////////////////////////////////
-RealVector VCJH::computeIntRHS(const CFPolyOrder::Type solOrder, CFuint f, CFuint j)
+RealVector VCJH::computeIntRHSTriag(const CFPolyOrder::Type solOrder, CFuint f, CFuint j)
 {
   const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
 
@@ -610,17 +635,174 @@ RealVector VCJH::computeIntRHS(const CFPolyOrder::Type solOrder, CFuint f, CFuin
   eta[1]=(flux_points[j]+1.)/2.;
   eta[2]=(-flux_points[j]+1.)/2.;
 
-  dubasis=computeDubiner(solOrder,ksi[f],eta[f]);
+  dubasis=computeDubiner2D(solOrder,ksi[f],eta[f]);
 
   for (CFuint i = 0; i < nbrSolPnts; ++i)            
     {
-      rhs[i]  = dubasis[i]*weights[j]*G[f]; //computeDubiner(P,ksi,eta) in which we define a=f(ksi,eta) b=f(ksi,eta)
+      rhs[i]  = dubasis[i]*weights[j]*G[f]; //computeDubiner2D(P,ksi,eta) in which we define a=f(ksi,eta) b=f(ksi,eta)
     }
 
   return rhs;
 }
+
 //////////////////////////////////////////////////////////////////////////////
-RealVector VCJH::computeDubiner(const CFPolyOrder::Type solOrder,CFreal ksi, CFreal eta)
+RealVector VCJH::computeIntRHSTetra(const CFPolyOrder::Type solOrder, CFuint f, CFuint j)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)*(solOrder+3)/6; 
+
+  std::vector< RealVector > flux_points;
+  RealVector rhs, weights;
+  RealVector G, ksi, eta, zta;
+  RealVector dubasis;
+
+  flux_points.resize((solOrder+1)*(solOrder+2)/2);
+  for (CFuint i=0; i<(solOrder+1)*(solOrder+2)/2  ; ++i)
+  {
+    flux_points[i].resize(2);
+  }
+
+  weights.resize((solOrder+1)*(solOrder+2)/2);
+  dubasis.resize(nbrSolPnts);
+  rhs.resize(nbrSolPnts);
+  G.resize(4);
+  ksi.resize(4);
+  eta.resize(4);
+  zta.resize(4);
+
+
+  switch(solOrder)
+    {
+      case 0:
+      {
+        flux_points[0][0]=0.333333333333333;
+        flux_points[0][1]=0.333333333333333;
+        weights[0]=1.0;
+      } break;
+      case 1:
+      {
+        flux_points[0][0]=0.1666666666667;
+        flux_points[0][1]=0.1666666666667;
+        weights[0]=0.333333333333333;
+        flux_points[1][0]=0.6666666666667;
+        flux_points[1][1]=0.1666666666667;
+        weights[1]=0.333333333333333;
+        flux_points[2][0]=0.1666666666667;
+        flux_points[2][1]=0.6666666666667;
+        weights[2]=0.333333333333333;
+      } break;
+      case 2:
+      {
+        flux_points[0][0]=0.091576213509780;
+        flux_points[0][1]=0.091576213509780;
+        weights[0]=0.109951743655333;
+        flux_points[1][0]=0.445948490915964;
+        flux_points[1][1]=0.108103018168071;
+        weights[1]=0.223381589678000;
+        flux_points[2][0]=0.816847572980440;
+        flux_points[2][1]=0.091576213509780;
+        weights[2]=0.109951743655333;
+        flux_points[3][0]=0.108103018168071;
+        flux_points[3][1]=0.445948490915964;
+        weights[3]=0.223381589678000;
+        flux_points[4][0]=0.445948490915964;
+        flux_points[4][1]=0.445948490915964;
+        weights[4]=0.223381589678000;
+        flux_points[5][0]=0.091576213509780;
+        flux_points[5][1]=0.816847572980440;
+        weights[5]=0.109951743655333;
+      } break;
+      case 3:
+      {
+        flux_points[0][0]=0.055564052669793;
+        flux_points[0][1]=0.055564052669793;
+
+        flux_points[1][0]=0.295533711735893;
+        flux_points[1][1]=0.070255540518384;
+
+        flux_points[2][0]=0.634210747745723;
+        flux_points[2][1]=0.070255540518384;
+
+        flux_points[3][0]=0.888871894660413;
+        flux_points[3][1]=0.055564052669793;
+
+        flux_points[4][0]=0.070255540518384;
+        flux_points[4][1]=0.295533711735893;
+
+        flux_points[5][0]=0.333333333333333;
+        flux_points[5][1]=0.333333333333333;
+
+        flux_points[6][0]=0.634210747745723;
+        flux_points[6][1]=0.295533711735893;
+
+        flux_points[7][0]=0.070255540518384;
+        flux_points[7][1]=0.634210747745723;
+
+        flux_points[8][0]=0.295533711735893;
+        flux_points[8][1]=0.634210747745723;
+
+        flux_points[9][0]=0.055564052669793;
+        flux_points[9][1]=0.888871894660413; 
+
+        weights[1]=0.112098412070887;
+        weights[2]=0.112098412070887;
+        weights[3]=0.041955512996649;
+        weights[4]=0.112098412070887;
+        weights[5]=0.201542988584730;
+        weights[6]=0.112098412070887;
+        weights[7]=0.112098412070887;
+        weights[8]=0.112098412070887;
+        weights[9]=0.041955512996649;
+      } break;
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"VCJH Correction Functions not implemented for this order "
+                                               + StringOps::to_str(solOrder) + ".");
+      }
+    }
+
+  //G[0]=0.5;
+  //G[1]=0.5;
+  //G[2]=0.5;
+  //G[3]=sqrt(3.)/2.;
+
+  G[0]=1.;
+  G[1]=1.;
+  G[2]=sqrt(3.);
+  G[3]=1.;
+
+
+/*Param =   [ x         y      0;                   
+            x            0       y;
+           0             x      y;      swapped
+            1-x-y        x      y];     swapped   */
+
+  ksi[0]= flux_points[j][KSI];
+  ksi[1]= flux_points[j][ETA];
+  ksi[2]= 1.-flux_points[j][KSI]-flux_points[j][ETA];
+  ksi[3]= 0.;
+
+  eta[0]= flux_points[j][ETA];
+  eta[1]= 0.;
+  eta[2]= flux_points[j][ETA];
+  eta[3]= flux_points[j][KSI];
+
+  zta[0]= 0.;
+  zta[1]= flux_points[j][KSI];
+  zta[2]= flux_points[j][KSI];
+  zta[3]= flux_points[j][ETA];
+
+  dubasis=computeDubiner3D(solOrder,ksi[f],eta[f],zta[f]);
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)            
+    {
+      rhs[i]  = dubasis[i]*weights[j]*G[f]; //computeDubiner3D(P,ksi,eta,zta) in which we define a=f(ksi,eta,zta) b=f(ksi,eta,zta) c=f(ksi,eta,zta)
+    }
+
+  return rhs;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+RealVector VCJH::computeDubiner2D(const CFPolyOrder::Type solOrder,CFreal ksi, CFreal eta)
 {
   const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
 
@@ -666,6 +848,60 @@ RealVector VCJH::computeDubiner(const CFPolyOrder::Type solOrder,CFreal ksi, CFr
 }
 
 //////////////////////////////////////////////////////////////////////////////
+RealVector VCJH::computeDubiner3D(const CFPolyOrder::Type solOrder,CFreal ksi, CFreal eta, CFreal zta)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)*(solOrder+3)/6; 
+
+  RealVector mat_u, mat_v, mat_w, Qau, Qbv, Qcw, dubasis;
+  CFuint k;
+  CFreal A, B, C;
+  Qau.resize(nbrSolPnts+1);
+  Qbv.resize(nbrSolPnts+1);
+  Qcw.resize(nbrSolPnts+1);
+  mat_u.resize(nbrSolPnts+1);
+  mat_v.resize(nbrSolPnts+1);
+  mat_w.resize(nbrSolPnts+1);
+  dubasis.resize(nbrSolPnts);
+
+  //setup
+  for (CFuint w = 0; w < solOrder+1; ++w)
+  {
+    for (CFuint v = 0; v < solOrder+1; ++v)
+    {
+      for (CFuint u = 0; u < solOrder+1; ++u)
+      {
+        if ((w+v+u) <= solOrder)
+        {
+          k=std::round(1.+(11.+12.*solOrder+3.*pow(solOrder,2.))*u/6.+(2.*solOrder+3.)*v/2.+w-((2.+solOrder)*(pow(u,2.))/2.)-u*v-(pow(v,2.))/2.+(pow(u,3.))/6.);
+          mat_u[k]=u;
+          mat_v[k]=v;
+          mat_w[k]=w;
+        }
+      }
+    }
+  }
+
+  A = ((2.*ksi)/(1.-eta-zta))-1.;
+  B = ((2.*eta)/(1.-zta))-1.;
+  C = (2.*zta)-1.;
+
+  //normalized nth order Jacobi polynomials
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      Qau[i] = ComputeJacobi(mat_u[i+1],  0.,  0. , A);
+      Qbv[i] = ComputeJacobi(mat_v[i+1],  2.*mat_u[i+1] +1.,  0. , B);
+      Qcw[i] = ComputeJacobi(mat_w[i+1],  2.*mat_u[i+1] +2.*mat_v[i+1] +2.,  0. , C);
+    }
+  //the 2D orthonormal dubinner formula
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      dubasis[i] = Qau[i]*Qbv[i]*pow((1-B), mat_u[i+1])*Qcw[i]*pow((1-C), mat_u[i+1]+mat_v[i+1])*sqrt(8.)*0.25;
+    }
+  return dubasis;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 CFreal VCJH::ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x)
 {
   // Evaluate Jacobi Polynomial (normalized to be orthonormal) of type (alpha,beta) > -1
@@ -698,7 +934,7 @@ CFreal VCJH::ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x)
   return PL[N];
 }
 //////////////////////////////////////////////////////////////////////////////
-RealVector VCJH::computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint j, CFreal ksi, CFreal eta, CFreal cfactor)
+RealVector VCJH::computeSigmasTriag(const CFPolyOrder::Type solOrder,CFuint f, CFuint j, CFreal ksi, CFreal eta, CFreal cfactor)
 {
   const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
   RealMatrix L, LInv;
@@ -709,7 +945,7 @@ RealVector VCJH::computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint
   sigmas.resize(nbrSolPnts);
   LInv=0.;
   sigmas=0.;
-  L=computeLhs(solOrder, ksi,eta);
+  L=computeLhsTriag(solOrder, ksi,eta);
 
   //L = cfactor*lhs + I;
 
@@ -722,7 +958,7 @@ RealVector VCJH::computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint
       L(i,i) += 1.;
     }
   
-  R=computeIntRHS(solOrder, f, j);
+  R=computeIntRHSTriag(solOrder, f, j);
   InvertMatrix(L,LInv);
   //sigmas=LInv*R;
   for (CFuint i = 0; i < nbrSolPnts; ++i)
@@ -738,7 +974,47 @@ RealVector VCJH::computeSigmas(const CFPolyOrder::Type solOrder,CFuint f, CFuint
 }
 
 //////////////////////////////////////////////////////////////////////////////
-RealMatrix VCJH::computeLhs(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal eta)
+RealVector VCJH::computeSigmasTetra(const CFPolyOrder::Type solOrder,CFuint f, CFuint j, CFreal ksi, CFreal eta, CFreal zta, CFreal cfactor)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)*(solOrder+3)/6; 
+  RealMatrix L, LInv;
+  RealVector R, sigmas;
+  L.resize(nbrSolPnts,nbrSolPnts);
+  LInv.resize(nbrSolPnts,nbrSolPnts);
+  R.resize(nbrSolPnts);
+  sigmas.resize(nbrSolPnts);
+  LInv=0.;
+  sigmas=0.;
+  L=computeLhsTetra(solOrder);
+
+  //L = cfactor*lhs + I;
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+    {
+      for (CFuint j = 0; j < nbrSolPnts; ++j)
+      {
+        L(i,j)= cfactor*L(i,j);
+      }
+      L(i,i) += 1.;
+    }
+  
+  R=computeIntRHSTetra(solOrder, f, j);
+  InvertMatrix(L,LInv);
+
+  for (CFuint i = 0; i < nbrSolPnts; ++i)
+  {
+    sigmas[i]=0.;
+    for (CFuint j = 0; j < nbrSolPnts; ++j)
+    {
+      sigmas[i]= sigmas[i] + LInv(i,j)*R[j];
+    }
+  }
+
+  return sigmas;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+RealMatrix VCJH::computeLhsTriag(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal eta)
 {
   const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)/2; 
   RealMatrix lhs;
@@ -917,7 +1193,7 @@ RealMatrix VCJH::computeLhs(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal
           lhs(27,26)=5321361946360.8;
           lhs(27,27)=4347585333000;
         } break;
-        case 7:
+	case 7:
         {
           lhs(7,7)=262965142440000;
           lhs(7,14)=354253656808852;
@@ -992,7 +1268,182 @@ RealMatrix VCJH::computeLhs(const CFPolyOrder::Type solOrder, CFreal ksi, CFreal
         } break;
         default:
         {
-            throw Common::NotImplementedException (FromHere(),"computeLhs Correction Function not implemented for order " + StringOps::to_str(solOrder) + ".");
+            throw Common::NotImplementedException (FromHere(),"computeLhsTriag Correction Function not implemented for order " + StringOps::to_str(solOrder) + ".");
+        }
+    }
+  return lhs;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+RealMatrix VCJH::computeLhsTetra(const CFPolyOrder::Type solOrder)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)*(solOrder+3)/6; 
+  RealMatrix lhs;
+  lhs.resize(nbrSolPnts,nbrSolPnts);
+  lhs=0.;
+  switch(solOrder)
+    {
+        case 0:
+        {
+          lhs(0,0)=0.046875;
+        } break;
+        case 1:
+        {
+          lhs(1,1)=1.25;
+          lhs(1,2)=0.44194;
+          lhs(1,3)=0.76547;
+          lhs(2,1)=0.44194;
+          lhs(2,2)=1.5625;
+          lhs(2,3)=1.0825;
+          lhs(3,1)=0.76547;
+          lhs(3,2)=1.0825;
+          lhs(3,3)=2.8125;
+        } break;
+        case 2:
+        {
+          lhs(2,2)=98.4375;
+          lhs(2,4)=55.6847;
+          lhs(2,5)=11.3666;
+          lhs(2,7)=96.4487;
+          lhs(2,8)=19.6875;
+          lhs(2,9)=25.4165;
+          lhs(4,2)=55.6847;
+          lhs(4,4)=173.25;
+          lhs(4,5)=83.5888;
+          lhs(4,7)=136.399;
+          lhs(4,8)=111.3693;
+          lhs(4,9)=57.5109;
+          lhs(5,2)=11.3666;
+          lhs(5,4)=83.5888;
+          lhs(5,5)=174.5625;
+          lhs(5,7)=55.6847;
+          lhs(5,8)=170.4988;
+          lhs(5,9)=55.7619;
+          lhs(7,2)=96.4487;
+          lhs(7,4)=136.399;
+          lhs(7,5)=55.6847;
+          lhs(7,7)=330.75;
+          lhs(7,8)=115.7384;
+          lhs(7,9)=199.2235;
+          lhs(8,2)=19.6875;
+          lhs(8,4)=111.3693;
+          lhs(8,5)=170.4988;
+          lhs(8,7)=115.7384;
+          lhs(8,8)=378;
+          lhs(8,9)=243.998;
+          lhs(9,2)=25.4165;
+          lhs(9,4)=57.5109;
+          lhs(9,5)=55.7619;
+          lhs(9,7)=199.2235;
+          lhs(9,8)=243.998;
+          lhs(9,9)=498.75;
+        } break;
+        case 3:
+        {
+          lhs(3,3)=15876;
+          lhs(3,6)=11226.0273;
+          lhs(3,8)=3928.2912;
+          lhs(3,9)=567;
+          lhs(3,12)=19444.0496;
+          lhs(3,14)=6804;
+          lhs(3,15)=982.0728;
+          lhs(3,17)=8783.9262;
+          lhs(3,18)=1267.8505;
+          lhs(3,19)=1500.141;
+          lhs(6,3)=11226.0273;
+          lhs(6,6)=31752;
+          lhs(6,8)=24999.4923;
+          lhs(6,9)=6414.8727;
+          lhs(6,12)=27498.0386;
+          lhs(6,14)=33678.0818;
+          lhs(6,15)=9722.0248;
+          lhs(6,17)=18633.5214;
+          lhs(6,18)=8965.0572;
+          lhs(6,19)=4243.0395;
+          lhs(8,3)=3928.2912;
+          lhs(8,6)=24999.4923;
+          lhs(8,8)=54108;
+          lhs(8,9)=26796.558;
+          lhs(8,12)=17640.9;
+          lhs(8,14)=56679.6306;
+          lhs(8,15)=35397;
+          lhs(8,17)=21010.0947;
+          lhs(8,18)=23528.3738;
+          lhs(8,19)=7052.584;
+          lhs(9,3)=567;
+          lhs(9,6)=6414.8727;
+          lhs(9,8)=26796.558;
+          lhs(9,9)=40014;
+          lhs(9,12)=4166.5821;
+          lhs(9,14)=25758;
+          lhs(9,15)=45455.9414;
+          lhs(9,17)=8156.5029;
+          lhs(9,18)=23364.6743;
+          lhs(9,19)=5143.3405;
+          lhs(12,3)=19444.0496;
+          lhs(12,6)=27498.0386;
+          lhs(12,8)=17640.9;
+          lhs(12,9)=4166.5821;
+          lhs(12,12)=63504;
+          lhs(12,14)=36110.3778;
+          lhs(12,15)=8018.5909;
+          lhs(12,17)=60962.3887;
+          lhs(12,18)=12422.3476;
+          lhs(12,19)=18372.8999;
+          lhs(14,3)=6804;
+          lhs(14,6)=33678.0818;
+          lhs(14,8)=56679.6306;
+          lhs(14,9)=25758;
+          lhs(14,12)=36110.3778;
+          lhs(14,14)=114696;
+          lhs(14,15)=51909.5627;
+          lhs(14,17)=77800.4895;
+          lhs(14,18)=69550.6584;
+          lhs(14,19)=38575.0541;
+          lhs(15,3)=982.0728;
+          lhs(15,6)=9722.0248;
+          lhs(15,8)=35397;
+          lhs(15,9)=45455.9414;
+          lhs(15,12)=8018.5909;
+          lhs(15,14)=51909.5627;
+          lhs(15,15)=93960;
+          lhs(15,17)=26443.7399;
+          lhs(15,18)=89094.1089;
+          lhs(15,19)=31551.0337;
+          lhs(17,3)=8783.9262;
+          lhs(17,6)=18633.5214;
+          lhs(17,8)=21010.0947;
+          lhs(17,9)=8156.5029;
+          lhs(17,12)=60962.3887;
+          lhs(17,14)=77800.4895;
+          lhs(17,15)=26443.7399;
+          lhs(17,17)=158760;
+          lhs(17,18)=58924.3685;
+          lhs(17,19)=92960.3373;
+          lhs(18,3)=1267.8505;
+          lhs(18,6)=8965.0572;
+          lhs(18,8)=23528.3738;
+          lhs(18,9)=23364.6743;
+          lhs(18,12)=12422.3476;
+          lhs(18,14)=69550.6584;
+          lhs(18,15)=89094.1089;
+          lhs(18,17)=58924.3685;
+          lhs(18,18)=175770;
+          lhs(18,19)=107341.3516;
+          lhs(19,3)=1500.141;
+          lhs(19,6)=4243.0395;
+          lhs(19,8)=7052.584;
+          lhs(19,9)=5143.3405;
+          lhs(19,12)=18372.8999;
+          lhs(19,14)=38575.0541;
+          lhs(19,15)=31551.0337;
+          lhs(19,17)=92960.3373;
+          lhs(19,18)=107341.3516;
+          lhs(19,19)=170100;
+        } break;
+        default:
+        {
+            throw Common::NotImplementedException (FromHere(),"computeLhsTetra Correction Function not implemented for order " + StringOps::to_str(solOrder) + ".");
         }
     }
   return lhs;
@@ -1012,32 +1463,48 @@ RealMatrix VCJH::computeTriagDivCorrFct(const CFPolyOrder::Type solOrder, CFreal
   dubasis.resize(nbrSolPnts);
   sigmas.resize(nbrSolPnts);
   phi.resize(3,solOrder+1);
-  dubasis=computeDubiner(solOrder,ksi,eta);
+  dubasis=computeDubiner2D(solOrder,ksi,eta);
   for (CFuint f = 0; f < 3; ++f)
     {
 			for (CFuint j = 0; j < solOrder+1; ++j)
       {
-       /* if (f==0) {
-          sigmas=computeSigmas(solOrder,2, 2-j, eta,ksi, cfactor);
-          dubasis=computeDubiner(solOrder,eta,ksi);
-          for (CFuint k = 0; k < nbrSolPnts; ++k)
-          {
-            phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
-          }
-        }*/
-        //else
-        {
-          sigmas=computeSigmas(solOrder,f, j, ksi,eta, cfactor);
-            dubasis=computeDubiner(solOrder,ksi,eta);
+        sigmas=computeSigmasTriag(solOrder,f, j, ksi,eta, cfactor);
+        dubasis=computeDubiner2D(solOrder,ksi,eta);
 
-          for (CFuint k = 0; k < nbrSolPnts; ++k)
-          {
-            phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
-          }
-        }
+        for (CFuint k = 0; k < nbrSolPnts; ++k)
+        {
+          phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
+        }        
       }
     }
   return (phi*16*4);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+RealMatrix VCJH::computeTetraDivCorrFct(const CFPolyOrder::Type solOrder, CFreal cfactor, CFreal ksi, CFreal eta, CFreal zta)
+{
+  const CFuint nbrSolPnts = (solOrder+1)*(solOrder+2)*(solOrder+3)/6; 
+  RealVector dubasis, sigmas;
+  RealMatrix  phi;
+  dubasis.resize(nbrSolPnts);
+  sigmas.resize(nbrSolPnts);
+  phi.resize(4,(solOrder+1)*(solOrder+2)/2);
+  dubasis=computeDubiner3D(solOrder,ksi,eta,zta);
+  for (CFuint f = 0; f < 4; ++f)
+    {
+			for (CFuint j = 0; j < (solOrder+1)*(solOrder+2)/2; ++j)
+      {
+        sigmas=computeSigmasTetra(solOrder,f, j, ksi, eta, zta, cfactor);
+        dubasis=computeDubiner3D(solOrder,ksi,eta,zta);
+
+        for (CFuint k = 0; k < nbrSolPnts; ++k)
+        {
+          phi(f,j)=phi(f,j) + sigmas[k]*dubasis[k];
+        }
+
+      }
+    }
+  return (phi*16*8);
 }
 
 //////////////////////////////////////////////////////////////////////////////

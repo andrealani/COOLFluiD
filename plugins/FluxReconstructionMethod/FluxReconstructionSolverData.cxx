@@ -17,6 +17,7 @@
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TetraFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
@@ -421,7 +422,7 @@ void FluxReconstructionSolverData::createFRLocalData()
       } break;
       case CFGeoShape::TETRA:
       {
-        throw Common::NotImplementedException (FromHere(),"FR has not been implemented for tetrahedral cells");
+        m_frLocalData[iElemType] = new TetraFluxReconstructionElementData(polyOrder,getSolPntDistribution(),getFluxPntDistribution());      
       } break;
       case CFGeoShape::HEXA:
       {

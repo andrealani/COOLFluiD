@@ -224,7 +224,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
     State& pertState = *(*m_cellStates)[m_pertSol];
     
     // Loop over flux points to determine which flx pnts are influenced by the pert
-    if (elemShape == CFGeoShape::TRIAG)
+    if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA)
     {
       m_influencedFlxPnt = 0;
       m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;

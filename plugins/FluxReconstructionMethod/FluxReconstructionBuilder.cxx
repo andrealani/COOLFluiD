@@ -21,6 +21,7 @@
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TetraFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBuilder.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
@@ -776,6 +777,10 @@ vector< vector < vector < CFuint > > > FluxReconstructionBuilder::getNodeConnPer
     {
       frElemData = new TriagFluxReconstructionElementData(CFPolyOrder::ORDER0);
     } break;
+    case CFGeoShape::TETRA:
+    {
+      frElemData = new TetraFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
     default:
     {
       throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
@@ -815,6 +820,10 @@ vector < vector < CFuint > > FluxReconstructionBuilder::getFaceConnPerOrientatio
     case CFGeoShape::TRIAG:
     {
       frElemData = new TriagFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
+    case CFGeoShape::TETRA:
+    {
+      frElemData = new TetraFluxReconstructionElementData(CFPolyOrder::ORDER0);
     } break;
     default:
     {
@@ -1346,6 +1355,10 @@ vector< vector < CFuint > > FluxReconstructionBuilder::getBFaceOrientations(cons
     {
       frElemData = new TriagFluxReconstructionElementData(CFPolyOrder::ORDER0);
     } break;
+    case CFGeoShape::TETRA:
+    {
+      frElemData = new TetraFluxReconstructionElementData(CFPolyOrder::ORDER0);
+    } break;
     default:
     {
       throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape...");
@@ -1607,10 +1620,10 @@ void FluxReconstructionBuilder::reorderBoundaryFacesTRS()
             // (this has to be done outside the if, in case the order of the nodes has to be altered)
             const CFuint nbNodes = m_faceNodeElement[cellType]->nbCols(iOrient); // iOrient == local face ID (in a cell)
             for (CFuint iNode = 0; iNode < nbNodes; ++iNode)
-            {
-              (*bFaceNodeConn)(iBFace,iNode) = (*bFaceNodeConn)(faceIdx,iNode);
+            {              
+              (*bFaceNodeConn)(iBFace,iNode) = (*bFaceNodeConn)(faceIdx,iNode);          
               const CFuint nodeLocalID = (*m_faceNodeElement[cellType])(iOrient,iNode);
-              (*bFaceNodeConn)(faceIdx,iNode) = (*cellNodeConn)(cellID,nodeLocalID);
+              (*bFaceNodeConn)(faceIdx,iNode) = (*cellNodeConn)(cellID,nodeLocalID);              
             }
 
             // increase faceIdx

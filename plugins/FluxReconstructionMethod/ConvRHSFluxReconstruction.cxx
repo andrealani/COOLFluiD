@@ -187,7 +187,7 @@ void ConvRHSFluxReconstruction::execute()
       // build the face GeometricEntity
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
-      
+
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
       m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
@@ -787,6 +787,10 @@ void ConvRHSFluxReconstruction::setup()
   if (elemShape == CFGeoShape::TRIAG)
     {
       m_ndimplus=3;
+    }
+  else if (elemShape == CFGeoShape::TETRA)
+    {
+      m_ndimplus=4;
     }
   else
     {

@@ -748,6 +748,10 @@ void DiffRHSFluxReconstruction::setup()
     {
       m_ndimplus=3;
     }
+  else if (elemShape == CFGeoShape::TETRA)
+    {
+      m_ndimplus=4;
+    }
   else
     {
       m_ndimplus=0;

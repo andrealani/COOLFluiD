@@ -320,7 +320,7 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
       
     // Loop over flux points to determine which flx pnts are influenced by the pert
-    if (m_ndimplus == 3) //(elemShape == CFGeoShape::TRIAG)
+    if ((m_ndimplus == 3) || (m_ndimplus == 4)) //(elemShape == CFGeoShape::TRIAG or TETRA)
     {
       m_influencedFlxPnt = 0;
       m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;
@@ -467,7 +467,7 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
       State& pertState = *(*m_states[m_pertSide])[m_pertSol];
       
       // Loop over flux points to determine which flx pnts are influenced by the pert
-      if (m_ndimplus == 3) //(elemShape == CFGeoShape::TRIAG)
+      if ((m_ndimplus == 3) || (m_ndimplus == 4)) //(elemShape == CFGeoShape::TRIAG or TETRA)
       {
         m_influencedFlxPnt = 0;
         m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;

@@ -14,6 +14,7 @@
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TetraFluxReconstructionElementData.hh"
 
 #include <algorithm>
 #include <iostream>
@@ -148,8 +149,7 @@ CFuint MeshUpgradeBuilder::getNbrOfInternalNodesInCellType(CFGeoShape::Type geoS
   {
     case CFGeoShape::LINE:
       return polyOrder - 1;
-
-    case CFGeoShape::TRIAG: // need a fix here like quads 
+    case CFGeoShape::TRIAG:
     {
       switch (polyOrder)
       {
@@ -190,6 +190,9 @@ CFuint MeshUpgradeBuilder::getNbrOfInternalNodesInCellType(CFGeoShape::Type geoS
       switch (polyOrder)
       {
         case CFPolyOrder::ORDER1:
+        {
+          return 0;
+        }
         case CFPolyOrder::ORDER2:
         {
           return 0;
@@ -502,6 +505,14 @@ void MeshUpgradeBuilder::divideElements()
 	{
 	  m_pattern[firstFreeIdx] = 8;
 	  nbNewStates += 8;
+	}
+        break;
+
+      case CFGeoShape::TETRA:
+        for (CFuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+	{
+	  m_pattern[firstFreeIdx] = 4;
+	  nbNewStates += 4;
 	}
         break;
 
@@ -1116,6 +1127,14 @@ void MeshUpgradeBuilder::divideElements()
 	
         break;
 	
+      case CFGeoShape::PRISM:
+
+        break;
+
+      case CFGeoShape::TETRA:
+
+        break;
+
       case CFGeoShape::HEXA:
 
         break;
@@ -1271,13 +1290,20 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       } break;
       case CFGeoShape::TRIAG:
       {
-	      oldOrder = static_cast<CFuint>  ((-3 + sqrt(1+8*oldNbStatesPerElem))/2 +0.5)   ; // FB: Changed
+	      oldOrder = static_cast<CFuint>  ((-3 + sqrt(1+8*oldNbStatesPerElem))/2 +0.5)   ; 
 	      oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         cout<< " MeshUpgradeBuilder::oldNbStatesPerElem   " << oldNbStatesPerElem << endl;
         cout<< " MeshUpgradeBuilder::oldOrder2  " << oldOrder2 << endl;
         cout<< " MeshUpgradeBuilder::m_solPolyOrder  "<< m_solPolyOrder << endl;
         frElemData = new TriagFluxReconstructionElementData(oldOrder2);
 	      frElemData2 = new TriagFluxReconstructionElementData(m_solPolyOrder);
+      } break;
+      case CFGeoShape::TETRA:
+      {
+  oldOrder = static_cast<CFuint> (0.5 -2. + pow((27.*oldNbStatesPerElem + sqrt(-3. + 729.*pow(oldNbStatesPerElem,2))),(1./3.)) / pow(3.,(2./3.)) + 1./pow((81.*oldNbStatesPerElem + 3.*sqrt(-3. + 729.*pow(oldNbStatesPerElem,2.))),(1./3.)));
+	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
+        frElemData = new TetraFluxReconstructionElementData(oldOrder2);
+	frElemData2 = new TetraFluxReconstructionElementData(m_solPolyOrder);
       } break;
       default:
       {
