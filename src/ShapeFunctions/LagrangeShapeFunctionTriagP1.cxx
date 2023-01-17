@@ -191,6 +191,36 @@ RealVector LagrangeShapeFunctionTriagP1::computeMappedCoordinatesPlus1D(const Re
 }
 
 //////////////////////////////////////////////////////////////////////////////
+   
+void LagrangeShapeFunctionTriagP1::computeFaceJacobDetVectorAtMappedCoords(const std::vector<RealVector>& mappedCoord,
+   const std::vector<Framework::Node*>& nodes,
+   std::vector<RealVector>& normal)                  
+{
+   for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
+   {
+     RealVector& pointNormal = normal[ip];
+
+     const CFreal xi =  mappedCoord[ip][KSI];
+     const CFreal eta = mappedCoord[ip][ETA];
+     const CFreal dN0dksi = -(1.);
+     const CFreal dN1dksi =  (1.);
+     const CFreal dN2dksi =  (0.);
+
+     const CFreal dN0deta = -(1.);
+     const CFreal dN1deta =  (0.);
+     const CFreal dN2deta =  (1.);
+
+     // compute shape function gradient
+     m_vec1 = (*nodes[0])*dN0dksi + (*nodes[1])*dN1dksi + (*nodes[2])*dN2dksi ;
+     m_vec2 = (*nodes[0])*dN0deta + (*nodes[1])*dN1deta + (*nodes[2])*dN2deta ;
+
+     // compute face jacobian vector
+     MathTools::MathFunctions::crossProd(m_vec1,m_vec2,pointNormal);
+     pointNormal*=-1.;
+   }
+}
+   
+//////////////////////////////////////////////////////////////////////////////
 
     } // namespace ShapeFunctions
 

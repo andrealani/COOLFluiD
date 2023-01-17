@@ -138,10 +138,7 @@ public:
   /// (Normal has the dimensionality of the Face + 1)
   static void computeFaceJacobDetVectorAtMappedCoords(const std::vector<RealVector>& mappedCoord,
       const std::vector<Framework::Node*>& nodes,
-      std::vector<RealVector>& normal)
-  {
-    throw Common::NotImplementedException (FromHere(),getName() + "::computeFaceJacobDetVectorAtMappedCoords()");
-  }
+      std::vector<RealVector>& normal);                  
 
   /// Computes the normal to a given mapped coordinate plane, at the given mapped coordinates
   static void computeMappedCoordPlaneNormal(const std::vector<CFuint>& planeIdx,

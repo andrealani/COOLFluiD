@@ -55,6 +55,42 @@ void LagrangeShapeFunctionTriagP2::computeFaceJacobianDeterminant(
     throw Common::NotImplementedException
       (FromHere(), getName()+"::computeFaceJacobianDeterminant()");
 }
+   
+//////////////////////////////////////////////////////////////////////////////
+  
+void LagrangeShapeFunctionTriagP2::computeFaceJacobDetVectorAtMappedCoords(const std::vector<RealVector>& mappedCoord,
+  const std::vector<Framework::Node*>& nodes,
+  std::vector<RealVector>& normal)                  
+{
+  for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
+  {
+    RealVector& pointNormal = normal[ip];
+
+    const CFreal xi =  mappedCoord[ip][KSI];
+    const CFreal eta = mappedCoord[ip][ETA];
+    const CFreal dN0dksi = -3. + 4.*eta + 4.*xi;
+    const CFreal dN1dksi = 4.*xi - 1.;
+    const CFreal dN2dksi = 0.;
+    const CFreal dN3dksi = 4. - 8.*xi - 4.*eta;
+    const CFreal dN4dksi = 4.*eta;
+    const CFreal dN5dksi = -4.*eta;
+
+    const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
+    const CFreal dN1deta = 0.;
+    const CFreal dN2deta = 4.*eta - 1.;
+    const CFreal dN3deta = -4.*xi;
+    const CFreal dN4deta = 4.*xi;
+    const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
+
+    // compute shape function gradient
+    m_vec1 = (*nodes[0])*dN0dksi + (*nodes[1])*dN1dksi + (*nodes[2])*dN2dksi + (*nodes[3])*dN3dksi + (*nodes[4])*dN4dksi + (*nodes[5])*dN5dksi ;
+    m_vec2 = (*nodes[0])*dN0deta + (*nodes[1])*dN1deta + (*nodes[2])*dN2deta + (*nodes[3])*dN3deta + (*nodes[4])*dN4deta + (*nodes[5])*dN5deta ;
+
+    // compute face jacobian vector
+    MathTools::MathFunctions::crossProd(m_vec1,m_vec2,pointNormal);
+        pointNormal*=-1.;
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

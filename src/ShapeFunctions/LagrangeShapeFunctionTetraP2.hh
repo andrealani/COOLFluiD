@@ -273,20 +273,13 @@ CFout << "JXZ: " << JXZ <<"\n";*/
   static void computeMappedCoordPlaneNormal(const std::vector<CFuint>& planeIdx,
                                             const std::vector<RealVector>& mappedCoord,
                                             const std::vector<Framework::Node*>& nodes,
-                                            std::vector<RealVector>& normal)
-  {
-    throw Common::NotImplementedException (FromHere(),getName() + "::computeMappedCoordPlaneNormal()");
-  }
+                                            std::vector<RealVector>& normal);
 
   /// Compute the Jacobian
   static void computeJacobian(
          const std::vector<Framework::Node*>& nodes,
          const std::vector<RealVector>& mappedCoord,
-               std::vector<RealMatrix>& jacob)
-  {
-    throw Common::NotImplementedException
-      (FromHere(), getName()+"::computeJacobian()");
-  }
+                              std::vector<RealMatrix>& jacob);
 
   /// Compute the Jacobian
   static void computeJacobianPlus1D(
@@ -311,11 +304,24 @@ CFout << "JXZ: " << JXZ <<"\n";*/
   static void computeJacobianDeterminant(
          const std::vector<RealVector>& mappedCoord,
          const std::vector<Framework::Node*>& nodes,
-               std::valarray<CFreal>& detJacobian)
-  {
-    throw Common::NotImplementedException
-      (FromHere(), getName()+"::computeJacobianDeterminant()");
-  }
+                                         std::valarray<CFreal>& detJacobian)
+    {
+      /// @note implemented in a not very efficient way
+      cf_assert(nodes.size() == getNbNodes());
+
+      const CFuint nbrPnts = mappedCoord.size();
+      cf_assert(detJacobian.size() == nbrPnts);
+
+      std::vector< RealMatrix > pntJacob(nbrPnts,RealMatrix(3,3));
+      
+      computeJacobian(nodes,mappedCoord,pntJacob);
+      
+      for (CFuint ip = 0; ip < nbrPnts; ++ip)
+      {
+        detJacobian[ip] = pntJacob[ip].determ3();
+      }
+    }
+
 
   /// Compute the jacobian determinant at the given
   /// mapped coordinates
@@ -565,6 +571,9 @@ private:
   static RealVector _vec2;
   static RealVector _vec3;
   static RealVector _vec4;
+    
+  /// gradients of shape functions
+  static std::vector< RealVector > _gradShapFunc;
 
   /// Vector of normals
   static RealVector m_mappedCoord;
