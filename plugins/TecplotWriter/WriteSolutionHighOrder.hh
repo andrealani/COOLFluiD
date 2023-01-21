@@ -88,7 +88,7 @@ protected:
 
   /// returns the local subcell node connectivity in a cell of given shape and order
   static std::vector< std::vector< CFuint > > getOutputCellNodeConn(CFGeoShape::Type shape,CFuint solOrder);
-
+  
 private:
 
   /// File format to write in (ASCII or Binary)
@@ -99,6 +99,12 @@ private:
 
 }; // class WriteSolutionHighOrder
 
+//helper functions
+
+  /// Compute the midpoints of all 6 edges of a tetrahedron
+  std::vector<RealVector> compute_midpoints(std::vector<RealVector> tetrahedron);
+  // Subdivide a tetrahedron into 8 sub-tetrahedra
+  std::vector<std::vector<RealVector>> subdivide_tetrahedron(std::vector<RealVector> tetrahedron, std::vector<RealVector> midpoints);
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter

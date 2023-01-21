@@ -525,7 +525,9 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
     } break;
     case CFGeoShape::TETRA:
     {
-      /// @warn: for tetra this is only implemented for P1
+      /// @warn: not very efficient
+      std::vector<std::vector<CFuint>> cellsNodesConn;
+
       RealVector coords(3);
       coords[KSI] = 0.0;
       coords[ETA] = 0.0;
@@ -543,6 +545,38 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
       coords[ETA] = 0.0;
       coords[ZTA] = 1.0;
       nodeMappedCoords.push_back(coords);
+
+      std::vector<CFuint> nodes_index(nodeMappedCoords.size());
+      std::iota(nodes_index.begin(), nodes_index.end(), 0);
+      std::vector<std::vector<CFuint>> cells = {{0, 1, 2, 3}};
+
+      for (int i = 0; i < solOrder-1; i++) 
+      {
+        std::vector<std::vector<CFuint>> new_cells;
+        for (int j = 0; j < cells.size(); j++) 
+        {
+          std::vector<RealVector> midpoints = compute_midpoints({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]});
+          std::vector<std::vector<RealVector>> sub_tetrahedra = subdivide_tetrahedron({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]}, midpoints);
+          for (int k = 0; k < sub_tetrahedra.size(); k++) 
+          {
+            for (int l = 0; l < sub_tetrahedra[k].size(); l++) 
+            {
+              CFuint node_index = std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][l]) - nodeMappedCoords.begin();
+              if (node_index == nodeMappedCoords.size()) 
+              {
+                  nodeMappedCoords.push_back(sub_tetrahedra[k][l]);
+                  node_index = nodeMappedCoords.size() - 1;
+              }
+            }
+            new_cells.push_back({std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin()});
+          }
+        }
+        cells = new_cells;
+      }
+
+      cellsNodesConn = cells;
+
+
     } break;
     case CFGeoShape::PYRAM:
     {
@@ -653,13 +687,56 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
     } break;
     case CFGeoShape::TETRA:
     {
-      /// @warn: for tetra this is only implemented for P1
-      vector< CFuint > cellNodesConn(4);
-      cellNodesConn[0] = 0;
-      cellNodesConn[1] = 1;
-      cellNodesConn[2] = 2;
-      cellNodesConn[3] = 3;
-      cellsNodesConn.push_back(cellNodesConn);
+      /// @warn: not very effcient
+
+      std::vector<RealVector> nodeMappedCoords;
+      RealVector coords(3);
+      coords[KSI] = 0.0;
+      coords[ETA] = 0.0;
+      coords[ZTA] = 0.0;
+      nodeMappedCoords.push_back(coords);
+      coords[KSI] = 1.0;
+      coords[ETA] = 0.0;
+      coords[ZTA] = 0.0;
+      nodeMappedCoords.push_back(coords);
+      coords[KSI] = 0.0;
+      coords[ETA] = 1.0;
+      coords[ZTA] = 0.0;
+      nodeMappedCoords.push_back(coords);
+      coords[KSI] = 0.0;
+      coords[ETA] = 0.0;
+      coords[ZTA] = 1.0;
+      nodeMappedCoords.push_back(coords);
+      std::vector<CFuint> nodes_index(nodeMappedCoords.size());
+      std::iota(nodes_index.begin(), nodes_index.end(), 0);
+      std::vector<std::vector<CFuint>> cells = {{0, 1, 2, 3}};
+
+      for (int i = 0; i < solOrder-1; i++) 
+      {
+        std::vector<std::vector<CFuint>> new_cells;
+        for (int j = 0; j < cells.size(); j++) 
+        {
+          std::vector<RealVector> midpoints = compute_midpoints({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]});
+          std::vector<std::vector<RealVector>> sub_tetrahedra = subdivide_tetrahedron({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]}, midpoints);
+          for (int k = 0; k < sub_tetrahedra.size(); k++) 
+          {
+            for (int l = 0; l < sub_tetrahedra[k].size(); l++) 
+            {
+              CFuint node_index = std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][l]) - nodeMappedCoords.begin();
+              if (node_index == nodeMappedCoords.size()) 
+              {
+                  nodeMappedCoords.push_back(sub_tetrahedra[k][l]);
+                  node_index = nodeMappedCoords.size() - 1;
+              }
+            }
+            new_cells.push_back({std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin()});
+          }
+        }
+          cells = new_cells;
+      }
+
+      cellsNodesConn = cells;
+
     } break;
     case CFGeoShape::PYRAM:
     {
@@ -701,6 +778,41 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
   return cellsNodesConn;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+vector<RealVector> compute_midpoints(vector<RealVector> tetrahedron) 
+{
+  vector<RealVector> midpoints;
+  for (CFuint i = 0; i < 4; i++) 
+  {
+    for (CFuint j = i + 1; j < 4; j++) 
+    {
+      RealVector midpoint(3);
+      for (CFuint k = 0; k < 3; k++) 
+      {
+        midpoint[k] = (tetrahedron[i][k] + tetrahedron[j][k]) / 2;
+      }
+      midpoints.push_back(midpoint);
+    }
+  }
+  return midpoints;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+vector<vector<RealVector>> subdivide_tetrahedron(vector<RealVector> tetrahedron, vector<RealVector> midpoints) 
+{
+  vector<vector<RealVector>> sub_tetrahedra;
+  sub_tetrahedra.push_back({tetrahedron[0], midpoints[0], midpoints[1], midpoints[2]});
+  sub_tetrahedra.push_back({tetrahedron[1], midpoints[3], midpoints[0], midpoints[4]});
+  sub_tetrahedra.push_back({tetrahedron[2], midpoints[1], midpoints[3], midpoints[5]});
+  sub_tetrahedra.push_back({tetrahedron[3], midpoints[4], midpoints[5], midpoints[2]});
+  sub_tetrahedra.push_back({midpoints[0], midpoints[1], midpoints[3], midpoints[4]});
+  sub_tetrahedra.push_back({midpoints[0], midpoints[1], midpoints[4], midpoints[2]});
+  sub_tetrahedra.push_back({midpoints[2], midpoints[5], midpoints[4], midpoints[1]});
+  sub_tetrahedra.push_back({midpoints[1], midpoints[5], midpoints[4], midpoints[3]});
+  return sub_tetrahedra;
+}
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter
