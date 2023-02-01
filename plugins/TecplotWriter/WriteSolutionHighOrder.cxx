@@ -547,7 +547,10 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
       nodeMappedCoords.push_back(coords);
 
       std::vector<CFuint> nodes_index(nodeMappedCoords.size());
-      std::iota(nodes_index.begin(), nodes_index.end(), 0);
+      for (CFuint i = 0; i < nodes_index.size(); ++i) 
+      {
+        nodes_index[i] = i;
+      }
       vector<vector<CFuint> > cells;
       vector<CFuint> cell(4);
       cell[0] = 0;
@@ -731,7 +734,10 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
       coords[ZTA] = 1.0;
       nodeMappedCoords.push_back(coords);
       std::vector<CFuint> nodes_index(nodeMappedCoords.size());
-      std::iota(nodes_index.begin(), nodes_index.end(), 0);
+      for (CFuint i = 0; i < nodes_index.size(); ++i) 
+      {
+        nodes_index[i] = i;
+      }
       vector<vector<CFuint> > cells;
       vector<CFuint> cell(4);
       cell[0] = 0;
