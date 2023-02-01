@@ -342,6 +342,31 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
         }
         break;	
       }
+      case CFGeoShape::PRISM:
+      {	
+      	CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
+        const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();	
+        std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
+        cf_assert(corrfct.size() == nbrSolPnts);
+
+        CFuint iFlx;
+        RealMatrix phi;
+        phi.resize(5,(solOrder+1)*(solOrder+1));
+        phi=0.;
+        for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+        {
+          iFlx = 0;
+          //phi=computeTetraDivCorrFct(solOrder, m_cfactor, solPntsLocalCoord[iSol][0], solPntsLocalCoord[iSol][1], solPntsLocalCoord[iSol][2]);
+          for (CFuint f = 0; f < 5; ++f)
+          {
+            for (CFuint j = 0; j < (solOrder+1)*(solOrder+1); ++j, ++iFlx)
+            {
+              corrfct[iSol][iFlx] = 1.; //phi(f,j);
+            }
+          }
+        }
+        break;	
+      }      
       default:
       {
         throw Common::NotImplementedException (FromHere(),"Divergence of VCJH Correction Functions not implemented for elements of type "
@@ -872,7 +897,7 @@ RealVector VCJH::computeDubiner3D(const CFPolyOrder::Type solOrder,CFreal ksi, C
       {
         if ((w+v+u) <= solOrder)
         {
-          k=std::round(1.+(11.+12.*solOrder+3.*pow(solOrder,2.))*u/6.+(2.*solOrder+3.)*v/2.+w-((2.+solOrder)*(pow(u,2.))/2.)-u*v-(pow(v,2.))/2.+(pow(u,3.))/6.);
+          k= round(1.+(11.+12.*solOrder+3.*pow(solOrder,2.))*u/6.+(2.*solOrder+3.)*v/2.+w-((2.+solOrder)*(pow(u,2.))/2.)-u*v-(pow(v,2.))/2.+(pow(u,3.))/6.);
           mat_u[k]=u;
           mat_v[k]=v;
           mat_w[k]=w;
@@ -1477,7 +1502,7 @@ RealMatrix VCJH::computeTriagDivCorrFct(const CFPolyOrder::Type solOrder, CFreal
         }        
       }
     }
-  return (phi*16*4);
+  return (phi*16.*4.);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1585,6 +1610,12 @@ void VCJH::SwapRows(RealMatrix& A, CFuint row1, CFuint row2)
   RealVector swapRow = A.getRow<RealVector>(row1);
   A.setRow(A.getRow<RealVector>(row2),row1);
   A.setRow(swapRow,row2);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFuint VCJH::round(double x)
+{
+    return (x > 0.0) ? (int)(x + 0.5) : (int)(x - 0.5);
 }
 //////////////////////////////////////////////////////////////////////////////
 

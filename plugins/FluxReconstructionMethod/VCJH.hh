@@ -113,6 +113,9 @@ private : // helper functions
   /// Computes the factorial
   CFreal factorial(CFreal n);
 
+  /// Round a floating-point value to the nearest integer
+  CFuint round(double x);
+
   /// Compute inverse matrix
   void InvertMatrix(RealMatrix A, RealMatrix& AI);
 
