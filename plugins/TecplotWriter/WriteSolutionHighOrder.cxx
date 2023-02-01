@@ -562,10 +562,15 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
         for (int j = 0; j < cells.size(); j++) 
         {
           vector<RealVector> nodes(4);
+          for (CFuint c = 0; c < 4; c++)
+          {
+            nodes[c].resize(3); 
+          }
           nodes[0] = nodeMappedCoords[cells[j][0]];
           nodes[1] = nodeMappedCoords[cells[j][1]];
           nodes[2] = nodeMappedCoords[cells[j][2]];
           nodes[3] = nodeMappedCoords[cells[j][3]];
+
           vector<RealVector> midpoints = compute_midpoints(nodes);
 
           vector<vector<RealVector> > sub_tetrahedra = subdivide_tetrahedron(nodes, midpoints);
@@ -741,6 +746,10 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
         for (int j = 0; j < cells.size(); j++) 
         {
           vector<RealVector> nodes(4);
+          for (CFuint c = 0; c < 4; c++)
+          {
+            nodes[c].resize(3); 
+          }
           nodes[0] = nodeMappedCoords[cells[j][0]];
           nodes[1] = nodeMappedCoords[cells[j][1]];
           nodes[2] = nodeMappedCoords[cells[j][2]];
@@ -840,41 +849,73 @@ vector<vector<RealVector> > subdivide_tetrahedron(vector<RealVector> tetrahedron
 {
   vector<vector<RealVector> > sub_tetrahedra;
   vector<RealVector> sub_tetrahedron1(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron1[c].resize(3); 
+  }
   sub_tetrahedron1[0] = tetrahedron[0];
   sub_tetrahedron1[1] = midpoints[0];
   sub_tetrahedron1[2] = midpoints[1];
   sub_tetrahedron1[3] = midpoints[2];
   vector<RealVector> sub_tetrahedron2(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron2[c].resize(3); 
+  }
   sub_tetrahedron2[0] = tetrahedron[1];
   sub_tetrahedron2[1] = midpoints[3];
   sub_tetrahedron2[2] = midpoints[0];
   sub_tetrahedron2[3] = midpoints[4];
   vector<RealVector> sub_tetrahedron3(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron3[c].resize(3); 
+  }
   sub_tetrahedron3[0] = tetrahedron[2];
   sub_tetrahedron3[1] = midpoints[1];
   sub_tetrahedron3[2] = midpoints[3];
   sub_tetrahedron3[3] = midpoints[5];
   vector<RealVector> sub_tetrahedron4(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron4[c].resize(3); 
+  }
   sub_tetrahedron4[0] = tetrahedron[3];
   sub_tetrahedron4[1] = midpoints[4];
   sub_tetrahedron4[2] = midpoints[5];
   sub_tetrahedron4[3] = midpoints[2];
   vector<RealVector> sub_tetrahedron5(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron5[c].resize(3); 
+  }
   sub_tetrahedron5[0] = midpoints[0];
   sub_tetrahedron5[1] = midpoints[1];
   sub_tetrahedron5[2] = midpoints[3];
   sub_tetrahedron5[3] = midpoints[4];
   vector<RealVector> sub_tetrahedron6(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron6[c].resize(3); 
+  }
   sub_tetrahedron6[0] = midpoints[0];
   sub_tetrahedron6[1] = midpoints[1];
   sub_tetrahedron6[2] = midpoints[4];
   sub_tetrahedron6[3] = midpoints[2];
   vector<RealVector> sub_tetrahedron7(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron7[c].resize(3); 
+  }
   sub_tetrahedron7[0] = midpoints[2];
   sub_tetrahedron7[1] = midpoints[5];
   sub_tetrahedron7[2] = midpoints[4];
   sub_tetrahedron7[3] = midpoints[1];
   vector<RealVector> sub_tetrahedron8(4);
+  for (CFuint c = 0; c < 4; c++)
+  {
+    sub_tetrahedron8[c].resize(3); 
+  }
   sub_tetrahedron8[0] = midpoints[1];
   sub_tetrahedron8[1] = midpoints[5];
   sub_tetrahedron8[2] = midpoints[4];
