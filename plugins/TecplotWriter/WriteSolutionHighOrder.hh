@@ -104,7 +104,7 @@ private:
   /// Compute the midpoints of all 6 edges of a tetrahedron
   std::vector<RealVector> compute_midpoints(std::vector<RealVector> tetrahedron);
   // Subdivide a tetrahedron into 8 sub-tetrahedra
-  std::vector<std::vector<RealVector>> subdivide_tetrahedron(std::vector<RealVector> tetrahedron, std::vector<RealVector> midpoints);
+  std::vector<std::vector<RealVector> > subdivide_tetrahedron(std::vector<RealVector> tetrahedron, std::vector<RealVector> midpoints);
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace TecplotWriter

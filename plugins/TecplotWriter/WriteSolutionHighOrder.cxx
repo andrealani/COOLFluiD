@@ -526,7 +526,7 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
     case CFGeoShape::TETRA:
     {
       /// @warn: not very efficient
-      std::vector<std::vector<CFuint>> cellsNodesConn;
+      std::vector<std::vector<CFuint> > cellsNodesConn;
 
       RealVector coords(3);
       coords[KSI] = 0.0;
@@ -548,15 +548,28 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
 
       std::vector<CFuint> nodes_index(nodeMappedCoords.size());
       std::iota(nodes_index.begin(), nodes_index.end(), 0);
-      std::vector<std::vector<CFuint>> cells = {{0, 1, 2, 3}};
+      vector<vector<CFuint> > cells;
+      vector<CFuint> cell(4);
+      cell[0] = 0;
+      cell[1] = 1;
+      cell[2] = 2;
+      cell[3] = 3;
+      cells.push_back(cell);
 
       for (int i = 0; i < solOrder-1; i++) 
       {
-        std::vector<std::vector<CFuint>> new_cells;
+        std::vector<std::vector<CFuint> > new_cells;
         for (int j = 0; j < cells.size(); j++) 
         {
-          std::vector<RealVector> midpoints = compute_midpoints({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]});
-          std::vector<std::vector<RealVector>> sub_tetrahedra = subdivide_tetrahedron({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]}, midpoints);
+          vector<RealVector> nodes(4);
+          nodes[0] = nodeMappedCoords[cells[j][0]];
+          nodes[1] = nodeMappedCoords[cells[j][1]];
+          nodes[2] = nodeMappedCoords[cells[j][2]];
+          nodes[3] = nodeMappedCoords[cells[j][3]];
+          vector<RealVector> midpoints = compute_midpoints(nodes);
+
+          vector<vector<RealVector> > sub_tetrahedra = subdivide_tetrahedron(nodes, midpoints);
+
           for (int k = 0; k < sub_tetrahedra.size(); k++) 
           {
             for (int l = 0; l < sub_tetrahedra[k].size(); l++) 
@@ -568,7 +581,12 @@ vector< RealVector > WriteSolutionHighOrder::getOutputPntsMappedCoords(CFGeoShap
                   node_index = nodeMappedCoords.size() - 1;
               }
             }
-            new_cells.push_back({std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin()});
+            vector<CFuint> new_cell(4);
+            new_cell[0] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin());
+            new_cell[1] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin());
+            new_cell[2] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin());
+            new_cell[3] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin());
+            new_cells.push_back(new_cell);
           }
         }
         cells = new_cells;
@@ -709,15 +727,28 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
       nodeMappedCoords.push_back(coords);
       std::vector<CFuint> nodes_index(nodeMappedCoords.size());
       std::iota(nodes_index.begin(), nodes_index.end(), 0);
-      std::vector<std::vector<CFuint>> cells = {{0, 1, 2, 3}};
+      vector<vector<CFuint> > cells;
+      vector<CFuint> cell(4);
+      cell[0] = 0;
+      cell[1] = 1;
+      cell[2] = 2;
+      cell[3] = 3;
+      cells.push_back(cell);
 
       for (int i = 0; i < solOrder-1; i++) 
       {
-        std::vector<std::vector<CFuint>> new_cells;
+        std::vector<std::vector<CFuint> > new_cells;
         for (int j = 0; j < cells.size(); j++) 
         {
-          std::vector<RealVector> midpoints = compute_midpoints({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]});
-          std::vector<std::vector<RealVector>> sub_tetrahedra = subdivide_tetrahedron({nodeMappedCoords[cells[j][0]], nodeMappedCoords[cells[j][1]],nodeMappedCoords[cells[j][2]], nodeMappedCoords[cells[j][3]]}, midpoints);
+          vector<RealVector> nodes(4);
+          nodes[0] = nodeMappedCoords[cells[j][0]];
+          nodes[1] = nodeMappedCoords[cells[j][1]];
+          nodes[2] = nodeMappedCoords[cells[j][2]];
+          nodes[3] = nodeMappedCoords[cells[j][3]];
+          vector<RealVector> midpoints = compute_midpoints(nodes);
+
+          vector<vector<RealVector> > sub_tetrahedra = subdivide_tetrahedron(nodes, midpoints);
+
           for (int k = 0; k < sub_tetrahedra.size(); k++) 
           {
             for (int l = 0; l < sub_tetrahedra[k].size(); l++) 
@@ -729,7 +760,12 @@ vector< vector< CFuint > > WriteSolutionHighOrder::getOutputCellNodeConn(CFGeoSh
                   node_index = nodeMappedCoords.size() - 1;
               }
             }
-            new_cells.push_back({std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin(), std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin()});
+            vector<CFuint> new_cell(4);
+            new_cell[0] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][0]) - nodeMappedCoords.begin());
+            new_cell[1] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][1]) - nodeMappedCoords.begin());
+            new_cell[2] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][2]) - nodeMappedCoords.begin());
+            new_cell[3] = (std::find(nodeMappedCoords.begin(), nodeMappedCoords.end(), sub_tetrahedra[k][3]) - nodeMappedCoords.begin());
+            new_cells.push_back(new_cell);          
           }
         }
           cells = new_cells;
@@ -800,17 +836,57 @@ vector<RealVector> compute_midpoints(vector<RealVector> tetrahedron)
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<vector<RealVector>> subdivide_tetrahedron(vector<RealVector> tetrahedron, vector<RealVector> midpoints) 
+vector<vector<RealVector> > subdivide_tetrahedron(vector<RealVector> tetrahedron, vector<RealVector> midpoints) 
 {
-  vector<vector<RealVector>> sub_tetrahedra;
-  sub_tetrahedra.push_back({tetrahedron[0], midpoints[0], midpoints[1], midpoints[2]});
-  sub_tetrahedra.push_back({tetrahedron[1], midpoints[3], midpoints[0], midpoints[4]});
-  sub_tetrahedra.push_back({tetrahedron[2], midpoints[1], midpoints[3], midpoints[5]});
-  sub_tetrahedra.push_back({tetrahedron[3], midpoints[4], midpoints[5], midpoints[2]});
-  sub_tetrahedra.push_back({midpoints[0], midpoints[1], midpoints[3], midpoints[4]});
-  sub_tetrahedra.push_back({midpoints[0], midpoints[1], midpoints[4], midpoints[2]});
-  sub_tetrahedra.push_back({midpoints[2], midpoints[5], midpoints[4], midpoints[1]});
-  sub_tetrahedra.push_back({midpoints[1], midpoints[5], midpoints[4], midpoints[3]});
+  vector<vector<RealVector> > sub_tetrahedra;
+  vector<RealVector> sub_tetrahedron1(4);
+  sub_tetrahedron1[0] = tetrahedron[0];
+  sub_tetrahedron1[1] = midpoints[0];
+  sub_tetrahedron1[2] = midpoints[1];
+  sub_tetrahedron1[3] = midpoints[2];
+  vector<RealVector> sub_tetrahedron2(4);
+  sub_tetrahedron2[0] = tetrahedron[1];
+  sub_tetrahedron2[1] = midpoints[3];
+  sub_tetrahedron2[2] = midpoints[0];
+  sub_tetrahedron2[3] = midpoints[4];
+  vector<RealVector> sub_tetrahedron3(4);
+  sub_tetrahedron3[0] = tetrahedron[2];
+  sub_tetrahedron3[1] = midpoints[1];
+  sub_tetrahedron3[2] = midpoints[3];
+  sub_tetrahedron3[3] = midpoints[5];
+  vector<RealVector> sub_tetrahedron4(4);
+  sub_tetrahedron4[0] = tetrahedron[3];
+  sub_tetrahedron4[1] = midpoints[4];
+  sub_tetrahedron4[2] = midpoints[5];
+  sub_tetrahedron4[3] = midpoints[2];
+  vector<RealVector> sub_tetrahedron5(4);
+  sub_tetrahedron5[0] = midpoints[0];
+  sub_tetrahedron5[1] = midpoints[1];
+  sub_tetrahedron5[2] = midpoints[3];
+  sub_tetrahedron5[3] = midpoints[4];
+  vector<RealVector> sub_tetrahedron6(4);
+  sub_tetrahedron6[0] = midpoints[0];
+  sub_tetrahedron6[1] = midpoints[1];
+  sub_tetrahedron6[2] = midpoints[4];
+  sub_tetrahedron6[3] = midpoints[2];
+  vector<RealVector> sub_tetrahedron7(4);
+  sub_tetrahedron7[0] = midpoints[2];
+  sub_tetrahedron7[1] = midpoints[5];
+  sub_tetrahedron7[2] = midpoints[4];
+  sub_tetrahedron7[3] = midpoints[1];
+  vector<RealVector> sub_tetrahedron8(4);
+  sub_tetrahedron8[0] = midpoints[1];
+  sub_tetrahedron8[1] = midpoints[5];
+  sub_tetrahedron8[2] = midpoints[4];
+  sub_tetrahedron8[3] = midpoints[3];
+  sub_tetrahedra.push_back(sub_tetrahedron1);
+  sub_tetrahedra.push_back(sub_tetrahedron2);
+  sub_tetrahedra.push_back(sub_tetrahedron3);
+  sub_tetrahedra.push_back(sub_tetrahedron4);
+  sub_tetrahedra.push_back(sub_tetrahedron5);
+  sub_tetrahedra.push_back(sub_tetrahedron6);
+  sub_tetrahedra.push_back(sub_tetrahedron7);
+  sub_tetrahedra.push_back(sub_tetrahedron8);
   return sub_tetrahedra;
 }
 //////////////////////////////////////////////////////////////////////////////
