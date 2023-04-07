@@ -79,7 +79,7 @@ void NSGradientComputer::computeGradients()
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-	m_projectedCorrL = m_tempGradTerm(iEq,iSolPnt) * m_cellFluxProjVects[iDir][iSolPnt];
+	m_projectedCorrL = m_tempGradTerm(iEq,iSolPnt) * m_cellFluxProjVects[iDir+m_ndimplus][iSolPnt];
 	
         // Loop over solution pnts to count factor of all sol pnt polys
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
@@ -135,7 +135,7 @@ void NSGradientComputer::computeGradients()
         // Loop over gradient directions
         for (CFuint iDir = 0; iDir < m_dim; ++iDir)
         {
-          m_projectedCorrL = (*((*m_cellStates)[iSolPnt]))[iEq] * m_cellFluxProjVects[iDir][iSolPnt];
+          m_projectedCorrL = (*((*m_cellStates)[iSolPnt]))[iEq] * m_cellFluxProjVects[iDir+m_ndimplus][iSolPnt];
 
           // Loop over solution pnts to count factor of all sol pnt polys
           for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
@@ -192,7 +192,7 @@ void NSGradientComputer::computeGradients()
         // Loop over gradient directions
         for (CFuint iDir = 0; iDir < m_dim; ++iDir)
         {
-	  m_projectedCorrL = transformedState[iEq] * m_cellFluxProjVects[iDir][iSolPnt];
+	  m_projectedCorrL = transformedState[iEq] * m_cellFluxProjVects[iDir+m_ndimplus][iSolPnt];
 	  
           // Loop over solution pnts to count factor of all sol pnt polys
           for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
