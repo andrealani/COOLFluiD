@@ -11,6 +11,8 @@
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP1.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionTetraP1.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionTetraP2.hh"
+#include "ShapeFunctions/LagrangeShapeFunctionPrismP1.hh"
+//#include "ShapeFunctions/LagrangeShapeFunctionPrismP2.hh"
 
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP2_27nodes.hh"
 
@@ -29,6 +31,8 @@
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceTriagP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceTriagP2.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceTriagP3.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceTriagP4.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceTriagP5.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceQuadP0.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceQuadP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionFaceQuadP2.hh"
@@ -44,6 +48,10 @@
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP2.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP3.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP4.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP5.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP0.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP0.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP2.hh"
@@ -667,7 +675,7 @@ cellLagrangeHexaP2FluxReconstructionP10("CellHexaLagrangeP2FluxReconstructionP10
                           FluxReconstructionModule>
   cellLagrangeTriagP2FluxReconstructionP9("CellTriagLagrangeP2FluxReconstructionP9");
 
-
+///////////////////////
 
   /**
  * Flux Reconstruction Tetra Cell with P1 geometry and P0 solution.
@@ -706,6 +714,24 @@ GeometricEntityProvider<Cell,
 cellLagrangeTetraP1FluxReconstructionP3("CellTetraLagrangeP1FluxReconstructionP3");
 
 /**
+ * Flux Reconstruction Tetra Cell with P1 geometry and P4 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionTetraP1,
+                        FluxReconstructionBaseFunctionTetraP4,
+                        FluxReconstructionModule>
+cellLagrangeTetraP1FluxReconstructionP4("CellTetraLagrangeP1FluxReconstructionP4");
+
+/**
+ * Flux Reconstruction Tetra Cell with P1 geometry and P5 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionTetraP1,
+                        FluxReconstructionBaseFunctionTetraP5,
+                        FluxReconstructionModule>
+cellLagrangeTetraP1FluxReconstructionP5("CellTetraLagrangeP1FluxReconstructionP5");
+
+/**
  * Flux Reconstruction Tetra Cell with P2 geometry and P0 solution.
  */
 GeometricEntityProvider<Cell,
@@ -740,6 +766,47 @@ GeometricEntityProvider<Cell,
                         FluxReconstructionBaseFunctionTetraP3,
                         FluxReconstructionModule>
 cellLagrangeTetraP2FluxReconstructionP3("CellTetraLagrangeP2FluxReconstructionP3");
+
+/**
+ * Flux Reconstruction Tetra Cell with P2 geometry and P4 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionTetraP2,
+                        FluxReconstructionBaseFunctionTetraP4,
+                        FluxReconstructionModule>
+cellLagrangeTetraP2FluxReconstructionP4("CellTetraLagrangeP2FluxReconstructionP4");
+
+/**
+ * Flux Reconstruction Tetra Cell with P2 geometry and P5 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionTetraP2,
+                        FluxReconstructionBaseFunctionTetraP5,
+                        FluxReconstructionModule>
+cellLagrangeTetraP2FluxReconstructionP5("CellTetraLagrangeP2FluxReconstructionP5");
+
+//////////////
+
+  /**
+ * Flux Reconstruction Prism Cell with P1 geometry and P0 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP1,
+                        FluxReconstructionBaseFunctionPrismP0,
+                        FluxReconstructionModule>
+cellLagrangePrismP1FluxReconstructionP0("CellPrismLagrangeP1FluxReconstructionP0");
+
+/**
+ * Flux Reconstruction Prism Cell with P1 geometry and P1 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP1,
+                        FluxReconstructionBaseFunctionPrismP1,
+                        FluxReconstructionModule>
+cellLagrangePrismP1FluxReconstructionP1("CellPrismLagrangeP1FluxReconstructionP1");
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -978,6 +1045,24 @@ GeometricEntityProvider<Face,
 faceLagrangeTriagP1FluxReconstructionP3("FaceTriagLagrangeP1FluxReconstructionP3");
 
 /**
+ * Flux Reconstruction Triangular Face with P1 geometry and P4 solution.
+ */
+GeometricEntityProvider<Face,
+                        LagrangeShapeFunctionTriagP1,
+                        FluxReconstructionBaseFunctionFaceTriagP4,
+                        FluxReconstructionModule>
+faceLagrangeTriagP1FluxReconstructionP4("FaceTriagLagrangeP1FluxReconstructionP4");
+
+/**
+ * Flux Reconstruction Triangular Face with P1 geometry and P5 solution.
+ */
+GeometricEntityProvider<Face,
+                        LagrangeShapeFunctionTriagP1,
+                        FluxReconstructionBaseFunctionFaceTriagP5,
+                        FluxReconstructionModule>
+faceLagrangeTriagP1FluxReconstructionP5("FaceTriagLagrangeP1FluxReconstructionP5");
+
+/**
  * Flux Reconstruction Triangular Face with P2 geometry and P0 solution.
  */
 GeometricEntityProvider<Face,
@@ -1012,6 +1097,24 @@ GeometricEntityProvider<Face,
                         FluxReconstructionBaseFunctionFaceTriagP3,
                         FluxReconstructionModule>
 faceLagrangeTriagP2FluxReconstructionP3("FaceTriagLagrangeP2FluxReconstructionP3");
+
+/**
+ * Flux Reconstruction Triangular Face with P2 geometry and P4 solution.
+ */
+GeometricEntityProvider<Face,
+                        LagrangeShapeFunctionTriagP2,
+                        FluxReconstructionBaseFunctionFaceTriagP4,
+                        FluxReconstructionModule>
+faceLagrangeTriagP2FluxReconstructionP4("FaceTriagLagrangeP2FluxReconstructionP4");
+
+/**
+ * Flux Reconstruction Triangular Face with P2 geometry and P5 solution.
+ */
+GeometricEntityProvider<Face,
+                        LagrangeShapeFunctionTriagP2,
+                        FluxReconstructionBaseFunctionFaceTriagP5,
+                        FluxReconstructionModule>
+faceLagrangeTriagP2FluxReconstructionP5("FaceTriagLagrangeP2FluxReconstructionP5");
 
 /**
  * Flux Reconstruction Quadrilateral Face with P1 geometry and P0 solution.

@@ -3702,8 +3702,8 @@ void ConvDiffLLAVJacobFluxReconstruction::setup()
       
       for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
       {
-        m_gradientStateJacobian[LEFT][iSol][iSide][jSol].resize(m_dim+m_ndimplus);
-        m_gradientStateJacobian[RIGHT][iSol][iSide][jSol].resize(m_dim+m_ndimplus);
+        m_gradientStateJacobian[LEFT][iSol][iSide][jSol].resize(m_dim);
+        m_gradientStateJacobian[RIGHT][iSol][iSide][jSol].resize(m_dim);
       }
     }
 

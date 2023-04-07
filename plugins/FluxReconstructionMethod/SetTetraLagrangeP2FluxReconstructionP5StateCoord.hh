@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP3StateCoord_hh
-#define COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP3StateCoord_hh
+#ifndef COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP5StateCoord_hh
+#define COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP5StateCoord_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,26 +20,26 @@ namespace COOLFluiD {
 /**
  * This class is a functor and offers an abstract interface
  * for setting the corresponding space coordinates (Framework::Node) in
- * the State's in a Tetra with P2 geometrical and P3 solution
+ * the State's in a Tetra with P2 geometrical and P5 solution
  * interpolation.
  *
  * @author Rayan Dhib
  */
-class SetTetraLagrangeP2FluxReconstructionP3StateCoord : public Framework::SetElementStateCoord {
+class SetTetraLagrangeP2FluxReconstructionP5StateCoord : public Framework::SetElementStateCoord {
 
 public:
 
   /**
    * Constructor
    */
-  SetTetraLagrangeP2FluxReconstructionP3StateCoord() : Framework::SetElementStateCoord()
+  SetTetraLagrangeP2FluxReconstructionP5StateCoord() : Framework::SetElementStateCoord()
   {
   }
 
   /**
    * Destructor
    */
-  ~SetTetraLagrangeP2FluxReconstructionP3StateCoord()
+  ~SetTetraLagrangeP2FluxReconstructionP5StateCoord()
   {
   }
 
@@ -60,7 +60,7 @@ public:
   void update(const std::vector<Framework::Node*>& nodes,
                             std::vector<Framework::State*>& states);
 
-}; // end of class SetTetraLagrangeP2FluxReconstructionP3StateCoord
+}; // end of class SetTetraLagrangeP2FluxReconstructionP5StateCoord
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -70,4 +70,4 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP3StateCoord_hh
+#endif // COOLFluiD_ShapeFunctions_SetTetraLagrangeP2FluxReconstructionP5StateCoord_hh

@@ -278,7 +278,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computeJacobDiffBndContributi
     computeCellGradTerm(m_gradTermBefore);
 
     // Loop over flux points to determine which flx pnts are influenced by the pert
-    if (elemShape == CFGeoShape::TRIAG)
+    if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA)
     {
       m_influencedFlxPnt = 0;
       m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;
@@ -751,7 +751,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradientsAnal
       m_faceJacobVecs = (*m_faces)[faceIdx]->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
     
       // Loop over flux points to set the normal vectors
-      if (elemShape == CFGeoShape::TRIAG)
+      if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA)
       {
         pertFlxPnt = 0;      
         pertFlxPntIdx = 0;
@@ -846,7 +846,7 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::computePerturbedGradientsAnal
       m_faceJacobVecs = (*m_faces)[faceIdx]->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
       
       // Loop over flux points to set the normal vectors
-      if (elemShape == CFGeoShape::TRIAG)
+      if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA)
       {
         pertFlxPnt = 0;      
         pertFlxPntIdx = 0;
@@ -1061,11 +1061,14 @@ void DiffBndCorrectionsRHSJacobFluxReconstruction::setup()
     {
       m_ndimplus=3;
     }
+  else if (elemShape == CFGeoShape::TETRA)
+    {
+      m_ndimplus=4;
+    }
   else
     {
       m_ndimplus=0;
     }
-
   // get the coefs for derivation of the states in the sol pnts
   m_solPolyDerivAtSolPnts = frLocalData[0]->getCoefSolPolyDerivInSolPnts();
   
