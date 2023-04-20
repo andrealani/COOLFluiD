@@ -20,8 +20,8 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 MHD3DProjectionEpsVarSet::MHD3DProjectionEpsVarSet(Common::SafePtr<Framework::BaseTerm> term) :
-  ConvectiveVarSet(term),
-  _model(term.d_castTo<MHDProjectionEpsTerm>())
+  MHD3DProjectionVarSet(term),
+  _modelEps(term.d_castTo<MHDProjectionEpsTerm>())
 {
 }
 
@@ -34,7 +34,7 @@ MHD3DProjectionEpsVarSet::~MHD3DProjectionEpsVarSet()
 //////////////////////////////////////////////////////////////////////////////
 
 void MHD3DProjectionEpsVarSet::computeFlux (const RealVector& data,
-					 const RealVector& normals)
+					    const RealVector& normals)
 {
   const CFreal nx = normals[XX];
   const CFreal ny = normals[YY];
@@ -55,10 +55,10 @@ void MHD3DProjectionEpsVarSet::computeFlux (const RealVector& data,
   const CFreal P = p + 0.5*B2;
   const CFreal E = p/(getModel()->getGamma() - 1.0) + 0.5*
     (rho*(u*u + v*v + w*w) + B2);
-
+  
   const CFreal refSpeed = getModel()->getRefSpeed();
   const CFreal refSpeedSq = refSpeed*refSpeed;
-
+  
   _fluxArray[0] = Vn*rho;
   _fluxArray[1] = Vn*rho*u - Bn*Bx + P*nx;
   _fluxArray[2] = Vn*rho*v - Bn*By + P*ny;
@@ -68,12 +68,12 @@ void MHD3DProjectionEpsVarSet::computeFlux (const RealVector& data,
   _fluxArray[6] = (u*Bz - Bx*w)*nx + (v*Bz - By*w)*ny + phi*nz;
   _fluxArray[7] = Vn*(E + P) - Bn*VdotB;
   _fluxArray[8] = refSpeedSq*Bn;
-
+  
   // AL: new components to implement
   _fluxArray[9] = 0.;
   _fluxArray[10] = 0.;
 }
-
+      
 //////////////////////////////////////////////////////////////////////////////
 
 void MHD3DProjectionEpsVarSet::computeStateFlux (const RealVector& data)
@@ -161,48 +161,6 @@ void MHD3DProjectionEpsVarSet::computeStateFlux (const RealVector& data)
 }
 
 //////////////////////////////////////////////////////////////////////
-
-void MHD3DProjectionEpsVarSet::setTransformationMatrices(const RealVector& coords,
-							 RealVector& coordsSpherical,
-							 RealMatrix& carSphTransMat,
-							 RealMatrix& sphCarTransMat)
-{
-  const CFreal x = coords[0];
-  const CFreal y = coords[1];
-  const CFreal z = coords[2];
-  const CFreal r = sqrt(x*x+y*y+z*z);
-  const CFreal R = sqrt(x*x+y*y);
-  
-  coordsSpherical[0] = r;
-  coordsSpherical[1] = atan2(R,z);
-  coordsSpherical[2] = atan2(y,x);
-  
-  carSphTransMat(0,0) = x/r;
-  carSphTransMat(1,0) = (x*z)/(R*r);
-  carSphTransMat(2,0) = -y/R;
-  
-  carSphTransMat(0,1) = y/r;
-  carSphTransMat(1,1) = (y*z)/(R*r);
-  carSphTransMat(2,1) = x/R;
-  
-  carSphTransMat(0,2) = z/r;
-  carSphTransMat(1,2) = -R/r;
-  carSphTransMat(2,2) = 0.0;
-  
-  sphCarTransMat(0,0) = x/r;
-  sphCarTransMat(1,0) = y/r;
-  sphCarTransMat(2,0) = z/r;
-  
-  sphCarTransMat(0,1) = (x*z)/(R*r);
-  sphCarTransMat(1,1) = (y*z)/(R*r);
-  sphCarTransMat(2,1) = -R/r;
-  
-  sphCarTransMat(0,2) = -y/R;
-  sphCarTransMat(1,2) = x/R;
-  sphCarTransMat(2,2) = 0.0;
-}
-
-//////////////////////////////////////////////////////////////////////////////
  
 CFreal MHD3DProjectionEpsVarSet::getMaxEigenValue(const RealVector& data,
 						  const RealVector& normal)

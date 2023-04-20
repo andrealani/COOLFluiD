@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/ConvectiveVarSet.hh"
+#include "MHD/MHD3DProjectionVarSet.hh"
 #include "MHD/MHDProjectionEpsTerm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -22,7 +22,7 @@ namespace COOLFluiD {
  *
  * @author Andrea Lani
  */
-class MHD3DProjectionEpsVarSet : public Framework::ConvectiveVarSet {
+class MHD3DProjectionEpsVarSet : public MHD3DProjectionVarSet {
 
 public: // classes
   
@@ -45,7 +45,7 @@ public: // classes
    */
   virtual void setup()
   {
-    Framework::ConvectiveVarSet::setup();
+    MHD3DProjectionVarSet::setup();
   }
   
   /**
@@ -80,91 +80,13 @@ public: // classes
     throw Common::NotImplementedException (FromHere(),"MHD3DProjectionEpsVarSet::computeEigenValuesVectors()");
   }
 
-  /**
-   * Get the dissipation coefficient for projection scheme
-   */
-  CFreal getDissipationCoefficient() const
-  {
-    return getModel()->getDissipationCoefficient();
-  }
-
-  /**
-   * Get the mass of the external object 
-   */
-  CFreal getMass() const
-  {
-    return getModel()->getMass();
-  }
-
-  /**
-   * Get the reference proton density to non-dimensionalize certain source terms
-   */
-  CFreal getNRef() const
-  {
-    return getModel()->getNRef();
-  }
-  
-  /**
-   * Get the reference magnetic field to non-dimensionalize certain source terms
-   */
-  CFreal getBRef() const
-  {
-    return getModel()->getBRef();
-  }
-  
-  /**
-   * Get the reference length to non-dimensionalize certain source terms
-   */
-  CFreal getLRef() const
-  {
-    return getModel()->getLRef();
-  }
-  
-  /**
-   * Get the reference temperature to non-dimensionalize the equations for the solar wind problem
-   */
-  CFreal getTRef() const
-  {
-    return getModel()->getTRef();
-  }
-  
-  /**
-   * Get the name of the output file for divB errors
-   */
-  std::string getNameOutputFile() const
-  {
-    return getModel()->getNameOutputFile();
-  }
-
-  /**
-   * Get the frequency of saving the output file for divB errors
-   */
-  CFuint getOutputFileSaveRate() const
-  {
-    return getModel()->getOutputFileSaveRate();
-  }
-
-  /**
-   * Set the transformation matrices between Cartesian and spherical coordinate systems
-   */
-  void setTransformationMatrices(const RealVector& coords,
-		           RealVector& coordsSpherical,
-                           RealMatrix& carSphTransMat,
-                           RealMatrix& sphCarTransMat);
-
-  
-  /// Set the IDs corresponding to the velocity components in a State
-  virtual void setStateVelocityIDs (std::vector<CFuint>& velIDs) 
-  {
-    velIDs.resize(3); velIDs[XX] = 1; velIDs[YY] = 2; velIDs[ZZ] = 3;
-  }
-  
+ 
   /**
    * Get the model
    */
   Common::SafePtr<MHDProjectionEpsTerm> getModel() const
   {
-    return _model;
+    return _modelEps;
   }
 
  /// Set the vector of the eigenValues
@@ -189,7 +111,7 @@ protected:
 private:
 
   /// acquaintance of the model
-  Common::SafePtr<MHDProjectionEpsTerm> _model;
+  Common::SafePtr<MHDProjectionEpsTerm> _modelEps;
   
 }; // end of class MHD3DProjectionEpsVarSet
 
