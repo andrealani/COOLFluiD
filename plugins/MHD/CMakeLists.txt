@@ -116,6 +116,23 @@ MHDProjectionPolytropicTerm.cxx
 MHDProjectionPolytropicTerm.hh
 MHDTerm.cxx
 MHDTerm.hh
+MHD3DProjectionEpsCons.cxx
+MHD3DProjectionEpsCons.hh
+MHD3DProjectionEpsConsToPrim.cxx
+MHD3DProjectionEpsConsToPrim.hh
+MHD3DProjectionEpsPrim.cxx
+MHD3DProjectionEpsPrim.hh
+MHD3DProjectionEpsPrimToCons.cxx
+MHD3DProjectionEpsPrimToCons.hh
+MHD3DProjectionEpsVarSet.cxx
+MHD3DProjectionEpsVarSet.hh
+MHDProjectionEpsDiffPhysicalModel.ci
+MHDProjectionEpsDiffPhysicalModel.cxx
+MHDProjectionEpsDiffPhysicalModel.hh
+MHD3DProjectionEpsDiffPrim.cxx
+MHD3DProjectionEpsDiffPrim.hh
+MHDProjectionEpsTerm.cxx
+MHDProjectionEpsTerm.hh
 )
 
 IF (CF_HAVE_CUDA)

@@ -82,7 +82,7 @@ void MHD3DProjectionCons::setup()
 
 vector<std::string> MHD3DProjectionCons::getExtraVarNames() const
 {
-  vector<std::string> names(10);
+  vector<std::string> names(9);
   names[0] = "BxPotential";
   names[1] = "ByPotential";
   names[2] = "BzPotential";
@@ -92,8 +92,7 @@ vector<std::string> MHD3DProjectionCons::getExtraVarNames() const
   names[6] = "BTotal";
   names[7] = "rhoETotal";
   names[8] = "p";
-  names[9] = "divB";
-
+  
   return names;
 }
 
@@ -1081,14 +1080,14 @@ void MHD3DProjectionCons::setDimensionalValuesPlusExtraValues(const State& state
   extra[8] = (getModel()->getGamma() - 1.)*
     (state[7] - 0.5*(rho*V2 + sqB1));
 
-  std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
-  std::string datahandleName = nsp + "_divBNodal";
+  // std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+  // std::string datahandleName = nsp + "_divBNodal";
   
-  DataHandle<CFreal> divBNodal = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
+  // DataHandle<CFreal> divBNodal = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
   
-  const CFuint stateID = state.getLocalID();
+  // const CFuint stateID = state.getLocalID();
   
-  extra[9] = divBNodal[stateID];
+  // extra[9] = divBNodal[stateID];
 
 }
 

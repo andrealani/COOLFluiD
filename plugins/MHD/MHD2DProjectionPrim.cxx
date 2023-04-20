@@ -74,14 +74,13 @@ void MHD2DProjectionPrim::setup()
 
 vector<std::string> MHD2DProjectionPrim::getExtraVarNames() const
 {
-  vector<std::string> names(7);
+  vector<std::string> names(6);
   names[0] = "BxDipole";
   names[1] = "ByDipole";
   names[2] = "BxTotal";
   names[3] = "ByTotal";
   names[4] = "BTotal";
   names[5] = "rhoETotal";
-  names[6] = "divB";
 
   return names;
 }
@@ -791,15 +790,14 @@ void MHD2DProjectionPrim::setDimensionalValuesPlusExtraValues(const State& state
     extra[5] = 0.0;
   }
 
-  std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
+/*  std::string nsp = MeshDataStack::getActive()->getPrimaryNamespace();
   std::string datahandleName = nsp + "_divBNodal";
 
   DataHandle<CFreal> divBNodal = MeshDataStack::getActive()->getDataStorage()->getData<CFreal>(datahandleName);
 
   const CFuint stateID = state.getLocalID();
 
-  extra[6] = divBNodal[stateID];
-
+  extra[6] = divBNodal[stateID];*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
