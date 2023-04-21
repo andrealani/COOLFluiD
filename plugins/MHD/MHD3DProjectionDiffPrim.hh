@@ -34,63 +34,63 @@ public: // classes
   /**
    * Default destructor
    */
-  ~MHD3DProjectionDiffPrim();
+  virtual ~MHD3DProjectionDiffPrim();
 
   /**
    * Set the composition
    * @pre this function has to be called before any other function
    *      computing other physical quantities
    */
-  void setComposition(const RealVector& state,
-		      const bool isPerturb,
-		      const CFuint iVar);
-
+  virtual void setComposition(const RealVector& state,
+			      const bool isPerturb,
+			      const CFuint iVar);
+  
   /**
    * Set the quantities needed to compute gradients (pressure,
    * velocity, etc.) starting from the states
    */
-  void setGradientVars(const std::vector<RealVector*>& states,
-                       RealMatrix& values,
-                       const CFuint stateSize);
-
+  virtual void setGradientVars(const std::vector<RealVector*>& states,
+			       RealMatrix& values,
+			       const CFuint stateSize);
+  
   /**
    * Compute required gradients (velocity, Temperature) starting from the gradients of the states
    */
-  void setGradientVarGradients(const std::vector<RealVector*>& states,
-                               const std::vector< std::vector<RealVector*> >& stateGradients,
-                               std::vector< std::vector<RealVector*> >& gradVarGradients,
-                               const CFuint stateSize);
+  virtual void setGradientVarGradients(const std::vector<RealVector*>& states,
+				       const std::vector< std::vector<RealVector*> >& stateGradients,
+				       std::vector< std::vector<RealVector*> >& gradVarGradients,
+				       const CFuint stateSize);
 
   /**
    * Compute the gradients of the states starting from gradient variable gradients (pressure, velocity, temperature)
    */
-  void setStateGradients(const std::vector<RealVector*>& states,
-                         const std::vector< std::vector<RealVector*> >& gradVarGradients,
-                         std::vector< std::vector<RealVector*> >& stateGradients,
-                         const CFuint stateSize);
+  virtual void setStateGradients(const std::vector<RealVector*>& states,
+				 const std::vector< std::vector<RealVector*> >& gradVarGradients,
+				 std::vector< std::vector<RealVector*> >& stateGradients,
+				 const CFuint stateSize);
 
   /// Get the diffusive flux
-  void computeFluxJacobian(const RealVector& state,
-			   const RealVector& gradientJacob,
-			   const RealVector& normal,
-			   const CFreal& radius,
-			   RealMatrix& fluxJacob);
+  virtual void computeFluxJacobian(const RealVector& state,
+				   const RealVector& gradientJacob,
+				   const RealVector& normal,
+				   const CFreal& radius,
+				   RealMatrix& fluxJacob);
   
   /**
    * Get the adimensional dynamic viscosity
    */
-  CFreal getDynViscosity(const RealVector& state, const std::vector<RealVector*>& gradients);
+  virtual CFreal getDynViscosity(const RealVector& state, const std::vector<RealVector*>& gradients);
 
   /**
    * Get the adimensional density
    */
-  CFreal getDensity(const RealVector& state);
+  virtual CFreal getDensity(const RealVector& state);
 
   /**
    * Get the adimensional thermal conductivity
    */
-  CFreal getThermConductivity(const RealVector& state,
-			      const CFreal& dynViscosity)
+  virtual CFreal getThermConductivity(const RealVector& state,
+				      const CFreal& dynViscosity)
   {
   }
 

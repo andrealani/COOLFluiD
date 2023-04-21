@@ -56,7 +56,54 @@ void MHD3DProjectionDiffPrim::setGradientVars(const vector<RealVector*>& states,
 					      const CFuint stateSize)
 {
   /// PETER
-  
+  /*
+  Here you have to compute multiple states [rho u v w Bx By Bz T phi] from the given states [rho u v w Bx By Bz p phi]
+states and values are matrices storing multiple states
+  */
+
+
+CFreal mu = 1.27;       // Mean molecular weight
+CFreal mH = 1.67e-27;   // Mass hydrogen
+CFreal kB = 1.38e-23;
+
+// First copy over all states
+for (CFuint i = 0; i < 9 ; ++i) {
+    for (CFuint j = 0; j < 6 ; ++j) {
+
+      values(i,j) = (*states[j])[i];
+
+      //std::cout << "i = " << i << "\n";
+      //std::cout << "j = " << j << "\n";
+    }
+}
+
+// Now overwrite values(7,j):
+for (CFuint j = 0; j < 6; ++j) {
+   //values(7,j) = (*states[j])[7]*mu*mH/(2*(*states[j])[0]*kB;
+   // Adimensional:
+   values(7,j) = (*states[j])[7]/(*states[j])[0]; // T = P[adim]/rho[adim]
+}
+
+
+
+
+
+
+
+/*
+for (CFuint i = 0; i < nbValues; ++i) {
+    for (CFuint j = 0; j < stateSize; ++j) {
+      
+      if (j==7) {
+       values(i,j) = (*states[j])[i]*mu*mH/(2*(*states[0])[i]*kB);
+      } else {
+        values(i,j) = (*states[j])[i];
+      }
+
+    }
+}
+*/
+
   /// examples for Navier-Stokes
   // from [p u v w T] to [p u v w T] 
   /*for (CFuint i = 0; i < nbValues; ++i) {
@@ -121,10 +168,8 @@ CFreal MHD3DProjectionDiffPrim::getDynViscosity(const RealVector& state,
 //////////////////////////////////////////////////////////////////////////////
 
 CFreal MHD3DProjectionDiffPrim::getDensity(const RealVector& state)
-{
-  throw Common::NotImplementedException
-    (FromHere(), "MHD3DProjectionDiffPrim::getDensity()");
-  return 0;
+{  
+  return state[0];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -154,6 +199,18 @@ void MHD3DProjectionDiffPrim::setGradientState(const RealVector& state)
   _gradState[4] = (state[4] - 0.5*state[0]*V2)/(state[0]*cv);
   _gradState[0] = R*state[0]*_gradState[4];
   */
+
+CFreal mu = 1.27;       // Mean molecular weight
+CFreal mH = 1.67e-27;   // Mass hydrogen
+CFreal kB = 1.38e-23;
+
+ // Again, copy over the full state vector:
+ _gradState = state;
+ // And then overwrite _gratState[7] = T
+ //_gradState[7] = state[7]*mu*mH/(2.0*state[0]*kB);
+ // Adimensional:
+ _gradState[7] = state[7]/state[0];
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
