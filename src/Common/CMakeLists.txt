@@ -248,7 +248,7 @@ ENDIF()
 
   IF    ( CF_OS_MACOSX )
     IF    ( CF_ARCH_ARM )
-        LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSXarm.cxx )
+        LIST ( APPEND Common_files SignalHandlerMacOSXarm.hh SignalHandlerMacOSXarm.cxx )
     ELSE ()
         LIST ( APPEND Common_files SignalHandlerMacOSX.hh SignalHandlerMacOSX.cxx )
     ENDIF ()

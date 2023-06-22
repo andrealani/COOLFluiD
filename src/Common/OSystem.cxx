@@ -27,7 +27,7 @@
 #ifdef __x86_64__
   #include "Common/SignalHandlerMacOSX.hh"
 #endif
-#ifdef __arm__
+#ifdef __arm64__
   #include "Common/SignalHandlerMacOSXarm.hh"
 #endif
 #endif
@@ -70,7 +70,7 @@ OSystem::OSystem() :
     #ifdef __x86_64__
         if ( m_sig_handler == CFNULL )  m_sig_handler = new SignalHandlerMacOSX();
     #endif
-    #ifdef __arm__
+    #ifdef __arm64__
         if ( m_sig_handler == CFNULL )  m_sig_handler = new SignalHandlerMacOSXarm();
     #endif
 #else

@@ -14,6 +14,9 @@ IF ( APPLE )
   ELSE()
     SET ( CF_OS_UNRECOGNIZED_REASON "Unrecognized APPLE type : COOLFluiD has only been tested  only with Apple MacOSX ( Darwin ) systems.")
   ENDIF()
+  IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64") 
+  SET ( CF_ARCH_ARM 1 ) 
+  ENDIF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
 ENDIF()
 
 ### Check for Windows
