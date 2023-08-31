@@ -32,7 +32,7 @@ mhd3DProjectionEpsConsProvider("MHD3DProjectionEpsCons");
 MHD3DProjectionEpsCons::MHD3DProjectionEpsCons(Common::SafePtr<Framework::BaseTerm> term) :
   MHD3DProjectionEpsVarSet(term)
 {
-  vector<std::string> names(9);
+  vector<std::string> names(11);
   names[0] = "rho";
   names[1] = "rhoU";
   names[2] = "rhoV";
