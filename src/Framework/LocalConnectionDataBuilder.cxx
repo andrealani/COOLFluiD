@@ -446,6 +446,68 @@ Table<CFuint>* LocalConnectionDataBuilder::faceDofPrismOrder1()
 
 //////////////////////////////////////////////////////////////////////////////
 
+Table<CFuint>* LocalConnectionDataBuilder::faceDofPrismOrder2()
+{
+  const CFuint nbFaces = 5;
+  std::valarray<CFuint> dofsPerFace(nbFaces);
+
+  dofsPerFace[0] = 6;
+  dofsPerFace[1] = 6;
+  dofsPerFace[2] = 9;
+  dofsPerFace[3] = 9;
+  dofsPerFace[4] = 9;
+
+  Table<CFuint>* table = new Table<CFuint>(dofsPerFace);
+
+  (*table)(0,0) = 0;
+  (*table)(0,1) = 2;
+  (*table)(0,2) = 1;
+  (*table)(0,3) = 8;
+  (*table)(0,4) = 7;
+  (*table)(0,5) = 6;
+
+  (*table)(1,0) = 3;
+  (*table)(1,1) = 4;
+  (*table)(1,2) = 5;
+  (*table)(1,3) = 15;
+  (*table)(1,4) = 16;
+  (*table)(1,5) = 17;
+
+  (*table)(2,0) = 0;
+  (*table)(2,1) = 1;
+  (*table)(2,2) = 4;
+  (*table)(2,3) = 3;
+  (*table)(2,4) = 6;
+  (*table)(2,5) = 11;
+  (*table)(2,6) = 15;
+  (*table)(2,7) = 9;
+  (*table)(2,8) = 10;
+
+  (*table)(3,0) = 1;
+  (*table)(3,1) = 2;
+  (*table)(3,2) = 5;
+  (*table)(3,3) = 4;
+  (*table)(3,4) = 7;
+  (*table)(3,5) = 13;
+  (*table)(3,6) = 16;
+  (*table)(3,7) = 11;
+  (*table)(3,8) = 12;
+
+  (*table)(4,0) = 0;
+  (*table)(4,1) = 3;
+  (*table)(4,2) = 5;
+  (*table)(4,3) = 2;
+  (*table)(4,4) = 9;
+  (*table)(4,5) = 17;
+  (*table)(4,6) = 13;
+  (*table)(4,7) = 8;
+  (*table)(4,8) = 14;
+
+  return table;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 Table<CFuint>* LocalConnectionDataBuilder::faceDofHexaOrder1()
 {
   const CFuint nbFaces = 6;
@@ -767,7 +829,6 @@ Table<CFuint>* LocalConnectionDataBuilder::edgeDofPrismOrder1()
   Table<CFuint>* table = new Table<CFuint>(nbEdges,
              nbDofsPerEdge);
 
-///@todo this is wrong!!!!!!!1
 
   (*table)(0,0) = 0;
   (*table)(0,1) = 1;
@@ -782,28 +843,75 @@ Table<CFuint>* LocalConnectionDataBuilder::edgeDofPrismOrder1()
   (*table)(3,1) = 2;
 
   (*table)(4,0) = 1;
-  (*table)(4,1) = 3;
+  (*table)(4,1) = 4;
 
   (*table)(5,0) = 2;
-  (*table)(5,1) = 3;
+  (*table)(5,1) = 5;
 
-  (*table)(5,0) = 2;
-  (*table)(5,1) = 3;
+  (*table)(6,0) = 3;
+  (*table)(6,1) = 4;
 
-  (*table)(6,0) = 2;
-  (*table)(6,1) = 3;
+  (*table)(7,0) = 3;
+  (*table)(7,1) = 5;
 
-  (*table)(7,0) = 2;
-  (*table)(7,1) = 3;
-
-  (*table)(8,0) = 2;
-  (*table)(8,1) = 3;
+  (*table)(8,0) = 4;
+  (*table)(8,1) = 5;
 
   return table;
 
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+Table<CFuint>* LocalConnectionDataBuilder::edgeDofPrismOrder2()
+{
+  const CFuint nbEdges = 9;
+  const CFuint nbDofsPerEdge = 3;
+
+  Table<CFuint>* table = new Table<CFuint>(nbEdges,
+             nbDofsPerEdge);
+
+  (*table)(0,0) = 0;
+  (*table)(0,1) = 1;
+  (*table)(0,2) = 6;
+  
+  (*table)(1,0) = 0;
+  (*table)(1,1) = 2;
+  (*table)(1,2) = 8;
+
+  (*table)(2,0) = 0;
+  (*table)(2,1) = 3;
+  (*table)(2,2) = 9;
+
+  (*table)(3,0) = 1;
+  (*table)(3,1) = 2;
+  (*table)(3,2) = 7;
+
+  (*table)(4,0) = 1;
+  (*table)(4,1) = 4;
+  (*table)(4,2) = 11;
+
+  (*table)(5,0) = 2;
+  (*table)(5,1) = 5;
+  (*table)(5,2) = 13;
+
+  (*table)(6,0) = 3;
+  (*table)(6,1) = 4;
+  (*table)(6,2) = 15;
+
+  (*table)(7,0) = 3;
+  (*table)(7,1) = 5;
+  (*table)(7,2) = 17;
+
+  (*table)(8,0) = 4;
+  (*table)(8,1) = 5;
+  (*table)(8,2) = 16;
+
+  return table;
+
+
+}
 //////////////////////////////////////////////////////////////////////////////
 
 Table<CFuint>* LocalConnectionDataBuilder::edgeDofHexaOrder1()

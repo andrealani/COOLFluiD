@@ -68,6 +68,8 @@ LagrangeShapeFunctionPrismP0.cxx
 LagrangeShapeFunctionPrismP0.hh
 LagrangeShapeFunctionPrismP1.cxx
 LagrangeShapeFunctionPrismP1.hh
+LagrangeShapeFunctionPrismP2.cxx
+LagrangeShapeFunctionPrismP2.hh
 LagrangeShapeFunctionPyramP0.cxx
 LagrangeShapeFunctionPyramP0.hh
 LagrangeShapeFunctionPyramP1.cxx

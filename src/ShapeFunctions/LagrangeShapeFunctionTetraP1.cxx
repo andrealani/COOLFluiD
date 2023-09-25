@@ -87,95 +87,6 @@ void LagrangeShapeFunctionTetraP1::computeMappedCoordPlaneNormal(const std::vect
      
    if (planeIdx[ip] == 0)
    {
-       _gradShapFunc[KSI][ 0] = - 1.;
-       _gradShapFunc[KSI][ 1] = 1. ;
-       _gradShapFunc[KSI][ 2] = 0.;
-       _gradShapFunc[KSI][ 3] = 0.;
-       
-       _gradShapFunc[ETA][ 0] = - 1.;
-       _gradShapFunc[ETA][ 1] = 0.;
-       _gradShapFunc[ETA][ 2] = 1.;
-       _gradShapFunc[ETA][ 3] = 0.;
-       
-     _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
-     _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
-       
-     for (CFuint in = 1; in < 4; ++in)
-     {
-       _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
-       _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
-     }
-   }
-   else if (planeIdx[ip] == 1)
-   {
-       
-       _gradShapFunc[KSI][ 0] = - 1.;
-       _gradShapFunc[KSI][ 1] = 1. ;
-       _gradShapFunc[KSI][ 2] = 0.;
-       _gradShapFunc[KSI][ 3] = 0.;
-       
-       _gradShapFunc[ZTA][ 0] = -1.;
-       _gradShapFunc[ZTA][ 1] = 0.;
-       _gradShapFunc[ZTA][ 2] = 0.;
-       _gradShapFunc[ZTA][ 3] = 1.;
-       
-     _vec1 = _gradShapFunc[KSI][0]*(*nodes[0]);
-     _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0]);
-     for (CFuint in = 1; in < 4; ++in)
-     {
-       _vec1 += _gradShapFunc[KSI][in]*(*nodes[in]);
-       _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
-     }
-   }
-   else if (planeIdx[ip] == 3)
-   {
-       _gradShapFunc[ETA][ 0] = - 1.;
-       _gradShapFunc[ETA][ 1] = 0.;
-       _gradShapFunc[ETA][ 2] = 1.;
-       _gradShapFunc[ETA][ 3] = 0.;
-
-       
-       _gradShapFunc[ZTA][ 0] = -1.;
-       _gradShapFunc[ZTA][ 1] = 0.;
-       _gradShapFunc[ZTA][ 2] = 0.;
-       _gradShapFunc[ZTA][ 3] = 1.;
-              
-     _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0]);
-     _vec2 = _gradShapFunc[ETA][0]*(*nodes[0]);
-     for (CFuint in = 1; in < 4; ++in)
-     {
-       _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in]);
-       _vec2 += _gradShapFunc[ETA][in]*(*nodes[in]);
-     }
-   }
-   else if (planeIdx[ip] == 2) //Face normal for equilateral triangle (oblique face)
-   {
-       _gradShapFunc[KSI][ 0] = - 1.;
-       _gradShapFunc[KSI][ 1] = 1. ;
-       _gradShapFunc[KSI][ 2] = 0.;
-       _gradShapFunc[KSI][ 3] = 0.;
-       
-       _gradShapFunc[ETA][ 0] = - 1.;
-       _gradShapFunc[ETA][ 1] = 0.;
-       _gradShapFunc[ETA][ 2] = 1.;
-       _gradShapFunc[ETA][ 3] = 0.;
-       
-       _gradShapFunc[ZTA][ 0] = -1.;
-       _gradShapFunc[ZTA][ 1] = 0.;
-       _gradShapFunc[ZTA][ 2] = 0.;
-       _gradShapFunc[ZTA][ 3] = 1.;
-       
-     _vec1 = -_gradShapFunc[ETA][0]*(*nodes[0]) + _gradShapFunc[ZTA][0]*(*nodes[0]) ;
-     _vec2 = -_gradShapFunc[ETA][0]*(*nodes[0]) + _gradShapFunc[KSI][0]*(*nodes[0]);
-     for (CFuint in = 1; in < 4; ++in)
-     {
-       _vec1 += -_gradShapFunc[ETA][in]*(*nodes[in]) + _gradShapFunc[ZTA][in]*(*nodes[in]);
-       _vec2 += -_gradShapFunc[ETA][in]*(*nodes[in]) + _gradShapFunc[KSI][in]*(*nodes[in]);
-     }
-   }
-     
-   else if (planeIdx[ip] == 4) // x
-   {
        _gradShapFunc[ETA][ 0] = - 1.;
        _gradShapFunc[ETA][ 1] = 0.;
        _gradShapFunc[ETA][ 2] = 1.;
@@ -195,7 +106,7 @@ void LagrangeShapeFunctionTetraP1::computeMappedCoordPlaneNormal(const std::vect
          _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
        }
    }
-   else if (planeIdx[ip] == 5) // y
+   else if (planeIdx[ip] == 1) // y
    {
        _gradShapFunc[KSI][ 0] = - 1.;
        _gradShapFunc[KSI][ 1] = 1. ;
@@ -215,7 +126,7 @@ void LagrangeShapeFunctionTetraP1::computeMappedCoordPlaneNormal(const std::vect
          _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
        }
    }
-   else  // z
+   else if (planeIdx[ip] == 2)// z
    {
        _gradShapFunc[KSI][ 0] = - 1.;
        _gradShapFunc[KSI][ 1] = 1. ;
@@ -236,6 +147,33 @@ void LagrangeShapeFunctionTetraP1::computeMappedCoordPlaneNormal(const std::vect
        }
    }
 
+   else if (planeIdx[ip] == 3) //Face normal for equilateral triangle (oblique face)
+   {
+       _gradShapFunc[KSI][ 0] = - 1.;
+       _gradShapFunc[KSI][ 1] = 1. ;
+       _gradShapFunc[KSI][ 2] = 0.;
+       _gradShapFunc[KSI][ 3] = 0.;
+       
+       _gradShapFunc[ETA][ 0] = - 1.;
+       _gradShapFunc[ETA][ 1] = 0.;
+       _gradShapFunc[ETA][ 2] = 1.;
+       _gradShapFunc[ETA][ 3] = 0.;
+       
+       _gradShapFunc[ZTA][ 0] = -1.;
+       _gradShapFunc[ZTA][ 1] = 0.;
+       _gradShapFunc[ZTA][ 2] = 0.;
+       _gradShapFunc[ZTA][ 3] = 1.;
+       
+     _vec1 = +_gradShapFunc[ETA][0]*(*nodes[0]) - _gradShapFunc[ZTA][0]*(*nodes[0]) ;
+     _vec2 = -_gradShapFunc[ETA][0]*(*nodes[0]) + _gradShapFunc[KSI][0]*(*nodes[0]);
+     for (CFuint in = 1; in < 4; ++in)
+     {
+       _vec1 += +_gradShapFunc[ETA][in]*(*nodes[in]) - _gradShapFunc[ZTA][in]*(*nodes[in]);
+       _vec2 += -_gradShapFunc[ETA][in]*(*nodes[in]) + _gradShapFunc[KSI][in]*(*nodes[in]);
+     }
+   }
+
+   
    // compute normal
      MathTools::MathFunctions::crossProd(_vec1,_vec2,pointNormal);
  }

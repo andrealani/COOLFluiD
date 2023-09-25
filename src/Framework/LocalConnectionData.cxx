@@ -120,9 +120,15 @@ LocalConnectionData::LocalConnectionData()
 
   _code2TableFace.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER1, STATE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::faceDofPrismOrder1());
+  
+  _code2TableFace.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER2, STATE, CFPolyForm::LAGRANGE),
+       LocalConnectionDataBuilder::faceDofPrismOrder2());
 
   _code2TableFace.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::faceDofPrismOrder1());
+       
+  _code2TableFace.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER2, NODE, CFPolyForm::LAGRANGE),
+       LocalConnectionDataBuilder::faceDofPrismOrder2());
 
   _code2TableFace.insert(LocalConnectionData::getCode(CFGeoShape::HEXA, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::faceDofHexaOrder1());
@@ -192,9 +198,15 @@ LocalConnectionData::LocalConnectionData()
 
   _code2TableEdge.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER1, STATE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::edgeDofPrismOrder1());
+       
+  _code2TableEdge.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER2, STATE, CFPolyForm::LAGRANGE),
+       LocalConnectionDataBuilder::edgeDofPrismOrder2());
 
   _code2TableEdge.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::edgeDofPrismOrder1());
+       
+  _code2TableEdge.insert(LocalConnectionData::getCode(CFGeoShape::PRISM, CFPolyOrder::ORDER2, NODE, CFPolyForm::LAGRANGE),
+       LocalConnectionDataBuilder::edgeDofPrismOrder2());
 
   _code2TableEdge.insert(LocalConnectionData::getCode(CFGeoShape::HEXA, CFPolyOrder::ORDER1, NODE, CFPolyForm::LAGRANGE),
        LocalConnectionDataBuilder::edgeDofHexaOrder1());

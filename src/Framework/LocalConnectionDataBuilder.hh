@@ -82,6 +82,11 @@ public:
   /// @pre the numbering is anticlockwise on each face if you look
   ///      at the face from outside the Prism.
   static Common::Table<CFuint>* faceDofPrismOrder1();
+  
+  /// @return the table of connectivity face to DOF for a Prism of order 2
+  /// @pre the numbering is anticlockwise on each face if you look
+  ///      at the face from outside the Prism.
+  static Common::Table<CFuint>* faceDofPrismOrder2();
 
   /// @return the table of connectivity face to DOF for a Hexahedron of order 1
   /// @pre the numbering is anticlockwise on each face if you look
@@ -114,6 +119,9 @@ public:
 
   /// @return the table of connectivity edge-dof for a Prism of order 1
   static Common::Table<CFuint>* edgeDofPrismOrder1();
+  
+  /// @return the table of connectivity edge-dof for a Prism of order 2
+  static Common::Table<CFuint>* edgeDofPrismOrder2();
 
   /// @return the table of connectivity edge-dof for a Hexahedron of order 1
   static Common::Table<CFuint>* edgeDofHexaOrder1();

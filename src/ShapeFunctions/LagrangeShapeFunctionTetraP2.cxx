@@ -180,87 +180,53 @@ for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
 
 
 
-  //cf_assert(planeIdx[ip] == 0 || planeIdx[ip] == 1 || planeIdx[ip] == 2);
-    
-  if (planeIdx[ip] == 0)
+  cf_assert(planeIdx[ip] == 0 || planeIdx[ip] == 1 || planeIdx[ip] == 2 || planeIdx[ip] == 3);
+     
+  if (planeIdx[ip] == 0) // x
   {
 
       _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
-        
-      for (CFuint in = 1; in < 10; ++in)
-      {
-        _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
-      }
-  }
-  else if (planeIdx[ip] == 1)
-  {
-
-      _vec1 = _gradShapFunc[KSI][0]*(*nodes[0]);
       _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0]);
       for (CFuint in = 1; in < 10; ++in)
       {
-        _vec1 += _gradShapFunc[KSI][in]*(*nodes[in]);
+        _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
         _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
       }
   }
-  else if (planeIdx[ip] == 3)
+  else if (planeIdx[ip] == 1) // y
   {
 
       _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[ETA][0]*(*nodes[0]);
+      _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
       for (CFuint in = 1; in < 10; ++in)
       {
         _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in]);
+        _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
+      }
+  }
+  else if (planeIdx[ip] == 2) // z
+  {
+
+      _vec1 = _gradShapFunc[KSI][0]*(*nodes[0]);
+      _vec2 = _gradShapFunc[ETA][0]*(*nodes[0]);
+      for (CFuint in = 1; in < 10; ++in)
+      {
+        _vec1 += _gradShapFunc[KSI][in]*(*nodes[in]);
         _vec2 += _gradShapFunc[ETA][in]*(*nodes[in]);
       }
   }
-  else if (planeIdx[ip] == 2) //Face normal for equilateral triangle (oblique face)
+  else if (planeIdx[ip] == 3) //Face normal for equilateral triangle (oblique face)
   {
     
-      _vec1 = -_gradShapFunc[ETA][0]*(*nodes[0]) + _gradShapFunc[ZTA][0]*(*nodes[0]) ;
+      _vec1 = +_gradShapFunc[ETA][0]*(*nodes[0]) - _gradShapFunc[ZTA][0]*(*nodes[0]) ;
       _vec2 = -_gradShapFunc[ETA][0]*(*nodes[0]) + _gradShapFunc[KSI][0]*(*nodes[0]);
       for (CFuint in = 1; in < 10; ++in)
       {
-        _vec1 += -_gradShapFunc[ETA][in]*(*nodes[in]) + _gradShapFunc[ZTA][in]*(*nodes[in]);
+        _vec1 += +_gradShapFunc[ETA][in]*(*nodes[in]) - _gradShapFunc[ZTA][in]*(*nodes[in]);
         _vec2 += -_gradShapFunc[ETA][in]*(*nodes[in]) + _gradShapFunc[KSI][in]*(*nodes[in]);
       }
   }
-    
-  else if (planeIdx[ip] == 4) // x
-  {
-
-      _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0]);
-      for (CFuint in = 1; in < 10; ++in)
-      {
-        _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
-      }
-  }
-  else if (planeIdx[ip] == 5) // y
-  {
-
-      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
-      for (CFuint in = 1; in < 10; ++in)
-      {
-        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
-      }
-  }
-  else  // z
-  {
-
-      _vec1 = _gradShapFunc[KSI][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[ETA][0]*(*nodes[0]);
-      for (CFuint in = 1; in < 10; ++in)
-      {
-        _vec1 += _gradShapFunc[KSI][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[ETA][in]*(*nodes[in]);
-      }
-  }
+   
 
   // compute normal
   MathTools::MathFunctions::crossProd(_vec1,_vec2,pointNormal);

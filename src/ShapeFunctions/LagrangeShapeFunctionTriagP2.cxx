@@ -88,7 +88,7 @@ void LagrangeShapeFunctionTriagP2::computeFaceJacobDetVectorAtMappedCoords(const
 
     // compute face jacobian vector
     MathTools::MathFunctions::crossProd(m_vec1,m_vec2,pointNormal);
-        pointNormal*=-1.;
+        //pointNormal*=-1.;
   }
 }
 

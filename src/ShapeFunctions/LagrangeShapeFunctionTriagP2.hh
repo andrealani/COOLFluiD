@@ -214,53 +214,7 @@ public:
       const CFreal xi =  mappedCoord[ip][KSI];
       const CFreal eta = mappedCoord[ip][ETA];
       
-      if (planeIdx[ip] == 0)  // normal to face nb 1
-      {
-          const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
-      const CFreal dN1dxi = 4.*xi - 1.;
-      const CFreal dN2dxi = 0.;
-      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
-      const CFreal dN4dxi = 4.*eta;
-      const CFreal dN5dxi = -4.*eta;
-        
-        pointNormal[XX] = +(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
-        pointNormal[YY] = -(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
-        }
-      else if (planeIdx[ip] == 1) // normal to face nb 2
-      {
-        const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
-      const CFreal dN1deta = 0.;
-      const CFreal dN2deta = 4.*eta - 1.;
-      const CFreal dN3deta = -4.*xi;
-      const CFreal dN4deta = 4.*xi;
-      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
-
-        pointNormal[XX] = +(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
-        pointNormal[YY] = -(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
-        
-        const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
-      const CFreal dN1dxi = 4.*xi - 1.;
-      const CFreal dN2dxi = 0.;
-      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
-      const CFreal dN4dxi = 4.*eta;
-      const CFreal dN5dxi = -4.*eta;
-        
-        pointNormal[XX] += -(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
-        pointNormal[YY] += +(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
-      }
-      else if (planeIdx[ip] == 2) // normal to face nb 3
-      {
-      const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
-      const CFreal dN1deta = 0.;
-      const CFreal dN2deta = 4.*eta - 1.;
-      const CFreal dN3deta = -4.*xi;
-      const CFreal dN4deta = 4.*xi;
-      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
-
-        pointNormal[XX] = -(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
-        pointNormal[YY] = +(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
-      }
-      else if (planeIdx[ip] == 3) // vector ~ in the x direction
+      if (planeIdx[ip] == 0) // vector ~ in the x direction
       {
       const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
       const CFreal dN1deta = 0.;
@@ -273,7 +227,7 @@ public:
         pointNormal[YY] = -(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
         
         }
-      else if (planeIdx[ip] == 4) // vector ~ in the y direction
+      else if (planeIdx[ip] == 1) // vector ~ in the y direction
       {
         const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
       const CFreal dN1dxi = 4.*xi - 1.;
@@ -284,6 +238,28 @@ public:
         
         pointNormal[XX] = -(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
         pointNormal[YY] = +(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
+      }
+      else if (planeIdx[ip] == 2) // normal to face nb 2
+      {
+        const CFreal dN0deta = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1deta = 0.;
+      const CFreal dN2deta = 4.*eta - 1.;
+      const CFreal dN3deta = -4.*xi;
+      const CFreal dN4deta = 4.*xi;
+      const CFreal dN5deta = 4. - 4.*xi - 8.*eta;
+
+        pointNormal[XX] = -(y0*dN0deta  + y1*dN1deta +y2*dN2deta +y3*dN3deta + y4*dN4deta + y5*dN5deta);
+        pointNormal[YY] = +(x0*dN0deta + x1*dN1deta + x2*dN2deta + x3*dN3deta + x4*dN4deta + x5*dN5deta);
+        
+        const CFreal dN0dxi = -3. + 4.*eta + 4.*xi;
+      const CFreal dN1dxi = 4.*xi - 1.;
+      const CFreal dN2dxi = 0.;
+      const CFreal dN3dxi = 4. - 8.*xi - 4.*eta;
+      const CFreal dN4dxi = 4.*eta;
+      const CFreal dN5dxi = -4.*eta;
+        
+        pointNormal[XX] += +(y0*dN0dxi  + y1*dN1dxi +y2*dN2dxi +y3*dN3dxi + y4*dN4dxi + y5*dN5dxi);
+        pointNormal[YY] += -(x0*dN0dxi  + x1*dN1dxi +x2*dN2dxi +x3*dN3dxi + x4*dN4dxi + x5*dN5dxi);
       }
     }
   }

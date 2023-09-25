@@ -6,11 +6,16 @@
 
 #include "ShapeFunctions/LagrangeShapeFunctionPrismP1.hh"
 
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+using namespace std;
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-
 
    namespace ShapeFunctions {
 
@@ -21,6 +26,7 @@ RealVector LagrangeShapeFunctionPrismP1::_vec1 = RealVector(DIM_3D);
 RealVector LagrangeShapeFunctionPrismP1::_vec2 = RealVector(DIM_3D);
 RealVector LagrangeShapeFunctionPrismP1::_vec3 = RealVector(DIM_3D);
 std::vector<RealVector> LagrangeShapeFunctionPrismP1::_normals = std::vector<RealVector>(5);
+std::vector<RealVector> LagrangeShapeFunctionPrismP1::_gradShapFunc = std::vector<RealVector>(3,RealVector(6));
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -258,6 +264,99 @@ void LagrangeShapeFunctionPrismP1::computeFaceJacobianDeterminant(
    }
 
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void LagrangeShapeFunctionPrismP1::computeMappedCoordPlaneNormal(const std::vector<CFuint>& planeIdx,
+                                                                const std::vector<RealVector>& mappedCoord,
+                                                                const std::vector<Framework::Node*>& nodes,
+                                                                std::vector<RealVector>& normal)
+  {
+   for (CFuint ip = 0; ip < mappedCoord.size(); ++ip)
+  {
+    RealVector& pointNormal = normal[ip];
+
+    const CFreal xi =  mappedCoord[ip][KSI];
+    const CFreal eta = mappedCoord[ip][ETA];
+    const CFreal zta = mappedCoord[ip][ZTA];
+
+    const CFreal lbd = 1.0 - xi - eta;
+    const CFreal a   = 0.5 * (1.0 - zta);
+    const CFreal b   = 0.5 * (1.0 + zta);
+    
+      _gradShapFunc[KSI][0] = -a;
+      _gradShapFunc[KSI][1] =  a;
+      _gradShapFunc[KSI][2] =  0.;
+      _gradShapFunc[KSI][3] = -b;
+      _gradShapFunc[KSI][4] =  b;
+      _gradShapFunc[KSI][5] =  0.;
+      
+      _gradShapFunc[ETA][0] = -a;
+      _gradShapFunc[ETA][1] = 0.;
+      _gradShapFunc[ETA][2] =  a;
+      _gradShapFunc[ETA][3] = -b;
+      _gradShapFunc[ETA][4] = 0.;
+      _gradShapFunc[ETA][5] =  b;
+
+      _gradShapFunc[ZTA][0] = -0.5*lbd;
+      _gradShapFunc[ZTA][1] = -0.5*xi;
+      _gradShapFunc[ZTA][2] = -0.5*eta;
+      _gradShapFunc[ZTA][3] =  0.5*lbd;
+      _gradShapFunc[ZTA][4] =  0.5*xi;
+      _gradShapFunc[ZTA][5] =  0.5*eta;
+      
+    cf_assert(planeIdx[ip] == 0 || planeIdx[ip] == 1 || planeIdx[ip] == 2 || planeIdx[ip] == 3);
+    
+    if (planeIdx[ip] == 0) // x-direction
+    {
+      _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
+      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      for (CFuint in = 1; in < 6; ++in)
+      {
+        _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
+        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+      }
+    }
+    else if (planeIdx[ip] == 1) // y-direction
+    {
+      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
+      for (CFuint in = 1; in < 6; ++in)
+      {
+        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
+      }
+    }
+    else if (planeIdx[ip] == 2) // z-direction
+    {
+      _vec1 = _gradShapFunc[KSI][0]*(*nodes[0]);
+      _vec2 = _gradShapFunc[ETA][0]*(*nodes[0]);
+      for (CFuint in = 1; in < 6; ++in)
+      {
+        _vec1 += _gradShapFunc[KSI][in]*(*nodes[in]);
+        _vec2 += _gradShapFunc[ETA][in]*(*nodes[in]);
+      }
+    }
+    else  // oblique face noraml direction (x+y)
+    {
+      _vec1 = -_gradShapFunc[KSI][0]*(*nodes[0])+_gradShapFunc[ETA][0]*(*nodes[0]);
+      _vec2 = -_gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      for (CFuint in = 1; in < 6; ++in)
+      {
+        _vec1 += -_gradShapFunc[KSI][in]*(*nodes[in])+_gradShapFunc[ETA][in]*(*nodes[in]);
+        _vec2 += -_gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+      }
+    }
+
+    // compute normal
+    MathTools::MathFunctions::crossProd(_vec1,_vec2,pointNormal);
+    //std::cout<<" Normal in direction : "<<planeIdx[ip]<<"    :  "<<pointNormal<<std::endl;
+
+  }
+  
+
+  }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

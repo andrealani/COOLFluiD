@@ -128,10 +128,7 @@ public:
   static void computeMappedCoordPlaneNormal(const std::vector<CFuint>& planeIdx,
                                             const std::vector<RealVector>& mappedCoord,
                                             const std::vector<Framework::Node*>& nodes,
-                                            std::vector<RealVector>& normal)
-  {
-    throw Common::NotImplementedException (FromHere(),getName() + "::computeMappedCoordPlaneNormal()");
-  }
+                                            std::vector<RealVector>& normal);
 
   /// Compute the Jacobian
   static void computeJacobian(
@@ -440,6 +437,9 @@ private:
   static RealVector _vec1;
   static RealVector _vec2;
   static RealVector _vec3;
+  
+  /// gradients of shape functions
+  static std::vector< RealVector > _gradShapFunc;
 
   /// Vector of normals
   static std::vector<RealVector> _normals;

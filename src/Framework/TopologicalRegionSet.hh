@@ -176,6 +176,11 @@ public:
   /// GeoEnts in the GeomEntList
   Common::SafePtr<std::vector<CFuint> > getGeoEntsGlobalIdx()  { return m_geoEntGlobalIdx; }
 
+  /// Get the list of geometric type encapsulating the knowledge
+  /// of the geometrical and solution-related shape of the
+  /// of the GeometricEntity's in this TRS
+  Common::SafePtr<std::vector<CFuint> > getGeoTypes()  { return m_geoTypes; }
+
   /// Sets the global index list of checking the GeometricEntity's in this TRS
   /// @pre m_geoEntGlobalIdx == CFNULL
   /// @pre setGlobalNbGeoEnts() must be called first to set global number
