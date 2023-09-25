@@ -196,6 +196,7 @@ void MHDJacobGradientComputer::computeGradientFaceCorrections()
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -255,6 +256,7 @@ void MHDJacobGradientComputer::computeGradientFaceCorrections()
       const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
       const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
       // compute the face corrections to the gradients
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
