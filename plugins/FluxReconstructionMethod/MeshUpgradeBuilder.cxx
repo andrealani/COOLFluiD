@@ -15,6 +15,7 @@
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/TetraFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/PrismFluxReconstructionElementData.hh"
 
 #include <algorithm>
 #include <iostream>
@@ -123,6 +124,8 @@ CFuint MeshUpgradeBuilder::getNbrOfStatesInSDCellType(CFGeoShape::Type geoShape,
       return (polyOrder + 1)*(polyOrder + 2)*(polyOrder + 3)/6;
     case CFGeoShape::HEXA:
       return (polyOrder + 1)*(polyOrder + 1)*(polyOrder + 1);
+    case CFGeoShape::PRISM:
+      return (polyOrder + 1)*(polyOrder + 1)*(polyOrder + 2)/2;
     default:
       throw Common::NotImplementedException (FromHere(),"Element type not implemented...");
   }
@@ -203,6 +206,24 @@ CFuint MeshUpgradeBuilder::getNbrOfInternalNodesInCellType(CFGeoShape::Type geoS
         }
       }
     }
+    case CFGeoShape::PRISM:
+    {
+      switch (polyOrder)
+      {
+        case CFPolyOrder::ORDER1:
+        {
+          return 0;
+        }
+        case CFPolyOrder::ORDER2:
+        {
+          return 0;
+        }
+        default:
+        {
+          throw Common::NotImplementedException (FromHere(),"Element type not implemented...");
+        }
+      }
+    }    
     case CFGeoShape::HEXA:
     {
       switch (polyOrder)
@@ -267,7 +288,7 @@ CFuint MeshUpgradeBuilder::getNbrOfInternalNodesInFaceType(CFGeoShape::Type geoS
         }
         case CFPolyOrder::ORDER2:
         {
-          return 1;
+          return 0;
         }
         default:
         {
@@ -323,7 +344,7 @@ void MeshUpgradeBuilder::computeGeoTypeInfo()
   {
     // get the number of solution points (states) in this element type
     const CFuint nbStatesPerElem = getNbrOfStatesInSDCellType(type_itr->getGeoShape(),m_solPolyOrder);
-    cout<<"nbStatesPerElem = getNbrOfStatesInSDCellType  "<< nbStatesPerElem<< endl;
+    cout<<"nbStatesPerElem = getNbrOfStatesInFRCellType  "<< nbStatesPerElem<< endl;
     // set the solution polynomial order and number of states
     type_itr->setSolOrder(m_solPolyOrder);
     type_itr->setNbStates(nbStatesPerElem);
@@ -513,6 +534,14 @@ void MeshUpgradeBuilder::divideElements()
 	{
 	  m_pattern[firstFreeIdx] = 4;
 	  nbNewStates += 4;
+	}
+        break;
+
+      case CFGeoShape::PRISM:
+        for (CFuint iNewCell = 0; iNewCell < nbNewCellsPerOldCell; ++iNewCell,++firstFreeIdx)
+	{
+	  m_pattern[firstFreeIdx] = 6;
+	  nbNewStates += 6;
 	}
         break;
 
@@ -1283,28 +1312,32 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
       } break;
       case CFGeoShape::HEXA:
       {
-	  oldOrder = static_cast<CFuint>  (pow(oldNbStatesPerElem,1./3.)+0.5) - 1;
-	  oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
+	      oldOrder = static_cast<CFuint>  (pow(oldNbStatesPerElem,1./3.)+0.5) - 1;
+	      oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         frElemData = new HexaFluxReconstructionElementData(oldOrder2);
-	frElemData2 = new HexaFluxReconstructionElementData(m_solPolyOrder);
+	      frElemData2 = new HexaFluxReconstructionElementData(m_solPolyOrder);
       } break;
       case CFGeoShape::TRIAG:
       {
 	      oldOrder = static_cast<CFuint>  ((-3 + sqrt(1+8*oldNbStatesPerElem))/2 +0.5)   ; 
 	      oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
-        cout<< " MeshUpgradeBuilder::oldNbStatesPerElem   " << oldNbStatesPerElem << endl;
-        cout<< " MeshUpgradeBuilder::oldOrder2  " << oldOrder2 << endl;
-        cout<< " MeshUpgradeBuilder::m_solPolyOrder  "<< m_solPolyOrder << endl;
         frElemData = new TriagFluxReconstructionElementData(oldOrder2);
 	      frElemData2 = new TriagFluxReconstructionElementData(m_solPolyOrder);
       } break;
       case CFGeoShape::TETRA:
       {
-  oldOrder = static_cast<CFuint> (0.5 -2. + pow((27.*oldNbStatesPerElem + sqrt(-3. + 729.*pow(oldNbStatesPerElem,2))),(1./3.)) / pow(3.,(2./3.)) + 1./pow((81.*oldNbStatesPerElem + 3.*sqrt(-3. + 729.*pow(oldNbStatesPerElem,2.))),(1./3.)));
-	oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
+        oldOrder = static_cast<CFuint> (0.5 -2. + pow((27.*oldNbStatesPerElem + sqrt(-3. + 729.*pow(oldNbStatesPerElem,2))),(1./3.)) / pow(3.,(2./3.)) + 1./pow((81.*oldNbStatesPerElem + 3.*sqrt(-3. + 729.*pow(oldNbStatesPerElem,2.))),(1./3.)));
+	      oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         frElemData = new TetraFluxReconstructionElementData(oldOrder2);
-	frElemData2 = new TetraFluxReconstructionElementData(m_solPolyOrder);
+	      frElemData2 = new TetraFluxReconstructionElementData(m_solPolyOrder);
       } break;
+      case CFGeoShape::PRISM:
+      {        
+        oldOrder = static_cast<CFuint> (1./3. * ( (pow(  3.*sqrt(3.)*sqrt(27.*pow(oldNbStatesPerElem,2.)-2.*oldNbStatesPerElem) +27.*oldNbStatesPerElem-1.   , 1./3.))  +( 1./(pow(  3.*sqrt(3)*sqrt(27.*pow(oldNbStatesPerElem,2.)-2.*oldNbStatesPerElem) +27.*oldNbStatesPerElem-1.   , 1./3.)))  -4. ));
+        oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
+        frElemData = new PrismFluxReconstructionElementData(oldOrder2);
+	      frElemData2 = new PrismFluxReconstructionElementData(m_solPolyOrder);
+      } break;      
       default:
       {
         throw Common::ShouldNotBeHereException (FromHere(),"Unsupported cell shape");
@@ -2347,7 +2380,7 @@ vector< RealVector > MeshUpgradeBuilder::getNewNodesCoords(CFGeoShape::Type shap
     } break;
     case CFGeoShape::TRIAG:
     {
-      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for PYRAM");
+      throw Common::NotImplementedException (FromHere(),"MeshUpgradeBuilder::getOutputPntsMappedCoords() for TRIAG");
 //       for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
 //       {
 //         const CFreal ksi = iKsi*1.0/solOrder;
@@ -2590,7 +2623,7 @@ MeshUpgradeBuilder::createTopologicalRegionSet
   cf_assert(elementType->size() > 0);
   const CFGeoShape::Type cellShape = (*elementType)[0].getGeoShape();
   vector< vector< CFuint > > bFaceOrientations = getBFaceOrientations(cellShape);
-  const CFuint nbFaceNodesP1 = bFaceOrientations[0].size();
+  CFuint nbFaceNodesP1 = bFaceOrientations[0].size();
 
   // create the TopologicalRegion storage
   const CFuint nbTRs = nbFacesPerTR.size();
@@ -2748,6 +2781,13 @@ MeshUpgradeBuilder::createTopologicalRegionSet
 	  
             for (CFuint iNode = 0; iNode < nbFaceNodes; ++iNode)
             {
+              // here add if facenodes of faceidx have same nbFaceNodes
+              if ((*m_bFaceNodes).nbCols(faceIdx) != nbFaceNodes)
+              {
+                //CFLog(VERBOSE,"MeshUpgradeBuilder::createTopologicalRegionSet -- different face type detected\n");
+                break;
+              }
+              /////
               const CFuint nodeID = (*m_bFaceNodes)(faceIdx, iNode);
               for (CFuint jNode = 0; jNode < nbFaceNodes; ++jNode)
               {
@@ -2768,7 +2808,7 @@ MeshUpgradeBuilder::createTopologicalRegionSet
               break;
             }
 	  } // end loop over boundary faces
-	  
+
 	  // check if the face has been found
           if (!faceFound)
           {
@@ -2804,6 +2844,25 @@ MeshUpgradeBuilder::createTopologicalRegionSet
           /// even though the entity may be higher order. Another way to fix this is to extend getGeoShape()
           /// by passing also the dimensionality and the geometric order of the entity.
           const CFuint dim = PhysicalModelStack::getActive()->getDim();
+
+          // determine the number of nodes for Q1 elements based on the number nodes of the current face and dim (needed for meshes with different face types like for prisms)
+
+          if (dim==2) // In 2D faces should always be segments of 2 corner nodes and one additional node for Q2
+          {
+            nbFaceNodesP1=2;
+          }
+          else
+          {
+            if (nbFaceNodes==3 or nbFaceNodes==6) // Triangular Face
+            {
+              nbFaceNodesP1=3;
+            }
+            else if ((nbFaceNodes==4 or nbFaceNodes==9)) //Quad Face
+            {
+              nbFaceNodesP1=4;
+            }
+          }
+
           const std::string faceGeoTypeName = makeGeomEntName (getGeoShape(CFGeoEnt::FACE, dim, nbFaceNodesP1),
                                                                getGeometricPolyType(),
                                                                getGeometricPolyOrder(),

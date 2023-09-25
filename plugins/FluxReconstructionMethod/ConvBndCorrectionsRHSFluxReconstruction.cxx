@@ -68,10 +68,12 @@ ConvBndCorrectionsRHSFluxReconstruction::ConvBndCorrectionsRHSFluxReconstruction
   m_gradUpdates(),
   m_solPolyValsAtFlxPnts(CFNULL),
   m_flxLocalCoords(CFNULL),
+  m_faceFlxPntsLocalCoordsPerType(CFNULL),
   m_flxSolDep(CFNULL),
   m_nbrSolDep(),
   m_faceJacobVecs(),
   m_projectedCorr(),
+  m_mappedFaceNormalDir(),
   m_order()
 {
 }
@@ -124,9 +126,9 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
     bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
   vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[faceTrs->getName()];
 
-  // number of face orientations (should be the same for all TRs)
+  // number of face orientations
   cf_assert(bndFacesStartIdxs.size() != 0);
-  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+  CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
 
   // number of TRs
   const CFuint nbTRs = faceTrs->getNbTRs();
@@ -144,10 +146,15 @@ void ConvBndCorrectionsRHSFluxReconstruction::executeOnTrs()
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
+    nbOrients = bndFacesStartIdxs[iTR].size()-1;
+
     // loop over different orientations
     for (m_orient = 0; m_orient < nbOrients; ++m_orient)
     {
       CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
+      
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts=(*m_faceFlxPntConn)[m_orient].size();
       
       // select the correct flx pnts on the face out of all cell flx pnts for the current orient
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
@@ -277,6 +284,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
     const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
     
     // extrapolate the states to current flx pnt
+    m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
@@ -303,6 +311,23 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
 
 void ConvBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
 {  
+  // get the correct flxPntsLocalCoords depending on the face type (only applied for Prism for now @todo but also needed if hybrid grids)
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+    }
+    else  // quad face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+    } 
+
+  }
+
   // compute flux point coordinates if needed for the BC
   if (m_bcStateComputer->needsSpatialCoordinates())
   {
@@ -332,7 +357,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::setBndFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient];
     
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 }
 
@@ -359,6 +384,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeCorrection(vector< RealVect
     cf_assert(currentCorrFactor.size() == m_nbrEqs);
 
     // compute the term due to each flx pnt
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
       const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -460,6 +486,7 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeGradientBndFaceCorrections(
       m_projectedCorr = (avgSol-(*m_cellStatesFlxPnt[iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
 
       // Loop over solution pnts to calculate the grad updates
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
       for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
       {
         const CFuint iSolIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -522,11 +549,27 @@ void ConvBndCorrectionsRHSFluxReconstruction::setup()
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = flxLocalCoords->size();
-  
+
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
   
   m_order = static_cast<CFuint>(order);
   
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+  
+  if (elemShape == CFGeoShape::TETRA)  // numbering convention in tetra requires face->computeFaceJacobDetVectorAtMappedCoords with -1 factor
+    {
+      m_mappedFaceNormalDir= -1.;
+    }
+  else
+    {
+      m_mappedFaceNormalDir= 1.;
+    }
+
+    if (elemShape == CFGeoShape::PRISM)  // (Max number of face flx pnts)
+    {
+      m_nbrFaceFlxPnts=(order+1)*(order+1);
+    }
+
   // number of sol points
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
   
@@ -553,6 +596,9 @@ void ConvBndCorrectionsRHSFluxReconstruction::setup()
   
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  // get the face local coords of the flux points on one face depending on the face type
+  m_faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
 
   m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
 

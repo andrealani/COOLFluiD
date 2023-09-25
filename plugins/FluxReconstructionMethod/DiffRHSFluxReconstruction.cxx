@@ -65,6 +65,7 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_orient(),
   m_nbrSolPnts(),
   m_nbrFaceFlxPnts(),
+  m_nbFaceFlxPntsMax(),
   m_face(),
   m_cells(),
   m_riemannFluxComputer(CFNULL),
@@ -97,6 +98,7 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_avgSol(),
   m_avgGrad(),
   m_flxLocalCoords(CFNULL),
+  m_faceFlxPntsLocalCoordsPerType(CFNULL),
   m_flxSolDep(CFNULL),
   m_solSolDep(CFNULL),
   m_solFlxDep(CFNULL),
@@ -107,8 +109,10 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_tempGrad(),
   m_nbrTotalFlxPnts(),
   m_faceJacobVecs(),
+  m_mappedFaceNormalDir(),
   m_jacobDets(),
-  m_order()
+  m_order(),
+  elemShape()
   {
     addConfigOptionsTo(this);
     
@@ -198,6 +202,9 @@ void DiffRHSFluxReconstruction::execute()
     // start and stop index of the faces with this orientation
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
+      
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
 
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
@@ -359,6 +366,23 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
 
 void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
 {
+  // get the correct flxPntsLocalCoords depending on the face type (only applied for Prism for now @todo but also needed if hybrid grids)
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+    }
+    else  // quad face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+    } 
+
+  }
+
   // compute face Jacobian vectors
   m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
@@ -376,7 +400,7 @@ void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
   
   // compute Jacobian determinants
@@ -426,6 +450,7 @@ void DiffRHSFluxReconstruction::computeFlxPntStatesAndGrads()
     }
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
@@ -508,7 +533,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
           //if (m_cell->getID() == 11) CFLog(INFO,"State: " << iSolPnt << ", jSol: " << jSolIdx << ", iDir: " << iDir << ", var: " << iEq << ", flx: " << m_contFlx[jSolIdx][iDir][iEq] << "\n");
     }
       }
@@ -616,6 +641,7 @@ void DiffRHSFluxReconstruction::computeCorrection(CFuint side, vector< RealVecto
     const RealVector& currentCorrFactor = m_cellFlx[side][iFlxPnt];
 
     // compute the term due to each flx pnt
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
       const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -678,7 +704,8 @@ void DiffRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -741,26 +768,37 @@ void DiffRHSFluxReconstruction::setup()
   
   m_order = static_cast<CFuint>(order);
 
-  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+  elemShape = frLocalData[0]->getShape();
   
   //Setting ndimplus, needed for Triag (and tetra, prism)
-  if (elemShape == CFGeoShape::TRIAG)
+  if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA || elemShape == CFGeoShape::PRISM)
     {
-      m_ndimplus=3;
-    }
-  else if (elemShape == CFGeoShape::TETRA)
-    {
-      m_ndimplus=4;
+      m_ndimplus=1;
     }
   else
     {
       m_ndimplus=0;
     }
-  
+
+  if (elemShape == CFGeoShape::TETRA)  // numbering convention in tetra requires face->computeFaceJacobDetVectorAtMappedCoords with -1 factor
+    {
+      m_mappedFaceNormalDir= -1.;
+    }
+  else
+    {
+      m_mappedFaceNormalDir= 1.;
+    }
   // compute flux point coordinates
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = flxLocalCoords->size();
+
+   if (elemShape == CFGeoShape::PRISM)  // (Max number of face flx pnts)
+    {
+      m_nbrFaceFlxPnts=(order+1)*(order+1);
+    }
   
+  //Max number of flux points per face (relevant only for Prisms)
+  m_nbFaceFlxPntsMax= m_nbrFaceFlxPnts; 
   // number of sol points
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
 
@@ -811,6 +849,9 @@ void DiffRHSFluxReconstruction::setup()
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  // get the face local coords of the flux points on one face depending on the face type
+  m_faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
 
   m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
   

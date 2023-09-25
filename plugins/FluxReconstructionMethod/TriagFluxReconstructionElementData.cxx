@@ -1603,8 +1603,8 @@ void TriagFluxReconstructionElementData::createFaceNodeConnectivityPerOrient()
       m_faceConnPerOrient[iOrient][LEFT ] = iFaceL;
       m_faceConnPerOrient[iOrient][RIGHT] = iFaceR;
 
-      m_faceMappedCoordDirPerOrient[iOrient][LEFT ] = 2.;
-      m_faceMappedCoordDirPerOrient[iOrient][RIGHT] = -2.;
+      m_faceMappedCoordDirPerOrient[iOrient][LEFT ] = m_faceMappedCoordDir[iFaceL];//2.;
+      m_faceMappedCoordDirPerOrient[iOrient][RIGHT] = -m_faceMappedCoordDir[iFaceR]; //-2.;
 
       for (CFuint iNode = 0; iNode < 2; ++iNode)
       {
@@ -2015,9 +2015,9 @@ void TriagFluxReconstructionElementData::createFaceMappedCoordDir()
 
   m_faceMappedCoordDir.resize(3);
 
-  m_faceMappedCoordDir[0] = 2.;
-  m_faceMappedCoordDir[1] = 2.;
-  m_faceMappedCoordDir[2] = 2.; 
+  m_faceMappedCoordDir[0] = -2.;
+  m_faceMappedCoordDir[1] = -2.;
+  m_faceMappedCoordDir[2] = -2.; 
 
 }
 //////////////////////////////////////////////////////////////////////
@@ -2061,7 +2061,7 @@ void TriagFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
   {
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    /*for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
      CFuint modalDof = 0;
     
@@ -2078,7 +2078,53 @@ void TriagFluxReconstructionElementData::createVandermondeMatrix()
             modalDof+=1;
           } 
         }
+    }*/
+
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    {
+      CFuint modalDof = 0;
+      double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]))-1.;
+      double b = 2.*m_solPntsLocalCoords[iSol][ETA]-1.;
+
+      for (CFuint iOrder = 0; iOrder < (m_polyOrder/2)+1; ++iOrder)
+      {
+        for (CFuint iOrderKsi = 0; iOrderKsi < iOrder; ++iOrderKsi, ++modalDof)
+        {
+	        CFuint iOrderEta = iOrder;
+          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
+        }
+        for (CFuint iOrderEta = 0; iOrderEta < iOrder+1; ++iOrderEta, ++modalDof)
+        {
+	        CFuint iOrderKsi = iOrder;
+          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
+        }
+      }
+
+      for (CFuint iOrder = 0 ; iOrder < m_polyOrder-(m_polyOrder/2); ++iOrder)
+      {
+        for (CFuint iOrderKsi = 0; iOrderKsi < m_polyOrder-(m_polyOrder/2)-iOrder; ++iOrderKsi, ++modalDof)
+        {
+	        CFuint iOrderEta = iOrder+(m_polyOrder/2)+1;
+          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
+        }
+        for (CFuint iOrderEta = 0; iOrderEta < m_polyOrder-(m_polyOrder/2)-iOrder; ++iOrderEta, ++modalDof)
+        {
+	        CFuint iOrderKsi = iOrder+(m_polyOrder/2)+1;
+          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
+        }
+      }
+
+      cf_assert(modalDof == nbrSolPnts);
     }
+    m_vandermonde*=0.25;
     InvertMatrix(m_vandermonde,m_vandermondeInv);
   }
 }
@@ -2138,6 +2184,7 @@ void TriagFluxReconstructionElementData::createFaceIntegrationCoefs()
       // add contribution of quadrature point to integration coefficient
       m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
     }
+    
   }
 }
 
@@ -2150,9 +2197,9 @@ void TriagFluxReconstructionElementData::createFluxPntFluxDim()
   
     for (CFuint iFlx = 0; iFlx < (m_polyOrder+1); ++iFlx)
     { 
-        m_flxPntFlxDim[m_faceFlxPntConn[0][iFlx]] = 0;//1; //along y
-        m_flxPntFlxDim[m_faceFlxPntConn[1][iFlx]] = 1;//2; //oblique
-        m_flxPntFlxDim[m_faceFlxPntConn[2][iFlx]] = 2;//0; //along x
+        m_flxPntFlxDim[m_faceFlxPntConn[0][iFlx]] = 1;//1; //along y
+        m_flxPntFlxDim[m_faceFlxPntConn[1][iFlx]] = 2;//2; //oblique
+        m_flxPntFlxDim[m_faceFlxPntConn[2][iFlx]] = 0;//0; //along x
     }
 }
 //////////////////////////////////////////////////////////////////////
@@ -2300,6 +2347,16 @@ void TriagFluxReconstructionElementData::createFluxPntFluxDim()
         } break;
       }
     };
+
+
+//////////////////////////////////////////////////////////////////////
+
+void TriagFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
+{
+  CFAUTOTRACE;
+  // Not needed in 2D
+
+}
 
 //////////////////////////////////////////////////////////////////////
   

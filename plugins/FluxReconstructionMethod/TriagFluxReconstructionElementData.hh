@@ -107,6 +107,11 @@ protected: // functions
   void createFaceFlxPntsFaceLocalCoords();
 
   /**
+   * create vector with face flux points local coordinates (coordinate system local to face) per face type
+   */
+  void createFaceFlxPntsLocalCoordsPerType();
+
+  /**
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   void createSolPolyExponents();

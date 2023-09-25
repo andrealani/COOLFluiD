@@ -145,6 +145,9 @@ protected: // data
   /// flux pnt idx influenced by the perturbation
   CFuint m_influencedFlxPnt;
 
+  /// influenced flx pnts idx (by perturbation)
+  std::vector< CFuint> m_influencedFlxPnts;
+
   /// Number of influenced flx pnts (by perturbation)
   CFuint m_NbInfluencedFlxPnts;
 
@@ -159,6 +162,9 @@ protected: // data
   
   /// index of the side which is being perturbed
   CFuint m_pertSide;
+
+  /// Element shape
+  CFGeoShape::Type elemShape;
   
   /// the discontinuous flux extrapolated to the flux points backup
   std::vector< RealVector > m_extrapolatedFluxesBackup;

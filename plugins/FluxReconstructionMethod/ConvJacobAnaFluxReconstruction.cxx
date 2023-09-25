@@ -259,6 +259,9 @@ void ConvJacobAnaFluxReconstruction::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
@@ -392,13 +395,13 @@ void ConvJacobAnaFluxReconstruction::setFaceData(CFuint faceID)
 {   
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
-  
+
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
 
@@ -416,7 +419,7 @@ void ConvJacobAnaFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 }
 
@@ -436,6 +439,7 @@ void ConvJacobAnaFluxReconstruction::computeFlxPntStatesAndGrads()
     *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) = 0.0;
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
@@ -718,7 +722,7 @@ void ConvJacobAnaFluxReconstruction::computeBothJacobsDiffFaceTerm()
             {
               const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][m_pertSol]; 
           
-              m_tempFlux += (m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim+m_ndimplus]) * polyCoef;
+              m_tempFlux += (m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim]) * polyCoef;
             }
             
             acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
@@ -731,6 +735,7 @@ void ConvJacobAnaFluxReconstruction::computeBothJacobsDiffFaceTerm()
             const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
             
             // add the second part of the discontinuous part of the jacobian
+             m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -774,6 +779,7 @@ void ConvJacobAnaFluxReconstruction::computeBothJacobsDiffFaceTerm()
         const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlxPnt];
         
         // loop over the states to perturb the states
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
           const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
@@ -881,7 +887,7 @@ void ConvJacobAnaFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
             {
               const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[jSolIdx][iDim][m_pertSol]; 
           
-              m_tempFlux += (m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim+m_ndimplus]) * polyCoef;
+              m_tempFlux += (m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][iDim]) * polyCoef;
             }
             
             acc.addValues(jSolIdx+pertSideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_tempFlux[0]);
@@ -894,6 +900,7 @@ void ConvJacobAnaFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
             const CFuint dim = (*m_flxPntFlxDim)[flxIdx];
             
             // add the second part of the discontinuous part of the jacobian
+            m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -937,6 +944,7 @@ void ConvJacobAnaFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
         const CFuint flxPntIdxOther = (*m_faceFlxPntConnPerOrient)[m_orient][iOtherSide][iFlxPnt];
         
         // loop over the states to perturb the states
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
           const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
@@ -1052,7 +1060,7 @@ void ConvJacobAnaFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -1259,36 +1267,38 @@ void ConvJacobAnaFluxReconstruction::setup()
   
   RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
   temp = 0.0;
-    if (m_dim == 2)
-  {
-    if (m_ndimplus==3){  //if Triag
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }
-    else{
-      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }  
-  }
-  else if (m_dim == 3)
-  {
-    if (m_ndimplus==4){  //if Tetra
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }
-    else{
-      for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
+
+  if (elemShape == CFGeoShape::TRIAG){
+    for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
+    {
+      temp(idx,idx) = 1.0;
     }
   }
+  else if(elemShape == CFGeoShape::QUAD){
+    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }  
+  else if (elemShape == CFGeoShape::TETRA){
+    for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  else if (elemShape == CFGeoShape::PRISM){
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }  
+  else{
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {

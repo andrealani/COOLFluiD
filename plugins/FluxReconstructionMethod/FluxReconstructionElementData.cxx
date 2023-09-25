@@ -34,6 +34,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_solPntsLocalCoords(),
   m_flxPntsLocalCoords(),
   m_faceFlxPntsFaceLocalCoords(),
+  m_faceFlxPntsLocalCoordsPerType(),
   m_flxPntDerivDir(),
   m_allSolPntIdxs(),
   m_allFlxPntIdxs(),
@@ -125,6 +126,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFlxPntsLocalCoords();
   createSolPntsLocalCoords();
   createFaceFlxPntsFaceLocalCoords();
+  createFaceFlxPntsLocalCoordsPerType();
   createSolPolyExponents();
   computeSolPolyCoefs();
   computeInitPntsCoords();
@@ -591,12 +593,15 @@ void FluxReconstructionElementData::createFaceNodeCoordsPerOrient()
 
   // number of face nodes
   cf_assert(getNbrCellFaces() > 0);
-  const CFuint nbrFaceNodes = m_faceNodeCoords[0].size();
+  CFuint nbrFaceNodes = m_faceNodeCoords[0].size();
 
   // create face-node coordinates per face connectivity orientation
   m_faceNodeCoordsPerOrient.resize(nbrOrients);
   for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
   {
+    // number of face nodes
+    nbrFaceNodes = (m_faceNodeConnPerOrient[iOrient]).size();
+
     // resize
     m_faceNodeCoordsPerOrient[iOrient].resize(2);
     for (CFuint iSide = 0; iSide < 2; ++iSide)
@@ -747,15 +752,16 @@ void FluxReconstructionElementData::createCoefSolPolyInNodes()
 void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
 {
   CFAUTOTRACE;
-  
+
   // number of face flux points
-  const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
+  //const CFuint nbrFaceFlxPnts = getNbrOfFaceFlxPnts();
 
   // connectivity for all faces
   const CFuint nbrCellFaces = getNbrCellFaces();
   m_faceFlxPntCellMappedCoords.resize(nbrCellFaces);
   for (CFuint iFace = 0; iFace < nbrCellFaces; ++iFace)
   {
+    CFuint nbrFaceFlxPnts= m_faceFlxPntConn[iFace].size();
     for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
     {
       const CFuint flxIdx = m_faceFlxPntConn[iFace][iFlx];
@@ -768,7 +774,7 @@ void FluxReconstructionElementData::createFaceFlxPntsCellLocalCoords()
   for (CFuint iOrient = 0; iOrient < nbrOrients; ++iOrient)
   {
     m_faceFlxPntCellMappedCoordsPerOrient[iOrient].resize(2);
-    for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_faceFlxPntConnPerOrient[iOrient][LEFT ].size(); ++iFlx)
     {
       const CFuint flxIdxL = m_faceFlxPntConnPerOrient[iOrient][LEFT ][iFlx];
       m_faceFlxPntCellMappedCoordsPerOrient[iOrient][LEFT ].push_back(m_flxPntsLocalCoords[flxIdxL]);

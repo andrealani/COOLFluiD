@@ -70,6 +70,9 @@ protected: // data
   /// face local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
   
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
+
   /// vector to store the face jacobians in
   std::vector< RealVector > m_faceJacobVecs;
 
@@ -78,6 +81,9 @@ protected: // data
 
   /// flx pnt - face connectivity per orient
   Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
+
+  /// flx pnt - face connectivity
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
   
 };  // class SetupExtra
 

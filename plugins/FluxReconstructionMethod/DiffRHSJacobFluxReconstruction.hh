@@ -294,7 +294,7 @@ protected: //data
   
   /// perturbation value
   RealVector m_eps;
-  
+
   /// flags for each cell to tell whether its inner -divFD has been computed 
   std::vector< bool > m_cellFlags;
   

@@ -138,6 +138,9 @@ protected: // data
   
   /// influenced flx pnt idx (by perturbation)
   CFuint m_influencedFlxPnt;
+
+  /// influenced flx pnts idx (by perturbation)
+  std::vector< CFuint> m_influencedFlxPnts;
   
   /// Number of influenced flx pnts (by perturbation)
   CFuint m_NbInfluencedFlxPnts;

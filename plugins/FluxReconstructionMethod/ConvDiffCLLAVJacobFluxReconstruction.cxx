@@ -190,6 +190,9 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
       m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
@@ -298,6 +301,9 @@ void ConvDiffCLLAVJacobFluxReconstruction::execute()
       // build the face GeometricEntity
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
+
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
 
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
@@ -564,12 +570,15 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeEpsilon()
 
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[iFace].size();
+  
     if (!((*m_isFaceOnBoundaryCell)[iFace]) || m_LLAVBCZero)
     {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
-
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -584,7 +593,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeEpsilon()
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
-
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -624,7 +633,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
 
@@ -642,7 +651,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 
   // compute inverse characteristic lengths
@@ -683,6 +692,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
     m_epsilonLR[RIGHT][iFlxPnt] = 0.0;
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
@@ -1012,6 +1022,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
             m_temp = m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][m_pertSol];
             
             // add the second part of the discontinuous part of the jacobian (i)
+            m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -1040,6 +1051,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
               const CFreal l = (*m_solPolyValsAtFlxPnts)[flxIdx][kSolIdx];            
               
               // (i)
+              m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
               for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
               {
                 const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -1113,6 +1125,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
         const CFreal halfFaceJacob = 0.5 * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
         
         // loop over the states to perturb the states (l)
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
           const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
@@ -1664,6 +1677,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFu
             m_temp = m_fluxJacobian[m_pertSide][m_pertSol][m_pertVar][dim] * (*m_solPolyValsAtFlxPnts)[flxIdx][m_pertSol];
             
             // add the second part of the discontinuous part of the jacobian (i)
+            m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -1692,6 +1706,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFu
               const CFreal l = (*m_solPolyValsAtFlxPnts)[flxIdx][kSolIdx];            
               
               // (i)
+              m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
               for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
               {
                 const CFuint jSolIdx = (*m_flxSolDep)[flxIdx][jSolPnt];
@@ -1765,6 +1780,7 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFu
         const CFreal halfFaceJacob = 0.5 * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
         
         // loop over the states to perturb the states (l)
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
           const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];

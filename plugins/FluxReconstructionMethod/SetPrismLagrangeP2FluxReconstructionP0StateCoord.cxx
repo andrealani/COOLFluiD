@@ -2,7 +2,7 @@
 #include "Environment/ObjectProvider.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
-#include "FluxReconstructionMethod/SetPrismLagrangeP1FluxReconstructionP0StateCoord.hh"
+#include "FluxReconstructionMethod/SetPrismLagrangeP2FluxReconstructionP0StateCoord.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -16,18 +16,18 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<SetPrismLagrangeP1FluxReconstructionP0StateCoord,
+Environment::ObjectProvider<SetPrismLagrangeP2FluxReconstructionP0StateCoord,
                Framework::SetElementStateCoord,
                FluxReconstructionModule>
-SetPrismLagrangeP1FluxReconstructionP0StateCoord("PrismLagrangeP1FluxReconstructionP0");
+SetPrismLagrangeP2FluxReconstructionP0StateCoord("PrismLagrangeP2FluxReconstructionP0");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetPrismLagrangeP1FluxReconstructionP0StateCoord::operator() (const vector<Framework::Node*>& nodes,
+void SetPrismLagrangeP2FluxReconstructionP0StateCoord::operator() (const vector<Framework::Node*>& nodes,
                                                           vector<Framework::State*>& states)
 {
   cf_assert(states.size() == 1);
-  cf_assert(nodes.size() == 6);
+  cf_assert(nodes.size() == 18);
 
   /*_tempCoord = ((*nodes[0]) + (*nodes[1]) + (*nodes[2]) + (*nodes[3]) +
                 (*nodes[4]) + (*nodes[5]))/6.0;
@@ -39,7 +39,7 @@ void SetPrismLagrangeP1FluxReconstructionP0StateCoord::operator() (const vector<
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetPrismLagrangeP1FluxReconstructionP0StateCoord::update(const vector<Framework::Node*>& nodes,
+void SetPrismLagrangeP2FluxReconstructionP0StateCoord::update(const vector<Framework::Node*>& nodes,
                                                      vector<Framework::State*>& states)
 {
 }

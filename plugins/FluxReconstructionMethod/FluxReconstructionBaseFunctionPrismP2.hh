@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP1_hh
-#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP1_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP2_hh
+#define COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP2_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,14 +20,14 @@ namespace COOLFluiD {
 
 /**
  * This class provides the FR base function describing the
- * representation of the solution in a P1 Prism element.
+ * representation of the solution in a P2 Prism element.
  *
  * @author Ray Vandenhoeck
  * @author Alexander Papen
  * @author Rayan Dhib
  * 
  */
-class FluxReconstructionBaseFunctionPrismP1 : public ShapeFunctions::LagrangeShapeFunction {
+class FluxReconstructionBaseFunctionPrismP2 : public ShapeFunctions::LagrangeShapeFunction {
 public:
 
   /**
@@ -43,7 +43,7 @@ public:
    */
   static CFuint getNbNodes()
   {
-    return 6;
+    return 18;
   }
 
   /**
@@ -82,7 +82,7 @@ public:
   */
   static CFPolyOrder::Type getInterpolatorOrder()
   {
-    return CFPolyOrder::ORDER1;
+    return CFPolyOrder::ORDER2;
   }
 
   /**
@@ -258,7 +258,7 @@ public:
    */
   static const std::string getName()
   {
-    return "FluxReconstructionPrismP1";
+    return "FluxReconstructionPrismP2";
   }
 
   /**
@@ -355,12 +355,12 @@ public:
   /**
    * Default constructor without arguments
    */
-  FluxReconstructionBaseFunctionPrismP1();
+  FluxReconstructionBaseFunctionPrismP2();
 
   /**
    * Default destructor
    */
-  ~FluxReconstructionBaseFunctionPrismP1() {}
+  ~FluxReconstructionBaseFunctionPrismP2() {}
 
 private:
 
@@ -383,7 +383,7 @@ private: // data
   /// vector holding the 1D coordinates of solution points
   static RealVector m_solPnts1D;
 
-}; // end of class FluxReconstructionBaseFunctionPrismP1
+}; // end of class FluxReconstructionBaseFunctionPrismP2
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -393,4 +393,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP1_hh
+#endif // COOLFluiD_FluxReconstructionMethod_FluxReconstructionBaseFunctionPrismP2_hh

@@ -346,25 +346,39 @@ void VCJH::computeDivCorrectionFunction(Common::SafePtr< FluxReconstructionEleme
       {	
       	CFuint nbrSolPnts = frElemData->getNbrOfSolPnts();
         const CFuint nbrFlxPnts = frElemData->getNbrOfFlxPnts();	
+        const CFuint nbrSolPnts1D = frElemData->getSolPntsLocalCoord1D()->size();
         std::vector< RealVector > solPntsLocalCoord = *(frElemData->getSolPntsLocalCoords());
         cf_assert(corrfct.size() == nbrSolPnts);
 
         CFuint iFlx;
         RealMatrix phi;
-        phi.resize(5,(solOrder+1)*(solOrder+1));
+        phi.resize(3,(solOrder+1));
         phi=0.;
-        for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+        CFuint iSol = 0;
+        CFuint NbFlxTriagFace=(solOrder+1)*(solOrder+2)/2;
+       
+        for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta)
         {
-          iFlx = 0;
-          //phi=computeTetraDivCorrFct(solOrder, m_cfactor, solPntsLocalCoord[iSol][0], solPntsLocalCoord[iSol][1], solPntsLocalCoord[iSol][2]);
-          for (CFuint f = 0; f < 5; ++f)
+          for (CFuint iEta = 0; iEta < NbFlxTriagFace; ++iEta, ++iSol)
           {
-            for (CFuint j = 0; j < (solOrder+1)*(solOrder+1); ++j, ++iFlx)
-            {
-              corrfct[iSol][iFlx] = 1.; //phi(f,j);
+            cf_assert(corrfct[iSol].size() == nbrFlxPnts);
+            phi=computeTriagDivCorrFct(solOrder, m_cfactor, solPntsLocalCoord[iSol][KSI], solPntsLocalCoord[iSol][ETA]);
+            
+            // add the contriubutions of the flx pnts related to the current sol pnt
+            corrfct[iSol][iEta] = computeDerivativeCorrectionFunction1D(solOrder, solPntsLocalCoord[iSol][ZTA], m_cfactor);
+            corrfct[iSol][iEta+NbFlxTriagFace] = -computeDerivativeCorrectionFunction1D(solOrder, -solPntsLocalCoord[iSol][ZTA], m_cfactor);        
+            
+            for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+            {                
+              corrfct[iSol][NbFlxTriagFace*2+iZta*nbrSolPnts1D+iKsi]=phi(0,iKsi);
+              corrfct[iSol][NbFlxTriagFace*2+iZta*nbrSolPnts1D+nbrSolPnts1D*nbrSolPnts1D+iKsi]= phi(1,iKsi);
+              corrfct[iSol][NbFlxTriagFace*2+iZta*nbrSolPnts1D+2*nbrSolPnts1D*nbrSolPnts1D+iKsi]=phi(2,iKsi);
             }
           }
+         
         }
+        //}
+
         break;	
       }      
       default:
@@ -1199,7 +1213,7 @@ RealMatrix VCJH::computeTriagDivCorrFct(const CFPolyOrder::Type solOrder, CFreal
         }        
       }
     }
-  return (phi*16.*4.);
+  return (phi*-16.*4.);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1226,7 +1240,7 @@ RealMatrix VCJH::computeTetraDivCorrFct(const CFPolyOrder::Type solOrder, CFreal
 
       }
     }
-  return (phi*16.*8.*2.);
+  return (-phi*16.*8.*2.);
 }
 
 //////////////////////////////////////////////////////////////////////////////

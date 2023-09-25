@@ -224,8 +224,11 @@ protected: // data
   /// backup of extrapolated states in the flux points of the cell
   std::vector< RealVector > m_cellStatesFlxPntBackup;
   
-  /// influenced flx pnt idx
+  /// influenced flx pnt idx (by perturbation)
   CFuint m_influencedFlxPnt;
+
+  /// influenced flx pnts idx (by perturbation)
+  std::vector< CFuint> m_influencedFlxPnts;
 
   /// Number of influenced flx pnts (by perturbation)
   CFuint m_NbInfluencedFlxPnts;
@@ -262,6 +265,9 @@ protected: // data
   
   /// face local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
   
   /// vector to store the face jacobians in
   std::vector< RealVector > m_faceJacobVecs;

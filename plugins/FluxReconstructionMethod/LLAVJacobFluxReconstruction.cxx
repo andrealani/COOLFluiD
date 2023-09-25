@@ -294,6 +294,9 @@ void LLAVJacobFluxReconstruction::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
@@ -469,7 +472,7 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
     // Loop over gradient directions
     for (CFuint iDir = 0; iDir < m_dim; ++iDir)
     {
-      m_projectedCorrL = eps * m_neighbCellFluxProjVects[m_pertSide][iDir+m_ndimplus][m_pertSol];
+      m_projectedCorrL = eps * m_neighbCellFluxProjVects[m_pertSide][iDir][m_pertSol];
 	  
       // compute the grad updates
       (*m_cellGrads[side][iSolIdx])[m_pertVar] += (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][m_pertSol]*m_projectedCorrL*invJacobDet;
@@ -480,9 +483,15 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
   
   // Perturbed flx pnt idx and cell wide idx
-  CFuint pertFlxPnt;
-  CFuint pertFlxPntIdx;
   
+  //CFuint pertFlxPnt;
+  //CFuint pertFlxPntIdx;
+  
+  std::vector< CFuint > pertFlxPnts;
+  std::vector< CFuint > pertFlxPntsIdx;
+  pertFlxPnts.resize(0);
+  pertFlxPntsIdx.resize(0);
+
   // Add the contribution of the correction to the gradients for each face
   // compute other face contributions to the gradients
   const CFuint nbrOtherFaces = m_otherFaceLocalIdxs[side].size();
@@ -491,6 +500,9 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
   {
     // get local face index
     const CFuint faceIdx = m_otherFaceLocalIdxs[side][iFace];
+
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[faceIdx].size();
 
     //Don't add anything for bnd face, corresponding to enforcing zero AV on bnd
 //    if ((*m_isFaceOnBoundary[side])[faceIdx])
@@ -576,6 +588,22 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
       // cell side with respect to this face
       const CFuint cellSide = (*m_currCellSide[side])[faceIdx];
       
+      // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = (*m_faces[side])[faceIdx]->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+      }
+
       // compute face Jacobian vectors
       m_faceJacobVecs = (*m_faces[side])[faceIdx]->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
       
@@ -588,50 +616,81 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
         {
           if ((*m_solFlxDep)[m_pertSol][jFlxPnt] == currFlxIdx)
           {
-            pertFlxPnt = iFlxPnt;
-            pertFlxPntIdx = currFlxIdx;
+            //pertFlxPnt = iFlxPnt;
+            //pertFlxPntIdx = currFlxIdx;
             
+            pertFlxPnts.push_back(iFlxPnt);
+            pertFlxPntsIdx.push_back(currFlxIdx);
+
             // get face Jacobian vector size
             m_faceJacobVecAbsSizeFlxPnts[iFlxPnt] = faceJacobVecSizeFaceFlxPnts[(*m_faces[side])[faceIdx]->getID()][iFlxPnt];
 
             // set unit normal vector
-            m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+            m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
         
-            break;
+            //break;
           }
         }
       }
-      
-      ///@todo check if faceLocalDir is ok & faceFlxPntConn
-      m_projectedCorrL = -0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntIdx][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnt]*(*m_faceMappedCoordDir)[orient][cellSide])*m_unitNormalFlxPnts[pertFlxPnt];
-
-      // Loop over solution pnts to calculate the grad updates
-      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+      CFuint NbpertFlxPnts = pertFlxPnts.size();
+      for (CFuint iFlx = 0; iFlx < NbpertFlxPnts; ++iFlx)
       {
-        const CFuint iSolIdx = (*m_flxSolDep)[pertFlxPntIdx][iSolPnt];
-        
-        // inverse Jacobian determinant
-        const CFreal invJacobDet = 1.0/m_solJacobDet[side][iSolIdx];
+        ///@todo check if faceLocalDir is ok & faceFlxPntConn
+        m_projectedCorrL = -0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntsIdx[iFlx]][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnts[iFlx]]*(*m_faceMappedCoordDir)[orient][cellSide])*m_unitNormalFlxPnts[pertFlxPnts[iFlx]];
 
-        /// @todo Check if this is also OK for triangles!!
-        (*m_cellGrads[side][iSolIdx])[m_pertVar] += m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntIdx]*invJacobDet;
-//          if (m_cells[m_pertSide]->getID() == 5) 
-//	  {
-//            RealVector temp = m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntIdx]*invJacobDet;
-//              CFLog(INFO,"Ana otherFace: " << iSolIdx << ", "  << temp << "\n");
-//          }
+        // Loop over solution pnts to calculate the grad updates
+        m_nbrSolDep = ((*m_flxSolDep)[pertFlxPntsIdx[iFlx]]).size();
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+        {
+          const CFuint iSolIdx = (*m_flxSolDep)[pertFlxPntsIdx[iFlx]][iSolPnt];
+          
+          // inverse Jacobian determinant
+          const CFreal invJacobDet = 1.0/m_solJacobDet[side][iSolIdx];
+
+          /// @todo Check if this is also OK for triangles!!
+          (*m_cellGrads[side][iSolIdx])[m_pertVar] += m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntsIdx[iFlx]]*invJacobDet;
+  //          if (m_cells[m_pertSide]->getID() == 5) 
+  //	  {
+  //            RealVector temp = m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntIdx]*invJacobDet;
+  //              CFLog(INFO,"Ana otherFace: " << iSolIdx << ", "  << temp << "\n");
+  //          }
+        }
       }
     }
   }
   
   // Add the contribution of the correction of the gradients for this face
   
+  // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+    }
+    else  // quad face
+    {
+      (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+    } 
+  }
+
+  // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+  m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
   // compute face Jacobian vectors
   m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
   
-  CFuint pertFlxPntIdxOtherSide;
+  //CFuint pertFlxPntIdxOtherSide;
   const CFuint otherSide = (side == LEFT) ? RIGHT : LEFT;
-      
+
+  std::vector< CFuint > pertFlxPntsIdxOtherSide;     
+  pertFlxPnts.resize(0);
+  pertFlxPntsIdx.resize(0);
+  pertFlxPntsIdxOtherSide.resize(0);
+
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
@@ -641,11 +700,15 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
     {
       if ((*m_solFlxDep)[m_pertSol][jFlxPnt] == currFlxIdx)
       {
-        pertFlxPnt = iFlxPnt;
-        pertFlxPntIdx = currFlxIdx;
-        pertFlxPntIdxOtherSide = (*m_faceFlxPntConnPerOrient)[m_orient][otherSide][iFlxPnt];
+        //pertFlxPnt = iFlxPnt;
+        //pertFlxPntIdx = currFlxIdx;
+        //pertFlxPntIdxOtherSide = (*m_faceFlxPntConnPerOrient)[m_orient][otherSide][iFlxPnt];
         
-        break;
+        pertFlxPnts.push_back(iFlxPnt);
+        pertFlxPntsIdx.push_back(currFlxIdx);
+        pertFlxPntsIdxOtherSide.push_back((*m_faceFlxPntConnPerOrient)[m_orient][otherSide][iFlxPnt]);
+        
+        //break;
       }
     }
       
@@ -653,30 +716,34 @@ void LLAVJacobFluxReconstruction::computePerturbedGradientsAnalytical(const CFui
     m_faceJacobVecAbsSizeFlxPnts[iFlxPnt] = faceJacobVecSizeFaceFlxPnts[m_face->getID()][iFlxPnt];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
-      
-  ///@todo check if faceLocalDir is ok & faceFlxPntConn
-  m_projectedCorrL = -0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntIdx][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnt]*(*m_faceMappedCoordDir)[m_orient][side])*m_unitNormalFlxPnts[pertFlxPnt];
-  m_projectedCorrR = 0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntIdx][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnt]*(*m_faceMappedCoordDir)[m_orient][otherSide])*m_unitNormalFlxPnts[pertFlxPnt];
+  CFuint NbpertFlxPnts = pertFlxPnts.size();
+  for (CFuint iFlx = 0; iFlx < NbpertFlxPnts; ++iFlx)
+  {     
+    ///@todo check if faceLocalDir is ok & faceFlxPntConn
+    m_projectedCorrL = -0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntsIdx[iFlx]][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnts[iFlx]]*(*m_faceMappedCoordDir)[m_orient][side])*m_unitNormalFlxPnts[pertFlxPnts[iFlx]];
+    m_projectedCorrR = 0.5*eps*(*m_solPolyValsAtFlxPnts)[pertFlxPntsIdx[iFlx]][m_pertSol]*(m_faceJacobVecAbsSizeFlxPnts[pertFlxPnts[iFlx]]*(*m_faceMappedCoordDir)[m_orient][otherSide])*m_unitNormalFlxPnts[pertFlxPnts[iFlx]];
 
-  // Loop over solution pnts to calculate the grad updates
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
-  {
-    const CFuint iSolIdx = (*m_flxSolDep)[pertFlxPntIdx][iSolPnt];
-    const CFuint iSolIdxOtherSide = (*m_flxSolDep)[pertFlxPntIdxOtherSide][iSolPnt];
+    // Loop over solution pnts to calculate the grad updates
+    m_nbrSolDep = ((*m_flxSolDep)[pertFlxPntsIdx[iFlx]]).size();
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+    {
+      const CFuint iSolIdx = (*m_flxSolDep)[pertFlxPntsIdx[iFlx]][iSolPnt];
+      const CFuint iSolIdxOtherSide = (*m_flxSolDep)[pertFlxPntsIdxOtherSide[iFlx]][iSolPnt];
+        
+      m_affectedSolPnts[otherSide][iSolIdxOtherSide] = true;
       
-    m_affectedSolPnts[otherSide][iSolIdxOtherSide] = true;
-    
-    // inverse Jacobian determinant
-    const CFreal invJacobDet = 1.0/m_solJacobDet[side][iSolIdx];
-    const CFreal invJacobDetOtherSide = 1.0/m_solJacobDet[otherSide][iSolIdxOtherSide];
+      // inverse Jacobian determinant
+      const CFreal invJacobDet = 1.0/m_solJacobDet[side][iSolIdx];
+      const CFreal invJacobDetOtherSide = 1.0/m_solJacobDet[otherSide][iSolIdxOtherSide];
 
-    /// @todo Check if this is also OK for triangles!!
-    (*m_cellGrads[side][iSolIdx])[m_pertVar] += m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntIdx]*invJacobDet;
-    (*m_cellGrads[otherSide][iSolIdxOtherSide])[m_pertVar] += m_projectedCorrR*m_corrFctDiv[iSolIdxOtherSide][pertFlxPntIdxOtherSide]*invJacobDetOtherSide;
+      /// @todo Check if this is also OK for triangles!!
+      (*m_cellGrads[side][iSolIdx])[m_pertVar] += m_projectedCorrL*m_corrFctDiv[iSolIdx][pertFlxPntsIdx[iFlx]]*invJacobDet;
+      (*m_cellGrads[otherSide][iSolIdxOtherSide])[m_pertVar] += m_projectedCorrR*m_corrFctDiv[iSolIdxOtherSide][pertFlxPntsIdxOtherSide[iFlx]]*invJacobDetOtherSide;
+    }
   }
-  
+
   // compute the states projected on order P-1
   computeProjStates(m_statesPMinOne, side);
   
@@ -841,7 +908,8 @@ void LLAVJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& wave
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -919,7 +987,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -929,12 +997,16 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
   
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[iFace].size();
+
     if (!((*m_isFaceOnBoundary[m_pertSide])[iFace]))
     {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -965,6 +1037,22 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
       vector< CFreal > faceJacobVecSizeFlxPnts;
       faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);
 
+      // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = (*m_faces[m_pertSide])[iFace]->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+      }
+
       // compute flux point coordinates
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
@@ -987,7 +1075,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
         faceJacobVecSizeFlxPnts[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
 
 	// set unit normal vector
-	m_unitNormalFlxPnts2[iFlxPnt] = (faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+	m_unitNormalFlxPnts2[iFlxPnt] = (m_mappedFaceNormalDir*faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -1003,6 +1091,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
         *(m_cellStatesFlxPnt[0][iFlxPnt]) = 0.0;
 
         // loop over the sol pnts to compute the states and grads in the flx pnts
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
         {
 	  const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
@@ -1107,6 +1196,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
         m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt]; 
 	if (m_cells[m_pertSide]->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
 	
+  m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
 	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {  
 	  const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -1122,6 +1212,8 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
       }
     }
   }
+  // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+  m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1191,7 +1283,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir+m_ndimplus][iEq]);
+          residuals[m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlxNeighb[side][jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -1200,12 +1292,16 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
   const CFuint nbrFaces = m_cells[side]->nbNeighborGeos();
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[iFace].size();
+
     if (!((*m_isFaceOnBoundary[side])[iFace]))
     {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -1236,6 +1332,22 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
       vector< CFreal > faceJacobVecSizeFlxPnts;
       faceJacobVecSizeFlxPnts.resize(m_nbrFaceFlxPnts);
 
+      // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = (*m_faces[side])[iFace]->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+      }
+
       // compute flux point coordinates
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
@@ -1258,7 +1370,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
         faceJacobVecSizeFlxPnts[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
 
 	// set unit normal vector
-	m_unitNormalFlxPnts2[iFlxPnt] = (faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+	m_unitNormalFlxPnts2[iFlxPnt] = (m_mappedFaceNormalDir*faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -1274,6 +1386,7 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
         *(m_cellStatesFlxPnt[0][iFlxPnt]) = 0.0;
 
         // loop over the sol pnts to compute the states and grads in the flx pnts
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
         {
 	  const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
@@ -1383,7 +1496,8 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
         m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*faceJacobVecSizeFlxPnts[iFlxPnt]; 
 	if (m_cells[side]->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << faceJacobVecSizeFlxPnts[iFlxPnt] << "\n");
 	
-	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+	m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {  
 	  const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
           const CFreal divh = m_corrFctDiv[solIdx][currFlxIdx];
@@ -1398,6 +1512,8 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
       }
     }
   }
+  // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+  m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1790,7 +1906,7 @@ void LLAVJacobFluxReconstruction::setup()
   temp = 0.0;
   if (m_dim == 2)
   {
-    if (m_ndimplus==3){  //if Triag
+    if (elemShape == CFGeoShape::TRIAG){  
       for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
       {
         temp(idx,idx) = 1.0;
@@ -1805,8 +1921,14 @@ void LLAVJacobFluxReconstruction::setup()
   }
   else if (m_dim == 3)
   {
-    if (m_ndimplus==4){  //if Tetra
+    if (elemShape == CFGeoShape::TETRA){ 
       for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }
+    else if (elemShape == CFGeoShape::PRISM){ 
+      for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
       {
         temp(idx,idx) = 1.0;
       }

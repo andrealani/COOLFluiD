@@ -45,6 +45,7 @@ ConvBndCorrectionsRHSJacobFluxReconstruction::ConvBndCorrectionsRHSJacobFluxReco
   m_nbrFlxDep(),
   m_cellStatesFlxPntBackup(),
   m_influencedFlxPnt(),
+  m_influencedFlxPnts(),
   m_flxPntRiemannFluxBackup(),
   elemShape()
 {
@@ -84,7 +85,7 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
 
   // number of face orientations (should be the same for all TRs)
   cf_assert(bndFacesStartIdxs.size() != 0);
-  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+  CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
 
   // number of TRs
   const CFuint nbTRs = faceTrs->getNbTRs();
@@ -102,10 +103,14 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
+    nbOrients = bndFacesStartIdxs[iTR].size()-1;
     // loop over different orientations
     for (m_orient = 0; m_orient < nbOrients; ++m_orient)
     {
       CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
+      
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts=(*m_faceFlxPntConn)[m_orient].size();
       
       // select the correct flx pnts on the face out of all cell flx pnts for the current orient
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
@@ -224,28 +229,22 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
     State& pertState = *(*m_cellStates)[m_pertSol];
     
     // Loop over flux points to determine which flx pnts are influenced by the pert
-    if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA)
+    m_influencedFlxPnts.resize(0);
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
     {
-      m_influencedFlxPnt = 0;
-      m_NbInfluencedFlxPnts = m_nbrFaceFlxPnts;
-    }
-    else
-    {
-      for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+      // get current flx pnt idx
+      const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    
+      for (CFuint jFlxPnt = 0; jFlxPnt < m_nbrFlxDep; ++jFlxPnt)
       {
-        // get current flx pnt idx
-        const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
-      
-        for (CFuint jFlxPnt = 0; jFlxPnt < m_nbrFlxDep; ++jFlxPnt)
+        if (currFlxIdx == (*m_solFlxDep)[m_pertSol][jFlxPnt])
         {
-          if (currFlxIdx == (*m_solFlxDep)[m_pertSol][jFlxPnt])
-          {
-            m_influencedFlxPnt = iFlxPnt;
-            m_NbInfluencedFlxPnts= iFlxPnt+1;
-          }
+          //m_influencedFlxPnt = iFlxPnt;
+          m_influencedFlxPnts.push_back(iFlxPnt);
         }
       }
     }
+    m_NbInfluencedFlxPnts= m_influencedFlxPnts.size(); 
 
     // loop over the variables in the state
     for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
@@ -276,10 +275,11 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
       // multiply residual update derivatives with residual factor
       m_derivResUpdates *= resFactor;
       
-      for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+      for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
       {   
-        const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
-          
+        const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
+
+        m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -315,19 +315,20 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
 void ConvBndCorrectionsRHSJacobFluxReconstruction::extrapolatePerturbedState()
 {       
-  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   {   
     // get current flx pnt idx
-    const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
     // reset the extrapolated states
-    (*(m_cellStatesFlxPnt[iFlxPnt]))[m_pertVar] = 0.0;
+    (*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]))[m_pertVar] = 0.0;
     
     // extrapolate the states to current flx pnt
+    m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
 
-    (*(m_cellStatesFlxPnt[iFlxPnt]))[m_pertVar] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]))[m_pertVar];
+    (*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]))[m_pertVar] += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]))[m_pertVar];
     }
   }  
   // compute ghost states
@@ -338,14 +339,14 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::extrapolatePerturbedState()
 
 void ConvBndCorrectionsRHSJacobFluxReconstruction::computePertInterfaceFlxCorrection()
 { 
-  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt){   
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt){   
     // compute the riemann flux in the flx pnts
-    m_flxPntRiemannFlux[iFlxPnt] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[iFlxPnt]),
-                          *(m_flxPntGhostSol[iFlxPnt]),
-                          m_unitNormalFlxPnts[iFlxPnt]);
+    m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ] = m_riemannFluxComputer->computeFlux(*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]),
+                          *(m_flxPntGhostSol[ m_influencedFlxPnts[iFlxPnt] ]),
+                          m_unitNormalFlxPnts[ m_influencedFlxPnts[iFlxPnt] ]);
       
     // store the local Riemann flux, scaled with geometrical Jacobian
-    m_flxPntRiemannFlux[iFlxPnt] *= m_faceJacobVecSizeFlxPnts[iFlxPnt];
+    m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ] *= m_faceJacobVecSizeFlxPnts[ m_influencedFlxPnts[iFlxPnt] ];
   }
 }
 
@@ -355,22 +356,24 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computePertCorrection(vector<
 { 
   cf_assert(corrections.size() == m_nbrSolPnts);  
   // reset corrections
-  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnt];
-        
+  //for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  //{ 
+  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[0]];
+  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
   {
     const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
     corrections[solIdx] = 0.0;
   }  
-
-  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  //}
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   { 
-    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
     // the current correction factor previously computed
-    const RealVector& currentCorrFactor = m_flxPntRiemannFlux[iFlxPnt];
+    const RealVector& currentCorrFactor = m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ];
 
     cf_assert(currentCorrFactor.size() == m_nbrEqs);
-
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
     // compute the term due to each flx pnt
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
@@ -408,12 +411,14 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::storeBackups()
 
 void ConvBndCorrectionsRHSJacobFluxReconstruction::restoreFromBackups()
 {
-  for (CFuint iFlxPnt = m_influencedFlxPnt; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   { 
-  (*(m_cellStatesFlxPnt[iFlxPnt]))[m_pertVar] = m_cellStatesFlxPntBackup[iFlxPnt][m_pertVar];
-  m_flxPntRiemannFlux[iFlxPnt] = m_flxPntRiemannFluxBackup[iFlxPnt];
+  (*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]))[m_pertVar] = m_cellStatesFlxPntBackup[ m_influencedFlxPnts[iFlxPnt] ][m_pertVar];
+  m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ] = m_flxPntRiemannFluxBackup[ m_influencedFlxPnts[iFlxPnt] ];
   }
-  
+
+  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnt];
+  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
   for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
   {
     m_pertCorrections[iSol] = m_corrections[iSol];

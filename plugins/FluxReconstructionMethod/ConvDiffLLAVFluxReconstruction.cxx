@@ -306,6 +306,9 @@ void ConvDiffLLAVFluxReconstruction::execute()
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
       m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
@@ -428,6 +431,9 @@ void ConvDiffLLAVFluxReconstruction::execute()
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
       m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
@@ -547,7 +553,7 @@ void ConvDiffLLAVFluxReconstruction::setFaceDataForGradients(CFuint faceID)
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
 
@@ -565,7 +571,7 @@ void ConvDiffLLAVFluxReconstruction::setFaceDataForGradients(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 
   // loop over flx pnts to extrapolate the states to the flux points
@@ -580,6 +586,7 @@ void ConvDiffLLAVFluxReconstruction::setFaceDataForGradients(CFuint faceID)
     *(m_cellStatesFlxPnt[RIGHT][iFlxPnt]) = 0.0;
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
@@ -604,7 +611,7 @@ void ConvDiffLLAVFluxReconstruction::setFaceData(CFuint faceID)
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
 
@@ -622,7 +629,7 @@ void ConvDiffLLAVFluxReconstruction::setFaceData(CFuint faceID)
     m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT] = m_faceJacobVecAbsSizeFlxPnts[iFlxPnt]*(*m_faceMappedCoordDir)[m_orient][RIGHT];
 
     // set unit normal vector
-    m_unitNormalFlxPnts[iFlxPnt] = m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
+    m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 
   // compute inverse characteristic lengths
@@ -712,6 +719,7 @@ void ConvDiffLLAVFluxReconstruction::computeFlxPntStatesAndGrads()
     }
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxPntIdxL][iSol];
@@ -807,7 +815,8 @@ void ConvDiffLLAVFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& w
   {
     for (CFuint iSide = 0; iSide < 2; ++iSide)
     {
-      for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+      //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
         const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                          m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -935,7 +944,8 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
-
+        
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -951,6 +961,7 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -985,7 +996,7 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          m_unpertCellDiffRes[side][m_nbrEqs*iSolPnt+iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -1018,7 +1029,7 @@ void ConvDiffLLAVFluxReconstruction::computeGradientFaceCorrections()
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
 
@@ -1045,6 +1056,7 @@ void ConvDiffLLAVFluxReconstruction::computeGradientFaceCorrections()
     *(m_cellStatesFlxPnt[RIGHT][iFlx]) = 0.0;
 
     // extrapolate the left and right states to the flx pnts
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
       const CFuint solIdxL = (*m_flxSolDep)[flxIdxL][iSol];
@@ -1059,8 +1071,8 @@ void ConvDiffLLAVFluxReconstruction::computeGradientFaceCorrections()
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
       const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
-      m_projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*(*m_faceMappedCoordDir)[m_orient][LEFT]*m_faceJacobVecs[iFlx];
-      m_projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*(*m_faceMappedCoordDir)[m_orient][RIGHT]*m_faceJacobVecs[iFlx];
+      m_projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*(*m_faceMappedCoordDir)[m_orient][LEFT]*m_mappedFaceNormalDir*m_faceJacobVecs[iFlx];
+      m_projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*(*m_faceMappedCoordDir)[m_orient][RIGHT]*m_mappedFaceNormalDir*m_faceJacobVecs[iFlx];
 
       // Loop over solution pnts to calculate the grad updates
       for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
@@ -1124,7 +1136,7 @@ void ConvDiffLLAVFluxReconstruction::computeGradients()
         for (CFuint jDir = 0; jDir < m_dim; ++jDir)
         {
 	  // project the state on a normal and reuse a RealVector variable of the class to store
-	  m_projectedCorrL[jDir] = ((*(*m_cellStates)[iSolPnt])[iEq]) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDir+m_ndimplus)*m_dim+jDir];
+	  m_projectedCorrL[jDir] = ((*(*m_cellStates)[iSolPnt])[iEq]) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+iDir*m_dim+jDir];
         }
 	
         // Loop over solution pnts to count factor of all sol pnt polys
@@ -1573,35 +1585,36 @@ void ConvDiffLLAVFluxReconstruction::setup()
   
   RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
   temp = 0.0;
-  if (m_dim == 2)
-  {
-    if (m_ndimplus==3){  //if Triag
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
+
+  if (elemShape == CFGeoShape::TRIAG){
+    for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
+    {
+      temp(idx,idx) = 1.0;
     }
-    else{
-      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }  
   }
-  else if (m_dim == 3)
-  {
-    if (m_ndimplus==4){  //if Tetra
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
+  else if(elemShape == CFGeoShape::QUAD){
+    for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
     }
-    else{
-       for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }  
+  }  
+  else if (elemShape == CFGeoShape::TETRA){
+    for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }
+  else if (elemShape == CFGeoShape::PRISM){
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
+  }  
+  else{
+    for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
+    {
+      temp(idx,idx) = 1.0;
+    }
   }
   
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)

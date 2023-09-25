@@ -43,6 +43,7 @@ SetupExtra::SetupExtra(const std::string& name) :
   socket_cellVolumes("cellVolumes"),
   m_face(CFNULL),
   m_flxLocalCoords(),
+  m_faceFlxPntsLocalCoordsPerType(),
   m_faceJacobVecs(),
   m_faceMappedCoordDir(),
   m_faceFlxPntConnPerOrient()
@@ -121,17 +122,23 @@ void SetupExtra::createNormalSockets()
 
   const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
   CFuint m_ndimplus;
-  if (elemShape == CFGeoShape::TRIAG)
+  if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA || elemShape == CFGeoShape::PRISM)
     {
-      m_ndimplus=3;	
+      m_ndimplus=1;	
     }
-  else if (elemShape == CFGeoShape::TETRA)
-    {
-      m_ndimplus=4;
-    }  
   else
     {
       m_ndimplus=0;
+    }
+
+  CFreal m_mappedFaceNormalDir;
+  if (elemShape == CFGeoShape::TETRA)  // numbering convention in tetra requires face->computeFaceJacobDetVectorAtMappedCoords with -1 factor
+    {
+      m_mappedFaceNormalDir= -1.;
+    }
+  else
+    {
+      m_mappedFaceNormalDir= 1.;
     }
 
   std::vector< std::vector< std::vector< CFuint > > > dimList(nbrElemTypes);
@@ -246,21 +253,28 @@ void SetupExtra::createNormalSockets()
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
 
   const CFuint totNbFlxPnts = frLocalData[0]->getNbrOfFlxPnts();
-
+  
+  const CFuint nbFaceFlxPntsMax= nbFaceFlxPnts; 
   // resize flx pnt normal socket
-  flxPntNormals.resize(nbFaces*nbFaceFlxPnts*dim);//innerFacesStartIdxs[nbrFaceOrients]
+  flxPntNormals.resize(nbFaces*nbFaceFlxPntsMax*dim);//innerFacesStartIdxs[nbrFaceOrients]
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+
+  // get the face local coords of the flux points on one face depending on the face type
+  m_faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
 
   // get flux point mapped coordinate directions per orient
   m_faceMappedCoordDir = frLocalData[0]->getFaceMappedCoordDirPerOrient();
 
   // get the face - flx pnt connectivity per orient
+  m_faceFlxPntConn = frLocalData[0]->getFaceFlxPntConn();
+
+  // get the face - flx pnt connectivity per orient
   m_faceFlxPntConnPerOrient = frLocalData[0]->getFaceFlxPntConnPerOrient();
-  
+
   m_faceJacobVecs.resize(nbFaceFlxPnts);
-  
+
   for (CFuint iFlx = 0; iFlx < nbFaceFlxPnts; ++iFlx)
   {
     m_faceJacobVecs[iFlx].resize(dim);
@@ -269,6 +283,9 @@ void SetupExtra::createNormalSockets()
   // loop over different orientations
   for (CFuint orient = 0; orient < nbrFaceOrients; ++orient)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    CFuint nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[orient][0].size();
+
     // start and stop index of the faces with this orientation
     const CFuint faceStartIdx = innerFacesStartIdxs[orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[orient+1];
@@ -280,16 +297,33 @@ void SetupExtra::createNormalSockets()
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
 
+      // get the correct flxPntsLocalCoords depending on the face type (only applied for Prism for now @todo but also needed if hybrid grids)
+      if (dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+
+      }
+
       // compute face Jacobian vectors
       m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
 
       // Loop over flux points to set the normal vectors
-      for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
+      for (CFuint iFlxPnt = 0; iFlxPnt < nbrFaceFlxPnts; ++iFlxPnt)
       {
         for (CFuint iDim = 0; iDim < dim; ++iDim)
         {
           // set unit normal vector
-          flxPntNormals[m_face->getID()*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
+          flxPntNormals[m_face->getID()*nbFaceFlxPntsMax*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
         }
       }
       
@@ -315,9 +349,9 @@ void SetupExtra::createNormalSockets()
   
     vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[faceTrs->getName()];
 
-    // number of face orientations (should be the same for all TRs)
+    // number of face orientations (should be the same for all TRs) not anymore (prism !!!)
     cf_assert(bndFacesStartIdxs.size() != 0);
-    const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+    CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
 
     // number of TRs
     const CFuint nbTRs = faceTrs->getNbTRs();
@@ -332,9 +366,14 @@ void SetupExtra::createNormalSockets()
     // loop over TRs
     for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
     {
+      nbOrients = bndFacesStartIdxs[0].size()-1;
+
       // loop over different orientations
       for (CFuint orient = 0; orient < nbOrients; ++orient)
       {   
+        // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+        CFuint nbrFaceFlxPnts=(*m_faceFlxPntConn)[orient].size();
+
         // start and stop index of the faces with this orientation
         const CFuint startFaceIdx = bndFacesStartIdxs[iTR][orient  ];
         const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][orient+1];
@@ -346,22 +385,39 @@ void SetupExtra::createNormalSockets()
           geoData.idx = faceID;
           m_face = m_faceBuilder->buildGE();
         
+          // get the correct flxPntsLocalCoords depending on the face type (only applied for Prism for now @todo but also needed if hybrid grids)
+          if (dim>2)
+          {
+            // get face geo
+            const CFGeoShape::Type geo = m_face->getShape(); 
+
+            if (geo == CFGeoShape::TRIAG) // triag face
+            {
+              (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+            }
+            else  // quad face
+            {
+              (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+            } 
+
+          }
+
           // compute face Jacobian vectors
           m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
         
           // Loop over flux points to set the normal vectors
-          for (CFuint iFlxPnt = 0; iFlxPnt < nbFaceFlxPnts; ++iFlxPnt)
+          for (CFuint iFlxPnt = 0; iFlxPnt < nbrFaceFlxPnts; ++iFlxPnt)
           {
             for (CFuint iDim = 0; iDim < dim; ++iDim)
             {
               // set unit normal vector
-              flxPntNormals[m_face->getID()*nbFaceFlxPnts*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
+              flxPntNormals[m_face->getID()*nbFaceFlxPntsMax*dim+iFlxPnt*dim+iDim] = m_faceJacobVecs[iFlxPnt][iDim];
             }
           }
         
           // release the face
           m_faceBuilder->releaseGE();
-        }
+        } 
       }
     }
   }

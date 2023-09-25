@@ -189,7 +189,10 @@ protected: //data
   
   /// number of face flx pnts
   CFuint m_nbrFaceFlxPnts;
-  
+
+  /// Max number of face flx pnts (relevant only for prisms)
+  CFuint m_nbFaceFlxPntsMax;
+
   /// variable for current face
   Framework::GeometricEntity* m_face;
   
@@ -286,6 +289,9 @@ protected: //data
   /// face local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
 
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
+
   /// dependencies of flx pnts on sol pnts
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
 
@@ -313,6 +319,9 @@ protected: //data
   /// number of flx pnts in a cell
   CFreal m_nbrTotalFlxPnts;
   
+  /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
+  CFreal m_mappedFaceNormalDir;
+
   /// vector with the face Jacobian vectors
   std::vector< RealVector > m_faceJacobVecs;
   
@@ -322,6 +331,9 @@ protected: //data
   /// FR order
   CFuint m_order;
 
+  /// Element shape/type
+  CFGeoShape::Type elemShape;
+  
   /// number of additionnal face normal directions for Triag (,terta and prism)
   CFuint m_ndimplus;
 

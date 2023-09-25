@@ -1054,6 +1054,14 @@ void QuadFluxReconstructionElementData::createVandermondeMatrix()
 
 //////////////////////////////////////////////////////////////////////
 
+void QuadFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
+{
+  CFAUTOTRACE;
+  // Not needed in 2D
+
+}
+//////////////////////////////////////////////////////////////////////
+
   } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD

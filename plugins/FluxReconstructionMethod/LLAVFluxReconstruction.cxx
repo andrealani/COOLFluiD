@@ -327,13 +327,16 @@ void LLAVFluxReconstruction::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
       // build the face GeometricEntity
       geoDataFace.idx = faceID;
       m_face = m_faceBuilder->buildGE();
-      
+
       // get the neighbouring cells
       m_cells[LEFT ] = m_face->getNeighborGeo(LEFT );
       m_cells[RIGHT] = m_face->getNeighborGeo(RIGHT);
@@ -497,7 +500,7 @@ void LLAVFluxReconstruction::setFaceData(CFuint faceID)
   DiffRHSFluxReconstruction::setFaceData(faceID);
   
   m_faceNodes = m_face->getNodes();
-  
+
   // loop over flx pnts to extrapolate the states to the flux points
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {   
@@ -549,7 +552,8 @@ void LLAVFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSpeed
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                          m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -625,7 +629,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -636,12 +640,16 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
 
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[iFace].size();
+
     if (!((*m_isFaceOnBoundaryCell)[iFace]))
     {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -663,7 +671,23 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       
       // get the datahandle of the update coefficients
       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-  
+
+      // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+      }
+
       // compute flux point coordinates
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
@@ -686,7 +710,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         m_faceJacobVecSizeFlxPnts2[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
  
 	// set unit normal vector
-        m_unitNormalFlxPnts2[iFlxPnt] = (m_faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+        m_unitNormalFlxPnts2[iFlxPnt] = (m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -702,6 +726,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         *(m_cellStatesFlxPnt[0][iFlxPnt]) = 0.0;
 
         // loop over the sol pnts to compute the states and grads in the flx pnts
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
         for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
         {
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
@@ -719,6 +744,8 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       // compute ghost gradients
       if ((getMethodData().getUpdateVarStr() == "Cons" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasDiffTerm())
       {
+          
+
 	for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
         {
 	  for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
@@ -731,7 +758,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
       {
 	(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]]->computeGhostGradients(m_cellGradFlxPnt[0],m_flxPntGhostGrads,m_unitNormalFlxPnts2,m_flxPntCoords);
       }
-	
+
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
 	const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
@@ -803,6 +830,7 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
         m_cellFlx[0][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts2[iFlxPnt]; 
 	if (m_cell->getID() == 1092) CFLog(VERBOSE, "riemannunit: " << m_flxPntRiemannFlux[iFlxPnt] << "jacob: " << m_faceJacobVecSizeFlxPnts2[iFlxPnt] << "\n");
 	
+  m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
 	for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {  
           const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSolPnt];
@@ -1215,7 +1243,7 @@ void LLAVFluxReconstruction::setup()
   temp = 0.0;
   if (m_dim == 2)
   {
-    if (m_ndimplus==3){  //if Triag
+    if (elemShape == CFGeoShape::TRIAG){  
       for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
       {
         temp(idx,idx) = 1.0;
@@ -1230,8 +1258,14 @@ void LLAVFluxReconstruction::setup()
   }
   else if (m_dim == 3)
   {
-    if (m_ndimplus==4){  //if Tetra
+    if (elemShape == CFGeoShape::TETRA){ 
       for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
+      {
+        temp(idx,idx) = 1.0;
+      }
+    }
+    else if (elemShape == CFGeoShape::PRISM){ 
+      for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
       {
         temp(idx,idx) = 1.0;
       }

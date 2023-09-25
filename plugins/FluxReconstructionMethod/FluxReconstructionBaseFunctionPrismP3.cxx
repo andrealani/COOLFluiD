@@ -1,5 +1,5 @@
 //#include "FluxReconstructionMethod/PrismFluxReconstructionElementData.hh"
-#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP1.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP3.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -9,13 +9,13 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFuint FluxReconstructionBaseFunctionPrismP1::_interpolatorID = 0;
-RealVector FluxReconstructionBaseFunctionPrismP1::m_ztaFac = RealVector(2);
-RealVector FluxReconstructionBaseFunctionPrismP1::m_solPnts1D = RealVector(2);
+CFuint FluxReconstructionBaseFunctionPrismP3::_interpolatorID = 0;
+RealVector FluxReconstructionBaseFunctionPrismP3::m_ztaFac = RealVector(4);
+RealVector FluxReconstructionBaseFunctionPrismP3::m_solPnts1D = RealVector(4);
 
 //////////////////////////////////////////////////////////////////////////////
 
-FluxReconstructionBaseFunctionPrismP1::FluxReconstructionBaseFunctionPrismP1()
+FluxReconstructionBaseFunctionPrismP3::FluxReconstructionBaseFunctionPrismP3()
 {
   FluxReconstructionElementData* frElemData = new PrismFluxReconstructionElementData(getInterpolatorOrder());
 
@@ -33,7 +33,7 @@ FluxReconstructionBaseFunctionPrismP1::FluxReconstructionBaseFunctionPrismP1()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FluxReconstructionBaseFunctionPrismP1::computeFaceJacobianDeterminant(
+void FluxReconstructionBaseFunctionPrismP3::computeFaceJacobianDeterminant(
         const std::vector<RealVector>& mappedCoord,
         const std::vector<Framework::Node*>& nodes,
         const Framework::IntegratorPattern& pattern,
@@ -44,7 +44,7 @@ void FluxReconstructionBaseFunctionPrismP1::computeFaceJacobianDeterminant(
 
 //////////////////////////////////////////////////////////////////////////////
 
-RealVector FluxReconstructionBaseFunctionPrismP1::computeMappedCoordinates(const RealVector& coord,
+RealVector FluxReconstructionBaseFunctionPrismP3::computeMappedCoordinates(const RealVector& coord,
                                     const std::vector<Framework::Node*>& nodes)
 {
   throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");
@@ -52,7 +52,7 @@ RealVector FluxReconstructionBaseFunctionPrismP1::computeMappedCoordinates(const
 
 //////////////////////////////////////////////////////////////////////////////
 
-RealVector FluxReconstructionBaseFunctionPrismP1::computeMappedCoordinatesPlus1D(const RealVector& coord,
+RealVector FluxReconstructionBaseFunctionPrismP3::computeMappedCoordinatesPlus1D(const RealVector& coord,
                                     const std::vector<Framework::Node*>& nodes)
 {
   throw Common::ShouldNotBeHereException (FromHere(),"FR base functions should not be used as geometrical shape functions.");

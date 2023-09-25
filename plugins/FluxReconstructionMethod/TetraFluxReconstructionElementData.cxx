@@ -2424,10 +2424,10 @@ void TetraFluxReconstructionElementData::createFaceMappedCoordDir()
 
   m_faceMappedCoordDir.resize(4);
 
-  m_faceMappedCoordDir[0] = 1;
-  m_faceMappedCoordDir[1] = 1;
-  m_faceMappedCoordDir[2] = 1;
-  m_faceMappedCoordDir[3] = 1;
+  m_faceMappedCoordDir[0] = -1;
+  m_faceMappedCoordDir[1] = -1;
+  m_faceMappedCoordDir[2] = -1;
+  m_faceMappedCoordDir[3] = -1;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -2444,7 +2444,7 @@ void TetraFluxReconstructionElementData::createFluxPntFluxDim()
     {
      if (iFace == 0)
       {
-        m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 0;
+        m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 2;
       }
       else if (iFace == 1)
       {
@@ -2452,11 +2452,11 @@ void TetraFluxReconstructionElementData::createFluxPntFluxDim()
       }
       else if (iFace == 2)
       {
-	      m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 2;
+	      m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 3;
       }
       else if (iFace == 3)
       {
-	      m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 3;
+	      m_flxPntFlxDim[m_faceFlxPntConn[iFace][iFlx]] = 0;
       }
     }
   }
@@ -3123,6 +3123,35 @@ CFreal TetraFluxReconstructionElementData::factorial(CFreal n)
   return (n==1. || n==0.) ? 1. : factorial(n-1.)*n;
 }
 
+//////////////////////////////////////////////////////////////////////
+
+void TetraFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
+{
+  CFAUTOTRACE;
+
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+  // number of solution points in triag
+  const CFuint nbrFlxPntsTriag = (m_polyOrder+1)*(m_polyOrder+2)/2;
+
+  const CFuint nbrFlxPnts2D = m_flxPntsLocalCoord2D.size();
+
+  // set face flux point face local coordinates on Triag Face
+  m_faceFlxPntsLocalCoordsPerType.resize(2);
+  m_faceFlxPntsLocalCoordsPerType[0].resize(0); 
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx)
+  {
+    RealVector flxCoord(2);
+    flxCoord[KSI] = m_flxPntsLocalCoord2D[iFlx][KSI];
+    flxCoord[ETA] = m_flxPntsLocalCoord2D[iFlx][ETA];
+      (m_faceFlxPntsLocalCoordsPerType[0]).push_back(flxCoord);    
+  }
+
+  // set face flux point face local coordinates on Quad Face (reference -1 1 quad) (not applicable)
+  m_faceFlxPntsLocalCoordsPerType[1].resize(0);
+
+
+}
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

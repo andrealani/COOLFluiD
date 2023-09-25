@@ -244,6 +244,7 @@ void StdSetup::computeStatesVolumes()
     totNbrStates += (*elemType)[iElemType].getNbElems()*frLocalData[iElemType]->getNbrOfSolPnts();
   }
 
+
   // resize the vector for the cell volumes per state
   volumes.resize(totNbrStates);
   CFuint nbNegJacob = 0;
@@ -292,6 +293,7 @@ void StdSetup::computeStatesVolumes()
 
       //release the GeometricEntity
       geoBuilder->releaseGE();
+
     }
   }
   CFLog(INFO, "NB NEGATIVE JACOB FOUND: " << nbNegJacob << "\n");
@@ -328,8 +330,9 @@ void StdSetup::computeFaceJacobianVectorSizes()
   // face flux points data
   std::vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   SafePtr< std::vector< RealVector > >                 faceFlxPntsFaceLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-
-  const CFuint nbrFaceFlxPnts = faceFlxPntsFaceLocalCoords->size();
+  SafePtr< std::vector< std::vector< RealVector > > >              faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
+ 
+  CFuint nbrFaceFlxPnts = faceFlxPntsFaceLocalCoords->size();
 
   // get Inner Cells TRS
   SafePtr<TopologicalRegionSet> cellTRS = MeshDataStack::getActive()->getTrs("InnerCells");
@@ -338,6 +341,8 @@ void StdSetup::computeFaceJacobianVectorSizes()
   SafePtr< GeometricEntityPool<FaceToCellGEBuilder> > geoBuilder = getMethodData().getFaceBuilder();
   FaceToCellGEBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.cellsTRS = cellTRS;
+
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
 
   // set face jacobian vector sizes in face flux points
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
@@ -357,15 +362,45 @@ void StdSetup::computeFaceJacobianVectorSizes()
         // build the GeometricEntity
         geoData.idx = iFace;
         GeometricEntity& face = *geoBuilder->buildGE();
-
+        
         // get face ID
         const CFuint faceID = face.getID();
 
-        // get the face Jacobian vectors
-        vector< RealVector > faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords(*faceFlxPntsFaceLocalCoords);
+        // get the face Jacobian vectors        
+          vector< RealVector > faceJacobVecs ;
+
+        if (elemShape == CFGeoShape::PRISM) // should be only true for prisms
+        {
+          // get face geo
+          const CFGeoShape::Type geo = face.getShape();
+
+          if (geo == CFGeoShape::TRIAG) // triag face
+          {
+            nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[0]).size();
+          }
+          else  // quad face
+          {
+            nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[1]).size();
+          } 
+          
+          if (geo == CFGeoShape::TRIAG) 
+          {
+            faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerType)[0]);
+          }
+          else
+          {
+            faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerType)[1]);
+          } 
+        }
+        else
+        {
+          // get the face Jacobian vectors
+          faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords(*faceFlxPntsFaceLocalCoords);
+          
+        }
 
         // loop over face flux points
-        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)   ///@todo here problem for P>0 (prism)
         {
           faceJacobVecSizeFaceFlxPnts[faceID].push_back(faceJacobVecs[iFlx].norm2());
         }

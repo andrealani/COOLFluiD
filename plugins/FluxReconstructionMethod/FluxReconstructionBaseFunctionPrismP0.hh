@@ -103,9 +103,12 @@ public:
   static void computeShapeFunction(
         const RealVector& mappedCoord, RealVector& shapeFunc)
   {
+
     FluxReconstructionElementData* frElemData = new PrismFluxReconstructionElementData(getInterpolatorOrder());
 
     Common::SafePtr< std::vector< CFreal > > solPnts1D = frElemData->getSolPntsLocalCoord1D();
+    std::vector< std::vector< CFint > > solPolyExponents = *(frElemData -> getSolPolyExponents());
+    std::vector< std::vector< CFreal > > solPolyCoefs = *(frElemData -> getSolPolyCoefs());
 
     const CFuint nbrSolPnts = solPnts1D->size();
     cf_assert(nbrSolPnts == m_solPnts1D.size());
@@ -120,42 +123,12 @@ public:
     const CFreal eta = mappedCoord[ETA];
     const CFreal zta = mappedCoord[ZTA];
 
-    // ksi factors
-    for (CFuint iSol = 0; iSol < 1; ++iSol)
-    {
-      const CFreal ksiSol = m_solPnts1D[iSol];
-      m_ksiFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 1; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ksiFac = m_solPnts1D[iFac];
-          m_ksiFac[iSol] *= (ksi-ksiFac)/(ksiSol-ksiFac);
-        }
-      }
-    }
-
-    // eta factors
-    for (CFuint iSol = 0; iSol < 1; ++iSol)
-    {
-      const CFreal etaSol = m_solPnts1D[iSol];
-      m_etaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 1; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal etaFac = m_solPnts1D[iFac];
-          m_etaFac[iSol] *= (eta-etaFac)/(etaSol-etaFac);
-        }
-      }
-    }
-
     // zta factors
-    for (CFuint iSol = 0; iSol < 1; ++iSol)
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       const CFreal ztaSol = m_solPnts1D[iSol];
       m_ztaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < 1; ++iFac)
+      for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
       {
         if (iFac != iSol)
         {
@@ -165,19 +138,29 @@ public:
       }
     }
 
-    // compute shapefunctions
-    CFuint iFunc = 0;
-    for (CFuint iKsi = 0; iKsi < 1; ++iKsi)
+    CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts)*(nbrSolPnts+1)/2;
+    
+    // loop over polynomials
+    
+    for (CFuint iZta = 0; iZta < nbrSolPnts; ++iZta)
     {
-      const CFreal ksiFac = m_ksiFac[iKsi];
-      for (CFuint iEta = 0; iEta < 1; ++iEta)
+      for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
       {
-        const CFreal etaFac = m_etaFac[iEta];
-        for (CFuint iZta = 0; iZta < 1; ++iZta, ++iFunc)
+        // loop over terms
+        for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
         {
-          shapeFunc[iFunc] = ksiFac*etaFac*m_ztaFac[iZta];
+          CFreal term = solPolyCoefs[iPoly][iTerm];
+
+          // loop over coordinates
+          for (CFuint iCoor = 0; iCoor < 2; ++iCoor)
+          {
+            term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]);
+          }
+
+          // add term to polynomial value
+          shapeFunc[iPoly] += term * m_ztaFac[iZta];
         }
-      }
+      } 
     }
   }
 
@@ -345,12 +328,11 @@ public:
   static bool isInMappedElement(const RealVector& mappedCoord)
   {
     cf_assert(mappedCoord.size() == 3);
-    if( (mappedCoord[0] >= -1.) &&
-        (mappedCoord[0] <= +1.) &&
-        (mappedCoord[1] >= -1.) &&
-        (mappedCoord[1] <= +1.) &&
+    if( (mappedCoord[0] >= 0.) &&
+        (mappedCoord[1] >= 0.) &&
+        (mappedCoord[0]+mappedCoord[1] <= 1.) &&
         (mappedCoord[2] >= -1.) &&
-        (mappedCoord[2] <= +1.))
+        (mappedCoord[2] <= 1.))
     {
       return true;
     }
@@ -393,12 +375,6 @@ private: // data
 
   /// solution integrator ID
   static CFuint _interpolatorID;
-  
-  /// factors for computation of basis functions
-  static RealVector m_ksiFac;
-
-  /// factors for computation of basis functions
-  static RealVector m_etaFac;
 
   /// factors for computation of basis functions
   static RealVector m_ztaFac;

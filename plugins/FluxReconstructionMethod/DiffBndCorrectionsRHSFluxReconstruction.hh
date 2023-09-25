@@ -179,6 +179,9 @@ protected: // data
   /// number of flux pnts on a face
   CFuint m_nbrFaceFlxPnts;
   
+  /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
+  CFreal m_mappedFaceNormalDir;
+  
   /// solution point mapped coordinates
   Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
   
@@ -250,6 +253,9 @@ protected: // data
 
   /// local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
+
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
 
   /// dependencies of flx pnts on sol pnts
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;

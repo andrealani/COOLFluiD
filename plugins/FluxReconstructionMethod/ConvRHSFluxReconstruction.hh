@@ -262,6 +262,9 @@ protected: //data
   /// face local coordinates of the flux points on one face
   Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
 
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
+
   /// dependencies of flx pnts on sol pnts
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
 
@@ -309,6 +312,9 @@ protected: //data
 
   /// number of additionnal face normal directions per element for Triag (,terta and prism)
   CFuint m_ndimplus;
+
+  /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
+  CFreal m_mappedFaceNormalDir;
   
 }; // class Solve
 
