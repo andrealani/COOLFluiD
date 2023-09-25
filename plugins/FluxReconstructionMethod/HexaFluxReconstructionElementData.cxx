@@ -1319,7 +1319,6 @@ void HexaFluxReconstructionElementData::createFlxSolDependencies()
   m_solFlxDep.resize(nbrSolPnts);
   m_solSolDep.resize(nbrSolPnts);
   m_flxSolDep.resize(nbrFlxPnts);
-  m_closestSolToFlxIdx.resize(nbrFlxPnts);
 
   CFuint iSol = 0;
   
@@ -1352,27 +1351,37 @@ void HexaFluxReconstructionElementData::createFlxSolDependencies()
       }
     }
   }
+}
+//////////////////////////////////////////////////////////////////////
+
+void HexaFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
+{
+  //only needed for meshes with prisms or hybrid grids
+  CFAUTOTRACE;
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+  // number of solution points in triag
+  const CFuint nbrFlxPntsTriag = (m_polyOrder+1)*(m_polyOrder+2)/2;
+
+  // set face flux point face local coordinates on Triag Face (not applicable)
+  m_faceFlxPntsLocalCoordsPerType.resize(2);
+  m_faceFlxPntsLocalCoordsPerType[0].resize(0);
   
 
-  for (CFuint i = 0; i < nbrSolPnts1D; ++i)
+  // set face flux point face local coordinates on Quad Face (reference -1 1 quad)
+  m_faceFlxPntsLocalCoordsPerType[1].resize(0);
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
   {
-    for (CFuint j = 0; j < nbrSolPnts1D; ++j)
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
     {
-      // face 0 and 1
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D] = j*nbrSolPnts1D+i*nbrSolPnts1D*nbrSolPnts1D; 
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D] = j*nbrSolPnts1D+i*nbrSolPnts1D*nbrSolPnts1D + nbrSolPnts1D-1; 
-      
-      // face 2 and 3
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 2*nbrSolPnts1D*nbrSolPnts1D] = j+i*nbrSolPnts1D; 
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 3*nbrSolPnts1D*nbrSolPnts1D] = j+i*nbrSolPnts1D + nbrSolPnts1D*nbrSolPnts1D*(nbrSolPnts1D-1); 
-        
-      // face 4 and 5
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 4*nbrSolPnts1D*nbrSolPnts1D] = i+j*nbrSolPnts1D*nbrSolPnts1D; 
-      m_closestSolToFlxIdx[j+i*nbrSolPnts1D + 5*nbrSolPnts1D*nbrSolPnts1D] = i+j*nbrSolPnts1D*nbrSolPnts1D + nbrSolPnts1D*(nbrSolPnts1D-1); 
+      RealVector flxCoord(2);
+      flxCoord[KSI] = m_flxPntsLocalCoord1D[iKsi];
+      flxCoord[ETA] = m_flxPntsLocalCoord1D[iEta];
+      (m_faceFlxPntsLocalCoordsPerType[1]).push_back(flxCoord);
     }
   }
-}
 
+}
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

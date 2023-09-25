@@ -12,7 +12,7 @@
 #include "ShapeFunctions/LagrangeShapeFunctionTetraP1.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionTetraP2.hh"
 #include "ShapeFunctions/LagrangeShapeFunctionPrismP1.hh"
-//#include "ShapeFunctions/LagrangeShapeFunctionPrismP2.hh"
+#include "ShapeFunctions/LagrangeShapeFunctionPrismP2.hh"
 
 #include "ShapeFunctions/LagrangeShapeFunctionHexaP2_27nodes.hh"
 
@@ -52,6 +52,8 @@
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionTetraP5.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP0.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP1.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP2.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP3.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP0.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP2.hh"
@@ -804,6 +806,61 @@ GeometricEntityProvider<Cell,
                         FluxReconstructionBaseFunctionPrismP1,
                         FluxReconstructionModule>
 cellLagrangePrismP1FluxReconstructionP1("CellPrismLagrangeP1FluxReconstructionP1");
+
+/**
+ * Flux Reconstruction Prism Cell with P1 geometry and P2 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP1,
+                        FluxReconstructionBaseFunctionPrismP2,
+                        FluxReconstructionModule>
+cellLagrangePrismP1FluxReconstructionP2("CellPrismLagrangeP1FluxReconstructionP2");
+
+/**
+ * Flux Reconstruction Prism Cell with P1 geometry and P3 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP1,
+                        FluxReconstructionBaseFunctionPrismP3,
+                        FluxReconstructionModule>
+cellLagrangePrismP1FluxReconstructionP3("CellPrismLagrangeP1FluxReconstructionP3");
+
+
+  /**
+ * Flux Reconstruction Prism Cell with P2 geometry and P0 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP2,
+                        FluxReconstructionBaseFunctionPrismP0,
+                        FluxReconstructionModule>
+cellLagrangePrismP2FluxReconstructionP0("CellPrismLagrangeP2FluxReconstructionP0");
+
+/**
+ * Flux Reconstruction Prism Cell with P2 geometry and P1 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP2,
+                        FluxReconstructionBaseFunctionPrismP1,
+                        FluxReconstructionModule>
+cellLagrangePrismP2FluxReconstructionP1("CellPrismLagrangeP2FluxReconstructionP1");
+
+/**
+ * Flux Reconstruction Prism Cell with P2 geometry and P2 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP2,
+                        FluxReconstructionBaseFunctionPrismP2,
+                        FluxReconstructionModule>
+cellLagrangePrismP2FluxReconstructionP2("CellPrismLagrangeP2FluxReconstructionP2");
+
+/**
+ * Flux Reconstruction Prism Cell with P2 geometry and P3 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP2,
+                        FluxReconstructionBaseFunctionPrismP3,
+                        FluxReconstructionModule>
+cellLagrangePrismP2FluxReconstructionP3("CellPrismLagrangeP2FluxReconstructionP3");
 
 
 

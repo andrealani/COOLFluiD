@@ -184,6 +184,14 @@ public:
   }
 
   /**
+   * @return m_faceFlxPntsLocalCoordsPerType
+   */
+  Common::SafePtr< std::vector< std::vector< RealVector > > > getFaceFlxPntsLocalCoordsPerType()
+  {
+    return &m_faceFlxPntsLocalCoordsPerType;
+  }
+
+  /**
    * @return m_flxPntDerivDir
    */
   Common::SafePtr< std::vector< CFuint > > getFlxPntDerivDir()
@@ -592,6 +600,11 @@ protected: // functions
   virtual void createFaceFlxPntsFaceLocalCoords() = 0;
 
   /**
+   * create vector with face flux points local coordinates (coordinate system local to face) per face type
+   */
+  virtual void createFaceFlxPntsLocalCoordsPerType() = 0;
+
+  /**
    * Creates a vector containing the exponents of the terms in the solution polynomials.
    */
   virtual void createSolPolyExponents() = 0;
@@ -823,6 +836,9 @@ protected: // protected data
 
   /// face flux point local coordinates (face coordinates)
   std::vector< RealVector > m_faceFlxPntsFaceLocalCoords;
+
+  /// face flux point local coordinates (face coordinates) per face type
+  std::vector< std::vector< RealVector > > m_faceFlxPntsLocalCoordsPerType;
 
   /// flux point local coordinate derivative direction
   std::vector< CFuint > m_flxPntDerivDir;
