@@ -137,6 +137,9 @@ void DiffRHSJacobFluxReconstructionPoisson::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
@@ -282,7 +285,8 @@ void DiffRHSJacobFluxReconstructionPoisson::computeWaveSpeedUpdates(vector< CFre
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -409,7 +413,7 @@ void DiffRHSJacobFluxReconstructionPoisson::prepareFluxComputation()
 void DiffRHSJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(const CFuint side)
 {
   // create a list of the dimensions in which the deriv will be calculated
-  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
   {
     m_cellFluxProjVects[iDim] = m_cells[side]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
   }

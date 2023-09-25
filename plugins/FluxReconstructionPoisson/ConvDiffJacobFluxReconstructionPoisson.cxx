@@ -145,6 +145,9 @@ void ConvDiffJacobFluxReconstructionPoisson::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
@@ -220,6 +223,9 @@ void ConvDiffJacobFluxReconstructionPoisson::execute()
     // start and stop index of the faces with this orientation
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
+
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
 
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
@@ -513,7 +519,8 @@ void ConvDiffJacobFluxReconstructionPoisson::computeWaveSpeedUpdates(vector< CFr
     
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -715,7 +722,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeGradients()
         for (CFuint jDir = 0; jDir < m_dim; ++jDir)
         {
 	  // project the state on a normal and reuse a RealVector variable of the class to store
-	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
+	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+iDir*m_dim+jDir];
         }
 	
         // Loop over solution pnts to count factor of all sol pnt polys
@@ -764,7 +771,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeGradientFaceCorrections()
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
   
@@ -795,6 +802,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeGradientFaceCorrections()
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -854,11 +862,11 @@ void ConvDiffJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(cons
   {
     const CFuint solID = (*(m_states[side]))[iState]->getLocalID();
       
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       for (CFuint jDim = 0; jDim < m_dim; ++jDim)
       {
-        m_cellFluxProjVects[iDim][iState][jDim] = solPntNormals[solID*m_dim*m_dim+iDim*m_dim+jDim];
+        m_cellFluxProjVects[iDim][iState][jDim] = solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+iDim*m_dim+jDim];
       }
     }
   }
@@ -919,7 +927,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeUnpertCellDiffResiduals(cons
     prepareFluxComputation();
 
     // calculate the discontinuous flux projected on x, y, z-directions
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       // add diffusive part 
       computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
@@ -1131,7 +1139,8 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
           {   
             // (df)
             const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
-              
+
+            m_nbrSolDep = ((*m_flxSolDep)[iFlxPnt]).size();  
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[iFlxPnt][jSolPnt];
@@ -1204,6 +1213,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
         
         const CFreal halfFaceJacob = 0.5 * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
         
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         // loop over the states to perturb the states (l)
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
@@ -1340,8 +1350,9 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
         //// add the cross-element gradient part
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         { 
+          CFuint nbrSolDep1 = ((*m_flxSolDep)[flxPntIdxThis]).size();
           // loop over the states to perturb the states (l)
-          for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+          for (m_pertSol = 0; m_pertSol < nbrSolDep1; ++m_pertSol)
           {
             const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
               
@@ -1356,7 +1367,9 @@ void ConvDiffJacobFluxReconstructionPoisson::computeBothJacobsDiffFaceTerm()
               CFreal divh = m_corrFctDiv[jSolPnt][iInfluencedFlxIdx]; 
               
               const CFuint dimOther = (*m_flxPntFlxDim)[iInfluencedFlxIdx];
-                
+
+              m_nbrSolDep = ((*m_flxSolDep)[iInfluencedFlxIdx]).size();
+
               for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolDep; ++kSolPnt)
               {
                 const CFuint kSolIdxOther = (*m_flxSolDep)[iInfluencedFlxIdx][kSolPnt];
@@ -1573,7 +1586,9 @@ void ConvDiffJacobFluxReconstructionPoisson::computeOneJacobDiffFaceTerm(const C
           {   
             // (df)
             const CFuint dim = (*m_flxPntFlxDim)[iFlxPnt];
-              
+
+            m_nbrSolDep = ((*m_flxSolDep)[iFlxPnt]).size();
+
             for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolDep; ++jSolPnt)
             {
               const CFuint jSolIdx = (*m_flxSolDep)[iFlxPnt][jSolPnt];
@@ -1641,6 +1656,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeOneJacobDiffFaceTerm(const C
         
         const CFreal halfFaceJacob = 0.5 * m_faceJacobVecSizeFlxPnts[iFlxPnt][m_pertSide];
         
+        m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxThis]).size();
         // loop over the states to perturb the states (l)
         for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
         {
@@ -1768,8 +1784,9 @@ void ConvDiffJacobFluxReconstructionPoisson::computeOneJacobDiffFaceTerm(const C
         //// add the cross-element gradient part
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolPnts; ++jSolPnt)
         { 
+          CFuint nbrSolDep1 = ((*m_flxSolDep)[flxPntIdxThis]).size();
           // loop over the states to perturb the states (l)
-          for (m_pertSol = 0; m_pertSol < m_nbrSolDep; ++m_pertSol)
+          for (m_pertSol = 0; m_pertSol < nbrSolDep1; ++m_pertSol)
           {
             const CFuint pertSolIdx = (*m_flxSolDep)[flxPntIdxThis][m_pertSol];
               
@@ -1784,6 +1801,8 @@ void ConvDiffJacobFluxReconstructionPoisson::computeOneJacobDiffFaceTerm(const C
               CFreal divh = m_corrFctDiv[jSolPnt][iInfluencedFlxIdx]; 
               
               const CFuint dimOther = (*m_flxPntFlxDim)[iInfluencedFlxIdx];
+
+              m_nbrSolDep = ((*m_flxSolDep)[iInfluencedFlxIdx]).size();
                 
               for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolDep; ++kSolPnt)
               {
@@ -1893,7 +1912,7 @@ void ConvDiffJacobFluxReconstructionPoisson::computeCellFluxJacobianNum(const CF
         prepareFluxComputation();
 
         // calculate the discontinuous flux projected on x, y, z-directions
-        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+        for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
         {       
           // diffusive part
           computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);

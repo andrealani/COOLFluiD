@@ -79,7 +79,7 @@ void PoissonJacobBndGradientComputer::executeOnTrs()
 
   // number of face orientations (should be the same for all TRs)
   cf_assert(bndFacesStartIdxs.size() != 0);
-  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
+  CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
 
   // number of TRs
   const CFuint nbTRs = faceTrs->getNbTRs();
@@ -97,11 +97,16 @@ void PoissonJacobBndGradientComputer::executeOnTrs()
   // loop over TRs
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR)
   {
+    nbOrients = bndFacesStartIdxs[iTR].size()-1;
+
     // loop over different orientations
     for (m_orient = 0; m_orient < nbOrients; ++m_orient)
     {
       CFLog(VERBOSE,"m_orient: " << m_orient << "\n");
       
+      // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+      m_nbrFaceFlxPnts=(*m_faceFlxPntConn)[m_orient].size();
+
       // select the correct flx pnts on the face out of all cell flx pnts for the current orient
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
@@ -215,6 +220,9 @@ void PoissonJacobBndGradientComputer::computeGradientBndFaceCorrections()
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
+
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+    
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -266,7 +274,8 @@ void PoissonJacobBndGradientComputer::computeGradientBndFaceCorrections()
     for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
-
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+      
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
@@ -320,6 +329,8 @@ void PoissonJacobBndGradientComputer::computeGradientBndFaceCorrections()
       const RealVector transformedState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[iFlx]));
       const RealVector transformedGhostState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_flxPntGhostSol[iFlx]));
       
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {

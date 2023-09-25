@@ -93,6 +93,9 @@ void PoissonJacobGradientComputer::execute()
     const CFuint faceStartIdx = innerFacesStartIdxs[m_orient  ];
     const CFuint faceStopIdx  = innerFacesStartIdxs[m_orient+1];
 
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConnPerOrient)[m_orient][0].size();
+
     // loop over faces with this orientation
     for (CFuint faceID = faceStartIdx; faceID < faceStopIdx; ++faceID)
     {
@@ -394,6 +397,8 @@ void PoissonJacobGradientComputer::computeGradientFaceCorrections()
   {
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+    
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
 
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
@@ -453,6 +458,8 @@ void PoissonJacobGradientComputer::computeGradientFaceCorrections()
     {
       const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
       const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
 
       // compute the face corrections to the gradients
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)

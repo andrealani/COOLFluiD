@@ -97,7 +97,8 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeWaveSpeedUpdate
 //  const CFreal dynVisc = diffMFMHDVarSet->getCurrDynViscosity();
   
   waveSpeedUpd = 0.0;
-  for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
+  //for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
