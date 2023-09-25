@@ -99,7 +99,8 @@ void LLAVDiffFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >& wav
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     waveSpeedUpd[iSide] = 0.0;
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -337,6 +338,7 @@ void LLAVDiffFluxReconstructionNS::computeFlxPntStatesAndGrads()
       *(m_cellGradFlxPntAV[RIGHT][iFlxPnt][iVar]) = 0.0;
     }
 
+    m_nbrSolDep = ((*m_flxSolDep)[flxPntIdxL]).size();
     // extrapolate the left and right states to the flx pnts
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
     {
@@ -424,7 +426,7 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
           // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir+m_ndimplus][iEq]);
+          residuals[iSolPnt][iEq] += polyCoef*(m_contFlx[jSolIdx][iDir][iEq]);
 	}
       }
     }
@@ -435,11 +437,16 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
 
   for (CFuint iFace = 0; iFace < nbrFaces; ++iFace)
   {
+    // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+    m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[iFace].size();
+
     if (!((*m_isFaceOnBoundaryCell)[iFace]))
     {
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
+
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
 
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
@@ -462,7 +469,23 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
       
       // get the datahandle of the update coefficients
       DataHandle<CFreal> updateCoeff = socket_updateCoeff.getDataHandle();
-  
+
+      // get the correct flxPntsLocalCoords depending on the face type (only applicable for Prism for now @todo but also needed if hybrid grids)
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[0];
+        }
+        else  // quad face
+        {
+          (*m_flxLocalCoords) = (*m_faceFlxPntsLocalCoordsPerType)[1];
+        } 
+      }
+      
       // compute flux point coordinates
       for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
       {
@@ -485,13 +508,15 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
         m_faceJacobVecSizeFlxPnts2[iFlxPnt] = faceJacobVecAbsSizeFlxPnts*((*m_faceLocalDir)[iFace]);
  
 	// set unit normal vector
-        m_unitNormalFlxPnts2[iFlxPnt] = (m_faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
+        m_unitNormalFlxPnts2[iFlxPnt] = (m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/faceJacobVecAbsSizeFlxPnts);
       }
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
         const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
     
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
+
         // reset the grads in the flx pnts
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
@@ -533,30 +558,32 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
 	
       for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
       {
-	const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
+	      const CFuint currFlxIdx = (*m_faceFlxPntConn)[iFace][iFlxPnt];
 	
-	CFreal epsilon = 0.0;
+	      CFreal epsilon = 0.0;
 	
-	// loop over the sol pnts to compute the states and grads in the flx pnts
+        m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
+
+	      // loop over the sol pnts to compute the states and grads in the flx pnts
         for (CFuint iNode = 0; iNode < m_faceNodes->size(); ++iNode)
         {
-	  for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
+	       for (CFuint iNodeCell = 0; iNodeCell < m_nbrCornerNodes; ++iNodeCell)
           {
-	    if ((*m_faceNodes)[iNode]->getLocalID() == (*m_cellNodes)[iNodeCell]->getLocalID())
-	    {
+	          if ((*m_faceNodes)[iNode]->getLocalID() == (*m_cellNodes)[iNodeCell]->getLocalID())
+	          {
               //const CFuint nodeIdx = (*m_faceNodes)[iNode]->getLocalID();
-	      // get node local index
+	            // get node local index
               const CFuint nodeIdx = (*m_cellNodesConn)(m_cell->getID(),iNodeCell);
 	  
               epsilon += m_nodePolyValsAtFlxPnts[currFlxIdx][iNodeCell]*m_nodeEpsilons[nodeIdx]/m_nbNodeNeighbors[nodeIdx];
-	    }
-	  }
+	          }
+	        }
         }
 	
-	if (!m_jacob && m_addUpdCoeff)
-	{
-	  // adding updateCoeff
-	  CFreal visc = 1.0;
+	      if (!m_jacob && m_addUpdCoeff)
+	      {
+	        // adding updateCoeff
+	        CFreal visc = 1.0;
   
           m_waveSpeedUpd[0] = 0.0;
 
@@ -578,7 +605,7 @@ void LLAVDiffFluxReconstructionNS::computeDivDiscontFlx(vector< RealVector >& re
             updateCoeff[solID] += m_waveSpeedUpd[0];
           }
           //if (m_waveSpeedUpd[0] > 10.0) CFLog(INFO, "wvspLLAVBnd: " << m_waveSpeedUpd[0] << "\n");
-	}
+	      }
 	
         // compute the average sol and grad to use the BR2 scheme
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)

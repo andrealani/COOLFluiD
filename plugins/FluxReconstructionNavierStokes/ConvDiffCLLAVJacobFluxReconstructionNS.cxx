@@ -99,7 +99,8 @@ void ConvDiffCLLAVJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFr
   
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -690,6 +691,7 @@ void ConvDiffCLLAVJacobFluxReconstructionNS::computeGradientFaceCorrections()
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -747,6 +749,7 @@ void ConvDiffCLLAVJacobFluxReconstructionNS::computeGradientFaceCorrections()
       const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
       const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
       // compute the face corrections to the gradients
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {

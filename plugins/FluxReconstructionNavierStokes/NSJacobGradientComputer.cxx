@@ -74,7 +74,7 @@ void NSJacobGradientComputer::computeGradients()
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-	m_projectedCorrL = m_tempGradTerm(iEq,iSolPnt) * m_cellFluxProjVects[iDir+m_ndimplus][iSolPnt];
+	m_projectedCorrL = m_tempGradTerm(iEq,iSolPnt) * m_cellFluxProjVects[iDir][iSolPnt];
 	
         // Loop over solution pnts to count factor of all sol pnt polys
         for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
@@ -130,7 +130,7 @@ void NSJacobGradientComputer::computeGradients()
         // Loop over gradient directions
         for (CFuint iDir = 0; iDir < m_dim; ++iDir)
         {
-          m_projectedCorrL = (*((*m_cellStates)[iSolPnt]))[iEq] * m_cellFluxProjVects[iDir+m_ndimplus][iSolPnt];
+          m_projectedCorrL = (*((*m_cellStates)[iSolPnt]))[iEq] * m_cellFluxProjVects[iDir][iSolPnt];
 
           // Loop over solution pnts to count factor of all sol pnt polys
           for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
@@ -196,6 +196,7 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -255,6 +256,7 @@ void NSJacobGradientComputer::computeGradientFaceCorrections()
       const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
       const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
       // compute the face corrections to the gradients
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {

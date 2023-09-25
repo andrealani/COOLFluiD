@@ -1,4 +1,4 @@
-// Copyright (C) 2016 KU Leuven, Belgium
+// Copyright (C) 2012 von Karman Institute for Fluid Dynamics, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -554,7 +554,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradients()
         for (CFuint jDir = 0; jDir < m_dim; ++jDir)
         {
 	  // project the state on a normal and reuse a RealVector variable of the class to store
-	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDir+m_ndimplus)*m_dim+jDir];
+	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
         }
 	
         // Loop over solution pnts to count factor of all sol pnt polys
@@ -616,7 +616,7 @@ void ConvDiffLLAVJacobFluxReconstructionNS::computeGradients()
           for (CFuint jDir = 0; jDir < m_dim; ++jDir)
           {
 	    // project the state on a normal and reuse a RealVector variable of the class to store
-	    m_projectedCorrL[jDir] = m_tempSolVarState[iEq] * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDir+m_ndimplus)*m_dim+jDir];
+	    m_projectedCorrL[jDir] = m_tempSolVarState[iEq] * solPntNormals[solID*m_dim*m_dim+iDir*m_dim+jDir];
           }
 
           // Loop over solution pnts to count factor of all sol pnt polys

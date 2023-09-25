@@ -84,6 +84,8 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
+
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -135,7 +137,8 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
     for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
-
+      
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
@@ -189,6 +192,7 @@ void NSBndGradientComputer::computeGradientBndFaceCorrections()
       const RealVector transformedState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_cellStatesFlxPnt[iFlx]));
       const RealVector transformedGhostState = static_cast<RealVector&>(*m_updateToSolutionVecTrans->transform(m_flxPntGhostSol[iFlx]));
       
+      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
       // Loop over  variables
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {

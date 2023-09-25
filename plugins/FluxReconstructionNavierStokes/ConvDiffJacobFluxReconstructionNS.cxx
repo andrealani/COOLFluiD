@@ -100,7 +100,8 @@ void ConvDiffJacobFluxReconstructionNS::computeWaveSpeedUpdates(vector< CFreal >
     
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
-    for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
@@ -281,7 +282,7 @@ void ConvDiffJacobFluxReconstructionNS::computeRiemannFluxJacobianNum(const CFre
 void ConvDiffJacobFluxReconstructionNS::computeRiemannFluxToGradJacobianNum(const CFreal resFactor)
 {  
   CFLog(VERBOSE, "NS computeRiemannFluxToGradJacobianNum\n");
-  
+
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_tempStatesL[iFlx] = m_cellStatesFlxPnt[LEFT][iFlx]->getData();
@@ -432,7 +433,7 @@ void ConvDiffJacobFluxReconstructionNS::computeGradients()
         for (CFuint jDir = 0; jDir < m_dim; ++jDir)
         {
 	  // project the state on a normal and reuse a RealVector variable of the class to store
-	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+(iDir+m_ndimplus)*m_dim+jDir]; //Modified
+	  m_projectedCorrL[jDir] = m_tempGradTerm(iEq,iSolPnt) * solPntNormals[solID*(m_dim+m_ndimplus)*m_dim+iDir*m_dim+jDir]; //Modified
         }
 	
         // Loop over solution pnts to count factor of all sol pnt polys
@@ -481,7 +482,7 @@ void ConvDiffJacobFluxReconstructionNS::computeGradientFaceCorrections()
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
   
@@ -511,7 +512,8 @@ void ConvDiffJacobFluxReconstructionNS::computeGradientFaceCorrections()
   {
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
-
+    
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
     // Loop over  variables
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {

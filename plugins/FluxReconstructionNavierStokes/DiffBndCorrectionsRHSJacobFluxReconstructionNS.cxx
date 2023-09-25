@@ -78,7 +78,8 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionNS::computeWaveSpeedUpdates(CFr
   cf_assert(factorPr>0.0);
   
   waveSpeedUpd = 0.0;
-  for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
+  //for (CFuint iFlx = 0; iFlx < m_cellFlx.size(); ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
