@@ -203,6 +203,21 @@ Gmsh2CFmeshConverter::Gmsh2CFmeshConverter (const std::string& name)
   _mapNodeIdxPerElemTypeTable[11][24] = 19;
   _mapNodeIdxPerElemTypeTable[11][25] = 17;
   _mapNodeIdxPerElemTypeTable[11][26] = 25;
+  
+  // quadratic Prism
+  _mapNodeIdxPerElemTypeTable[12][ 6] =  6;
+  _mapNodeIdxPerElemTypeTable[12][ 7] =  9;
+  _mapNodeIdxPerElemTypeTable[12][ 8] =  7;
+  _mapNodeIdxPerElemTypeTable[12][ 9] =  8;
+  _mapNodeIdxPerElemTypeTable[12][10] = 15;
+  _mapNodeIdxPerElemTypeTable[12][11] = 10;
+  _mapNodeIdxPerElemTypeTable[12][12] = 17;
+  _mapNodeIdxPerElemTypeTable[12][13] = 11;
+  _mapNodeIdxPerElemTypeTable[12][14] = 16;
+  _mapNodeIdxPerElemTypeTable[12][15] = 12;
+  _mapNodeIdxPerElemTypeTable[12][16] = 14;
+  _mapNodeIdxPerElemTypeTable[12][17] = 13;
+
 
 
   _mapNodeIdxPerElemTypeTable[10][ 7] =  9;
