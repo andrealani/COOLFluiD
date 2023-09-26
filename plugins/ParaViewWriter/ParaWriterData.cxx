@@ -264,7 +264,22 @@ vector< RealVector > ParaWriterData::getOutputPntsMappedCoords(CFGeoShape::Type 
     } break;
     case CFGeoShape::PRISM:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputPntsMappedCoords() for PRISM");
+      for (CFuint iZta = 0; iZta < nbrNodes1D; ++iZta)
+      {
+        const CFreal zeta = -1.0 + iZta*2.0/solOrder;
+        for (CFuint iKsi = 0; iKsi < nbrNodes1D; ++iKsi)
+        {
+          const CFreal ksi = iKsi*1.0/solOrder;
+          for (CFuint iEta = 0; iEta < nbrNodes1D-iKsi; ++iEta)
+          {
+            RealVector coords(3);
+            coords[KSI] = ksi;
+            coords[ETA] = iEta*1.0/solOrder;
+            coords[ZTA] = zeta;
+            nodeMappedCoords.push_back(coords);
+          }
+        }
+      }
     } break;
     case CFGeoShape::HEXA:
     {
@@ -381,7 +396,50 @@ vector< vector< CFuint > > ParaWriterData::getOutputCellNodeConn(CFGeoShape::Typ
     } break;
     case CFGeoShape::PRISM:
     {
-      throw Common::NotImplementedException (FromHere(),"ParaWriterData::getOutputCellNodeConn() for PRISM");
+for (CFuint iZeta = 0; iZeta < solOrder; ++iZeta)
+{
+    CFuint nodeIdx = ((solOrder+1) * (solOrder+2) / 2 ) * iZeta;
+    CFuint nodeIdx1 = ((solOrder+1) * (solOrder+2) / 2 ) * (iZeta + 1);
+    
+    for (CFuint iKsi = 0; iKsi < solOrder; ++iKsi)
+    {
+        for (CFuint iEta = 0; iEta < solOrder - iKsi - 1; ++iEta)
+        {
+            vector<CFuint> cellNodesConn(6);
+            cellNodesConn[0] = nodeIdx + iEta;
+            cellNodesConn[1] = nodeIdx + nbrNodes1D - iKsi + iEta;
+            cellNodesConn[2] = nodeIdx + iEta + 1;
+            cellNodesConn[3] = nodeIdx1 + iEta;
+            cellNodesConn[4] = nodeIdx1 + nbrNodes1D - iKsi + iEta;
+            cellNodesConn[5] = nodeIdx1 + iEta + 1;
+            
+            cellsNodesConn.push_back(cellNodesConn);
+            
+            cellNodesConn[0] = nodeIdx + nbrNodes1D - iKsi + iEta;
+            cellNodesConn[1] = nodeIdx + nbrNodes1D - iKsi + iEta + 1;
+            cellNodesConn[2] = nodeIdx + iEta + 1;
+            cellNodesConn[3] = nodeIdx1 + nbrNodes1D - iKsi + iEta;
+            cellNodesConn[4] = nodeIdx1 + nbrNodes1D - iKsi + iEta + 1;
+            cellNodesConn[5] = nodeIdx1 + iEta + 1;
+            
+            cellsNodesConn.push_back(cellNodesConn);
+        }
+        
+        vector<CFuint> cellNodesConn(6);
+        cellNodesConn[0] = nodeIdx + solOrder - iKsi - 1;
+        cellNodesConn[1] = nodeIdx + nbrNodes1D - iKsi + solOrder - 1 - iKsi;
+        cellNodesConn[2] = nodeIdx + solOrder - iKsi;
+        cellNodesConn[3] = nodeIdx1 + solOrder - iKsi - 1;
+        cellNodesConn[4] = nodeIdx1 + nbrNodes1D - iKsi + solOrder - 1 - iKsi;
+        cellNodesConn[5] = nodeIdx1 + solOrder - iKsi;
+        
+        cellsNodesConn.push_back(cellNodesConn);
+        
+        nodeIdx += nbrNodes1D - iKsi;
+        nodeIdx1 += nbrNodes1D - iKsi;
+    }
+}
+
     } break;
     case CFGeoShape::HEXA:
     {
