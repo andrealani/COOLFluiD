@@ -21,13 +21,13 @@ if [ -z "$2" ] ; then
     exit 1
 fi
 
-module load CMake/3.10.2-GCCcore-6.4.0
-module load paralution/1.1.0-foss-2018a
-module load Boost/1.66.0-foss-2018a
-module load ParMETIS/4.0.3-foss-2018a
+module load CMake/3.20.1-GCCcore-10.3.0
+module load Boost/1.76.0-GCC-10.3.0
+module load ParMETIS/4.0.3-gompi-2021a
+module load PETSc/3.15.1-foss-2021a
 
 export TOP_DIR="${VSC_DATA}"
-export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius"
+export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius_Mine/"
 # download COOLFluiD
 if [ "$2" == "--download=2" ] ; then
 svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
@@ -41,22 +41,22 @@ if [ "$1" == "DEBUG_CUDA" ] ; then
 # with debugging
 export BUILD_MODE=geniuscuda
 export CONF_FILE="COOLFluid_Genius_debug.conf"
-module load PETSc/3.9.0-foss-2018a-debug
+module load PETSc/3.15.1-foss-2021a
 elif [ "$1" == "OPTIM_CUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=geniuscudafast
 export CONF_FILE="COOLFluid_Genius_optim.conf"
-module load PETSc/3.9.0-foss-2018a-CUDA
+module load PETSc/3.15.1-foss-2021a
 elif [ "$1" == "DEBUG_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=optim
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
-module load PETSc/3.9.0-foss-2018a-cpu
+module load PETSc/3.15.1-foss-2021a
 elif [ "$1" == "OPTIM_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=release
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
-module load PETSc/3.9.0-foss-2018a-cpu
+module load PETSc/3.15.1-foss-2021a
 fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
