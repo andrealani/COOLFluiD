@@ -67,3 +67,6 @@ cf_add_case( MPI 8 CASEDIR Wedge PCASE wedgeFVMMHDProj.CFcase CASEFILES wedge.th
 cf_add_case( MPI 4 CASEDIR Wedge PCASE wedgeFVMMHDProjImpl.CFcase CASEFILES wedge.thor wedge.SP )
 #cf_add_case( MPI default PCASE Wedge/wedgeMHDFluctSplitCRD.CFcase )
 #cf_add_case( MPI default PCASE Wedge/wedgeMHDProjFluctSplitCRD.CFcase )
+cf_add_case( MPI 8 CASEDIR COCONUT_Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
+cf_add_case( MPI 8 CASEDIR COCONUT_Quadrupole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh quadrupole_axisym.dat map.inter )
+cf_add_case( MPI 8 CASEDIR COCONUT_Map PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
