@@ -3,25 +3,25 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -15.1814 
+### Residual = -0.72898532
 
 ###############################################################################
 # User defined parameters
 ###############################################################################
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/Quadrupole/
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT_Quadrupole/
 Simulator.Paths.ResultsDir = ./results-quad-res
-Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/COCONUT/Quadrupole/map.inter
+Simulator.SubSystem.InteractiveParamReader.FileName = plugins/MHD/testcases/COCONUT_Quadrupole/map.inter
 
 # Boundary condition files
-Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/Quadrupole/quadrupole_axisym.dat
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT_Quadrupole/quadrupole_axisym.dat
 
 # Mesh reader
 # First reader 
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ../Meshes/BCindependent6.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./BCindependent5.CFmesh
 Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 # Second reader
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ../Meshes/BCindependent6.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./BCindependent5.CFmesh
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 # Physical parameters
@@ -41,12 +41,16 @@ Simulator.SubSystem.Flow.InField.Def = \
 
 # Stop Condition
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -3.5
 
 # CFL definition
-Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
-#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
-#Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
+if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<50,2.0,if(i<100,4.0,if(i<150,8.0,if(i<200,16.,if(i<250,32.,min(200.,cfl*1.02^2))))))
 #if(i<500,2.0,if(i<1000,4.0,if(i<1500,8.0,if(i<2000,16.,if(i<2500,32.,min(200.,cfl*1.02^2))))))
 
 # Restart option
