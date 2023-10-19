@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual =  -14.5982
+### Residual = 
 
 ###############################################################################
 # User defined parameters
@@ -18,10 +18,12 @@ Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ./map_hmi_lmax15_cr2219.d
 
 # Mesh reader
 # First reader 
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName =  ./BCindependent6.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./BCindependent5.CFmesh 
+#./BCindependent6.CFmesh
 Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 # Second reader
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./BCindependent6.CFmesh 
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./BCindependent5.CFmesh
+#./BCindependent6.CFmesh 
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 # Physical parameters
@@ -40,13 +42,18 @@ Simulator.SubSystem.Flow.InField.Def = \
 1. 2. 3. 0.108*((1/r)^5) 0.
 
 # Stop Condition
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -4.0
 
 # CFL definition
-Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
-#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
-#Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
+if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258)))))
+#if(i<50,2.0,if(i<100,4.0,if(i<150,8.0,if(i<200,16.,if(i<250,32.,min(200.,cfl*1.02^2))))))
 #if(i<500,2.0,if(i<1000,4.0,if(i<1500,8.0,if(i<2000,16.,if(i<2500,32.,min(200.,cfl*1.02^2))))))
 
 # Restart option

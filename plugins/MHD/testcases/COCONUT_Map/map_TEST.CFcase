@@ -50,6 +50,7 @@ Simulator.SubSystem.Norm.valueNorm      = -2.0
 Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
 Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
 if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258)))))
 #if(i<50,2.0,if(i<100,4.0,if(i<150,8.0,if(i<200,16.,if(i<250,32.,min(200.,cfl*1.02^2))))))
 #if(i<500,2.0,if(i<1000,4.0,if(i<1500,8.0,if(i<2000,16.,if(i<2500,32.,min(200.,cfl*1.02^2))))))
 
