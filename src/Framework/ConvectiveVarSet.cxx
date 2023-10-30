@@ -19,6 +19,7 @@ ConvectiveVarSet::ConvectiveVarSet(Common::SafePtr<Framework::BaseTerm> term) :
   Common::OwnedObject(),
   Common::NullableObject(),
   _nbEqs(0),
+  _entityID(0),
   _iEqSubSys(0),
   _extraData(false),
   _varNames(),
