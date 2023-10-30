@@ -44,6 +44,10 @@ Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.Tecplot.AppendIter = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 
+#Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolution
+#Simulator.SubSystem.Tecplot.ParWriteSolution.NbWriters = 1
+
+
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
 #Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
 
