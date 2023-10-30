@@ -347,6 +347,8 @@ void ConvergenceMethod::syncGlobalDataComputeResidual(const bool computeResidual
   }
 
   popNamespace();
+  
+  CFLog(VERBOSE, "ConvergenceMethod::syncGlobalDataComputeResidual()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -391,6 +393,8 @@ void ConvergenceMethod::syncAllAndComputeResidual(const bool computeResidual)
   }
 
   popNamespace();
+  
+  CFLog(VERBOSE, "ConvergenceMethod::syncAllAndComputeResidual()\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
