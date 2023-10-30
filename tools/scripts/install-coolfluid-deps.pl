@@ -141,7 +141,8 @@ my %packages = (  #  version   default install priority      function
 #    "petsc"      => [ "3.6.3",'on',  'off', $priority++,  \&install_petsc ], 
 #     "petsc"      => [ "3.9.0",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.9.3",'on',  'off', $priority++,  \&install_petsc ],
-    "petsc"      => [ "3.12.3",'on',  'off', $priority++,  \&install_petsc ],
+#    "petsc"      => [ "3.12.3",'on',  'off', $priority++,  \&install_petsc ],
+    "petsc"      => [ "3.18.0",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.6",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3a",'on',  'off', $priority++,  \&install_petsc ],
 #    "petsc"      => [ "3.7.3-next",'on',  'off', $priority++,  \&install_petsc ],
@@ -1313,10 +1314,10 @@ sub install_petsc ()
       run_command_or_die("export PATH=$opt_cuda_dir/bin:\\\$PATH");
       run_command_or_die("export LD_LIBRARY_PATH=/usr/lib64:$opt_cuda_dir/lib64:/usr/lib64/nvidia:\\\$LD_LIBRARY_PATH");
      
-      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3") {
+      if ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3" or $version eq "3.18.0") {
          my $cuda_arch="--with-cuda-arch=sm_30";
 	 my $cusp_dir="cusp-v0.4.0";  
-	 if ($version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3") {
+	 if ($version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3" or $version eq "3.18.0") {
            $cuda_arch="--CUDAFLAGS=-arch=sm_30";
            $cusp_dir="cusplibrary-0.5.0";
          }
@@ -1330,7 +1331,7 @@ sub install_petsc ()
            run_command_or_die("cp $cusp_name $opt_install_dir/ ; cd $opt_install_dir ; unzip $cusp_name ; rm -f $cusp_name ; cd -");
         
 	   my $cuda_arch="--with-cuda-arch=sm_30";
-	   if ($version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3") {$cuda_arch="--CUDAFLAGS=-arch=sm_30";} 
+	   if ($version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3" or $version eq "3.18.0") {$cuda_arch="--CUDAFLAGS=-arch=sm_30";} 
 
          # gory fixes to fix inclusions paths for cups and thrust     
 	 run_command_or_die("cp -R $opt_install_dir/$cusp_dir/cusp $opt_install_dir/include");
@@ -1391,7 +1392,7 @@ sub install_petsc ()
    run_command_or_die("./configure --prefix=$install_dir $wdebug COPTFLAGS='-O3 ' FOPTFLAGS='-O3 ' --with-mpi-dir=$opt_mpi_dir $wblaslib --with-fortran=$fcflag --with-shared-libraries=1 $dynamicload --with-c++-support $cuda_support --PETSC_ARCH=$petsc_arch");
    run_command_or_die("make $opt_makeopts");
   }
-  elsif ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3") {
+  elsif ($version eq "3.6.3" or $version eq "3.7.3a" or $version eq "3.7.3-next" or $version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3" or $version eq "3.18.0") {
     my $FFLAGS = "-O3 ";
     my $F90FLAGS ="-O3 ";
     my $CFLAGS ="-O3 "; 
@@ -1411,7 +1412,7 @@ sub install_petsc ()
        $FOPTFLAGS="-O3 -qstrict -qarch=qp -qtune=qp";
     }
 
-    if ($version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3") {
+    if ($version eq "3.7.6" or $version eq "3.9.0" or $version eq "3.9.3" or $version eq "3.12.3" or $version eq "3.18.0") {
       $dynamicload ="";
     } 
     my $link_libraries = "--with-shared-libraries=1"; 
