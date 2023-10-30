@@ -30,6 +30,7 @@ IF(UNIX)
    
     # dont allow gnu extensions
     CF_ADD_CXX_FLAGS("-fno-gnu-keywords")
+    CF_ADD_CXX_FLAGS("-Wno-dev")  
     
     # dont defined common variables
     CF_ADD_C_FLAGS("-fno-common")
