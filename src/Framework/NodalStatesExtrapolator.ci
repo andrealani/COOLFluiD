@@ -416,9 +416,15 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
   mapTrs2NodalValues->resize(PhysicalModelStack::getActive()->getNbEq());
   // resize the mapping TRS to nodal values with the number of equations
   // you have one map for each variable
-  
+ 
+  for (CFuint i = 0; i < mapTrs2NodalValues->size(); ++i) {
+  (*mapTrs2NodalValues)[i] = new MapTrs2NodalValues(); 
+  }
+ 
   // allocate storage for mapping TRS to nodal values (temperature in this case)
-  (*mapTrs2NodalValues)[m_tempID] = new MapTrs2NodalValues();
+  // AL: bug during cleanup if this is used
+  // (*mapTrs2NodalValues)[m_tempID] = new MapTrs2NodalValues();
+  
   for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
     SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
     const CFuint nbTrsNodes = trs->getNbNodesInTrs();
@@ -687,28 +693,31 @@ NodalStatesExtrapolator<DATA>::extractLineData(SurfaceData* surface)
 
 template <typename DATA>
 void NodalStatesExtrapolator<DATA>::unsetup()
-{  
+{ 
+  CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::unsetup() => START\n");
+ 
   Framework::MethodStrategy<DATA>::unsetup();
-  
+ 
   Common::SwapEmpty(_nodalValuesIDFlags);
-  
+
   for (CFuint i = 0; i < _mapTrs2NodalValues.size(); ++i) {
     for (CFuint j = 0; j < _mapTrs2NodalValues[i]->size(); ++j) {
       deletePtr((*_mapTrs2NodalValues[i])[j]);
     }
     deletePtr(_mapTrs2NodalValues[i]);
   }
-  
+
   for (CFuint i = 0; i < _mapNodeID2TrsNodeID.size(); ++i) {
     deletePtr(_mapNodeID2TrsNodeID[i]);
   }
-    
+
   _mapTrsNameToID.clear();
-  
   m_trsID2LookupState.clear();
-  
+
   Common::SwapEmpty(_orderedTrsList);
   Common::SwapEmpty(_neighborStates);
+
+  CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::unsetup() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

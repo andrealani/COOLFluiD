@@ -40,17 +40,15 @@ void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
 SuperInletProjection::SuperInletProjection(const std::string& name) :
   SuperInlet(name),
   m_mapGeoToTrs(),
-  m_mapTrs2Twall(),
   m_BfromFile(false)
 {
   addConfigOptionsTo(this);
 
-  
   _projectionIDs = vector<CFuint>();
   setParameter("ProjectionIDs",&_projectionIDs);
+  
   m_varIDs = vector<CFuint>();
   setParameter("VarIDs",&m_varIDs);
-
 
   _pBC = 0.108; //*8.0;
 
@@ -89,17 +87,6 @@ void SuperInletProjection::setup()
   
   m_mapGeoToTrs =
     MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
-  
-  // build the m_mapTrs2Twall storage
-  vector< SafePtr<TopologicalRegionSet> >& trsList = this->getTrsList();
-  
-  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
-    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
-    const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
-    RealVector* tWall = new RealVector(0.0,nbTrsFaces);
-    m_mapTrs2Twall.insert(&*trs, tWall);
-  }
-  m_mapTrs2Twall.sortKeys();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -146,11 +133,8 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
   // this interpolates Br directly from the magnetogram file
   // static CFreal maxBr = -1e-14;
-  CFreal BrFromFile = 1; //0.;
-  //std::cout << m_BfromFile << " m_BfromFile " << "\n";
-
-  m_BfromFile = false;
-  if (m_BfromFile) { 
+  CFreal BrFromFile = 0.;
+  if (m_initialSolutionMap.size() > 0 && m_BfromFile == true) {
     vector<Node*>& nodesInFace = *face->getNodes();
     const CFuint nbNodesInFace = nodesInFace.size();
     SafePtr<TopologicalRegionSet> trs = m_mapGeoToTrs->getTrs(face->getID());
@@ -170,7 +154,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
     
     RealVector& bArray = *(*mapTrs2NodalValues)[varID]->find(&*trs);
     CFMap<CFuint,CFuint>* mapNodeIDs = nse->getMapTrs2NodeIDs()->find(&*trs);
-    
+
     BrFromFile = 0.0;
     for (CFuint iNode = 0; iNode < nbNodesInFace; ++iNode) {
       const CFuint localNodeID = nodesInFace[iNode]->getLocalID();
@@ -178,10 +162,8 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       BrFromFile += bArray[mapNodeIDs->find(localNodeID)];
     }
     BrFromFile /= nbNodesInFace;
-
     // maxBr = std::max(maxBr, BrFromFile);
     // CFLog(INFO, "Br from file #### varID = " << varID << ", maxBr = " << maxBr << "\n");
-
   }
 
   CFreal latG = 0.;
@@ -243,11 +225,13 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
   //===== M A G N E T I C  F I E L D   B O U N D A R Y   C O N D I T I O N ===============
  
-
-  CFreal BrBoundary_dimless; // only initialization, it is overwritten just below
-
-  BrBoundary_dimless = xBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[0] + yBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[1] + zBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[2];
-
+  CFreal BrBoundary_dimless = BrFromFile;
+  if (!m_BfromFile) {
+   BrBoundary_dimless = xBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[0] + yBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[1] + zBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[2];
+  }
+ 
+  // CFLog(INFO, "m_BfromFile[" << m_BfromFile << "], Br from File vs BrBoundary_dimless = " << BrFromFile << " ? " << BrBoundary_dimless << " \n"); 
+ 
   CFreal BthetaBoundary_dimless = xBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*B_PFSS_dimless[0] + yBoundary_dimless*zBoundary_dimless/(rhoBoundary_dimless*rBoundary_dimless)*B_PFSS_dimless[1] - rhoBoundary_dimless/rBoundary_dimless*B_PFSS_dimless[2];
 
   CFreal BxI_dimless = (*innerState)[4];

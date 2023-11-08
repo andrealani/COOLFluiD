@@ -68,27 +68,14 @@ private: //data
   /// pointer to the mapping face - TRS
   Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
   
-  /// map each wall faceID to the corresponding wall temperature
-  Common::CFMap<Framework::TopologicalRegionSet*, RealVector*> m_mapTrs2Twall;
-
   /// phi value that is to be fixed
   bool   m_BfromFile;
   CFreal _refPhi;
   CFint _inletCoronalBC;
   CFint _Phi_divB_zero;
   CFint _Phi_divB_extrapolated;
-  CFint _JensVelocityBC;
-  CFint _BarbarasVelocityBC;
-  CFint _hydrodynamic_limit;
-  CFint _DanasVelocityBC;
-  CFint _DifferentialRotation;
-  CFint _JensBfieldBC;
-  CFint _DanasBfieldBC;
-  CFint _JonLinkersBfieldSuggestion;
   CFint _pressure_fixed;
   CFint _pressure_Neumann;
-  CFint _JensRhoIni;
-  CFint _JensPIni;
   CFreal _pBC;
   CFreal _rhoBC;
   CFreal _VrBC;  

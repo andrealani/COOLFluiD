@@ -59,17 +59,6 @@ void NeumannBCFromFile::setup()
   
   m_mapGeoToTrs =
     MeshDataStack::getActive()->getMapGeoToTrs("MapFacesToTrs");
-  
-  // build the m_mapTrs2Twall storage
-  vector< SafePtr<TopologicalRegionSet> >& trsList = this->getTrsList();
-  
-  for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
-    SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
-    const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
-    RealVector* tWall = new RealVector(0.0,nbTrsFaces);
-    m_mapTrs2Twall.insert(&*trs, tWall);
-  }
-  m_mapTrs2Twall.sortKeys();
 }
 
 //////////////////////////////////////////////////////////////////////////////

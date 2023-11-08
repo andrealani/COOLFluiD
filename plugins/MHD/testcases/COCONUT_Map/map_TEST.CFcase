@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -15.584 
+### Residual = -15.5685
 
 ###############################################################################
 # User defined parameters
@@ -41,7 +41,7 @@ Simulator.SubSystem.Flow.InField.Def = \
 
 # Stop Condition
 #Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 Simulator.SubSystem.StopCondition       = Norm
 Simulator.SubSystem.Norm.valueNorm      = -2.0
 
@@ -337,11 +337,13 @@ Simulator.SubSystem.Flow.Jet1.JensPIni = 0
 Simulator.SubSystem.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
 
 # needed for computing Br from file
-Simulator.SubSystem.Flow.Jet1.VarIDs = 0
+#Simulator.SubSystem.Flow.Jet1.VarIDs = 0
 Simulator.SubSystem.Flow.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.Flow.Data.DistanceBased.TRSName = Inlet
 Simulator.SubSystem.Flow.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.Flow.Data.DistanceBased.NbClosestPoints = 8
+# AL: this may be needed
+Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT_Map/map_hmi_lmax15_cr2219.dat
 
 Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
 Simulator.SubSystem.Flow.Jet2.refPhi = 0.

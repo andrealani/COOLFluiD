@@ -68,9 +68,6 @@ protected:
   /// pointer to the mapping face - TRS
   Common::SafePtr<Framework::MapGeoToTrsAndIdx> m_mapGeoToTrs;
   
-  /// map each wall faceID to the corresponding wall temperature
-  Common::CFMap<Framework::TopologicalRegionSet*, RealVector*> m_mapTrs2Twall;
-
   /// IDs of the variables from which values are read by file
   std::vector<CFuint> m_varIDs;
   
