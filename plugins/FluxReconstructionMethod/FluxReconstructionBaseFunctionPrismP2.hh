@@ -116,16 +116,17 @@ public:
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       m_solPnts1D[iSol] = (*solPnts1D)[iSol];
-    }
+    } 
 
     delete frElemData;
+
     // coordinates of output points
     const CFreal ksi = mappedCoord[KSI];
     const CFreal eta = mappedCoord[ETA];
     const CFreal zta = mappedCoord[ZTA];
 
     // zta factors
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    /*for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       const CFreal ztaSol = m_solPnts1D[iSol];
       m_ztaFac[iSol] = 1.;
@@ -139,14 +140,15 @@ public:
       }
     }
 
-    CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts)*(nbrSolPnts+1)/2;
-    
-    // loop over polynomials
-    
-    for (CFuint iZta = 0; iZta < nbrSolPnts; ++iZta)
+    // Correct the number of triangular polynomials
+    CFuint nbrPolys = nbrSolPnts * (nbrSolPnts + 1) / 2;
+
+    CFuint iFunc = 0;
+    for (CFuint iZta = 0; iZta < nbrSolPnts; ++iZta) 
     {
       for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
       {
+        CFreal triTerm = 0.0;
         // loop over terms
         for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
         {
@@ -155,14 +157,39 @@ public:
           // loop over coordinates
           for (CFuint iCoor = 0; iCoor < 2; ++iCoor)
           {
-            term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]);
+            term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]); //frdata from triag
           }
 
           // add term to polynomial value
-          shapeFunc[iPoly] += term * m_ztaFac[iZta];
+          triTerm += term;
         }
-      } 
+        
+        shapeFunc[iFunc] = triTerm* m_ztaFac[iZta] ;
+        iFunc++;
+      }
+    }*/
+
+    CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts+1)*(nbrSolPnts)/2;
+    
+    // loop over polynomials
+    for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
+    {
+      // loop over terms
+      for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
+      {
+        CFreal term = solPolyCoefs[iPoly][iTerm];
+
+        // loop over coordinates
+        for (CFuint iCoor = 0; iCoor < 3; ++iCoor)
+        {
+          term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]);
+        }
+
+        // add term to polynomial value
+        shapeFunc[iPoly] += term;
+      }
     }
+
   }
 
    /**

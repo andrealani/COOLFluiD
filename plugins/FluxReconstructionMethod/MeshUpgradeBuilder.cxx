@@ -1332,8 +1332,9 @@ void MeshUpgradeBuilder::upgradeStateConnectivity()
 	      frElemData2 = new TetraFluxReconstructionElementData(m_solPolyOrder);
       } break;
       case CFGeoShape::PRISM:
-      {        
-        oldOrder = static_cast<CFuint> (1./3. * ( (pow(  3.*sqrt(3.)*sqrt(27.*pow(oldNbStatesPerElem,2.)-2.*oldNbStatesPerElem) +27.*oldNbStatesPerElem-1.   , 1./3.))  +( 1./(pow(  3.*sqrt(3)*sqrt(27.*pow(oldNbStatesPerElem,2.)-2.*oldNbStatesPerElem) +27.*oldNbStatesPerElem-1.   , 1./3.)))  -4. ));
+      { 
+        double x=(1.0/3.0) * (std::pow(3.0 * std::sqrt(3.0) * std::sqrt(27.0 * std::pow(oldNbStatesPerElem, 2.0) - 2.0 * oldNbStatesPerElem) + 27.0 * oldNbStatesPerElem - 1.0, 1.0/3.0) + (1.0 / std::pow(3.0 * std::sqrt(3.0) * std::sqrt(27.0 * std::pow(oldNbStatesPerElem, 2.0) - 2.0 * oldNbStatesPerElem) + 27.0 * oldNbStatesPerElem - 1.0, 1.0/3.0))- 4.0);       
+        oldOrder = static_cast<CFuint> (x > 0.0) ? (int)(x + 0.5) : (int)(x - 0.5);
         oldOrder2 = CFPolyOrder::Convert::to_enum(oldOrder);
         frElemData = new PrismFluxReconstructionElementData(oldOrder2);
 	      frElemData2 = new PrismFluxReconstructionElementData(m_solPolyOrder);

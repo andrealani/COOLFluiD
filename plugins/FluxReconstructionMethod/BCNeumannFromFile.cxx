@@ -257,6 +257,17 @@ void BCNeumannFromFile::setup()
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = m_flxLocalCoords->size();
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+  CFuint nbrFaceFlxPntsMax;
+  if (elemShape == CFGeoShape::PRISM)  // (Max number of face flx pnts)
+  {
+    nbrFaceFlxPntsMax= (order+1)*(order+1);
+  }
+  else
+  {
+    nbrFaceFlxPntsMax= m_nbrFaceFlxPnts;
+  }
   
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
@@ -333,7 +344,7 @@ void BCNeumannFromFile::setup()
           GeometricEntity *const face = _faceBuilder->buildGE();
           const CFuint faceGlobalID = face->getID();
           m_globalToLocalTRSFaceID.insert(faceGlobalID,localFaceID);
-          
+
           for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
           {
             // Compute coordinates
@@ -365,13 +376,14 @@ void BCNeumannFromFile::setup()
   } // End of the TR loop
   
   CFuint nbBndFlxPnts = bndFlxPnts.size();
-  
+  CFuint nbBndFlxPntsMax = nbrFaceFlxPntsMax*localFaceID;
+
   ClosestPointData closestPoint;
   closestPoint.surfaceIDs.resize(m_nbClosestPoints); 
   closestPoint.pointsIDs.resize(m_nbClosestPoints); 
   closestPoint.r.resize(m_nbClosestPoints); 
   
-  m_flxPntTws.resize(nbBndFlxPnts);
+  m_flxPntTws.resize(nbBndFlxPntsMax);
   
   const CFuint nbBnd = nbBndFlxPnts; 
   for(CFuint iFlx=0; iFlx<nbBnd; iFlx++) 
@@ -400,7 +412,7 @@ void BCNeumannFromFile::setup()
 	  cf_assert(ip < sf.Tw.size());
 	  //nodalTwall[iNode] = sf.Tw[ip]; 
           currFlxPnt.setTw(sf.Tw[ip]);
-          m_flxPntTws[currFlxPnt.getLocalFaceID()*m_nbrFaceFlxPnts + currFlxPnt.getLocalFluxID()] = sf.Tw[ip];
+          m_flxPntTws[currFlxPnt.getLocalFaceID()*nbrFaceFlxPntsMax + currFlxPnt.getLocalFluxID()] = sf.Tw[ip];
 	  flagOut = true;
 	  break;
 	}
@@ -460,7 +472,7 @@ void BCNeumannFromFile::setup()
       // set the matching Twall in the array
       //nodalTwall[iNode] = matchingTw;
       currFlxPnt.setTw(matchingTw);
-      m_flxPntTws[currFlxPnt.getLocalFaceID()*m_nbrFaceFlxPnts + currFlxPnt.getLocalFluxID()] = matchingTw;
+      m_flxPntTws[currFlxPnt.getLocalFaceID()*nbrFaceFlxPntsMax + currFlxPnt.getLocalFluxID()] = matchingTw;
     }
   }
   

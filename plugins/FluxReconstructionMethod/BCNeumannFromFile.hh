@@ -195,6 +195,12 @@ public:  // methods
 
   /// number of flux pnts on a face
   CFuint m_nbrFaceFlxPnts;  
+
+  /// flx pnt - face connectivity
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
+  
+  /// local coordinates of the flux points on one face per face type
+  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
   
   /// number of dimensions in the physical model
   CFuint m_dim;

@@ -2061,69 +2061,25 @@ void TriagFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
   {
-    /*for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
      CFuint modalDof = 0;
     
-        for (CFuint iOrderKsi = 0; iOrderKsi < (m_polyOrder+1); ++iOrderKsi)
+        for (CFuint iOrderEta = 0; iOrderEta < (m_polyOrder+1); ++iOrderEta)
         {
-          for (CFuint iOrderEta = 0; iOrderEta < (m_polyOrder+1)-iOrderKsi; ++iOrderEta)
+          for (CFuint iOrderKsi = 0; iOrderKsi < (m_polyOrder+1)-iOrderEta; ++iOrderKsi)
           {
             double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]))-1.;
             double b = 2.*m_solPntsLocalCoords[iSol][ETA]-1.;
             double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
             double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
             m_vandermonde(iSol,modalDof)=sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
-            //m_vandermonde(iSol,modalDof) = evaluateLegendre(-1.+2.*m_solPntsLocalCoords[iSol][KSI],iOrderKsi)*evaluateLegendre(-1.+2.*m_solPntsLocalCoords[iSol][ETA],iOrderEta);
+
             modalDof+=1;
           } 
         }
-    }*/
-
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      CFuint modalDof = 0;
-      double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]))-1.;
-      double b = 2.*m_solPntsLocalCoords[iSol][ETA]-1.;
-
-      for (CFuint iOrder = 0; iOrder < (m_polyOrder/2)+1; ++iOrder)
-      {
-        for (CFuint iOrderKsi = 0; iOrderKsi < iOrder; ++iOrderKsi, ++modalDof)
-        {
-	        CFuint iOrderEta = iOrder;
-          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
-        }
-        for (CFuint iOrderEta = 0; iOrderEta < iOrder+1; ++iOrderEta, ++modalDof)
-        {
-	        CFuint iOrderKsi = iOrder;
-          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
-        }
-      }
-
-      for (CFuint iOrder = 0 ; iOrder < m_polyOrder-(m_polyOrder/2); ++iOrder)
-      {
-        for (CFuint iOrderKsi = 0; iOrderKsi < m_polyOrder-(m_polyOrder/2)-iOrder; ++iOrderKsi, ++modalDof)
-        {
-	        CFuint iOrderEta = iOrder+(m_polyOrder/2)+1;
-          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
-        }
-        for (CFuint iOrderEta = 0; iOrderEta < m_polyOrder-(m_polyOrder/2)-iOrder; ++iOrderEta, ++modalDof)
-        {
-	        CFuint iOrderKsi = iOrder+(m_polyOrder/2)+1;
-          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-          m_vandermonde(iSol,modalDof) = sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
-        }
-      }
-
-      cf_assert(modalDof == nbrSolPnts);
     }
+
     m_vandermonde*=0.25;
     InvertMatrix(m_vandermonde,m_vandermondeInv);
   }

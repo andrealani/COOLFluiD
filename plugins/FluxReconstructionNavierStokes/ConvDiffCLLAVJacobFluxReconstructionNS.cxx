@@ -660,7 +660,7 @@ void ConvDiffCLLAVJacobFluxReconstructionNS::computeGradientFaceCorrections()
   { 
     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
     {
-      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbrFaceFlxPnts*m_dim+iFlxPnt*m_dim+iDim];
+      m_faceJacobVecs[iFlxPnt][iDim] = flxPntNormals[m_face->getID()*m_nbFaceFlxPntsMax*m_dim+iFlxPnt*m_dim+iDim];
     }
   }
   

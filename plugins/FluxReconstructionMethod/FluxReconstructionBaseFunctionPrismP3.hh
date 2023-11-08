@@ -9,6 +9,7 @@
 #include "Common/ShouldNotBeHereException.hh"
 #include "MathTools/RealMatrix.hh"
 #include "FluxReconstructionMethod/PrismFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -116,53 +117,37 @@ public:
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       m_solPnts1D[iSol] = (*solPnts1D)[iSol];
-    }
+    } 
 
     delete frElemData;
+
     // coordinates of output points
     const CFreal ksi = mappedCoord[KSI];
     const CFreal eta = mappedCoord[ETA];
     const CFreal zta = mappedCoord[ZTA];
 
-    // zta factors
-    for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      const CFreal ztaSol = m_solPnts1D[iSol];
-      m_ztaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ztaFac = m_solPnts1D[iFac];
-          m_ztaFac[iSol] *= (zta-ztaFac)/(ztaSol-ztaFac);
-        }
-      }
-    }
-
-    CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts)*(nbrSolPnts+1)/2;
+    CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts+1)*(nbrSolPnts)/2;
     
     // loop over polynomials
-    
-    for (CFuint iZta = 0; iZta < nbrSolPnts; ++iZta)
+    for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
     {
-      for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
+      // loop over terms
+      for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
       {
-        // loop over terms
-        for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
+        CFreal term = solPolyCoefs[iPoly][iTerm];
+
+        // loop over coordinates
+        for (CFuint iCoor = 0; iCoor < 3; ++iCoor)
         {
-          CFreal term = solPolyCoefs[iPoly][iTerm];
-
-          // loop over coordinates
-          for (CFuint iCoor = 0; iCoor < 2; ++iCoor)
-          {
-            term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]);
-          }
-
-          // add term to polynomial value
-          shapeFunc[iPoly] += term * m_ztaFac[iZta];
+          term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]);
         }
-      } 
+
+        // add term to polynomial value
+        shapeFunc[iPoly] += term;
+      }
     }
+    
+   
   }
 
    /**
