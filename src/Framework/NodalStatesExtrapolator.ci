@@ -256,6 +256,8 @@ void NodalStatesExtrapolator<DATA>::setup()
       m_angle *= MathTools::MathConsts::CFrealPi()/180.;
       cf_always_assert(m_xvec.size() == 2);
     }
+
+    allocateMappingData();    
     extrapolateVarsFromFile();
   }
 }
@@ -385,23 +387,15 @@ void NodalStatesExtrapolator<DATA>::addBoundaryNeighbors
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
+void NodalStatesExtrapolator<DATA>::allocateMappingData()
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
   
-  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => START\n");
-  
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
-  vector<SurfaceData*> surfaces;
-  readSurfaceData(surfaces);
-  
-  const CFuint nbSurf = surfaces.size();
-  cf_assert(nbSurf >= 1);
-  
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::allocateMappingData() => START\n");
+    
   // Get the TRS list
   vector< SafePtr<TopologicalRegionSet> > trsList;
   for (CFuint i = 0; i < _trsName.size(); ++i) {
@@ -449,14 +443,50 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
     mapNodeID2TrsNodeID->insert(&*trs, mapNodeIDs);
   }
   mapNodeID2TrsNodeID->sortKeys();
+
+  // array of flags telling which interpolated or previously computed nodal values are available
+  _nodalValuesIDFlags.resize(PhysicalModelStack::getActive()->getNbEq());
+  cf_assert(_nodalValuesIDFlags.size() > 0);
+  _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
+  _nodalValuesIDFlags[m_tempID] = true;
+
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::allocateMappingData() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
   
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => START\n");
+  
+  vector<SurfaceData*> surfaces;
+  readSurfaceData(surfaces);
+  
+  const CFuint nbSurf = surfaces.size();
+  cf_assert(nbSurf >= 1);
+  
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
   RealVector tmpNode(dim);
   DataHandle<Node*,GLOBAL> nodes = socket_nodes.getDataHandle();
-    
+  
   ClosestPointData closestPoint;
   closestPoint.surfaceIDs.resize(m_nbClosestPoints); 
   closestPoint.pointsIDs.resize(m_nbClosestPoints); 
   closestPoint.r.resize(m_nbClosestPoints); 
+
+  // Get the TRS list
+  vector< SafePtr<TopologicalRegionSet> > trsList;
+  for (CFuint i = 0; i < _trsName.size(); ++i) {
+    trsList.push_back(MeshDataStack::getActive()->getTrs(_trsName[i]));
+  }
+
+  SafePtr<vector<MapTrs2NodalValues*> > mapTrs2NodalValues = getMapTrs2NodalValues();
   
   for (CFuint iTrs = 0; iTrs < trsList.size(); ++iTrs) {
     SafePtr<TopologicalRegionSet> trs = trsList[iTrs];
@@ -547,13 +577,7 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
   for (CFuint is = 0; is < nbSurf; ++is) {
     deletePtr(surfaces[is]);
   }
-  
-  // array of flags telling which interpolated or previously computed nodal values are available
-  _nodalValuesIDFlags.resize(PhysicalModelStack::getActive()->getNbEq());
-  cf_assert(_nodalValuesIDFlags.size() > 0);
-  _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
-  _nodalValuesIDFlags[m_tempID] = true;
-  
+    
   CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => END\n");
 }
 

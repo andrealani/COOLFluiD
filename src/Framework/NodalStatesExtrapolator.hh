@@ -204,6 +204,11 @@ protected: // helper function
    * Extrapolate some variables from a given file
    */
   void extrapolateVarsFromFile();
+
+  /**
+   * Allocate mapping data needed for interpolation 
+   */
+  void allocateMappingData();
   
   /**
    * Read the surface data
