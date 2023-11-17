@@ -156,7 +156,12 @@ public:
   /// return the number of iterations to run adiabatic
   bool runAdiabatic() const 
   {return (Framework::SubSystemStatusStack::getActive()->getNbIter() < m_nbIterAdiabatic);} 
-    
+
+  /**
+   * Extrapolate some variables from a given file in time
+   */
+  virtual void extrapolateVarsFromFileInTime();
+  
 protected: // helper function
   
   /**
@@ -203,8 +208,8 @@ protected: // helper function
   /**
    * Extrapolate some variables from a given file
    */
-  void extrapolateVarsFromFile();
-
+  void extrapolateVarsFromFile(const std::vector<SurfaceData*>& surfaces);
+  
   /**
    * Allocate mapping data needed for interpolation 
    */
@@ -213,7 +218,8 @@ protected: // helper function
   /**
    * Read the surface data
    */
-  void readSurfaceData(std::vector<SurfaceData*>& surfaces);
+  void readSurfaceData(std::vector<SurfaceData*>& surfaces,
+		       const std::string& fileName);
   
   /**
    * Read line data at z=0 from given surface
@@ -269,6 +275,12 @@ protected:
   /// storage of the constant lcoefficients
   std::vector<std::vector<Framework::State*> > _neighborStates;
   
+  /// storage of surface data
+  std::vector<std::vector<SurfaceData*> > m_allSurfaces;
+  
+  /// storage of surface data at given time
+  std::vector<SurfaceData*> m_surfaceAtTime;
+  
   /// ID corresponding to the z coordinate (z=0) for which plane is extracted
   CFint m_extractCoordZID;
   
@@ -278,8 +290,11 @@ protected:
   // name of the TRSs on which values must be prescribed
   std::vector<std::string> _trsName;
   
-  /// name of the file where the temperature distribution is provided
-  std::string m_fileNameTw;
+  /// name of the file where the boundary distribution is provided
+  std::vector<std::string> m_fileNameTw;
+  
+  /// time corresponding to the file where the boundary distribution is provided
+  std::vector<CFreal> m_fileNameTime;
   
   /// rotation angle
   CFreal m_angle;

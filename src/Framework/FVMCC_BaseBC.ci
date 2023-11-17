@@ -218,7 +218,7 @@ void FVMCC_BaseBC<BASE>::preProcess()
   using namespace std;
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::Common;
-  
+
   const CFuint initialSSize = m_initialSolutionIDs.size();
   if (initialSSize > 0 && this->getMethodData().isPreProcessedSolution()) {
     SafePtr<TopologicalRegionSet> trs = this->getCurrentTRS();

@@ -7,6 +7,7 @@
 #include "Framework/GeometricEntityPool.hh"
 #include "Framework/FaceTrsGeoBuilder.hh"
 #include "Framework/TrsNotFoundException.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "MathTools/MathChecks.hh"
 #include "Common/SwapEmpty.hh"
 #include "Common/FilesystemException.hh"
@@ -32,9 +33,12 @@ void NodalStatesExtrapolator<DATA>::defineConfigOptions(Config::OptionList& opti
   options.addConfigOption< vector<std::string> >
    ("TRSName","Name of the TRSs on which values must be prescribed");
 
-  options.addConfigOption<std::string>
-    ("FileNameTw", "Name of the file with the temperature distribution");
+  options.addConfigOption< vector<std::string> >
+    ("FileNameTw", "Name of the files with the given boundary distribution");
 
+  options.addConfigOption< vector<CFreal> >
+    ("FileNameTime", "Time corresponding to each file with the given boundary distribution");
+  
   options.addConfigOption<CFreal>
     ("RotationAngle", "Rotation angle (in degrees) to apply to the wall distribution coordinates");
 
@@ -72,6 +76,7 @@ NodalStatesExtrapolator<DATA>::NodalStatesExtrapolator(const std::string& name) 
   m_trsID2LookupState(),
   _orderedTrsList(),
   _neighborStates(),
+  m_allSurfaces(),
   m_extractCoordZID(-1)
 {
   this->addConfigOptionsTo(this);
@@ -84,9 +89,12 @@ NodalStatesExtrapolator<DATA>::NodalStatesExtrapolator(const std::string& name) 
   _trsName = vector<std::string>();
   this->setParameter("TRSName",&_trsName);
 
-  m_fileNameTw = "";
+  m_fileNameTw = vector<std::string>();
   this->setParameter("FileNameTw",&m_fileNameTw);
 
+  m_fileNameTime = vector<CFreal>();
+  this->setParameter("FileNameTime",&m_fileNameTime);
+  
   m_angle = 0.0;
   this->setParameter("RotationAngle",&m_angle);
 
@@ -232,7 +240,7 @@ void NodalStatesExtrapolator<DATA>::setup()
     }
   }
 
-  if (m_fileNameTw != "") {
+  if (m_fileNameTw.size() > 0) {
     
     if (m_extractCoordXYID.size() > 0) {
       if ((m_extractCoordXYID[0] == 0 && m_extractCoordXYID[1] == 1) ||
@@ -257,8 +265,27 @@ void NodalStatesExtrapolator<DATA>::setup()
       cf_always_assert(m_xvec.size() == 2);
     }
 
-    allocateMappingData();    
-    extrapolateVarsFromFile();
+    allocateMappingData();
+    
+    if (m_fileNameTw.size() == 1) {m_fileNameTime.resize(1, 0.0);}
+    cf_assert(m_fileNameTw.size() == m_fileNameTime.size());
+
+    if (m_fileNameTime.size() > 1) {
+      // read and store all the surface objects, one for each boundary file
+      // these will be used later on for time interpolation
+      m_allSurfaces.resize(m_fileNameTw.size());
+      for (CFuint is = 0; is < m_fileNameTw.size(); ++is) {
+	readSurfaceData(m_allSurfaces[is], m_fileNameTw[is]);
+	const CFuint nbSurf = m_allSurfaces[is].size();
+	cf_assert(nbSurf >= 1);
+      }
+    }
+    
+    // store SurfaceData for time "0"
+    readSurfaceData(m_surfaceAtTime, m_fileNameTw[0]);
+    
+    // at first just extrapolate for the first boundary file
+    extrapolateVarsFromFile(m_surfaceAtTime);
   }
 }
 
@@ -394,7 +421,7 @@ void NodalStatesExtrapolator<DATA>::allocateMappingData()
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
   
-  CFLog(INFO, "NodalStatesExtrapolator<DATA>::allocateMappingData() => START\n");
+  CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::allocateMappingData() => START\n");
     
   // Get the TRS list
   vector< SafePtr<TopologicalRegionSet> > trsList;
@@ -412,7 +439,7 @@ void NodalStatesExtrapolator<DATA>::allocateMappingData()
   // you have one map for each variable
  
   for (CFuint i = 0; i < mapTrs2NodalValues->size(); ++i) {
-  (*mapTrs2NodalValues)[i] = new MapTrs2NodalValues(); 
+    (*mapTrs2NodalValues)[i] = new MapTrs2NodalValues(); 
   }
  
   // allocate storage for mapping TRS to nodal values (temperature in this case)
@@ -450,13 +477,53 @@ void NodalStatesExtrapolator<DATA>::allocateMappingData()
   _nodalValuesIDFlags.assign(_nodalValuesIDFlags.size(), false);
   _nodalValuesIDFlags[m_tempID] = true;
 
-  CFLog(INFO, "NodalStatesExtrapolator<DATA>::allocateMappingData() => END\n");
+  CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::allocateMappingData() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
+void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime()
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime() => START\n");
+  
+  const CFreal currTimeDim = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+  const CFreal maxTimeDim = SubSystemStatusStack::getActive()->getMaxTimeDim();
+  const CFreal maxDT = SubSystemStatusStack::getActive()->getDT();
+  // time corresponding to the first input file used for the interpolation
+  const CFreal startTime = m_fileNameTime[0];
+  // time corresponding to the last input file used for the interpolation
+  const CFreal endTime   = m_fileNameTime.back();
+  cf_assert(endTime >= maxTimeDim);
+  
+  // here you use m_allSurfaces as a basis for interpolating at current time and storing
+  // the interpolated file into m_surfaceAtTime
+  //
+  // I remind here the definition of SurfaceData:
+  //
+  // class SurfaceData {
+  // public:
+  //  RealMatrix xyz;
+  //  RealVector Tw;
+  // };
+  //
+  // Note that xyz and Tw have been already allocated to the right size in the setup()
+  
+  extrapolateVarsFromFile(m_surfaceAtTime);
+  
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime() => END\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile
+(const std::vector<SurfaceData*>& surfaces)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -464,9 +531,6 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
   using namespace COOLFluiD::Common;
   
   CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => START\n");
-  
-  vector<SurfaceData*> surfaces;
-  readSurfaceData(surfaces);
   
   const CFuint nbSurf = surfaces.size();
   cf_assert(nbSurf >= 1);
@@ -573,18 +637,14 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile()
     }
   }
   
-  // cleanup the memory
-  for (CFuint is = 0; is < nbSurf; ++is) {
-    deletePtr(surfaces[is]);
-  }
-    
   CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFile() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename DATA>
-void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& surfaces)
+void NodalStatesExtrapolator<DATA>::readSurfaceData
+(std::vector<SurfaceData*>& surfaces, const std::string& fileName)
 {
   using namespace std;
   using namespace COOLFluiD::Framework;
@@ -594,13 +654,13 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
   const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
 
   boost::filesystem::path fname;
-  if (Common::StringOps::startsWith(m_fileNameTw,"."))
+  if (Common::StringOps::startsWith(fileName,"."))
   {
-    fname = boost::filesystem::path(m_fileNameTw);
+    fname = boost::filesystem::path(fileName);
   }
   else
   {
-    fname = Environment::DirPaths::getInstance().getBaseDir() / boost::filesystem::path(m_fileNameTw);
+    fname = Environment::DirPaths::getInstance().getBaseDir() / boost::filesystem::path(fileName);
   }
 
   // check the file type
@@ -617,7 +677,7 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
   // ...
   
   CFLogInfo("NodalStatesExtrapolator::readSurfaceData() => START reading file " <<
-	    m_fileNameTw << "\n");
+	    fileName << "\n");
   
   CFuint nbSurf = 0;
   fin >> nbSurf;
@@ -646,7 +706,7 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
 	
 	// rotate coordinates
 	const CFreal x1 =  sf->xyz(ip,m_xvec[0])*std::cos(m_angle) + sf->xyz(ip,m_xvec[1])*std::sin(m_angle);
-	const CFreal y1 = -sf->xyz(ip,m_xvec[0])*std::sin(m_angle) + sf->xyz(ip,m_xvec[1])*std::	cos(m_angle);
+	const CFreal y1 = -sf->xyz(ip,m_xvec[0])*std::sin(m_angle) + sf->xyz(ip,m_xvec[1])*std::cos(m_angle);
 	sf->xyz(ip,m_xvec[0]) = x1;				   
 	sf->xyz(ip,m_xvec[1]) = y1;				   
       }	
@@ -657,7 +717,7 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData(std::vector<SurfaceData*>& s
   }
   
   CFLogInfo("NodalStatesExtrapolator::readSurfaceData() => END reading file " <<
-	    m_fileNameTw << "\n"); 
+	    fileName << "\n"); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -741,6 +801,17 @@ void NodalStatesExtrapolator<DATA>::unsetup()
   Common::SwapEmpty(_orderedTrsList);
   Common::SwapEmpty(_neighborStates);
 
+  for (CFuint is = 0; is < m_allSurfaces.size(); ++is) {
+    const CFuint nbSurf = m_allSurfaces[is].size();
+    for (CFuint js = 0; js < nbSurf; ++js) {
+      deletePtr(m_allSurfaces[is][js]);
+    }
+  }
+  
+  for (CFuint is = 0; is < m_surfaceAtTime.size(); ++is) {
+    deletePtr(m_surfaceAtTime[is]);
+  }
+  
   CFLog(VERBOSE, "NodalStatesExtrapolator<DATA>::unsetup() => END\n");
 }
 

@@ -78,14 +78,15 @@ void DistanceBasedExtrapolatorMagnetogram::defineConfigOptions(Config::OptionLis
 void DistanceBasedExtrapolatorMagnetogram::setup()
 {
   static bool firstIn = true;
+  cf_assert(m_fileNameTw.size() == 1);
   if (firstIn) {
     if (_runPyScript) { 
       CFLog(INFO, "DistanceBasedExtrapolatorMagnetogram::setup() => PREPARE MAGNETOGRAM\n");
       
       // Run a python script for preparing the magnetogram:
       std::string cmd = _pyCommand + " prepare-the-magnetogram.py " + _link + " " +
-      StringOps::to_str(_sigma) + " " + StringOps::to_str(_scaling_factor) +  " " + 
-      StringOps::to_str(_Brefval) + " ; cp -r magnetogram*.dat " + m_fileNameTw;
+	StringOps::to_str(_sigma) + " " + StringOps::to_str(_scaling_factor) +  " " + 
+	StringOps::to_str(_Brefval) + " ; cp -r magnetogram*.dat " + m_fileNameTw[0];
       
       CFLog(INFO, "DistanceBasedExtrapolatorMagnetogram::setup() => running \"" << cmd << "\"\n");
       

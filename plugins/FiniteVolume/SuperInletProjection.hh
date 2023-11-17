@@ -57,7 +57,13 @@ public:
    * in this command after processing phase
    */
   virtual void unsetup();
-  
+
+  /**
+   * Set the preProcesses connectivity between faces belonging to different process
+   *
+   */
+  virtual void preProcess();
+
   /**
    * Apply boundary condition on the given face
    */
