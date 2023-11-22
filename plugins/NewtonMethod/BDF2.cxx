@@ -10,6 +10,7 @@
 #include "NewtonMethod/NewtonMethod.hh"
 #include "Framework/CFL.hh"
 #include "Framework/SpaceMethod.hh"
+#include "Framework/StopConditionController.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +78,12 @@ void BDF2::prepare()
   // prepare to take a time step
   m_prepare->execute();
 
+  // AL: added on 22/11/2023
+  getConvergenceMethodData()->getConvergenceStatus().res     = subSysStatus->getResidual();
+  getConvergenceMethodData()->getConvergenceStatus().iter    = 0;
+  getConvergenceMethodData()->getConvergenceStatus().subiter = 0;
+  getConvergenceMethodData()->getConvergenceStatus().time    = subSysStatus->getCurrentTimeDim();
+  
   // reset the achieved flag
   m_data->setAchieved(false);
   m_data->setAchieved(m_data->getNbMaxSteps(0) == 0);
@@ -94,7 +101,7 @@ void BDF2::prepare()
 void BDF2::takeStepImpl()
 {
   CFAUTOTRACE;
-  
+
   CFLog(VERBOSE, "BDF2::takeStepImpl() START\n");
   
   // do the prepare step, usually backing up the solution to past states
@@ -117,13 +124,14 @@ void BDF2::takeStepImpl()
     xi = 0.;
     theta = 1.0;
   }
-
+  
   std::auto_ptr<Framework::ConvergenceStatus> cvgst(new Framework::ConvergenceStatus);
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k)
   {
     subSysStatus->setSubIter(k);
-    
+    subSysStatus->setSubIterationFlag(true);
+     
     CFLog(VERBOSE, "BDF2::takeStepImpl() => Iter[" << subSysStatus->getNbIter()  
 	  << "], SubIter[" << subSysStatus->getSubIter()  << "], isSubIterationFirstStep() ? ["
 	  << subSysStatus->isSubIterationFirstStep() << "]\n");
@@ -184,16 +192,23 @@ void BDF2::takeStepImpl()
     
     // postprocess the solution (typically a limiter)
     getMethodData()->getCollaborator<SpaceMethod>()->postProcessSolution();
-
+    getConvergenceMethodData()->getConvergenceStatus().res  = subSysStatus->getResidual();
+    getConvergenceMethodData()->getConvergenceStatus().iter = k;
+    
     // Simple Stop Condition (max number of Steps or L2Norm reached)
     // HERE, if you stop because of residual, then you will do one step too much...
     m_data->setAchieved((k+1 == m_data->getNbMaxSteps(0)) ||
-			(subSysStatus->getResidual() < m_data->getMaxNorm()));
+    			(subSysStatus->getResidual() < m_data->getMaxNorm()));
 
+    // AL: this allows for using AbsoluteNormAndMaxIter
+    // m_data->setAchieved(m_stopCondControler->isAchieved(getConvergenceMethodData()->getConvergenceStatus()));
+    
     // set subsystemstatus
     subSysStatus->setFirstStep(false);
     const bool achieved = m_data->isAchieved();
     subSysStatus->setLastStep(achieved);
+    
+    subSysStatus->setSubIterationFlag(false);
     // if (achieved) {subSysStatus->setIsSubIterationLastStep(true);}
   }
   

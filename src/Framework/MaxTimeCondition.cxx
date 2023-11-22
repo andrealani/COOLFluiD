@@ -64,6 +64,8 @@ bool MaxTimeCondition::isAchieved (const ConvergenceStatus& status)
 {
   if (SubSystemStatusStack::getActive()->getStopSimulation()) return true;
 
+  CFLog(VERBOSE, "MaxTimeCondition::isAchieved() => status.time = " << status.time << "\n");
+  
   Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
 
   // if the user has set a max time use it
@@ -82,8 +84,7 @@ bool MaxTimeCondition::isAchieved (const ConvergenceStatus& status)
     return false;
   }
 
-  bool timeOver;
-  timeOver = status.time >= m_maxTime;
+  bool timeOver = (status.time >= m_maxTime);
 
   /// @todo explain this or remove it
   if (status.res < -30.0) timeOver = true;
