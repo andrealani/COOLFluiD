@@ -353,7 +353,9 @@ Simulator.SubSystem.Flow.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.Flow.Data.DistanceBased.TRSName = Inlet
 Simulator.SubSystem.Flow.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.Flow.Data.DistanceBased.NbClosestPoints = 8
+# here you have to put the list of different magnetogram file names corresponding to different times already in the right format
 Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT_Map/map_hmi_lmax15_cr2219.dat plugins/MHD/testcases/COCONUT_Map/map_hmi_lmax15_cr2219.dat
+# time in seconds starting from 0. corresponding to the magnetograms above
 Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTime = 0.0 0.01
 
 Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
