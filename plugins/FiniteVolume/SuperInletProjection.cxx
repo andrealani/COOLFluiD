@@ -343,12 +343,16 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 void SuperInletProjection::preProcess()
 {
   SuperInlet::preProcess();
-  
+
   CFLog(VERBOSE, "SuperInletProjection::preProcess() => START\n");
-  if (SubSystemStatusStack::getActive()->getSubIter() == 0) {
+
+  // AL: only for unsteady runs (DT > 0.)  
+  if (SubSystemStatusStack::getActive()->getDT() > 0.) {
+   if (SubSystemStatusStack::getActive()->getSubIter() == 0) {
     SafePtr<NodalStatesExtrapolator<CellCenterFVMData> > nse =
       this->getMethodData().getNodalStatesExtrapolator();
     nse->extrapolateVarsFromFileInTime();
+   }
   }
   CFLog(VERBOSE, "SuperInletProjection::preProcess() => END\n");
 }
