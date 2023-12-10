@@ -337,11 +337,13 @@ Simulator.SubSystem.Flow.Jet1.JensPIni = 0
 Simulator.SubSystem.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
 
 # needed for computing Br from file
-Simulator.SubSystem.Flow.Jet1.VarIDs = 0
+#Simulator.SubSystem.Flow.Jet1.VarIDs = 0
 Simulator.SubSystem.Flow.Data.NodalExtrapolation = DistanceBased
 Simulator.SubSystem.Flow.Data.DistanceBased.TRSName = Inlet
 Simulator.SubSystem.Flow.Data.DistanceBased.TemperatureID = 0
 Simulator.SubSystem.Flow.Data.DistanceBased.NbClosestPoints = 8
+# AL: this may be needed                                                              
+#Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT_Dipole/dipole.dat
 
 Simulator.SubSystem.Flow.Jet2.applyTRS = Outlet
 Simulator.SubSystem.Flow.Jet2.refPhi = 0.
