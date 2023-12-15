@@ -51,6 +51,8 @@ MFMHDJacobBndGradientComputer.cxx
 MFMHDJacobBndGradientComputer.hh
 LLAVJacobFluxReconstructionMFMHD.cxx
 LLAVJacobFluxReconstructionMFMHD.hh
+PhysicalityMFMHD2D.cxx
+PhysicalityMFMHD2D.hh
 )
 
 LIST ( APPEND FluxReconstructionMultiFluidMHD_cflibs FluxReconstructionMethod Maxwell MultiFluidMHD Framework)
