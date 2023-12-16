@@ -42,6 +42,8 @@ void PhysicalityMFMHD2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >("CheckInternal","Boolean to tell wether to also check internal solution for physicality.");
   options.addConfigOption< bool >("LimCompleteState","Boolean to tell wether to limit complete state or single variable.");
   options.addConfigOption< bool >("ExpLim","Boolean to tell wether to use the experimental limiter.");
+  options.addConfigOption< CFuint >("nbSpecies","Define the number of species.");
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -79,6 +81,10 @@ PhysicalityMFMHD2D::PhysicalityMFMHD2D(const std::string& name) :
   
   m_expLim = true;
   setParameter( "ExpLim", &m_expLim );
+
+  m_nbSpecies = 1;
+  setParameter( "nbSpecies", &m_nbSpecies );
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -196,30 +202,30 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         
         if (m_cellAvgState[8] < m_minDensity)
         {
-            m_cellAvgState[8] = 1.1*m_minDensity;
+            m_cellAvgState[8] = 1.1*std::abs(m_minDensity);
         }
         if (m_cellAvgState[16] < m_minTemperature)
         {
-	        m_cellAvgState[16] = 1.1*m_minTemperature;
+	        m_cellAvgState[16] = 1.1*std::abs(m_minTemperature);
         }
         if (m_cellAvgState[9] < m_minDensity)
         {
-            m_cellAvgState[9] = 1.1*m_minDensity;
+            m_cellAvgState[9] = 1.1*std::abs(m_minDensity);
         }
         if (m_cellAvgState[17] < m_minTemperature)
         {
-	        m_cellAvgState[17] = 1.1*m_minTemperature;
+	        m_cellAvgState[17] = 1.1*std::abs(m_minTemperature);
         }
     }
 
     if (m_nbSpecies ==1){        
         if (m_cellAvgState[8] < m_minDensity)
         {
-            m_cellAvgState[8] = 1.1*m_minDensity;
+            m_cellAvgState[8] = 1.1*std::abs(m_minDensity);
         }
         if (m_cellAvgState[11] < m_minTemperature)
         {
-            m_cellAvgState[11] = 1.1*m_minTemperature;
+            m_cellAvgState[11] = 1.1*std::abs(m_minTemperature);
         }
 
     }    
@@ -252,7 +258,7 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][8]);
     }
     
-    CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+    CFreal coeff = min((rhoAv0-std::abs(m_minDensity))/(rhoAv0-rhoMin),1.0);
     if (coeff < 1.0)
     {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -272,7 +278,7 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][9]);
     }
     
-    coeff = min((rhoAv1-m_minDensity)/(rhoAv1-rhoMin),1.0);
+    coeff = min((rhoAv1-std::abs(m_minDensity))/(rhoAv1-rhoMin),1.0);
     
     if (coeff < 1.0)
     {
@@ -283,7 +289,6 @@ void PhysicalityMFMHD2D::enforcePhysicality()
 	        output[stateID] += 10.0;
             (*((*m_cellStates)[iSol]))[9] = (1.0-coeff)*m_cellAvgState[9] + coeff*((*((*m_cellStates)[iSol]))[9]);
                   (*pastStates[stateID])[9] = (*((*m_cellStates)[iSol]))[9];
-// continue for the rest
         }
     }
       
@@ -294,14 +299,17 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         TMin = min(TMin,m_cellStatesFlxPnt[iFlx][16]);
     }
     
-    coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+    coeff = min((TAv0-std::abs(m_minTemperature))/(TAv0-TMin),1.0);
     
     if (coeff < 1.0)
     {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+          const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	        output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[16] = (1.0-coeff)*m_cellAvgState[16] + coeff*((*((*m_cellStates)[iSol]))[16]);
+            (*pastStates[stateID])[16] = (*((*m_cellStates)[iSol]))[16];
         }
     }
     TMin = 1.0e13;
@@ -311,13 +319,16 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         TMin = min(TMin,m_cellStatesFlxPnt[iFlx][17]);
     }
     
-    coeff = min((TAv1-m_minTemperature)/(TAv1-TMin),1.0);    
+    coeff = min((TAv1-std::abs(m_minTemperature))/(TAv1-TMin),1.0);    
     if (coeff < 1.0)
     {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+          const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	        output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[17] = (1.0-coeff)*m_cellAvgState[17] + coeff*((*((*m_cellStates)[iSol]))[17]);
+            (*pastStates[stateID])[17] = (*((*m_cellStates)[iSol]))[17];
         }
     }
    }
@@ -334,7 +345,7 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         rhoMin = min(rhoMin,m_cellStatesFlxPnt[iFlx][8]);
       }
     
-      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+      CFreal coeff = min((rhoAv0-std::abs(m_minDensity))/(rhoAv0-rhoMin),1.0);
     
       if (coeff < 1.0)
       {
@@ -355,7 +366,7 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         TMin = min(TMin,m_cellStatesFlxPnt[iFlx][11]);
       }
     
-      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+      coeff = min((TAv0-std::abs(m_minTemperature))/(TAv0-TMin),1.0);
     
       if (coeff < 1.0)
       {
@@ -389,17 +400,20 @@ void PhysicalityMFMHD2D::enforcePhysicality()
     
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {  
-        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[0]);
+        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[8]);
       }
     
-      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+      CFreal coeff = min((rhoAv0-std::abs(m_minDensity))/(rhoAv0-rhoMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	        output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+            (*pastStates[stateID])[8] = (*((*m_cellStates)[iSol]))[8];
         }
       }
       
@@ -407,17 +421,20 @@ void PhysicalityMFMHD2D::enforcePhysicality()
     
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {  
-        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[0]);
+        rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[9]);
       }
     
-      coeff = min((rhoAv1-m_minDensity)/(rhoAv1-rhoMin),1.0);
+      coeff = min((rhoAv1-std::abs(m_minDensity))/(rhoAv1-rhoMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
             output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[9] = (1.0-coeff)*m_cellAvgState[9] + coeff*((*((*m_cellStates)[iSol]))[9]);
+            (*pastStates[stateID])[9] = (*((*m_cellStates)[iSol]))[9];
         }
       }
       
@@ -425,34 +442,40 @@ void PhysicalityMFMHD2D::enforcePhysicality()
     
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {  
-        TMin = min(TMin,(*((*m_cellStates)[iSol]))[3]);
+        TMin = min(TMin,(*((*m_cellStates)[iSol]))[16]);
       }
     
-      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+      coeff = min((TAv0-std::abs(m_minTemperature))/(TAv0-TMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	        output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[16] = (1.0-coeff)*m_cellAvgState[16] + coeff*((*((*m_cellStates)[iSol]))[16]);
+            (*pastStates[stateID])[16] = (*((*m_cellStates)[iSol]))[16];
         }
       }
       TMin = 1.0e13;
     
       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
       {  
-        TMin = min(TMin,(*((*m_cellStates)[iSol]))[3]);
+        TMin = min(TMin,(*((*m_cellStates)[iSol]))[17]);
       }
     
-      coeff = min((TAv1-m_minTemperature)/(TAv1-TMin),1.0);
+      coeff = min((TAv1-std::abs(m_minTemperature))/(TAv1-TMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
 	        output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[17] = (1.0-coeff)*m_cellAvgState[17] + coeff*((*((*m_cellStates)[iSol]))[17]);
+            (*pastStates[stateID])[17] = (*((*m_cellStates)[iSol]))[17];
         }
       }
     }
@@ -467,14 +490,17 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         rhoMin = min(rhoMin,(*((*m_cellStates)[iSol]))[8]); 
       }
     
-      CFreal coeff = min((rhoAv0-m_minDensity)/(rhoAv0-rhoMin),1.0);
+      CFreal coeff = min((rhoAv0-std::abs(m_minDensity))/(rhoAv0-rhoMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
             output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[8] = (1.0-coeff)*m_cellAvgState[8] + coeff*((*((*m_cellStates)[iSol]))[8]);
+            (*pastStates[stateID])[8] = (*((*m_cellStates)[iSol]))[8];
         }
       }
 
@@ -485,14 +511,17 @@ void PhysicalityMFMHD2D::enforcePhysicality()
         TMin = min(TMin,(*((*m_cellStates)[iSol]))[11]);
       }
     
-      coeff = min((TAv0-m_minTemperature)/(TAv0-TMin),1.0);
+      coeff = min((TAv0-std::abs(m_minTemperature))/(TAv0-TMin),1.0);
     
       if (coeff < 1.0)
       {
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
+                const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+
             output[((*m_cellStates)[iSol])->getLocalID()] += 10.0;
             (*((*m_cellStates)[iSol]))[11] = (1.0-coeff)*m_cellAvgState[11] + coeff*((*((*m_cellStates)[iSol]))[11]);
+            (*pastStates[stateID])[11] = (*((*m_cellStates)[iSol]))[11];
         }
       }
   
@@ -517,21 +546,7 @@ void PhysicalityMFMHD2D::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   const bool RhoiViTi = getMethodData().getUpdateVarStr() == "RhoiViTi";
 
-  m_cellAvgSolCoefs = frLocalData[0]->getCellAvgSolCoefs();
-  
-  // get Euler 2D varset
-     
-    //m_MFMHDVarSet = getMethodData().getUpdateVar().d_castTo<MultiFluidMHDVarSet>();
-    //m_MFMHDVarSet = PhysicalModelStack::getActive()-> getImplementor()->getConvectiveTerm().d_castTo< MultiScalarTerm< EulerMFMHDTerm > >();
-
-    /*if (m_MFMHDVarSet.isNull())
-    {
-        throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in PhysicalityMFMHD2DFluxReconstruction!");
-    }*/
-    //m_gammaMinusOne = m_MFMHDVarSet->getModel()->getGamma()-1.0;
-    m_nbSpecies = 1;//m_MFMHDVarSet->getNbScalarVars(0);
-    cout<<"m_nbSpecies  ------------------YOYO"<< m_nbSpecies <<endl;
-
+  m_cellAvgSolCoefs = frLocalData[0]->getCellAvgSolCoefs();    
   
   m_cellAvgState.resize(m_nbrEqs);
 }
