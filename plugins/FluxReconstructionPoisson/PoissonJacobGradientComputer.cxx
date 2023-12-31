@@ -14,7 +14,7 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionPoisson/PoissonJacobGradientComputer.hh"
-#include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
+#include "FluxReconstructionPoisson/FluxReconstructionPoisson.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ namespace COOLFluiD {
 
 MethodCommandProvider< PoissonJacobGradientComputer,
 		       FluxReconstructionSolverData,
-		       FluxReconstructionNavierStokesModule >
+		       FluxReconstructionPoissonModule >
 PoissonJacobGradientComputerProvider("ConvRHSJacobPoisson");
   
 //////////////////////////////////////////////////////////////////////////////

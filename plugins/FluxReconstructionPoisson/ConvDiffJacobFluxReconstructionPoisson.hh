@@ -9,7 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "FluxReconstructionNavierStokes/ConvDiffJacobFluxReconstructionNS.hh"
+#include "FluxReconstructionMethod/ConvDiffJacobFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -34,7 +34,7 @@ namespace COOLFluiD {
  * 
  * @author Ray Vandenhoeck
  */
-class ConvDiffJacobFluxReconstructionPoisson : public ConvDiffJacobFluxReconstructionNS {
+class ConvDiffJacobFluxReconstructionPoisson : public ConvDiffJacobFluxReconstruction {
 
 public: // functions
 
@@ -139,7 +139,54 @@ protected: // data
   
   /// storage for Bphi
   Framework::DataSocketSource<CFreal> socket_Bphi;
+
+  /// matrix to store the state terms needed for the gradients inside element
+  RealMatrix m_tempGradTerm;
+    
+  /// matrix to store the state terms needed for the gradients for left neighbor
+  RealMatrix m_tempGradTermL;
   
+  /// matrix to store the state terms needed for the gradients for right neighbor
+  RealMatrix m_tempGradTermR;
+  
+  /// element states of the left neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesL;
+  
+  /// element states of the right neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesR;
+  
+  /// extra element states of the left neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesL2;
+  
+  /// extra element states of the right neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesR2;
+  
+  /// extra element states of the cell in the correct format
+  std::vector< RealVector* > m_tempStatesCell;
+
+  /// damping coefficient
+  CFreal m_dampCoeffDiff;
+  
+  /// Vector transformer from update to solution variables
+  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+    
+  /// matrix to store the state terms needed for the gradients inside element for the jacobian computation
+  RealMatrix m_tempGradTermJacob;
+  
+  /// element states of the left neighbor in the correct format for the jacobian computation
+  std::vector< RealVector* > m_tempStatesJacob;
+  
+  /// matrix to store the state terms needed for the gradients inside element for the jacobian computation
+  RealMatrix m_tempGradTermJacob2;
+  
+  /// element states of the left neighbor in the correct format for the jacobian computation
+  std::vector< RealVector* > m_tempStatesJacob2;
+  
+  /// unperturbed grad vars
+  RealVector m_unpertGradVars;
+  
+  /// perturbed grad vars
+  RealVector m_pertGradVars;
   
   private:
 

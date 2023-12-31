@@ -15,13 +15,8 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionPoisson/ConvDiffJacobFluxReconstructionPoisson.hh"
-#include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
+#include "FluxReconstructionPoisson/FluxReconstructionPoisson.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-
-#include "NavierStokes/EulerTerm.hh"
-#include "NavierStokes/EulerVarSet.hh"
-
-#include "NavierStokes/Euler2DVarSet.hh"
 
 #include "Poisson/PoissonDiffVarSet.hh"
 #include "Poisson/PoissonConvVarSet.hh"
@@ -33,7 +28,6 @@ using namespace std;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
-using namespace COOLFluiD::Physics::NavierStokes;
 using namespace COOLFluiD::Physics::Poisson;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -45,13 +39,13 @@ namespace COOLFluiD {
 
 MethodCommandProvider< ConvDiffJacobFluxReconstructionPoisson,
 		       FluxReconstructionSolverData,
-		       FluxReconstructionNavierStokesModule >
+		       FluxReconstructionPoissonModule >
 convDiffRHSJacobPoissonFluxReconstructionProvider("ConvDiffRHSJacobPoisson");
   
 //////////////////////////////////////////////////////////////////////////////
   
 ConvDiffJacobFluxReconstructionPoisson::ConvDiffJacobFluxReconstructionPoisson(const std::string& name) :
-  ConvDiffJacobFluxReconstructionNS(name),
+  ConvDiffJacobFluxReconstruction(name),
   socket_Bx("Bx"),
   socket_By("By"),
   socket_Bz("Bz"),
@@ -67,7 +61,7 @@ ConvDiffJacobFluxReconstructionPoisson::ConvDiffJacobFluxReconstructionPoisson(c
 
 void ConvDiffJacobFluxReconstructionPoisson::configure ( Config::ConfigArgs& args )
 {
-  ConvDiffJacobFluxReconstructionNS::configure(args);
+  ConvDiffJacobFluxReconstruction::configure(args);
 } 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -75,7 +69,7 @@ void ConvDiffJacobFluxReconstructionPoisson::configure ( Config::ConfigArgs& arg
 std::vector< Common::SafePtr< BaseDataSocketSource > >
   ConvDiffJacobFluxReconstructionPoisson::providesSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSource > > result = ConvDiffJacobFluxReconstructionNS::providesSockets();
+  std::vector< Common::SafePtr< BaseDataSocketSource > > result = ConvDiffJacobFluxReconstruction::providesSockets();
 
   result.push_back(&socket_Bx);
   result.push_back(&socket_By);

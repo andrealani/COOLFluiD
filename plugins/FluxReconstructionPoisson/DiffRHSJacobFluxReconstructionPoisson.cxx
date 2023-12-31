@@ -13,12 +13,8 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionPoisson/DiffRHSJacobFluxReconstructionPoisson.hh"
-#include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
+#include "FluxReconstructionPoisson/FluxReconstructionPoisson.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-#include "NavierStokes/EulerTerm.hh"
-#include "NavierStokes/EulerVarSet.hh"
-
-#include "NavierStokes/Euler2DVarSet.hh"
 
 #include "Poisson/PoissonDiffVarSet.hh"
 #include "Poisson/PoissonConvVarSet.hh"
@@ -29,7 +25,6 @@ using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Physics::NavierStokes;
 using namespace COOLFluiD::Physics::Poisson;
 
 
@@ -42,7 +37,7 @@ namespace COOLFluiD {
 
 MethodCommandProvider< DiffRHSJacobFluxReconstructionPoisson,
 		       FluxReconstructionSolverData,
-		       FluxReconstructionNavierStokesModule >
+		       FluxReconstructionPoissonModule >
 diffRHSJacobPoissonFluxReconstructionProvider("DiffRHSJacobPoisson");
   
 //////////////////////////////////////////////////////////////////////////////

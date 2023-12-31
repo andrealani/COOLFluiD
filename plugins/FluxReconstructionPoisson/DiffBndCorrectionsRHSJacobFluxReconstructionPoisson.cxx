@@ -6,9 +6,8 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionPoisson/DiffBndCorrectionsRHSJacobFluxReconstructionPoisson.hh"
-#include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
+#include "FluxReconstructionPoisson/FluxReconstructionPoisson.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-#include "NavierStokes/NavierStokesVarSet.hh"
 
 #include "Poisson/PoissonDiffVarSet.hh"
 #include "Poisson/PoissonConvVarSet.hh"
@@ -20,7 +19,6 @@
 using namespace std;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
-using namespace COOLFluiD::Physics::NavierStokes;
 using namespace COOLFluiD::MathTools;
 using namespace COOLFluiD::Physics::Poisson;
 
@@ -34,13 +32,13 @@ namespace COOLFluiD {
 
 MethodCommandProvider< DiffBndCorrectionsRHSJacobFluxReconstructionPoisson, 
 		       FluxReconstructionSolverData, 
-		       FluxReconstructionNavierStokesModule >
+		       FluxReconstructionPoissonModule >
 DiffBndCorrectionsRHSJacobPoissonFluxReconstructionProvider("DiffBndCorrectionsRHSJacobPoisson");
 
 //////////////////////////////////////////////////////////////////////////////
 
 DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::DiffBndCorrectionsRHSJacobFluxReconstructionPoisson(const std::string& name) :
-  DiffBndCorrectionsRHSJacobFluxReconstructionNS(name),
+  DiffBndCorrectionsRHSJacobFluxReconstruction(name),
   m_tempStates(),
   m_tempStatesSol()
 {
@@ -56,7 +54,7 @@ DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::~DiffBndCorrectionsRHSJacob
 
 void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::setup()
 {
-  DiffBndCorrectionsRHSJacobFluxReconstructionNS::setup();
+  DiffBndCorrectionsRHSJacobFluxReconstruction::setup();
   
   m_tempStates.resize(2);
 
@@ -74,14 +72,14 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::setup()
 
 void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::unsetup()
 {
-  DiffBndCorrectionsRHSJacobFluxReconstructionNS::unsetup();
+  DiffBndCorrectionsRHSJacobFluxReconstruction::unsetup();
 }
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSink > >
     DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::needsSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSink > > result = DiffBndCorrectionsRHSJacobFluxReconstructionNS::needsSockets();
+  std::vector< Common::SafePtr< BaseDataSocketSink > > result = DiffBndCorrectionsRHSJacobFluxReconstruction::needsSockets();
 
   //result.push_back(&socket_wallDistance);
 

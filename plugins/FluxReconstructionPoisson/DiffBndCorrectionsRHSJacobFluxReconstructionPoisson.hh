@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "FluxReconstructionNavierStokes/DiffBndCorrectionsRHSJacobFluxReconstructionNS.hh"
+#include "FluxReconstructionMethod/DiffBndCorrectionsRHSJacobFluxReconstruction.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,7 @@ namespace COOLFluiD {
    * @author Ray Vandenhoeck
    *
    */
-class DiffBndCorrectionsRHSJacobFluxReconstructionPoisson : public DiffBndCorrectionsRHSJacobFluxReconstructionNS {
+class DiffBndCorrectionsRHSJacobFluxReconstructionPoisson : public DiffBndCorrectionsRHSJacobFluxReconstruction {
 
 public:
 
