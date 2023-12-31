@@ -179,7 +179,7 @@ void LagrangeShapeFunctionPrismP2::computeJacobian(
      const CFreal zz = (*nodes[0])[ZZ];
      const CFreal dNdksi = _gradShapFunc[KSI][0];
      const CFreal dNdeta = _gradShapFunc[ETA][0];
-     const CFreal dNdzta = _gradShapFunc[ZTA][0]/2.;
+     const CFreal dNdzta = _gradShapFunc[ZTA][0];
 
      pointJacob(KSI,XX) = xx*dNdksi;
      pointJacob(ETA,XX) = xx*dNdeta;
@@ -201,7 +201,7 @@ void LagrangeShapeFunctionPrismP2::computeJacobian(
        const CFreal zz = (*nodes[in])[ZZ];
        const CFreal dNdksi = _gradShapFunc[KSI][in];
        const CFreal dNdeta = _gradShapFunc[ETA][in];
-       const CFreal dNdzta = _gradShapFunc[ZTA][in]/2.;
+       const CFreal dNdzta = _gradShapFunc[ZTA][in];
 
        pointJacob(KSI,XX) += xx*dNdksi;
        pointJacob(ETA,XX) += xx*dNdeta;
@@ -323,20 +323,20 @@ void LagrangeShapeFunctionPrismP2::computeMappedCoordPlaneNormal(const std::vect
       if (planeIdx[ip] == 0) // x-direction
     {
       _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0]);
       for (CFuint in = 1; in < 18; ++in)
       {
         _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
       }
     }
     else if (planeIdx[ip] == 1) // y-direction
     {
-      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0]);
       _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
       for (CFuint in = 1; in < 18; ++in)
       {
-        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in]);
         _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
       }
     }
@@ -353,11 +353,11 @@ void LagrangeShapeFunctionPrismP2::computeMappedCoordPlaneNormal(const std::vect
     else  // oblique face noraml direction (x+y)
     {
       _vec1 = -_gradShapFunc[KSI][0]*(*nodes[0])+_gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = -_gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec2 = -_gradShapFunc[ZTA][0]*(*nodes[0]);
       for (CFuint in = 1; in < 18; ++in)
       {
         _vec1 += -_gradShapFunc[KSI][in]*(*nodes[in])+_gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += -_gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec2 += -_gradShapFunc[ZTA][in]*(*nodes[in]);
       }
     }
 

@@ -69,7 +69,7 @@ public:
 
   static void getStatesMappedCoordinates(std::vector<RealVector>& mappedCoords)
   {
-    cf_assert (mappedCoords.size() == 27);
+    cf_assert (mappedCoords.size() == 18);
 
     mappedCoords[0][KSI] = 0. ;
     mappedCoords[0][ETA] = 0. ;

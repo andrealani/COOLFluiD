@@ -310,20 +310,20 @@ void LagrangeShapeFunctionPrismP1::computeMappedCoordPlaneNormal(const std::vect
     if (planeIdx[ip] == 0) // x-direction
     {
       _vec1 = _gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec2 = _gradShapFunc[ZTA][0]*(*nodes[0]);
       for (CFuint in = 1; in < 6; ++in)
       {
         _vec1 += _gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec2 += _gradShapFunc[ZTA][in]*(*nodes[in]);
       }
     }
     else if (planeIdx[ip] == 1) // y-direction
     {
-      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec1 = _gradShapFunc[ZTA][0]*(*nodes[0]);
       _vec2 = _gradShapFunc[KSI][0]*(*nodes[0]);
       for (CFuint in = 1; in < 6; ++in)
       {
-        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec1 += _gradShapFunc[ZTA][in]*(*nodes[in]);
         _vec2 += _gradShapFunc[KSI][in]*(*nodes[in]);
       }
     }
@@ -340,11 +340,11 @@ void LagrangeShapeFunctionPrismP1::computeMappedCoordPlaneNormal(const std::vect
     else  // oblique face noraml direction (x+y)
     {
       _vec1 = -_gradShapFunc[KSI][0]*(*nodes[0])+_gradShapFunc[ETA][0]*(*nodes[0]);
-      _vec2 = -_gradShapFunc[ZTA][0]*(*nodes[0])/2.;
+      _vec2 = -_gradShapFunc[ZTA][0]*(*nodes[0]);
       for (CFuint in = 1; in < 6; ++in)
       {
         _vec1 += -_gradShapFunc[KSI][in]*(*nodes[in])+_gradShapFunc[ETA][in]*(*nodes[in]);
-        _vec2 += -_gradShapFunc[ZTA][in]*(*nodes[in])/2.;
+        _vec2 += -_gradShapFunc[ZTA][in]*(*nodes[in]);
       }
     }
 
