@@ -125,50 +125,6 @@ public:
     const CFreal eta = mappedCoord[ETA];
     const CFreal zta = mappedCoord[ZTA];
 
-    // zta factors
-    /*for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-    {
-      const CFreal ztaSol = m_solPnts1D[iSol];
-      m_ztaFac[iSol] = 1.;
-      for (CFuint iFac = 0; iFac < nbrSolPnts; ++iFac)
-      {
-        if (iFac != iSol)
-        {
-          const CFreal ztaFac = m_solPnts1D[iFac];
-          m_ztaFac[iSol] *= (zta-ztaFac)/(ztaSol-ztaFac);
-        }
-      }
-    }
-
-    // Correct the number of triangular polynomials
-    CFuint nbrPolys = nbrSolPnts * (nbrSolPnts + 1) / 2;
-
-    CFuint iFunc = 0;
-    for (CFuint iZta = 0; iZta < nbrSolPnts; ++iZta) 
-    {
-      for (CFuint iPoly = 0; iPoly < nbrPolys; ++iPoly)
-      {
-        CFreal triTerm = 0.0;
-        // loop over terms
-        for (CFuint iTerm = 0; iTerm < nbrPolys; ++iTerm)
-        {
-          CFreal term = solPolyCoefs[iPoly][iTerm];
-
-          // loop over coordinates
-          for (CFuint iCoor = 0; iCoor < 2; ++iCoor)
-          {
-            term *= pow(mappedCoord[iCoor],solPolyExponents[iTerm][iCoor]); //frdata from triag
-          }
-
-          // add term to polynomial value
-          triTerm += term;
-        }
-        
-        shapeFunc[iFunc] = triTerm* m_ztaFac[iZta] ;
-        iFunc++;
-      }
-    }*/
-
     CFuint nbrPolys = (nbrSolPnts)*(nbrSolPnts+1)*(nbrSolPnts)/2;
     
     // loop over polynomials

@@ -1871,9 +1871,9 @@ void PrismFluxReconstructionElementData::createFaceMappedCoordDir()
 
   m_faceMappedCoordDir[0] = -1;
   m_faceMappedCoordDir[1] = +1;
-  m_faceMappedCoordDir[2] = -1;
-  m_faceMappedCoordDir[3] = -1;
-  m_faceMappedCoordDir[4] = -1;
+  m_faceMappedCoordDir[2] = -2;
+  m_faceMappedCoordDir[3] = -2;
+  m_faceMappedCoordDir[4] = -2;
 
 }
 
@@ -1937,8 +1937,8 @@ void PrismFluxReconstructionElementData::createFaceNormals()
   m_faceNormals[2][1] = -1.;
   m_faceNormals[2][2] = 0.;
 
-  m_faceNormals[3][0] = 0.5;
-  m_faceNormals[3][1] = 0.5;
+  m_faceNormals[3][0] = sqrt(2.)/2.;
+  m_faceNormals[3][1] = sqrt(2.)/2.;
   m_faceNormals[3][2] = 0.;
 
   m_faceNormals[4][0] = -1.;
@@ -2239,137 +2239,41 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
         } break;
         case CFPolyOrder::ORDER1:
         {
-          m_cellAvgSolCoefs[0] = 0.333333333333333;
-          m_cellAvgSolCoefs[1] = 0.333333333333333;
-          m_cellAvgSolCoefs[2] = 0.333333333333333;
-          m_cellAvgSolCoefs[3] = 0.333333333333333;
-          m_cellAvgSolCoefs[4] = 0.333333333333333;
-          m_cellAvgSolCoefs[5] = 0.333333333333333;
+          m_cellAvgSolCoefs[0] = 0.166666666666667;
+          m_cellAvgSolCoefs[1] = 0.166666666666667;
+          m_cellAvgSolCoefs[2] = 0.166666666666667;
+          m_cellAvgSolCoefs[3] = 0.166666666666667;
+          m_cellAvgSolCoefs[4] = 0.166666666666667;
+          m_cellAvgSolCoefs[5] = 0.166666666666667;
 
-        } break;
+         } break;
         case CFPolyOrder::ORDER2:
         {
-          m_cellAvgSolCoefs[0] = 0.109951743655333;
-          m_cellAvgSolCoefs[1] = 0.109951743655333;
-          m_cellAvgSolCoefs[2] = 0.109951743655333;
-          m_cellAvgSolCoefs[3] = 0.223381589678000;
-          m_cellAvgSolCoefs[4] = 0.223381589678000;
-          m_cellAvgSolCoefs[5] = 0.223381589678000;
+          m_cellAvgSolCoefs[0] = 0.055555555555556;
+          m_cellAvgSolCoefs[1] = 0.055555555555556;
+          m_cellAvgSolCoefs[2] = 0.055555555555556;
+          m_cellAvgSolCoefs[3] = 0.055555555555556;
+          m_cellAvgSolCoefs[4] = 0.055555555555556;
+          m_cellAvgSolCoefs[5] = 0.055555555555556;
+          m_cellAvgSolCoefs[6] = 0.055555555555556;
+          m_cellAvgSolCoefs[7] = 0.055555555555556;
+          m_cellAvgSolCoefs[8] = 0.055555555555556;
+          m_cellAvgSolCoefs[8] = 0.055555555555556;
+          m_cellAvgSolCoefs[10] = 0.055555555555556;
+          m_cellAvgSolCoefs[11] = 0.055555555555556;
+          m_cellAvgSolCoefs[12] = 0.055555555555556;
+          m_cellAvgSolCoefs[13] = 0.055555555555556;
+          m_cellAvgSolCoefs[14] = 0.055555555555556;
+          m_cellAvgSolCoefs[15] = 0.055555555555556;
+          m_cellAvgSolCoefs[16] = 0.055555555555556;
+          m_cellAvgSolCoefs[17] = 0.055555555555556;
 
-        } break;
-        case CFPolyOrder::ORDER3:
-        {
-          m_cellAvgSolCoefs[0] = 0.041955512996649;
-          m_cellAvgSolCoefs[1] = 0.041955512996649;
-          m_cellAvgSolCoefs[2] = 0.041955512996649;
-          m_cellAvgSolCoefs[3] = 0.112098412070887;
-          m_cellAvgSolCoefs[4] = 0.112098412070887;
-          m_cellAvgSolCoefs[5] = 0.112098412070887;
-          m_cellAvgSolCoefs[6] = 0.112098412070887;
-          m_cellAvgSolCoefs[7] = 0.112098412070887;
-          m_cellAvgSolCoefs[8] = 0.112098412070887;
-          m_cellAvgSolCoefs[9] = 0.201542988584730;
-          
-        } break;
-        case CFPolyOrder::ORDER4:
-        {
-          m_cellAvgSolCoefs[0] = 0.017915455012303;
-          m_cellAvgSolCoefs[1] = 0.017915455012303;
-          m_cellAvgSolCoefs[2] = 0.017915455012303;
-          m_cellAvgSolCoefs[3] = 0.127712195881265;
-          m_cellAvgSolCoefs[4] = 0.127712195881265;
-          m_cellAvgSolCoefs[5] = 0.127712195881265;
-          m_cellAvgSolCoefs[6] = 0.076206062385535;
-          m_cellAvgSolCoefs[7] = 0.076206062385535;
-          m_cellAvgSolCoefs[8] = 0.076206062385535;
-          m_cellAvgSolCoefs[9] = 0.055749810027115;
-          m_cellAvgSolCoefs[10] = 0.055749810027115;
-          m_cellAvgSolCoefs[11] = 0.055749810027115;
-          m_cellAvgSolCoefs[12] = 0.055749810027115;
-          m_cellAvgSolCoefs[13] = 0.055749810027115;
-          m_cellAvgSolCoefs[14] = 0.055749810027115;
-          
-        } break;
-        case CFPolyOrder::ORDER5:
-        {
-          m_cellAvgSolCoefs[0] = 0.010359374696538;
-          m_cellAvgSolCoefs[1] = 0.010359374696538;
-          m_cellAvgSolCoefs[2] = 0.010359374696538;
-          m_cellAvgSolCoefs[3] = 0.075394884326738;
-          m_cellAvgSolCoefs[4] = 0.075394884326738;
-          m_cellAvgSolCoefs[5] = 0.075394884326738;
-          m_cellAvgSolCoefs[6] = 0.097547802373242;
-          m_cellAvgSolCoefs[7] = 0.097547802373242;
-          m_cellAvgSolCoefs[8] = 0.097547802373242;
-          m_cellAvgSolCoefs[9] = 0.028969269372473;
-          m_cellAvgSolCoefs[10] = 0.028969269372473;
-          m_cellAvgSolCoefs[11] = 0.028969269372473;
-          m_cellAvgSolCoefs[12] = 0.028969269372473;
-          m_cellAvgSolCoefs[13] = 0.028969269372473;
-          m_cellAvgSolCoefs[14] = 0.028969269372473;
-          m_cellAvgSolCoefs[15] = 0.046046366595935;
-          m_cellAvgSolCoefs[16] = 0.046046366595935;
-          m_cellAvgSolCoefs[17] = 0.046046366595935;
-          m_cellAvgSolCoefs[18] = 0.046046366595935;
-          m_cellAvgSolCoefs[19] = 0.046046366595935;
-          m_cellAvgSolCoefs[20] = 0.046046366595935;
-
-        } break;
-        case CFPolyOrder::ORDER6:
-        {
-          m_cellAvgSolCoefs[0] = 0.083608212215637;
-
-          m_cellAvgSolCoefs[1] = 0.005272170280495;
-          m_cellAvgSolCoefs[2] = 0.005272170280495;
-          m_cellAvgSolCoefs[3] = 0.005272170280495;
-
-          m_cellAvgSolCoefs[4] = 0.044552936679504;
-          m_cellAvgSolCoefs[5] = 0.044552936679504;
-          m_cellAvgSolCoefs[6] = 0.044552936679504;
-
-          m_cellAvgSolCoefs[7] = 0.033815712804198;
-          m_cellAvgSolCoefs[8] = 0.033815712804198;
-          m_cellAvgSolCoefs[9] = 0.033815712804198;
-
-          m_cellAvgSolCoefs[10] = 0.015710461340183;
-          m_cellAvgSolCoefs[11] = 0.015710461340183;
-          m_cellAvgSolCoefs[12] = 0.015710461340183;
-          m_cellAvgSolCoefs[13] = 0.015710461340183;
-          m_cellAvgSolCoefs[14] = 0.015710461340183;
-          m_cellAvgSolCoefs[15] = 0.015710461340183;
-
-          m_cellAvgSolCoefs[16] = 0.028205136280616;
-          m_cellAvgSolCoefs[17] = 0.028205136280616;
-          m_cellAvgSolCoefs[18] = 0.028205136280616;
-          m_cellAvgSolCoefs[19] = 0.028205136280616;
-          m_cellAvgSolCoefs[20] = 0.028205136280616;
-          m_cellAvgSolCoefs[21] = 0.028205136280616;
-
-
-          m_cellAvgSolCoefs[22] = 0.066995957127830;
-          m_cellAvgSolCoefs[23] = 0.066995957127830;
-          m_cellAvgSolCoefs[24] = 0.066995957127830;
-          m_cellAvgSolCoefs[25] = 0.066995957127830;
-          m_cellAvgSolCoefs[26] = 0.066995957127830;
-          m_cellAvgSolCoefs[27] = 0.066995957127830;
-
-        } break;
-        case CFPolyOrder::ORDER7:
-        {
-
-        } break;
-        case CFPolyOrder::ORDER8:
-        {
-
-        } break;
-        case CFPolyOrder::ORDER9:
-        {
-
-        } break;
-        case CFPolyOrder::ORDER10:
-        {
-
-        } break;
+         } break; 
+      default:
+      {
+        throw Common::NotImplementedException (FromHere(),"m_cellAvgSolCoefs not implemented for order "
+                                      + StringOps::to_str(m_polyOrder) + ".");
+      }
       }
   
 }
