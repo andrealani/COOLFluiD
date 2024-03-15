@@ -1,0 +1,89 @@
+#==================================================================
+# Configuration opions for the prepare.pl script
+#==================================================================
+# This file should be in the directory from where the script is run
+#==================================================================
+# This file is meant as an example and it should be copied
+# and renamed to coolfluid.conf, and adapted to the
+# characteristics of the envrionment where you plan to
+# configure and run COOLFluiD
+#
+# If you used the install-coolfluid.pl script, just replace
+#    $HOME for your home account directory
+#    $ARCH for the result of command "uname -m"
+#==================================================================
+
+#==================================================================
+# default build options
+#==================================================================
+
+coolfluid_dir = /Users/andrealani/COOLFluiD_GIT
+basebuild_dir = /Users/andrealani/COOLFluiD_GIT/MPICH_p318_b179_COCONUT
+install_dir   = /Users/andrealani/COOLFluiD_GIT/MPICH_p318_b179_COCONUT/INSTALL 
+
+# compilers
+cc     = /Users/andrealani/COOLFluiD_DEPS/mpich_3.1.3/bin/mpicc
+cxx    = /Users/andrealani/COOLFluiD_DEPS/mpich_3.1.3/bin/mpic++
+fc     = gfortran
+
+withcurl = 0
+nofortran = 1
+
+# library locations
+mpi_dir       = /Users/andrealani/COOLFluiD_DEPS/mpich_3.1.3
+boost_dir     = /Users/andrealani/COOLFluiD_DEPS/boost_1.79.0
+petsc_dir     = /Users/andrealani/COOLFluiD_DEPS/mpich_3.1.3/petsc_3.18_optim
+parmetis_dir  = /Users/andrealani/COOLFluiD_DEPS/mpich_3.1.3
+
+allactive = 0
+
+# mimimum set of libs to be able to compile CF
+lib_Config = on
+lib_Common = on
+lib_MathTools = on
+lib_logcpp = on
+lib_Environment = on
+lib_Framework = on
+lib_ShapeFunctions = on
+lib_AnalyticalModel = on
+lib_PhysicalModelDummy = on
+
+####################
+# plugin libraries #
+####################
+
+# I/O
+lib_CFmeshFileReader = on
+lib_Gambit2CFmesh = on
+lib_Gmsh2CFmesh = on
+lib_Tecplot2CFmesh = on
+lib_CFmeshExtruder = on
+lib_CFmeshFileWriter = on
+lib_TecplotWriter = on
+lib_ParaViewWriter = on
+
+# Physical models  
+lib_MHD = on
+lib_Maxwell = on
+lib_MultiFluidMHD = on
+lib_Poisson = on
+
+# Numerical solvers (space method)
+lib_FiniteVolume = on
+lib_FiniteVolumeMHD = on
+lib_FiniteVolumeMaxwell = on
+lib_FiniteVolumeMultiFluidMHD = on
+lib_FiniteVolumePoisson = on
+
+# Numerical solvers (time integrator and linear system solver)
+lib_ForwardEuler = on
+lib_NewtonMethod = on
+lib_NewtonMethodMHD = on
+lib_PetscI = on
+
+with_testcases = 1
+#assertions = 0
+
+optim_cxxflags   = -O3 -g -fPIC -std=c++11
+optim_cflags     = -O3 -g -fPIC
+optim_fflags     = -O3 -g -fPIC
