@@ -269,6 +269,11 @@ void Tecplot2CFmeshConverter::readZone(ifstream& fin,
     startData = fin.tellg();
     getTecplotWordsFromLine(fin, line, countl, words);
   }
+  //skip all auxdata
+  while (line.find("AUXDATA ") != string::npos) {
+    startData = fin.tellg();
+    getTecplotWordsFromLine(fin, line, countl, words);
+  }
   //  if the line contains "DT=" read it, otherwise go back because this is data to be stored 
   if (line.find("DT=") == string::npos) {
     fin.seekg(startData);
@@ -1041,8 +1046,14 @@ void Tecplot2CFmeshConverter::readVariables(ifstream& fin,
   getTecplotWordsFromLine(fin, line, lineNb, words); // VARIABLES
   
   while (line.find("ZONE") == string::npos) {
+    // skip line if the keywork "DATASETAUXDATA" is found
+    if (line.find("DATASETAUXDATA ") != string::npos) {
+    }
     // skip line if the keyword "FILETYPE" is found
-    if (line.find("FILETYPE") == string::npos) {
+    else if (line.find("FILETYPE") != string::npos) {
+    }
+    else {
+    // parse variable name
       for (CFuint i = 0; i < words.size(); ++i) {
 	if (words[i].find('=')==string::npos && words[i].find("VARIABLES")==string::npos) {
 	  CFLog(VERBOSE, "detected variable named <" << words[i] << "> \n");
