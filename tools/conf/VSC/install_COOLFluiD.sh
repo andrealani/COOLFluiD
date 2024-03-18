@@ -19,11 +19,13 @@ export TOP_DIR="${VSC_DATA}"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_VSC"
 #download COOLFluiD
 if [ "$1" == "--download=2" ] ; then
-svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
+#svn co https://github.com/andrealani/COOLFluiD/trunk ${COOLFLUID_TOP_DIR}
+git clone https://github.com/andrealani/COOLFluiD.git ${COOLFLUID_TOP_DIR}
 elif [ "$1" == "--download=0" ] || [ "$1" == "--download=1" ] ; then
 #update COOLFluiD
 cd ${COOLFLUID_TOP_DIR} 
-svn up .
+#svn up .
+git pull . 
 fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"
