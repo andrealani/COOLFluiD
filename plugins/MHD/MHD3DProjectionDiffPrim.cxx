@@ -66,23 +66,31 @@ CFreal mu = 1.27;       // Mean molecular weight
 CFreal mH = 1.67e-27;   // Mass hydrogen
 CFreal kB = 1.38e-23;
 
+
+//cout << "state size = " << stateSize << endl;
+
 // First copy over all states
-for (CFuint i = 0; i < 9 ; ++i) {
-    for (CFuint j = 0; j < 6 ; ++j) {
-
-      values(i,j) = (*states[j])[i];
-
+for (CFuint i = 0; i < 9; ++i) {
+    for (CFuint j = 0; j < stateSize ; ++j) {
+		values(i,j) = (*states[j])[i];
+		
+	  if (i == 7) {
+	      values(i,j) = (*states[j])[i]/(*states[j])[0]; // T_adim = P[adim]/rho[adim]
+	             } else {
+          values(i,j) = (*states[j])[i];
+                 }
       //std::cout << "i = " << i << "\n";
       //std::cout << "j = " << j << "\n";
     }
 }
 
+
 // Now overwrite values(7,j):
-for (CFuint j = 0; j < 6; ++j) {
+//for (CFuint j = 0; j < 6; ++j) {
    //values(7,j) = (*states[j])[7]*mu*mH/(2*(*states[j])[0]*kB;
    // Adimensional:
-   values(7,j) = (*states[j])[7]/(*states[j])[0]; // T = P[adim]/rho[adim]
-}
+//   values(7,j) = (*states[j])[7]/(*states[j])[0]; // T_adim = P[adim]/rho[adim]
+//}
 
 
 
@@ -168,7 +176,10 @@ CFreal MHD3DProjectionDiffPrim::getDynViscosity(const RealVector& state,
 //////////////////////////////////////////////////////////////////////////////
 
 CFreal MHD3DProjectionDiffPrim::getDensity(const RealVector& state)
-{  
+{
+  //throw Common::NotImplementedException
+  //  (FromHere(), "MHD3DProjectionDiffPrim::getDensity()");
+  //return 0;
   return state[0];
 }
 
@@ -210,6 +221,7 @@ CFreal kB = 1.38e-23;
  //_gradState[7] = state[7]*mu*mH/(2.0*state[0]*kB);
  // Adimensional:
  _gradState[7] = state[7]/state[0];
+// _gradState[7] = _gradState[7]/(2.0*state[0]) - state[7]/(2.0*state[0]*state[0])*_gradState[0];
 
 }
 

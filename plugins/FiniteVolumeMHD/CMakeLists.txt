@@ -104,6 +104,10 @@ UnsteadyMHD3DProjectionPolytropicPhotosphere.hh
 UnsteadyMHD3DProjectionPolytropicPhotosphere.cxx
 Venktn3DStrict.cxx
 Venktn3DStrict.hh
+SuperInletProjectionParallelRotation.cxx
+SuperInletProjectionParallelRotation.hh
+SuperOutletMHD3DProjection9.cxx
+SuperOutletMHD3DProjection9.hh
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )

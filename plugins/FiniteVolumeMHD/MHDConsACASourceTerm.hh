@@ -72,21 +72,41 @@ private:
   
   /// socket for gravity values
   Framework::DataSocketSource<CFreal> socket_gravity;
-    
+  Framework::DataSocketSource<CFreal> socket_heating;
+  Framework::DataSocketSource<CFreal> socket_radiativeloss;    
+  Framework::DataSocketSource<CFreal> socket_wavepressure;
+//  Framework::DataSocketSource<CFreal> socket_zp;
+//  Framework::DataSocketSource<CFreal> socket_zm;
+  RealVector _gradP;
+  RealVector _gradBx;
+  RealVector _gradBy;
+  RealVector _gradBz;
+  RealVector _gradRho;
+  RealVector _gradVx;
+  RealVector _gradVy;
+  RealVector _gradVz;
   CFint _gravity;
   CFint _PevtsovHeating;
   CFreal _PevtsovHeatingFactor;
   CFint _Manchester;
   CFreal _ManchesterHeatingAmplitude;
   CFreal _ManchesterSigma;
+  CFreal _Qh4H_const;
+  CFreal _Qlio_AR;
+  CFreal _P0_W;
+  CFint _alfven_pressure;
+  CFint _Qh2_activate;
+  CFint _Qh3_activate;
+  CFint _Qh4_activate;
+  CFint _Qh_lio_activate;
   CFint _divQ;
   CFreal _divQConductivity;
   CFreal _divQalphaCollisionless;
-  CFint _ViscosityAndResistivity;
-  CFreal _Viscosity;
   CFreal _Resistivity;
   CFint _RadiativeLossTerm;
-
+  CFint _wave_pressure;
+//  CFint _zplus;
+//  CFint _zminus;
 }; // end of class MHDConsACASourceTerm
 
 //////////////////////////////////////////////////////////////////////////////

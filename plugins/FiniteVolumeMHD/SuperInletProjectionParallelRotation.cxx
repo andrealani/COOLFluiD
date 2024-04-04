@@ -1,5 +1,5 @@
-#include "FiniteVolume/FiniteVolume.hh"
-#include "SuperInletProjection.hh"
+#include "FiniteVolumeMHD/FiniteVolumeMHD.hh"
+#include "FiniteVolumeMHD/SuperInletProjectionParallelRotation.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MapGeoToTrsAndIdx.hh"
@@ -20,12 +20,15 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<SuperInletProjection, CellCenterFVMData, FiniteVolumeModule> 
+MethodCommandProvider<SuperInletProjectionParallelRotation, CellCenterFVMData, FiniteVolumeMHDModule>
 superInletProjectionFVMCCProvider("SuperInletProjectionFVMCC");
+
+MethodCommandProvider<SuperInletProjectionParallelRotation, CellCenterFVMData, FiniteVolumeMHDModule> 
+superInletProjectionParallelRotationFVMCCProvider("SuperInletProjectionParallelRotationFVMCC");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
+void SuperInletProjectionParallelRotation::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< vector<CFuint> >("ProjectionIDs","IDs corresponding to projection fields.");
   options.addConfigOption< vector<CFuint> >("VarIDs","IDs of the variables from which values are read by file");
@@ -37,7 +40,7 @@ void SuperInletProjection::defineConfigOptions(Config::OptionList& options)
       
 //////////////////////////////////////////////////////////////////////////////
 
-SuperInletProjection::SuperInletProjection(const std::string& name) :
+SuperInletProjectionParallelRotation::SuperInletProjectionParallelRotation(const std::string& name) :
   SuperInlet(name),
   m_mapGeoToTrs(),
   m_BfromFile(false)
@@ -46,40 +49,32 @@ SuperInletProjection::SuperInletProjection(const std::string& name) :
 
   _projectionIDs = vector<CFuint>();
   setParameter("ProjectionIDs",&_projectionIDs);
-  
+
   m_varIDs = vector<CFuint>();
   setParameter("VarIDs",&m_varIDs);
 
   _pBC = 0.108; //*8.0;
-
-  //_pBC = vector<CFuint>();
   setParameter("pBC",&_pBC);
 
   _rhoBC = 1.0;
-
-  //_rhoBC = vector<CFuint>();
   setParameter("rhoBC",&_rhoBC);
 
   _VrBC = 1935.07; //848.15;
-
-  //_VrBC = vector<CFuint>();
   setParameter("VrBC",&_VrBC);
 
   _rotation = 0; 
-
-  //_VrBC = vector<CFuint>();
   setParameter("rotation",&_rotation);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-SuperInletProjection::~SuperInletProjection()
+SuperInletProjectionParallelRotation::~SuperInletProjectionParallelRotation()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SuperInletProjection::setup()
+void SuperInletProjectionParallelRotation::setup()
 {
   SuperInlet::setup();
 
@@ -91,14 +86,14 @@ void SuperInletProjection::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SuperInletProjection::unsetup()
+void SuperInletProjectionParallelRotation::unsetup()
 {
   SuperInlet::unsetup();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SuperInletProjection::setGhostState(GeometricEntity *const face)
+void SuperInletProjectionParallelRotation::setGhostState(GeometricEntity *const face)
 {
   State *const innerState = face->getState(0);
   State *const ghostState = face->getState(1);
@@ -127,7 +122,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       B_PFSS_dimless[i] = (*initialValues)[idx]; // save the Poisson PFSS solution in a vector
 
       (*ghostState)[varID] = 2.*(*initialValues)[idx] - (*innerState)[varID];
-      CFLog(DEBUG_MIN, "SuperInletProjection::setGhostState() => [" << varID << "] => " << (*initialValues)[idx] << " | " << (*innerState)[varID] << "\n");
+      CFLog(DEBUG_MIN, "SuperInletProjectionParallelRotation::setGhostState() => [" << varID << "] => " << (*initialValues)[idx] << " | " << (*innerState)[varID] << "\n");
     }
   }
 
@@ -162,8 +157,10 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
       BrFromFile += bArray[mapNodeIDs->find(localNodeID)];
     }
     BrFromFile /= nbNodesInFace;
+
     // maxBr = std::max(maxBr, BrFromFile);
     // CFLog(INFO, "Br from file #### varID = " << varID << ", maxBr = " << maxBr << "\n");
+
   }
 
   CFreal latG = 0.;
@@ -326,7 +323,7 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
   CFreal PressureBoundary_dimless = _pBC;
 
 
-  (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7];
+  (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7]; //0.79557002079 * 2.*PressureBoundary_dimless - (*innerState)[7];
 
 
   
@@ -340,11 +337,11 @@ void SuperInletProjection::setGhostState(GeometricEntity *const face)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SuperInletProjection::preProcess()
+void SuperInletProjectionParallelRotation::preProcess()
 {
   SuperInlet::preProcess();
 
-  CFLog(VERBOSE, "SuperInletProjection::preProcess() => START\n");
+  CFLog(VERBOSE, "SuperInletProjectionParallelRotation::preProcess() => START\n");
 
   // AL: only for unsteady runs (DT > 0.)  
   if (SubSystemStatusStack::getActive()->getDT() > 0.) {
@@ -354,7 +351,7 @@ void SuperInletProjection::preProcess()
     nse->extrapolateVarsFromFileInTime();
    }
   }
-  CFLog(VERBOSE, "SuperInletProjection::preProcess() => END\n");
+  CFLog(VERBOSE, "SuperInletProjectionParallelRotation::preProcess() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

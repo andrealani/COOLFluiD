@@ -343,8 +343,6 @@ UnsteadySuperInlet.cxx
 UnsteadySuperInlet.hh
 SuperInletInterp.cxx
 SuperInletInterp.hh
-SuperInletProjection.cxx
-SuperInletProjection.hh
 SuperOutlet.cxx
 SuperOutlet.hh
 Venktn2D.cxx

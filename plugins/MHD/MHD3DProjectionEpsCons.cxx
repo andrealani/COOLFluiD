@@ -75,6 +75,8 @@ vector<std::string> MHD3DProjectionEpsCons::getExtraVarNames() const
   names[6] = "BTotal";
   names[7] = "rhoETotal";
   names[8] = "p";
+  names[9]  = "epsP";
+  names[10] = "epsM";
 
   return names;
 }

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_SuperInletProjection_hh
-#define COOLFluiD_Numerics_FiniteVolume_SuperInletProjection_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
+#define COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,7 @@ namespace COOLFluiD {
    * @author Radka Keslerova
    *
    */
-class SuperInletProjection : public SuperInlet {
+class SuperInletProjectionParallelRotation : public SuperInlet {
 public:
 
   /**
@@ -39,12 +39,12 @@ public:
   /**
    * Constructor
    */
-  SuperInletProjection(const std::string& name);
+  SuperInletProjectionParallelRotation(const std::string& name);
 
   /**
    * Default destructor
    */
-  virtual ~SuperInletProjection();
+  virtual ~SuperInletProjectionParallelRotation();
 
   /**
    * Set up private data and data of the aggregated classes
@@ -92,7 +92,7 @@ private: //data
   /// IDs of the variables from which values are read by file
   std::vector<CFuint> m_varIDs;
   
-}; // end of class SuperInletProjection
+}; // end of class SuperInletProjectionParallelRotation
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -104,4 +104,4 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_SuperInletProjection_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
