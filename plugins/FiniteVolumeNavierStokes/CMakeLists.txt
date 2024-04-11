@@ -204,8 +204,8 @@ SubOutletNSTurb3D.cxx
 SubInletNSTurb2DUVT.cxx
 SubInletNSTurb2DTtPtAlpha.cxx
 SubInletNSTurb3DUVWT.cxx
-SuperInletRhoVT.cxx
-SuperInletRhoVT.hh
+#SuperInletRhoVT.cxx
+#SuperInletRhoVT.hh
 StegerWarmingCorrFlux.cxx
 StegerWarmingCorrFlux.hh
 TransonicOutletNSTurb2D.hh
