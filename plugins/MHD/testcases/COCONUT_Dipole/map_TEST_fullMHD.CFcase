@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -15.6383
+### Residual = -15.639
 
 ###############################################################################
 # User defined parameters
@@ -27,7 +27,7 @@ Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./BCindependent5.CFmesh
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
 # Physical parameters
-Simulator.67bSystem.MHD3DProjectionDiff.ConvTerm.gamma = 1.67
+Simulator.SubSystem.MHD3DProjectionDiff.ConvTerm.gamma = 1.67
 Simulator.SubSystem.Flow.Jet1.rotation = 1
 
 # Boundary conditions
@@ -105,7 +105,7 @@ Simulator.SubSystemTypes = StandardSubSystem
 Simulator.SimpleMaestro.GlobalStopCondition = GlobalMaxNumberSteps
 Simulator.SimpleMaestro.GlobalMaxNumberSteps.nbSteps = 1
 
-Simulator.SubSystem.InteractiveParamReader.readRate = 1
+Simulator.SubSystem.InteractiveParamReader.readRate = 10
 
 Simulator.SubSystem.Namespaces = FlowNamespace EMNamespace
 
