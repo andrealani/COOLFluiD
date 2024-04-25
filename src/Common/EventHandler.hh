@@ -9,6 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include <functional>
 #include "Common/NonCopyable.hh"
 #include "Common/DynamicObject.hh"
 #include "Common/OwnedObject.hh"
