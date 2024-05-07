@@ -27,7 +27,7 @@ namespace COOLFluiD {
 void OutputFormatter::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< std::string >("FileName","The name with extension of the file to write the output to.");
-  options.addConfigOption< CFuint >("SaveRate","Rate to intermediate solution to Tecplot file.");
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("SaveRate","Rate to intermediate solution to Tecplot file.");
   options.addConfigOption< bool >("SaveFinal", "Save again on finishing simulation.");
   options.addConfigOption< bool >("AppendTime","Save each iteration to different file with suffix m_time#.");
   options.addConfigOption< bool >("AppendIter","Save each iteration to different file with suffix m_iter#.");
