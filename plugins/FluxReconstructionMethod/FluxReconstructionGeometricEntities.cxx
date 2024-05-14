@@ -54,6 +54,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP2.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP3.hh"
+#include "FluxReconstructionMethod/FluxReconstructionBaseFunctionPrismP4.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP0.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP1.hh"
 #include "FluxReconstructionMethod/FluxReconstructionBaseFunctionHexaP2.hh"
@@ -825,6 +826,15 @@ GeometricEntityProvider<Cell,
                         FluxReconstructionModule>
 cellLagrangePrismP1FluxReconstructionP3("CellPrismLagrangeP1FluxReconstructionP3");
 
+/**
+ * Flux Reconstruction Prism Cell with P1 geometry and P4 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP1,
+                        FluxReconstructionBaseFunctionPrismP4,
+                        FluxReconstructionModule>
+cellLagrangePrismP1FluxReconstructionP4("CellPrismLagrangeP1FluxReconstructionP4");
+
 
   /**
  * Flux Reconstruction Prism Cell with P2 geometry and P0 solution.
@@ -862,6 +872,14 @@ GeometricEntityProvider<Cell,
                         FluxReconstructionModule>
 cellLagrangePrismP2FluxReconstructionP3("CellPrismLagrangeP2FluxReconstructionP3");
 
+/**
+ * Flux Reconstruction Prism Cell with P2 geometry and P4 solution.
+ */
+GeometricEntityProvider<Cell,
+                        LagrangeShapeFunctionPrismP2,
+                        FluxReconstructionBaseFunctionPrismP4,
+                        FluxReconstructionModule>
+cellLagrangePrismP2FluxReconstructionP4("CellPrismLagrangeP2FluxReconstructionP4");
 
 
 

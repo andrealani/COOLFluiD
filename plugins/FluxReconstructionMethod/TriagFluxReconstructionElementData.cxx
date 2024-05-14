@@ -2059,28 +2059,36 @@ void TriagFluxReconstructionElementData::createVandermondeMatrix()
   const CFuint nbrSolPnts1D = m_solPntsLocalCoord1D.size();
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
-  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  if(m_polyOrder != CFPolyOrder::ORDER0)
   {
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
-     CFuint modalDof = 0;
+      CFuint modalDof = 0;
     
-        for (CFuint iOrderEta = 0; iOrderEta < (m_polyOrder+1); ++iOrderEta)
+      // Loop over the total order of polynomial terms
+      for (CFuint totalOrder = 0; totalOrder <= m_polyOrder; ++totalOrder)
+      {
+        // Within each total order, iterate over powers of ksi and eta
+        for (CFuint iOrderKsi = totalOrder; iOrderKsi >= 0; --iOrderKsi)
         {
-          for (CFuint iOrderKsi = 0; iOrderKsi < (m_polyOrder+1)-iOrderEta; ++iOrderKsi)
-          {
-            double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]))-1.;
-            double b = 2.*m_solPntsLocalCoords[iSol][ETA]-1.;
-            double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-            double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-            m_vandermonde(iSol,modalDof)=sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
+          CFuint iOrderEta = totalOrder - iOrderKsi;
+          
+          // Evaluate the polynomial basis functions at the solution point
+          double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]))-1.;
+          double b = 2.*m_solPntsLocalCoords[iSol][ETA]-1.;
+          double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+          double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+          m_vandermonde(iSol,modalDof)=0.25*sqrt(2.0)*h1*h2*pow((1.-b),iOrderKsi);
 
-            modalDof+=1;
-          } 
-        }
+          modalDof+=1;
+
+          // Make sure we don't go below zero
+          if (iOrderKsi == 0) break;
+        } 
+      }
+      cf_assert(modalDof == nbrSolPnts);
     }
 
-    m_vandermonde*=0.25;
     InvertMatrix(m_vandermonde,m_vandermondeInv);
   }
 }

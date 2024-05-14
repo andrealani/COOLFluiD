@@ -3024,30 +3024,34 @@ void TetraFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   
-  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  if(m_polyOrder != CFPolyOrder::ORDER0)
   {
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
-     CFuint modalDof = 0;
-    
-        for (CFuint iOrderKsi = 0; iOrderKsi < (m_polyOrder+1); ++iOrderKsi)
-        {
-          for (CFuint iOrderEta = 0; iOrderEta < (m_polyOrder+1)-iOrderKsi; ++iOrderEta)
-          {
-            for (CFuint iOrderZta = 0; iOrderZta < (m_polyOrder+1)-iOrderKsi-iOrderEta; ++iOrderZta)
-            {
-              double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]-m_solPntsLocalCoords[iSol][ZTA]))-1.;
-              double b = ((2.*m_solPntsLocalCoords[iSol][ETA])/(1.-m_solPntsLocalCoords[iSol][ZTA]))-1.;    
-              double c = (2.*m_solPntsLocalCoords[iSol][ZTA])-1.;
+      CFuint modalDof = 0;
 
-              double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
-              double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
-              double h3 = ComputeJacobi(iOrderZta, 2.*iOrderKsi+2.*iOrderEta+2., 0., c);
-              m_vandermonde(iSol,modalDof)=sqrt(8.0)*0.25*h1*h2*h3*pow((1.-b),iOrderKsi)*pow((1.-c),iOrderKsi+iOrderEta);
-              modalDof+=1;
-            }
-          } 
-        }
+      // Loop over the total order of polynomial terms for xi, eta, and zeta
+      for (CFuint totalOrder = 0; totalOrder <= m_polyOrder; ++totalOrder)
+      {
+        // Loop over the distributions of the total order among xi, eta, zeta
+        for (CFuint iOrderZta = 0; iOrderZta <= totalOrder; ++iOrderZta)
+        {
+          for (CFuint iOrderEta = 0; iOrderEta + iOrderZta <= totalOrder; ++iOrderEta)
+          {
+            CFuint iOrderKsi = totalOrder - iOrderEta - iOrderZta;
+            
+            double a = ((2.*m_solPntsLocalCoords[iSol][KSI])/(1.-m_solPntsLocalCoords[iSol][ETA]-m_solPntsLocalCoords[iSol][ZTA]))-1.;
+            double b = ((2.*m_solPntsLocalCoords[iSol][ETA])/(1.-m_solPntsLocalCoords[iSol][ZTA]))-1.;    
+            double c = (2.*m_solPntsLocalCoords[iSol][ZTA])-1.;
+
+            double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+            double h2 = ComputeJacobi(iOrderEta, 2.*iOrderKsi+1., 0., b);
+            double h3 = ComputeJacobi(iOrderZta, 2.*iOrderKsi+2.*iOrderEta+2., 0., c);
+            m_vandermonde(iSol,modalDof)=sqrt(8.0)*0.25*h1*h2*h3*pow((1.-b),iOrderKsi)*pow((1.-c),iOrderKsi+iOrderEta);
+            modalDof+=1;
+          }
+        } 
+      }
     }
     InvertMatrix(m_vandermonde,m_vandermondeInv);
   }

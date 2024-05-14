@@ -2268,7 +2268,22 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
           m_cellAvgSolCoefs[16] = 0.055555555555556;
           m_cellAvgSolCoefs[17] = 0.055555555555556;
 
-         } break; 
+         } break;
+        case CFPolyOrder::ORDER3:
+        {
+          for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+          {
+            m_cellAvgSolCoefs[iSol]=1./nbrSolPnts;
+          }
+
+        } break;
+        case CFPolyOrder::ORDER4:
+        {
+          for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+          {
+            m_cellAvgSolCoefs[iSol]=1./nbrSolPnts;
+          }
+         } break;   
       default:
       {
         throw Common::NotImplementedException (FromHere(),"m_cellAvgSolCoefs not implemented for order "
@@ -2493,26 +2508,37 @@ void PrismFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   
-  if(m_polyOrder != CFPolyOrder::ORDER3 && m_polyOrder != CFPolyOrder::ORDER1)
+  if(m_polyOrder != CFPolyOrder::ORDER0)
   {
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
       CFuint modalDof = 0;
-      RealVector orderIdx(nbrSolPnts1D);
-      orderIdx = 0.0;
-      
-      for (CFuint iKsi = 0; iKsi < nbrSolPnts1D; ++iKsi)
+
+      // Loop over the total order of polynomial terms for ξ and η
+      for (CFuint totalOrderXY = 0; totalOrderXY <= m_polyOrder; ++totalOrderXY)
       {
-        for (CFuint iEta = 0; iEta < nbrSolPnts1D-iKsi; ++iEta)
+        // Loop for the third dimension (Zta)
+        for (CFuint iOrderZta = 0; iOrderZta <= m_polyOrder; ++iOrderZta)
         {
-          for (CFuint iZta = 0; iZta < nbrSolPnts1D; ++iZta, ++modalDof)
+          // Within each total order, iterate over powers of ksi and eta in reverse for ksi
+          for (CFuint iOrderKsi = totalOrderXY; iOrderKsi >= 0; --iOrderKsi)
           {
-            order = max(iKsi,iEta);
-            order = max(order,iZta);
-            idx = order*order*order+orderIdx[order];
-            orderIdx[order] += 1;
-              
-            m_vandermonde(iSol,idx) = evaluateLegendre(m_solPntsLocalCoords[iSol][KSI],iKsi)*evaluateLegendre(m_solPntsLocalCoords[iSol][ETA],iEta)*evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA],iZta);
+            CFuint iOrderEta = totalOrderXY - iOrderKsi;
+            
+            // Evaluate the polynomial basis functions at the solution point
+            double a = ((2. * m_solPntsLocalCoords[iSol][KSI]) / (1. - m_solPntsLocalCoords[iSol][ETA])) - 1.;
+            double b = 2. * m_solPntsLocalCoords[iSol][ETA] - 1.;
+            double h1 = ComputeJacobi(iOrderKsi, 0., 0., a);
+            double h2 = ComputeJacobi(iOrderEta, 2. * iOrderKsi + 1., 0., b);
+            double h3 = evaluateLegendre(m_solPntsLocalCoords[iSol][ZTA], iOrderZta); 
+            
+            // Compute the value of the polynomial term at the solution point and store in the Vandermonde matrix
+            m_vandermonde(iSol, modalDof) = 0.25*sqrt(2.0) * h1 * h2 * h3 * pow((1. - b), iOrderKsi);
+
+            // Increment the modal degree of freedom index
+            modalDof += 1;
+            // Make sure we don't go below zero
+            if (iOrderKsi == 0) break;
           }
         }
       }
@@ -2606,6 +2632,45 @@ void PrismFluxReconstructionElementData::createFlxSolDependencies()
 
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal PrismFluxReconstructionElementData::ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x)
+{
+  // Evaluate Jacobi Polynomial (normalized to be orthonormal) of type (alpha,beta) > -1
+  // (alpha+beta <> -1) at points x for order N   
+
+  RealVector PL;
+  CFreal gamma0, gamma1, aold, H, anew, bnew;
+
+  PL.resize(N+1);
+  // Initial values P_0(x) and P_1(x)
+  gamma0 = pow(2.,(alpha+beta+1.))/(alpha+beta+1.)*factorial(alpha)*factorial(beta)/factorial(alpha+beta);
+  PL[0] = 1.0/sqrt(gamma0);
+//  PL[N]=PL[0];
+  if (N>=1) {
+    gamma1 = (alpha+1.)*(beta+1.)/(alpha+beta+3.)*gamma0;
+    PL[1] = ((alpha+beta+2.)*x/2. + (alpha-beta)/2.)/sqrt(gamma1);
+  }
+  if (N>1) {
+    // Repeat value in recurrence.
+    aold = 2./(2.+alpha+beta)*sqrt((alpha+1.)*(beta+1.)/(alpha+beta+3.));
+    // Forward recurrence using the symmetry of the recurrence.
+    for (CFuint i = 0; i < N-1; ++i){
+        H = 2.*(i+1.)+alpha+beta;
+        anew = 2./(H+2.)*sqrt( ((i+1.)+1.)*((i+1.)+1.+alpha+beta)*((i+1.)+1.+alpha)*((i+1.)+1.+beta)/(H+1.)/(H+3.));
+        bnew = - (pow(alpha,2.)-pow(beta,2.))/H/(H+2);
+        PL[i+2] = 1./anew*( -aold*PL[i] + (x-bnew)*PL[i+1]);
+        aold =anew;
+    }
+  }
+  return PL[N];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal PrismFluxReconstructionElementData::factorial(CFreal n)
+{
+  return (n==1. || n==0.) ? 1. : factorial(n-1.)*n;
+}
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

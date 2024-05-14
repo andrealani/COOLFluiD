@@ -1027,7 +1027,7 @@ void QuadFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   
-  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  if(m_polyOrder != CFPolyOrder::ORDER0)
   {
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
