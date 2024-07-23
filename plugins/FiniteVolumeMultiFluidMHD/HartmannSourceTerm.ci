@@ -346,7 +346,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
       source[8] = 0;                                    //Continuity equation
       source[9] = Jy*BzTotal -JzCurl*ByTotal;			//x-momentum equation
       source[10] = JzCurl*BxTotal -Jx*BzTotal;          //y-momentum equation
-      source[11] = Jx*ByTotal - Jy*ByTotal;          //z-momentum equation
+      source[11] = Jx*ByTotal - Jy*BxTotal;          //z-momentum equation        #Correction Here
       source[12] = Jx*ExTotal + Jy*EyTotal + JzCurl*(v*BxTotal - u*ByTotal);	//Total Energy
     }
     if(dim == 3)
@@ -363,7 +363,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
       source[8]  = 0.;                                      //Continuity equation
       source[9]  = Jy*BzTotal - Jz*ByTotal;                //x-momentum equation
       source[10] = Jz*BxTotal - Jx*BzTotal;          	  //y-momentum equation
-      source[11] = Jx*ByTotal - Jy*ByTotal;          	  //z-momentum equation
+      source[11] = Jx*ByTotal - Jy*BxTotal;          	  //z-momentum equation
       source[12] = Jx*Ex + Jy*Ey + Jz*Ez;  //Total Energy
     }
     if(dim == 2) {
@@ -378,7 +378,7 @@ void HartmannSourceTerm<UPDATEVAR>::computeSource
       source[8] = 0;                                      //Continuity equation
       source[9] = Jy*BzTotal -Jz*ByTotal;                 //x-momentum equation
       source[10] = Jz*BxTotal -Jx*BzTotal;                //y-momentum equation
-      source[11] = Jx*ByTotal - Jy*ByTotal;               //z-momentum equation
+      source[11] = Jx*ByTotal - Jy*BxTotal;               //z-momentum equation
       source[12] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;  //Total Energy
     }
     else {

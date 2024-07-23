@@ -262,7 +262,7 @@ void HartmannSourceTerm<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       m_source[8] = 0;                                    //Continuity equation
       m_source[9] = Jy*BzTotal -JzCurl*ByTotal;			//x-momentum equation
       m_source[10] = JzCurl*BxTotal -Jx*BzTotal;          //y-momentum equation
-      m_source[11] = Jx*ByTotal - Jy*ByTotal;          //z-momentum equation
+      m_source[11] = Jx*ByTotal - Jy*BxTotal;          //z-momentum equation
       m_source[12] = Jx*ExTotal + Jy*EyTotal + JzCurl*(v*BxTotal - u*ByTotal);	//Total Energy
     }
     if(m_dim == 3)
@@ -279,7 +279,7 @@ void HartmannSourceTerm<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       m_source[8]  = 0.;                                      //Continuity equation
       m_source[9]  = Jy*BzTotal - Jz*ByTotal;                //x-momentum equation
       m_source[10] = Jz*BxTotal - Jx*BzTotal;          	  //y-momentum equation
-      m_source[11] = Jx*ByTotal - Jy*ByTotal;          	  //z-momentum equation
+      m_source[11] = Jx*ByTotal - Jy*BxTotal;          	  //z-momentum equation
       m_source[12] = Jx*Ex + Jy*Ey + Jz*Ez;  //Total Energy
     }
     if(m_dim == 2) {
@@ -294,7 +294,7 @@ void HartmannSourceTerm<UPDATEVAR>::addSourceTerm(RealVector& resUpdates)
       m_source[8] = 0;                                      //Continuity equation
       m_source[9] = Jy*BzTotal -Jz*ByTotal;                 //x-momentum equation
       m_source[10] = Jz*BxTotal -Jx*BzTotal;                //y-momentum equation
-      m_source[11] = Jx*ByTotal - Jy*ByTotal;               //z-momentum equation
+      m_source[11] = Jx*ByTotal - Jy*BxTotal;               //z-momentum equation
       m_source[12] = Jx*ExTotal + Jy*EyTotal + Jz*EzTotal;  //Total Energy
     }
     else {
