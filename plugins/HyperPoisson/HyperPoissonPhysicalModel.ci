@@ -1,0 +1,92 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace HyperPoisson {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+HyperPoissonPhysicalModel<DIM>::HyperPoissonPhysicalModel(const std::string& name)
+  : Framework::ConvectionPM<HyperPTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+HyperPoissonPhysicalModel<DIM>::~HyperPoissonPhysicalModel()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint HyperPoissonPhysicalModel<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+CFuint HyperPoissonPhysicalModel<DIM>::getNbEquations() const
+{
+  return DIM+1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void HyperPoissonPhysicalModel<DIM>::setReferenceValues()
+{
+  Common::SafePtr<HyperPTerm> convTerm = getConvTerm();
+  
+  // reference physical data to set
+  RealVector& refDataConv = convTerm->getReferencePhysicalData();
+  
+  // if reference values
+  // have not been specified set all the ref values to 1.
+  refDataConv = 1.0;
+//  refDataSource = 1.0;
+
+  _isAdimensional = false;
+
+}
+      
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void HyperPoissonPhysicalModel<DIM>::setReferenceTime()
+{
+  RealVector& refDataConv = getConvTerm()->getReferencePhysicalData();
+  _refTime = getRefLength()/refDataConv[HyperPTerm::PHI];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<int DIM>
+void HyperPoissonPhysicalModel<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<HyperPTerm>::configure(args);
+
+  cf_assert(getDimension() > 0);
+  cf_assert(getNbEquations() > 0);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace HyperPoissson
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
+
