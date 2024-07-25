@@ -1,0 +1,16 @@
+LIST( APPEND FluxReconstructionHyperPoisson_files
+FluxReconstructionHyperPoisson.hh
+HyperPoissonSourceTerm.hh
+HyperPoissonSourceTerm.cxx
+BCOutletHyperPoisson.hh
+BCOutletHyperPoisson.cxx
+BCInletHyperPoisson.hh
+BCInletHyperPoisson.cxx
+)
+
+LIST ( APPEND FluxReconstructionHyperPoisson_requires_mods HyperPoisson FluxReconstructionMethod )
+LIST ( APPEND FluxReconstructionHyperPoisson_cflibs Framework HyperPoisson FluxReconstructionMethod ) 
+
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionHyperPoisson )
+
+CF_WARN_ORPHAN_FILES()
