@@ -804,6 +804,7 @@ sub setup_deps()
                         "mutationpp_includedir",
 			"plato_librarydir",
                         "plato_includedir",
+			"cgns_dir",
 			"lapack_libraries" );
   
   foreach (@dep_variables) {  add_cmake_option($_); }

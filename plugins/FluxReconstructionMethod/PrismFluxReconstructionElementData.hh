@@ -24,8 +24,6 @@ namespace COOLFluiD {
 /**
  * This class represents a Prism flux reconstruction element
  * 
- * @author Ray Vandenhoeck
- * @author Alexander Papen
  * @author Rayan Dhib
  *
  */
@@ -184,6 +182,11 @@ private:
   /// solution point local coordinate in 2D
   std::vector<std::vector < CFreal > > solPntsLocalCoord2D;
 
+  /// Compute the orthonormal normalized jacobi poly (for triag)
+  CFreal ComputeJacobi(CFuint N,CFuint alpha, CFuint beta,CFreal x);
+  
+  /// Computes the factorial
+  CFreal factorial(CFreal n);
 
 
 }; // end of class PrismFluxReconstructionElementData
