@@ -403,7 +403,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
     const CFuint gradPID = elementID*nbEqs + PID;
     _gradP[XX] = this->m_ux[gradPID];
     _gradP[YY] = this->m_uy[gradPID];
-    _gradP[XX] = this->m_uz[gradPID];
+    _gradP[ZZ] = this->m_uz[gradPID];
     CFreal n_x = normals[startID];
     CFreal n_y = normals[startID+1];
     CFreal n_z = normals[startID+2];
