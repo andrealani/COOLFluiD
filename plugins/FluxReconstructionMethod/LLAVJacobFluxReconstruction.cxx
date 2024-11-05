@@ -911,9 +911,12 @@ void LLAVJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& wave
     //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
     for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
+      CFreal coef;
+      if (m_nbrFaceFlxPnts==3) coef=1./6.;
+      if (m_nbrFaceFlxPnts==4) coef=1.;
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                   (*m_faceIntegrationCoefs)[iFlx]*
+                                   coef*
                                    m_cflConvDiffRatio;
       //const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
       const CFreal rho = 1.0;
@@ -1154,6 +1157,24 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& res
 	{
 	  // adding updateCoeff
 	  CFreal visc = 1.0;
+
+      // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+        }
+        else  // quad face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+        } 
+      }
   
           m_waveSpeedUpd[0] = 0.0;
 
@@ -1454,7 +1475,25 @@ void LLAVJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& residua
 	{
 	  // adding updateCoeff
 	  CFreal visc = 1.0;
-  
+
+      // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+        }
+        else  // quad face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+        } 
+      }
+
           m_waveSpeedUpd[0] = 0.0;
 
           const CFreal jacobXJacobXIntCoef = faceJacobVecSizeFlxPnts[iFlxPnt]*

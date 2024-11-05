@@ -192,6 +192,14 @@ public:
   }
 
   /**
+   * @return m_faceIntegrationCoefsPerType
+   */
+  Common::SafePtr< std::vector< RealVector > > getFaceIntegrationCoefsPerType()
+  {
+    return &m_faceIntegrationCoefsPerType;
+  }
+
+  /**
    * @return m_flxPntDerivDir
    */
   Common::SafePtr< std::vector< CFuint > > getFlxPntDerivDir()
@@ -711,6 +719,11 @@ protected: // functions
   virtual void createFaceIntegrationCoefs() = 0;
 
   /**
+   * Create the coefficients for the integration over a face per face type
+   */
+  virtual void createFaceIntegrationCoefsPerType() = 0;
+
+  /**
    * Create the coefficients for the cell average solution
    */
   virtual void createCellAvgSolCoefs() = 0;
@@ -839,6 +852,9 @@ protected: // protected data
 
   /// face flux point local coordinates (face coordinates) per face type
   std::vector< std::vector< RealVector > > m_faceFlxPntsLocalCoordsPerType;
+
+  /// coefficients for integration over a face per face type
+  std::vector< RealVector > m_faceIntegrationCoefsPerType;
 
   /// flux point local coordinate derivative direction
   std::vector< CFuint > m_flxPntDerivDir;

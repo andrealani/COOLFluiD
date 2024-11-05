@@ -2323,6 +2323,14 @@ void TriagFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
 }
 
 //////////////////////////////////////////////////////////////////////
+
+void TriagFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
+{
+  CFAUTOTRACE;
+  // Not needed in 2D
+}
+
+//////////////////////////////////////////////////////////////////////
   
   void TriagFluxReconstructionElementData::createCellCenterDerivCoefs(){
       CFAUTOTRACE;

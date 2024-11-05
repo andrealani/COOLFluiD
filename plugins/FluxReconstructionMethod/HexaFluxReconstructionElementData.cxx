@@ -1254,7 +1254,7 @@ void HexaFluxReconstructionElementData::createVandermondeMatrix()
   m_vandermonde.resize(nbrSolPnts,nbrSolPnts);
   m_vandermondeInv.resize(nbrSolPnts,nbrSolPnts);
   
-  if(m_polyOrder != CFPolyOrder::ORDER0 && m_polyOrder != CFPolyOrder::ORDER1)
+  if(m_polyOrder != CFPolyOrder::ORDER0)
   {
     for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
     {
@@ -1382,6 +1382,96 @@ void HexaFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
   }
 
 }
+//////////////////////////////////////////////////////////////////////
+
+void HexaFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
+{
+  CFAUTOTRACE;
+
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // set face integration coeffs coordinates on Triag Face
+  m_faceIntegrationCoefsPerType.resize(2);
+
+  m_faceIntegrationCoefsPerType[0].resize(0);
+
+  // set face integration coeffs on Quad Face (reference -1 1 quad)
+
+  // number of flux points on a face
+  const CFuint nbrFlxPnts = nbrFlxPnts1D*nbrFlxPnts1D;
+
+  // resize m_faceIntegrationCoefsPerType
+  m_faceIntegrationCoefsPerType[1].resize(nbrFlxPnts);
+
+  // create TensorProductGaussIntegrator
+  TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
+
+  // create face node local coordinates
+  vector< RealVector > nodeCoord(4);
+  nodeCoord[0].resize(2);
+  nodeCoord[0][KSI] = -1.0;
+  nodeCoord[0][ETA] = -1.0;
+  nodeCoord[1].resize(2);
+  nodeCoord[1][KSI] = +1.0;
+  nodeCoord[1][ETA] = -1.0;
+  nodeCoord[2].resize(2);
+  nodeCoord[2][KSI] = +1.0;
+  nodeCoord[2][ETA] = +1.0;
+  nodeCoord[3].resize(2);
+  nodeCoord[3][KSI] = -1.0;
+  nodeCoord[3][ETA] = +1.0;
+
+  // get quadrature point coordinates and wheights
+  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
+  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
+  const CFuint nbrQPnts = quadPntCoords.size();
+  cf_assert(quadPntWheights.size() == nbrQPnts);
+
+  // compute the coefficients for integration over a face
+  // loop over flux points
+  CFuint iFlx = 0;
+  for (CFuint iFlxKsi = 0; iFlxKsi < nbrFlxPnts1D; ++iFlxKsi)
+  {
+    const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlxKsi];
+    for (CFuint iFlxEta = 0; iFlxEta < nbrFlxPnts1D; ++iFlxEta, ++iFlx)
+    {
+      const CFreal etaFlx = m_flxPntsLocalCoord1D[iFlxEta];
+
+      m_faceIntegrationCoefsPerType[1][iFlx] = 0.0;
+      for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
+      {
+        // quadrature point local coordinate on the face
+        const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
+        const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
+
+        // evaluate polynomial value in quadrature point
+        CFreal quadPntPolyVal = 1.;
+        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
+        {
+          if (iFac != iFlxKsi)
+          {
+            const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
+            quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
+          }
+        }
+        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
+        {
+          if (iFac != iFlxEta)
+          {
+            const CFreal etaFac = m_flxPntsLocalCoord1D[iFac];
+            quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
+          }
+        }
+
+        // add contribution of quadrature point to integration coefficient
+        m_faceIntegrationCoefsPerType[1][iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
+      }
+    }
+  }
+
+}
+
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

@@ -185,6 +185,9 @@ protected: // data
   /// coefficients for integration over a face
   Common::SafePtr< RealVector > m_faceIntegrationCoefs;
   
+  /// coefficients for integration over a face per face type
+  Common::SafePtr<std::vector<  RealVector > > m_faceIntegrationCoefsPerType;
+
   /// face Jacobian vector sizes (abs)
   std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
   

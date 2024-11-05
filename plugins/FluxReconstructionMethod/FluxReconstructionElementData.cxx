@@ -35,6 +35,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_flxPntsLocalCoords(),
   m_faceFlxPntsFaceLocalCoords(),
   m_faceFlxPntsLocalCoordsPerType(),
+  m_faceIntegrationCoefsPerType(),
   m_flxPntDerivDir(),
   m_allSolPntIdxs(),
   m_allFlxPntIdxs(),
@@ -144,6 +145,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createNodePolyExponents();
   computeNodePolyCoefs();
   createFaceIntegrationCoefs();
+  createFaceIntegrationCoefsPerType();
   createCellAvgSolCoefs();
   createCellCenterDerivCoefs();
   setCFLConvDiffRatio();

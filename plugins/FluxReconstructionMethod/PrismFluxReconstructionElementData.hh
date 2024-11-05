@@ -124,6 +124,11 @@ protected: // functions
   void createFaceIntegrationCoefs();
 
   /**
+   * Create the coefficients for the integration over a face per face type
+   */
+  void createFaceIntegrationCoefsPerType();
+
+  /**
    * Create the coefficients for the cell average solution
    */
   void createCellAvgSolCoefs();

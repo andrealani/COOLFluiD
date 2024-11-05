@@ -149,14 +149,39 @@ void BCInletHyperPoisson::computeGhostStates(const vector< State* >& intStates,
     const CFreal yI_dimless = coords[iState][YY];
     const CFreal zI_dimless = coords[iState][ZZ];
     const CFreal rI_dimless = (coords[iState]).norm2();
+    const CFreal rhoI_dimless = std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless);
+    CFreal BrBoundary_dimless = m_flxPntBrs[localFlxPntID] ; // 2.0/3.0*0.666*zI_dimless; //
 
-    CFreal BrBoundary_dimless = m_flxPntBrs[localFlxPntID] ; //2.0/3.0*0.666*zI_dimless;
+      //ghostState[1] = 2.0*(BrBoundary_dimless*xI_dimless/rI_dimless) - intState[1];
+      //ghostState[2] = 2.0*(BrBoundary_dimless*yI_dimless/rI_dimless) - intState[2];
+      //ghostState[3] = 2.0*(BrBoundary_dimless*zI_dimless/rI_dimless) - intState[3];
+    
 
-      ghostState[1] = 2.0*(BrBoundary_dimless*xI_dimless/rI_dimless) - intState[1];
-      ghostState[2] = 2.0*(BrBoundary_dimless*yI_dimless/rI_dimless) - intState[2];
-      ghostState[3] = 2.0*(BrBoundary_dimless*zI_dimless/rI_dimless) - intState[3];
+    const CFreal BxI_dimless = intState[1];
+    const CFreal ByI_dimless = intState[2];
+    const CFreal BzI_dimless = intState[3];
+
+    const CFreal BrI_dimless = xI_dimless/rI_dimless*BxI_dimless + yI_dimless/rI_dimless*ByI_dimless + zI_dimless/rI_dimless*BzI_dimless;
+    const CFreal BthetaI_dimless = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BxI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*ByI_dimless - rhoI_dimless/rI_dimless*BzI_dimless;
+    const CFreal BphiI_dimless = -yI_dimless/rhoI_dimless*BxI_dimless + xI_dimless/rhoI_dimless*ByI_dimless;
     
+    // B bnd, Btheta and Bphi bnd are set equal to inner values
+    //const CFreal BxBoundary_dimless = xI_dimless/rI_dimless*BrBoundary_dimless - yI_dimless/rhoI_dimless*BphiI_dimless + xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaI_dimless;
+    //const CFreal ByBoundary_dimless = yI_dimless/rI_dimless*BrBoundary_dimless + xI_dimless/rhoI_dimless*BphiI_dimless + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaI_dimless;
+    //const CFreal BzBoundary_dimless = zI_dimless/rI_dimless*BrBoundary_dimless - rhoI_dimless/rI_dimless*BthetaI_dimless;
+
+    //ghostState[1] = 2.0*BxBoundary_dimless - BxI_dimless;
+    //ghostState[2] = 2.0*ByBoundary_dimless - ByI_dimless;
+    //ghostState[3] = 2.0*BzBoundary_dimless - BzI_dimless;
+
+    const CFreal BrG = 2.0*BrBoundary_dimless - BrI_dimless ;
+    const CFreal BthetaG = BthetaI_dimless ;
+    const CFreal BphiG = BphiI_dimless ;
     
+    ghostState[1] = xI_dimless/rI_dimless*BrG - yI_dimless/rhoI_dimless*BphiG + xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaG;
+    ghostState[2] = yI_dimless/rI_dimless*BrG + xI_dimless/rhoI_dimless*BphiG + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaG;
+    ghostState[3] = zI_dimless/rI_dimless*BrG - rhoI_dimless/rI_dimless*BthetaG;
+
     //phi
     ghostState[0] = intState[0];
     
@@ -239,6 +264,7 @@ void BCInletHyperPoisson::setup()
 
   // get the face local coords of the flux points on one face
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
+  SafePtr< std::vector< std::vector< RealVector > > >              faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
   m_nbrFaceFlxPnts = m_flxLocalCoords->size();
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
   const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
@@ -327,6 +353,22 @@ void BCInletHyperPoisson::setup()
           GeometricEntity *const face = _faceBuilder->buildGE();
           const CFuint faceGlobalID = face->getID();
           m_globalToLocalTRSFaceID.insert(faceGlobalID,localFaceID);
+          
+          if (elemShape == CFGeoShape::PRISM)
+          {
+            const CFGeoShape::Type geo = face->getShape();
+
+            if (geo == CFGeoShape::TRIAG) // triag face
+            {
+              m_nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[0]).size();
+              (*m_flxLocalCoords)=((*faceFlxPntsLocalCoordsPerType)[0]);
+            }
+            else  // quad face
+            {
+              m_nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[1]).size();
+              (*m_flxLocalCoords)=((*faceFlxPntsLocalCoordsPerType)[1]);
+            }
+          }
 
           for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
           {

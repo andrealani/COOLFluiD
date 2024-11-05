@@ -54,6 +54,7 @@ ConvBndCorrectionsRHSFluxReconstruction::ConvBndCorrectionsRHSFluxReconstruction
   m_faceFlxPntConn(CFNULL),
   m_faceConnPerOrient(CFNULL),
   m_faceIntegrationCoefs(CFNULL),
+  m_faceIntegrationCoefsPerType(CFNULL),
   m_faceJacobVecAbsSizeFlxPnts(),
   m_cellStatesFlxPnt(),
   m_flxPntGhostSol(),
@@ -444,13 +445,29 @@ void ConvBndCorrectionsRHSFluxReconstruction::computeWaveSpeedUpdates(CFreal& wa
   // reset the wave speed update
   waveSpeedUpd = 0.0;
   
+  // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+    }
+    else  // quad face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+    } 
+  }
+
   // loop over flux pnts to compute the updates
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                   (*m_faceIntegrationCoefs)[iFlx];
-				   
-				   
+  {   
+    const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*(*m_faceIntegrationCoefs)[iFlx];
+
     // transform update states to physical data to calculate eigenvalues
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iFlx]), m_pData);
     waveSpeedUpd += jacobXIntCoef*m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
@@ -599,6 +616,9 @@ void ConvBndCorrectionsRHSFluxReconstruction::setup()
 
   // get the face local coords of the flux points on one face depending on the face type
   m_faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
+
+  // get the face integration coefficient depending on the face type
+  m_faceIntegrationCoefsPerType = frLocalData[0]->getFaceIntegrationCoefsPerType();
 
   m_flxSolDep = frLocalData[0]->getFlxPntSolDependency();
 

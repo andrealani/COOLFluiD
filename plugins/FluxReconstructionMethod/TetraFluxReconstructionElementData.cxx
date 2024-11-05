@@ -2573,75 +2573,98 @@ void TetraFluxReconstructionElementData::createFaceIntegrationCoefs()
   // number of solution points in 1D
   const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
 
-  // number of flux points on a face
-  const CFuint nbrFlxPnts = nbrFlxPnts1D*nbrFlxPnts1D;
+  // number of solution points in triag
+  const CFuint nbrFlxPntsTriag = (m_polyOrder+1)*(m_polyOrder+2)/2;
 
   // resize m_faceIntegrationCoefs
-  m_faceIntegrationCoefs.resize(nbrFlxPnts);
+  m_faceIntegrationCoefs.resize(nbrFlxPntsTriag);
 
-  // create TensorProductGaussIntegrator
-  TensorProductGaussIntegrator tpIntegrator(DIM_2D,m_polyOrder);
-
-  // create face node local coordinates
-  vector< RealVector > nodeCoord(4);
-  nodeCoord[0].resize(2);
-  nodeCoord[0][KSI] = -1.0;
-  nodeCoord[0][ETA] = -1.0;
-  nodeCoord[1].resize(2);
-  nodeCoord[1][KSI] = +1.0;
-  nodeCoord[1][ETA] = -1.0;
-  nodeCoord[2].resize(2);
-  nodeCoord[2][KSI] = +1.0;
-  nodeCoord[2][ETA] = +1.0;
-  nodeCoord[3].resize(2);
-  nodeCoord[3][KSI] = -1.0;
-  nodeCoord[3][ETA] = +1.0;
-
-  // get quadrature point coordinates and wheights
-  vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
-  vector< CFreal     > quadPntWheights = tpIntegrator.getQuadPntsWheights(nodeCoord);
-  const CFuint nbrQPnts = quadPntCoords.size();
-  cf_assert(quadPntWheights.size() == nbrQPnts);
-
-  // compute the coefficients for integration over a face
-  // loop over flux points
-  CFuint iFlx = 0;
-  for (CFuint iFlxKsi = 0; iFlxKsi < nbrFlxPnts1D; ++iFlxKsi)
+  switch (m_polyOrder)
   {
-    const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlxKsi];
-    for (CFuint iFlxEta = 0; iFlxEta < nbrFlxPnts1D; ++iFlxEta, ++iFlx)
+    case CFPolyOrder::ORDER0:
     {
-      const CFreal etaFlx = m_flxPntsLocalCoord1D[iFlxEta];
+       m_faceIntegrationCoefs[0] = 0.5;
+    } break;
 
-      m_faceIntegrationCoefs[iFlx] = 0.0;
-      for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
-      {
-        // quadrature point local coordinate on the face
-        const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
-        const CFreal etaQPnt = quadPntCoords[iQPnt][ETA];
+    case CFPolyOrder::ORDER1:
+    {
+       m_faceIntegrationCoefs[0] = 0.166666666666667;
+       m_faceIntegrationCoefs[1] = 0.166666666666667;
+       m_faceIntegrationCoefs[2] = 0.166666666666667;
+    } break;
 
-        // evaluate polynomial value in quadrature point
-        CFreal quadPntPolyVal = 1.;
-        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
-        {
-          if (iFac != iFlxKsi)
-          {
-            const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
-            quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
-          }
-        }
-        for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
-        {
-          if (iFac != iFlxEta)
-          {
-            const CFreal etaFac = m_flxPntsLocalCoord1D[iFac];
-            quadPntPolyVal *= (etaQPnt-etaFac)/(etaFlx-etaFac);
-          }
-        }
+    case CFPolyOrder::ORDER2:
+    {
+       m_faceIntegrationCoefs[0] = 0.054975871827667;
+       m_faceIntegrationCoefs[1] = 0.054975871827667;
+       m_faceIntegrationCoefs[2] = 0.054975871827667;
+       m_faceIntegrationCoefs[3] = 0.111690794839000;
+       m_faceIntegrationCoefs[4] = 0.111690794839000;
+       m_faceIntegrationCoefs[5] = 0.111690794839000;
+    } break;
 
-        // add contribution of quadrature point to integration coefficient
-        m_faceIntegrationCoefs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
-      }
+    case CFPolyOrder::ORDER3:
+    {
+       m_faceIntegrationCoefs[0] = 0.020977756498325;
+       m_faceIntegrationCoefs[1] = 0.020977756498325;
+       m_faceIntegrationCoefs[2] = 0.020977756498325;
+       m_faceIntegrationCoefs[3] = 0.056049206035444;
+       m_faceIntegrationCoefs[4] = 0.056049206035444;
+       m_faceIntegrationCoefs[5] = 0.056049206035444;
+       m_faceIntegrationCoefs[6] = 0.056049206035444;
+       m_faceIntegrationCoefs[7] = 0.056049206035444;
+       m_faceIntegrationCoefs[8] = 0.056049206035444;
+       m_faceIntegrationCoefs[9] = 0.100771494292365;
+    } break;
+
+    case CFPolyOrder::ORDER4:
+    {
+       m_faceIntegrationCoefs[0] = 0.008957727506152;
+       m_faceIntegrationCoefs[1] = 0.008957727506152;
+       m_faceIntegrationCoefs[2] = 0.008957727506152;
+       m_faceIntegrationCoefs[3] = 0.063856097940632;
+       m_faceIntegrationCoefs[4] = 0.063856097940632;
+       m_faceIntegrationCoefs[5] = 0.063856097940632;
+       m_faceIntegrationCoefs[6] = 0.038103031192768;
+       m_faceIntegrationCoefs[7] = 0.038103031192768;
+       m_faceIntegrationCoefs[8] = 0.038103031192768;
+       m_faceIntegrationCoefs[9] = 0.027874905013558;
+       m_faceIntegrationCoefs[10] = 0.027874905013558;
+       m_faceIntegrationCoefs[11] = 0.027874905013558;
+       m_faceIntegrationCoefs[12] = 0.027874905013558;
+       m_faceIntegrationCoefs[13] = 0.027874905013558;
+       m_faceIntegrationCoefs[14] = 0.027874905013558;
+    } break;
+
+    case CFPolyOrder::ORDER5:
+    {
+       m_faceIntegrationCoefs[0] = 0.005179687348269;
+       m_faceIntegrationCoefs[1] = 0.005179687348269;
+       m_faceIntegrationCoefs[2] = 0.005179687348269;
+       m_faceIntegrationCoefs[3] = 0.037697442163369;
+       m_faceIntegrationCoefs[4] = 0.037697442163369;
+       m_faceIntegrationCoefs[5] = 0.037697442163369;
+       m_faceIntegrationCoefs[6] = 0.048773901186621;
+       m_faceIntegrationCoefs[7] = 0.048773901186621;
+       m_faceIntegrationCoefs[8] = 0.048773901186621;
+       m_faceIntegrationCoefs[9] = 0.014484634686237;
+       m_faceIntegrationCoefs[10] = 0.014484634686237;
+       m_faceIntegrationCoefs[11] = 0.014484634686237;
+       m_faceIntegrationCoefs[12] = 0.014484634686237;
+       m_faceIntegrationCoefs[13] = 0.014484634686237;
+       m_faceIntegrationCoefs[14] = 0.014484634686237;
+       m_faceIntegrationCoefs[15] = 0.023023183297967;
+       m_faceIntegrationCoefs[16] = 0.023023183297967;
+       m_faceIntegrationCoefs[17] = 0.023023183297967;
+       m_faceIntegrationCoefs[18] = 0.023023183297967;
+       m_faceIntegrationCoefs[19] = 0.023023183297967;
+       m_faceIntegrationCoefs[20] = 0.023023183297967;
+    } break;
+    
+    default:
+    {
+        throw Common::NotImplementedException(FromHere(), "Face Integration Coeff Per Face not implemented for order "
+                                              + StringOps::to_str(m_polyOrder) + ".");
     }
   }
 }
@@ -3154,6 +3177,121 @@ void TetraFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
   // set face flux point face local coordinates on Quad Face (reference -1 1 quad) (not applicable)
   m_faceFlxPntsLocalCoordsPerType[1].resize(0);
 
+
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void TetraFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
+{
+  CFAUTOTRACE;
+
+  // number of solution points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+  // number of solution points in triag
+  const CFuint nbrFlxPntsTriag = (m_polyOrder+1)*(m_polyOrder+2)/2;
+
+  // set face flux point face local coordinates on Triag Face
+  m_faceIntegrationCoefsPerType.resize(2);
+
+  m_faceIntegrationCoefsPerType[0].resize(nbrFlxPntsTriag);
+
+  switch (m_polyOrder)
+  {
+    case CFPolyOrder::ORDER0:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.5;
+    } break;
+    
+    case CFPolyOrder::ORDER1:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.166666666666667;
+        m_faceIntegrationCoefsPerType[0][1] = 0.166666666666667;
+        m_faceIntegrationCoefsPerType[0][2] = 0.166666666666667;
+    } break;
+    
+    case CFPolyOrder::ORDER2:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.054975871827667;
+        m_faceIntegrationCoefsPerType[0][1] = 0.054975871827667;
+        m_faceIntegrationCoefsPerType[0][2] = 0.054975871827667;
+        m_faceIntegrationCoefsPerType[0][3] = 0.111690794839000;
+        m_faceIntegrationCoefsPerType[0][4] = 0.111690794839000;
+        m_faceIntegrationCoefsPerType[0][5] = 0.111690794839000;
+    } break;
+    
+    case CFPolyOrder::ORDER3:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.020977756498325;
+        m_faceIntegrationCoefsPerType[0][1] = 0.020977756498325;
+        m_faceIntegrationCoefsPerType[0][2] = 0.020977756498325;
+        m_faceIntegrationCoefsPerType[0][3] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][4] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][5] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][6] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][7] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][8] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][9] = 0.100771494292365;
+    } break;
+
+    case CFPolyOrder::ORDER4:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.008957727506152;
+        m_faceIntegrationCoefsPerType[0][1] = 0.008957727506152;
+        m_faceIntegrationCoefsPerType[0][2] = 0.008957727506152;
+        m_faceIntegrationCoefsPerType[0][3] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][4] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][5] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][6] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][7] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][8] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][9] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][10] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][11] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][12] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][13] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][14] = 0.027874905013558;
+    } break;
+
+    case CFPolyOrder::ORDER5:
+    {
+        m_faceIntegrationCoefsPerType[0][0] = 0.005179687348269;
+        m_faceIntegrationCoefsPerType[0][1] = 0.005179687348269;
+        m_faceIntegrationCoefsPerType[0][2] = 0.005179687348269;
+        m_faceIntegrationCoefsPerType[0][3] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][4] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][5] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][6] = 0.048773901186621;
+        m_faceIntegrationCoefsPerType[0][7] = 0.048773901186621;
+        m_faceIntegrationCoefsPerType[0][8] = 0.048773901186621;
+        m_faceIntegrationCoefsPerType[0][9] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][10] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][11] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][12] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][13] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][14] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][15] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][16] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][17] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][18] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][19] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][20] = 0.023023183297967;
+    } break;
+    
+    default:
+    {
+        throw Common::NotImplementedException(FromHere(), "Face Integration Coeff Per Face not implemented for order "
+                                              + StringOps::to_str(m_polyOrder) + ".");
+    }
+  }
+
+  // set face flux point face local coordinates on Quad Face (reference -1 1 quad)
+
+  // number of flux points on a face
+  const CFuint nbrFlxPnts = nbrFlxPnts1D*nbrFlxPnts1D;
+
+  // resize m_faceIntegrationCoefsPerType
+  m_faceIntegrationCoefsPerType[1].resize(0);
 
 }
 //////////////////////////////////////////////////////////////////////

@@ -793,6 +793,24 @@ void ConvDiffLLAVFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& w
 {
   // compute the wave speed updates for the neighbouring cells
   cf_assert(waveSpeedUpd.size() == 2);
+
+  // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+    }
+    else  // quad face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+    } 
+  }
   
   // add convective part
   for (CFuint iSide = 0; iSide < 2; ++iSide)

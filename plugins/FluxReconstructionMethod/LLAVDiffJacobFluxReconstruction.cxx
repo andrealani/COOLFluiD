@@ -442,6 +442,24 @@ void LLAVDiffJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& 
   cf_assert(waveSpeedUpd.size() == 2);
   CFreal visc = 1.0;
   
+  // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+    }
+    else  // quad face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+    } 
+  }
+
   if (m_addUpdCoeff)
   {
     for (CFuint iSide = 0; iSide < 2; ++iSide)
@@ -696,6 +714,24 @@ void LLAVDiffJacobFluxReconstruction::computeDivDiscontFlx(vector< RealVector >&
 	{
 	  // adding updateCoeff
 	  CFreal visc = 1.0;
+
+      // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+      if (m_dim>2)
+      {
+        // get face geo
+        const CFGeoShape::Type geo = m_face->getShape(); 
+
+        if (geo == CFGeoShape::TRIAG) // triag face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+        }
+        else  // quad face
+        {
+          //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+          (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+        } 
+      }
   
           m_waveSpeedUpd[0] = 0.0;
 

@@ -232,6 +232,9 @@ protected: //data
   /// coefficients for integration over a face
   Common::SafePtr< RealVector > m_faceIntegrationCoefs;
   
+  /// coefficients for integration over a face per face type
+  Common::SafePtr<std::vector<  RealVector > > m_faceIntegrationCoefsPerType;
+
   /// local cell face - mapped coordinate direction per orientation
   Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
   

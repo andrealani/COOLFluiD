@@ -265,6 +265,9 @@ protected: //data
   /// local coordinates of the flux points on one face per face type
   Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
 
+  /// coefficients for integration over a face per face type
+  Common::SafePtr<std::vector<  RealVector > > m_faceIntegrationCoefsPerType;
+
   /// dependencies of flx pnts on sol pnts
   Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
 

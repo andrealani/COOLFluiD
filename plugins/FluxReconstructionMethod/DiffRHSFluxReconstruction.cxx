@@ -79,6 +79,7 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_waveSpeedUpd(),
   m_faceJacobVecAbsSizeFlxPnts(),
   m_faceIntegrationCoefs(CFNULL),
+  m_faceIntegrationCoefsPerType(CFNULL),
   m_faceMappedCoordDir(CFNULL),
   m_faceLocalDir(CFNULL),
   m_unitNormalFlxPnts(),
@@ -700,6 +701,24 @@ void DiffRHSFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& waveSp
   // compute the wave speed updates for the neighbouring cells
   cf_assert(waveSpeedUpd.size() == 2);
   CFreal visc = 1.0;
+
+  // get the correct m_faceIntegrationCoefs depending on the face type (only applicable for Prism for now) @todo should be updated for hybrid grid
+  if (m_dim>2)
+  {
+    // get face geo
+    const CFGeoShape::Type geo = m_face->getShape(); 
+
+    if (geo == CFGeoShape::TRIAG) // triag face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[0];
+    }
+    else  // quad face
+    {
+      //(*m_faceIntegrationCoefs).resize(m_nbrFaceFlxPnts);
+      (m_faceIntegrationCoefs) = &(*m_faceIntegrationCoefsPerType)[1];
+    } 
+  }
   
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
@@ -822,6 +841,9 @@ void DiffRHSFluxReconstruction::setup()
   
   // get the face integration coefficient
   m_faceIntegrationCoefs = frLocalData[0]->getFaceIntegrationCoefs();
+
+  // get the face integration coefficient depending on the face type
+  m_faceIntegrationCoefsPerType = frLocalData[0]->getFaceIntegrationCoefsPerType();  
   
   // get flux point mapped coordinate directions per orient
   m_faceMappedCoordDir = frLocalData[0]->getFaceMappedCoordDirPerOrient();

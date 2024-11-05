@@ -1060,6 +1060,15 @@ void QuadFluxReconstructionElementData::createFaceFlxPntsLocalCoordsPerType()
   // Not needed in 2D
 
 }
+
+//////////////////////////////////////////////////////////////////////
+
+void QuadFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
+{
+  CFAUTOTRACE;
+  // Not needed in 2D
+}
+
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod
