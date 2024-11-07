@@ -229,52 +229,53 @@ switch(polyOrder)
 
 
       } break;
-      case CFPolyOrder::ORDER4:   
+        case CFPolyOrder::ORDER4:   
       {
                         solPntsLocalCoord2D[0][0] = 0.035870877695734; 
                         solPntsLocalCoord2D[0][1] = 0.035870877695734;
 
-                        solPntsLocalCoord2D[1][0] = 0.928258244608533; 
-                        solPntsLocalCoord2D[1][1] = 0.035870877695734;
+                        solPntsLocalCoord2D[1][0] = 0.201503881881800; 
+                        solPntsLocalCoord2D[1][1] =  0.047312487011716;
 
-                        solPntsLocalCoord2D[2][0] = 0.035870877695734; 
-                        solPntsLocalCoord2D[2][1] = 0.928258244608533; 
+                        solPntsLocalCoord2D[2][0] = 0.474308787777079;
+                        solPntsLocalCoord2D[2][1] = 0.051382424445843; 
 
-                        solPntsLocalCoord2D[3][0] = 0.241729395767967;
-                        solPntsLocalCoord2D[3][1] = 0.241729395767967;
+                        solPntsLocalCoord2D[3][0] = 0.751183631106484; 
+                        solPntsLocalCoord2D[3][1] = 0.047312487011716;
 
-                        solPntsLocalCoord2D[4][0] = 0.516541208464066; 
-                        solPntsLocalCoord2D[4][1] = 0.241729395767967; 
+                        solPntsLocalCoord2D[4][0] = 0.928258244608533; 
+                        solPntsLocalCoord2D[4][1] = 0.035870877695734;
 
-                        solPntsLocalCoord2D[5][0] = 0.241729395767967; 
-                        solPntsLocalCoord2D[5][1] = 0.516541208464066; 
 
-                        solPntsLocalCoord2D[6][0] = 0.474308787777079;
-                        solPntsLocalCoord2D[6][1] = 0.051382424445843; 
+                        solPntsLocalCoord2D[5][0] = 0.047312487011716;
+                        solPntsLocalCoord2D[5][1] = 0.201503881881800;
 
-                        solPntsLocalCoord2D[7][0] = 0.051382424445843;
-                        solPntsLocalCoord2D[7][1] = 0.474308787777079;
+                        solPntsLocalCoord2D[6][0] = 0.241729395767967;
+                        solPntsLocalCoord2D[6][1] = 0.241729395767967;
 
-                        solPntsLocalCoord2D[8][0] = 0.474308787777079; 
-                        solPntsLocalCoord2D[8][1] = 0.474308787777079;
+                        solPntsLocalCoord2D[7][0] = 0.516541208464066; 
+                        solPntsLocalCoord2D[7][1] = 0.241729395767967; 
 
-                        solPntsLocalCoord2D[9][0] = 0.751183631106484; 
-                        solPntsLocalCoord2D[9][1] = 0.047312487011716;
+                        solPntsLocalCoord2D[8][0] = 0.751183631106484; 
+                        solPntsLocalCoord2D[8][1] = 0.201503881881800;
 
-                        solPntsLocalCoord2D[10][0] = 0.047312487011716; 
-                        solPntsLocalCoord2D[10][1] = 0.751183631106484;
+                        solPntsLocalCoord2D[9][0] = 0.051382424445843;
+                        solPntsLocalCoord2D[9][1] = 0.474308787777079;
 
-                        solPntsLocalCoord2D[11][0] =  0.201503881881800;
-                        solPntsLocalCoord2D[11][1] =  0.751183631106484;
+                        solPntsLocalCoord2D[10][0] = 0.241729395767967; 
+                        solPntsLocalCoord2D[10][1] = 0.516541208464066; 
 
-                        solPntsLocalCoord2D[12][0] = 0.201503881881800; 
-                        solPntsLocalCoord2D[12][1] =  0.047312487011716;
+                        solPntsLocalCoord2D[11][0] = 0.474308787777079; 
+                        solPntsLocalCoord2D[11][1] = 0.474308787777079;
 
-                        solPntsLocalCoord2D[13][0] = 0.047312487011716;
-                        solPntsLocalCoord2D[13][1] = 0.201503881881800;
+                        solPntsLocalCoord2D[12][0] = 0.047312487011716; 
+                        solPntsLocalCoord2D[12][1] = 0.751183631106484;
 
-                        solPntsLocalCoord2D[14][0] = 0.751183631106484; 
-                        solPntsLocalCoord2D[14][1] = 0.201503881881800;
+                        solPntsLocalCoord2D[13][0] =  0.201503881881800;
+                        solPntsLocalCoord2D[13][1] =  0.751183631106484;
+
+                        solPntsLocalCoord2D[14][0] = 0.035870877695734; 
+                        solPntsLocalCoord2D[14][1] = 0.928258244608533; 
 
       } break;
 
@@ -282,417 +283,71 @@ switch(polyOrder)
       {
                         solPntsLocalCoord2D[0][0] = 0.028112952182664; 
                         solPntsLocalCoord2D[0][1] = 0.028112952182664; 
+ 
+                        solPntsLocalCoord2D[1][0] = 0.148565812270887; 
+                        solPntsLocalCoord2D[1][1] = 0.033533207700614; 
 
-                        solPntsLocalCoord2D[1][0] = 0.943774095634672;
-                        solPntsLocalCoord2D[1][1] = 0.028112952182664; 
+                        solPntsLocalCoord2D[2][0] = 0.357196298615681; 
+                        solPntsLocalCoord2D[2][1] = 0.037824789609186;
 
-                        solPntsLocalCoord2D[2][0] = 0.028112952182664;
-                        solPntsLocalCoord2D[2][1] = 0.943774095634672;
+                        solPntsLocalCoord2D[3][0] = 0.604978911775132; 
+                        solPntsLocalCoord2D[3][1] = 0.037824789609186;
 
-                        solPntsLocalCoord2D[3][0] = 0.177139098469317;
-                        solPntsLocalCoord2D[3][1] = 0.177139098469317;
+                        solPntsLocalCoord2D[4][0] = 0.817900980028499; 
+                        solPntsLocalCoord2D[4][1] = 0.033533207700614;
 
-                        solPntsLocalCoord2D[4][0] = 0.645721803061365; 
-                        solPntsLocalCoord2D[4][1] = 0.177139098469317;
+                        solPntsLocalCoord2D[5][0] = 0.943774095634672;
+                        solPntsLocalCoord2D[5][1] = 0.028112952182664;
 
-                        solPntsLocalCoord2D[5][0] = 0.177139098469317;
-                        solPntsLocalCoord2D[5][1] = 0.645721803061365;
+                        solPntsLocalCoord2D[6][0] = 0.033533207700614;
+                        solPntsLocalCoord2D[6][1] = 0.148565812270887;
 
-                        solPntsLocalCoord2D[6][0] = 0.405508595867433;
-                        solPntsLocalCoord2D[6][1] = 0.188982808265134;
-
-                        solPntsLocalCoord2D[7][0] = 0.188982808265134;
-                        solPntsLocalCoord2D[7][1] = 0.405508595867433;
+                        solPntsLocalCoord2D[7][0] = 0.177139098469317;
+                        solPntsLocalCoord2D[7][1] = 0.177139098469317;
 
                         solPntsLocalCoord2D[8][0] = 0.405508595867433;
-                        solPntsLocalCoord2D[8][1] = 0.405508595867433;
+                        solPntsLocalCoord2D[8][1] = 0.188982808265134;
 
-                        solPntsLocalCoord2D[9][0] = 0.817900980028499; 
-                        solPntsLocalCoord2D[9][1] = 0.033533207700614;
+                        solPntsLocalCoord2D[9][0] = 0.645721803061365; 
+                        solPntsLocalCoord2D[9][1] = 0.177139098469317;
 
-                        solPntsLocalCoord2D[10][0] = 0.033533207700614; 
-                        solPntsLocalCoord2D[10][1] = 0.817900980028499;
+                        solPntsLocalCoord2D[10][0] = 0.817900980028499;
+                        solPntsLocalCoord2D[10][1] = 0.148565812270887;
 
-                        solPntsLocalCoord2D[11][0] = 0.148565812270887;
-                        solPntsLocalCoord2D[11][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[12][0] = 0.148565812270887; 
-                        solPntsLocalCoord2D[12][1] = 0.033533207700614; 
+                        solPntsLocalCoord2D[11][0] = 0.037824789609186; 
+                        solPntsLocalCoord2D[11][1] = 0.357196298615681; 
 
-                        solPntsLocalCoord2D[13][0] = 0.033533207700614;
-                        solPntsLocalCoord2D[13][1] = 0.148565812270887;
+                        solPntsLocalCoord2D[12][0] = 0.188982808265134;
+                        solPntsLocalCoord2D[12][1] = 0.405508595867433;
 
-                        solPntsLocalCoord2D[14][0] = 0.817900980028499;
-                        solPntsLocalCoord2D[14][1] = 0.148565812270887;
+                        solPntsLocalCoord2D[13][0] = 0.405508595867433;
+                        solPntsLocalCoord2D[13][1] = 0.405508595867433;
 
-                        solPntsLocalCoord2D[15][0] = 0.604978911775132; 
-                        solPntsLocalCoord2D[15][1] = 0.037824789609186;
+                        solPntsLocalCoord2D[14][0] = 0.604978911775132; 
+                        solPntsLocalCoord2D[14][1] = 0.357196298615681; 
 
-                        solPntsLocalCoord2D[16][0] = 0.037824789609186; 
-                        solPntsLocalCoord2D[16][1] = 0.604978911775132;
+
+                        solPntsLocalCoord2D[15][0] = 0.037824789609186; 
+                        solPntsLocalCoord2D[15][1] = 0.604978911775132;
+
+                        solPntsLocalCoord2D[16][0] = 0.177139098469317;
+                        solPntsLocalCoord2D[16][1] = 0.645721803061365;
 
                         solPntsLocalCoord2D[17][0] = 0.357196298615681;
                         solPntsLocalCoord2D[17][1] = 0.604978911775132;
 
-                        solPntsLocalCoord2D[18][0] = 0.357196298615681; 
-                        solPntsLocalCoord2D[18][1] = 0.037824789609186;
+                        solPntsLocalCoord2D[18][0] = 0.033533207700614; 
+                        solPntsLocalCoord2D[18][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[19][0] = 0.037824789609186; 
-                        solPntsLocalCoord2D[19][1] = 0.357196298615681; 
+                        solPntsLocalCoord2D[19][0] = 0.148565812270887;
+                        solPntsLocalCoord2D[19][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[20][0] = 0.604978911775132; 
-                        solPntsLocalCoord2D[20][1] = 0.357196298615681; 
+                        solPntsLocalCoord2D[20][0] = 0.028112952182664;
+                        solPntsLocalCoord2D[20][1] = 0.943774095634672;
 
       } break;
 
-
-   case CFPolyOrder::ORDER6:
-      {  
-                        solPntsLocalCoord2D[0][0] =  0.0000000000000;
-                        solPntsLocalCoord2D[0][1] =  0.9451704450174; 
-                        solPntsLocalCoord2D[1][0] =  0.9451704450173; 
-                        solPntsLocalCoord2D[1][1] =  0.0000000000000; 
-                        solPntsLocalCoord2D[2][0] =  0.9289002405719;
-                        solPntsLocalCoord2D[2][1] =  0.0685505797224;
-                        solPntsLocalCoord2D[3][0] =  0.0685505797224;
-                        solPntsLocalCoord2D[3][1] =  0.9289002405717;
-                        solPntsLocalCoord2D[4][0] =  0.0243268355615;
-                        solPntsLocalCoord2D[4][1] =  0.0243268355616; 
-                        solPntsLocalCoord2D[5][0] =  0.1279662835335;
-                        solPntsLocalCoord2D[5][1] =  0.0277838749488;
-                        solPntsLocalCoord2D[6][0] =  0.0277838749488; 
-                        solPntsLocalCoord2D[6][1] =  0.1279662835337; 
-                        solPntsLocalCoord2D[7][0] =  0.0287083428360; 
-                        solPntsLocalCoord2D[7][1] =  0.7498347588657;
-                        solPntsLocalCoord2D[8][0] =  0.7498347588656;
-                        solPntsLocalCoord2D[8][1] =  0.0287083428360;
-                        solPntsLocalCoord2D[9][0] =  0.7228007909707;
-                        solPntsLocalCoord2D[9][1] =  0.2497602062385;
-                        solPntsLocalCoord2D[10][0] = 0.2497602062386; 
-                        solPntsLocalCoord2D[10][1] = 0.7228007909707;
-                        solPntsLocalCoord2D[11][0] = 0.0865562992839;
-                        solPntsLocalCoord2D[11][1] = 0.8325513856997;
-                        solPntsLocalCoord2D[12][0] = 0.8325513856998;
-                        solPntsLocalCoord2D[12][1] = 0.0865562992839;
-                        solPntsLocalCoord2D[13][0] = 0.3061619157672;
-                        solPntsLocalCoord2D[13][1] = 0.0303526617491;
-                        solPntsLocalCoord2D[14][0] = 0.0303526617491;
-                        solPntsLocalCoord2D[14][1] = 0.3061619157675;
-                        solPntsLocalCoord2D[15][0] = 0.4868610595047;
-                        solPntsLocalCoord2D[15][1] = 0.4868610595047;
-                        solPntsLocalCoord2D[16][0] = 0.6657904293017;
-                        solPntsLocalCoord2D[16][1] = 0.1765456154219;
-                        solPntsLocalCoord2D[17][0] = 0.1765456154221; 
-                        solPntsLocalCoord2D[17][1] = 0.6657904293016;
-                        solPntsLocalCoord2D[18][0] = 0.0293121007360; 
-                        solPntsLocalCoord2D[18][1] = 0.5295657488669;
-                        solPntsLocalCoord2D[19][0] = 0.5295657488667;
-                        solPntsLocalCoord2D[19][1] = 0.0293121007360;
-                        solPntsLocalCoord2D[20][0] = 0.1444673824391; 
-                        solPntsLocalCoord2D[20][1] = 0.1444673824391;
-                        solPntsLocalCoord2D[21][0] = 0.3299740111411; 
-                        solPntsLocalCoord2D[21][1] = 0.5361815729050;
-                        solPntsLocalCoord2D[22][0] = 0.5361815729052; 
-                        solPntsLocalCoord2D[22][1] = 0.3299740111409;
-                        solPntsLocalCoord2D[23][0] = 0.5511507516862;
-                        solPntsLocalCoord2D[23][1] = 0.1437790861923;
-                        solPntsLocalCoord2D[24][0] = 0.1437790861923;
-                        solPntsLocalCoord2D[24][1] = 0.5511507516862;
-                        solPntsLocalCoord2D[25][0] = 0.3348066587327; 
-                        solPntsLocalCoord2D[25][1] = 0.1529619437161;
-                        solPntsLocalCoord2D[26][0] = 0.1529619437161; 
-                        solPntsLocalCoord2D[26][1] = 0.3348066587327;
-                        solPntsLocalCoord2D[27][0] = 0.3430183498147; 
-                        solPntsLocalCoord2D[27][1] = 0.3430183498147;
-                      
-      } break;
-
-
-      case CFPolyOrder::ORDER7:
-      {
-                        solPntsLocalCoord2D[0][0] = 0.0242935351590;
-                        solPntsLocalCoord2D[0][1] = 0.9493059293846; 
-                        solPntsLocalCoord2D[1][0] = 0.0265193427722;
-                        solPntsLocalCoord2D[1][1] = 0.0242695130640; 
-                        solPntsLocalCoord2D[2][0] = 0.9492126023551;
-                        solPntsLocalCoord2D[2][1] = 0.0265067966437;
-                        solPntsLocalCoord2D[3][0] = 0.0033775763749;
-                        solPntsLocalCoord2D[3][1] = 0.4767316412363;
-                        solPntsLocalCoord2D[4][0] = 0.4757672298101;
-                        solPntsLocalCoord2D[4][1] = 0.5198921829102; 
-                        solPntsLocalCoord2D[5][0] = 0.5190783193471;
-                        solPntsLocalCoord2D[5][1] = 0.0055912706202;
-                        solPntsLocalCoord2D[6][0] = 0.8616839745321; 
-                        solPntsLocalCoord2D[6][1] = 0.0133996048618; 
-                        solPntsLocalCoord2D[7][0] = 0.1249209759926;
-                        solPntsLocalCoord2D[7][1] = 0.8613054321334;
-                        solPntsLocalCoord2D[8][0] = 0.0138565453861;
-                        solPntsLocalCoord2D[8][1] = 0.1247733717358;
-                        solPntsLocalCoord2D[9][0] = 0.0211887064222;
-                        solPntsLocalCoord2D[9][1] = 0.8438438351223;
-                        solPntsLocalCoord2D[10][0]  =0.8432296787219; 
-                        solPntsLocalCoord2D[10][1] = 0.1354563645830;
-                        solPntsLocalCoord2D[11][0] = 0.1354231797865;
-                        solPntsLocalCoord2D[11][1] = 0.0213482820656;
-                        solPntsLocalCoord2D[12][0] = 0.3088853510679;
-                        solPntsLocalCoord2D[12][1] = 0.0221919663014;
-                        solPntsLocalCoord2D[13][0] = 0.6685057595169;
-                        solPntsLocalCoord2D[13][1] = 0.3089012879389;
-                        solPntsLocalCoord2D[14][0] = 0.0226545012557;
-                        solPntsLocalCoord2D[14][1] = 0.6691709943321;
-                        solPntsLocalCoord2D[15][0] = 0.2808515408772;
-                        solPntsLocalCoord2D[15][1] = 0.6924718155106;
-                        solPntsLocalCoord2D[16][0] = 0.6922446749051;
-                        solPntsLocalCoord2D[16][1] = 0.0268723345026;
-                        solPntsLocalCoord2D[17][0] = 0.0268617447119; 
-                        solPntsLocalCoord2D[17][1] = 0.2810093973222;
-                        solPntsLocalCoord2D[18][0] = 0.1141778485470; 
-                        solPntsLocalCoord2D[18][1] = 0.7973581413586;
-                        solPntsLocalCoord2D[19][0] = 0.7974807922061;
-                        solPntsLocalCoord2D[19][1] = 0.0879806508791;
-                        solPntsLocalCoord2D[20][0] = 0.0892807293894; 
-                        solPntsLocalCoord2D[20][1] = 0.1145020561128;
-                        solPntsLocalCoord2D[21][0] = 0.1052487892455; 
-                        solPntsLocalCoord2D[21][1] = 0.6686904119922;
-                        solPntsLocalCoord2D[22][0] = 0.6663022280740; 
-                        solPntsLocalCoord2D[22][1] = 0.2275051631832;
-                        solPntsLocalCoord2D[23][0] = 0.2307803737547;
-                        solPntsLocalCoord2D[23][1] = 0.1054572561221;
-                        solPntsLocalCoord2D[24][0] = 0.1705059157540;
-                        solPntsLocalCoord2D[24][1] = 0.5174064398658;
-                        solPntsLocalCoord2D[25][0] = 0.5086593973043; 
-                        solPntsLocalCoord2D[25][1] = 0.3170523855209;
-                        solPntsLocalCoord2D[26][0] = 0.3141823862281; 
-                        solPntsLocalCoord2D[26][1] = 0.1810706361659;
-                        solPntsLocalCoord2D[27][0] = 0.4617460817864; 
-                        solPntsLocalCoord2D[27][1] = 0.4678594539804;
-                        solPntsLocalCoord2D[28][0] = 0.0693087496081; 
-                        solPntsLocalCoord2D[28][1] = 0.4622856042085;
-                        solPntsLocalCoord2D[29][0] = 0.4622856042085; 
-                        solPntsLocalCoord2D[29][1] = 0.0724357805669;
-                        solPntsLocalCoord2D[30][0] = 0.2578625857893;
-                        solPntsLocalCoord2D[30][1] = 0.6131395039177;
-                        solPntsLocalCoord2D[31][0] = 0.6112627766779;
-                        solPntsLocalCoord2D[31][1] = 0.1300360834609;
-                        solPntsLocalCoord2D[32][0] = 0.1305182135934;
-                        solPntsLocalCoord2D[32][1] = 0.2581713828884;
-                        solPntsLocalCoord2D[33][0] = 0.4281437991828; 
-                        solPntsLocalCoord2D[33][1] = 0.2362005969817;
-                        solPntsLocalCoord2D[34][0] = 0.3356995783730; 
-                        solPntsLocalCoord2D[34][1] = 0.4311026308588;
-                        solPntsLocalCoord2D[35][0] = 0.2305424298836; 
-                        solPntsLocalCoord2D[35][1] = 0.3456013949376;
-
-                      
-      } break;
-
-        case CFPolyOrder::ORDER8:
-      {
-                        solPntsLocalCoord2D[0][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[0][1] = 1.0000000000000; 
-                        solPntsLocalCoord2D[1][0] = 1.0000000000000;
-                        solPntsLocalCoord2D[1][1] = 0.0000000000000; 
-                        solPntsLocalCoord2D[2][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[2][1] = 0.0000000000000;
-                        solPntsLocalCoord2D[3][0] = 0.0573330873026;
-                        solPntsLocalCoord2D[3][1] = 0.0151382269814;
-                        solPntsLocalCoord2D[4][0] = 0.0573330873026;
-                        solPntsLocalCoord2D[4][1] = 0.9275286857160; 
-                        solPntsLocalCoord2D[5][0] = 0.9275286857160;
-                        solPntsLocalCoord2D[5][1] = 0.0573330873026;
-                        solPntsLocalCoord2D[6][0] = 0.0151382269814; 
-                        solPntsLocalCoord2D[6][1] = 0.0573330873026; 
-                        solPntsLocalCoord2D[7][0] = 0.9275286857160;
-                        solPntsLocalCoord2D[7][1] = 0.0151382269814;
-                        solPntsLocalCoord2D[8][0] = 0.0151382269814;
-                        solPntsLocalCoord2D[8][1] = 0.9275286857160;
-                        solPntsLocalCoord2D[9][0] = 0.8159625040711;
-                        solPntsLocalCoord2D[9][1] = 0.1659719969565;
-                        solPntsLocalCoord2D[10][0]  =0.8159625040711; 
-                        solPntsLocalCoord2D[10][1] = 0.0180654989724;
-                        solPntsLocalCoord2D[11][0] = 0.1659719969565;
-                        solPntsLocalCoord2D[11][1] = 0.8159625040711;
-                        solPntsLocalCoord2D[12][0] = 0.0180654989724;
-                        solPntsLocalCoord2D[12][1] = 0.8159625040711;
-                        solPntsLocalCoord2D[13][0] = 0.1659719969565;
-                        solPntsLocalCoord2D[13][1] = 0.0180654989724;
-                        solPntsLocalCoord2D[14][0] = 0.0180654989724;
-                        solPntsLocalCoord2D[14][1] = 0.1659719969565;
-                        solPntsLocalCoord2D[15][0] = 0.3165475556378;
-                        solPntsLocalCoord2D[15][1] = 0.0186886898773;
-                        solPntsLocalCoord2D[16][0] = 0.6647637544849;
-                        solPntsLocalCoord2D[16][1] = 0.0186886898773;
-                        solPntsLocalCoord2D[17][0] = 0.0186886898773; 
-                        solPntsLocalCoord2D[17][1] = 0.6647637544849;
-                        solPntsLocalCoord2D[18][0] = 0.0186886898773; 
-                        solPntsLocalCoord2D[18][1] = 0.3165475556378;
-                        solPntsLocalCoord2D[19][0] = 0.3165475556378;
-                        solPntsLocalCoord2D[19][1] = 0.6647637544849;
-                        solPntsLocalCoord2D[20][0] = 0.6647637544849; 
-                        solPntsLocalCoord2D[20][1] = 0.3165475556378;
-                        solPntsLocalCoord2D[21][0] = 0.0192662192492; 
-                        solPntsLocalCoord2D[21][1] = 0.4903668903754;
-                        solPntsLocalCoord2D[22][0] = 0.4903668903754; 
-                        solPntsLocalCoord2D[22][1] = 0.0192662192492;
-                        solPntsLocalCoord2D[23][0] = 0.4903668903754;
-                        solPntsLocalCoord2D[23][1] = 0.4903668903754;
-                        solPntsLocalCoord2D[24][0] = 0.0875134669581;
-                        solPntsLocalCoord2D[24][1] = 0.8249730660837;
-                        solPntsLocalCoord2D[25][0] = 0.0875134669581; 
-                        solPntsLocalCoord2D[25][1] = 0.0875134669581;
-                        solPntsLocalCoord2D[26][0] = 0.8249730660837; 
-                        solPntsLocalCoord2D[26][1] = 0.0875134669581;
-                        solPntsLocalCoord2D[27][0] = 0.0935526036219; 
-                        solPntsLocalCoord2D[27][1] = 0.2079865423167;
-                        solPntsLocalCoord2D[28][0] = 0.0935526036219; 
-                        solPntsLocalCoord2D[28][1] = 0.6984608540613;
-                        solPntsLocalCoord2D[29][0] = 0.2079865423167; 
-                        solPntsLocalCoord2D[29][1] = 0.0935526036219;
-                        solPntsLocalCoord2D[30][0] = 0.6984608540613;
-                        solPntsLocalCoord2D[30][1] = 0.0935526036219;
-                        solPntsLocalCoord2D[31][0] = 0.6984608540613;
-                        solPntsLocalCoord2D[31][1] = 0.2079865423167;
-                        solPntsLocalCoord2D[32][0] = 0.2079865423167;
-                        solPntsLocalCoord2D[32][1] = 0.6984608540613;
-                        solPntsLocalCoord2D[33][0] = 0.0974892983467; 
-                        solPntsLocalCoord2D[33][1] = 0.5380088595149;
-                        solPntsLocalCoord2D[34][0] = 0.3645018421383; 
-                        solPntsLocalCoord2D[34][1] = 0.0974892983467;
-                        solPntsLocalCoord2D[35][0] = 0.5380088595149;
-                        solPntsLocalCoord2D[35][1] = 0.0974892983467;
-                        solPntsLocalCoord2D[36][0] = 0.5380088595149; 
-                        solPntsLocalCoord2D[36][1] = 0.3645018421383; 
-                        solPntsLocalCoord2D[37][0] = 0.3645018421383; 
-                        solPntsLocalCoord2D[37][1] = 0.5380088595149; 
-                        solPntsLocalCoord2D[38][0] = 0.0974892983467;
-                        solPntsLocalCoord2D[38][1] = 0.3645018421383;
-                        solPntsLocalCoord2D[39][0] = 0.2217145894873;
-                        solPntsLocalCoord2D[39][1] = 0.5565708210253;
-                        solPntsLocalCoord2D[40][0] = 0.5565708210253;
-                        solPntsLocalCoord2D[40][1] = 0.2217145894873; 
-                        solPntsLocalCoord2D[41][0] = 0.2217145894873;
-                        solPntsLocalCoord2D[41][1] = 0.2217145894873;
-                        solPntsLocalCoord2D[42][0] = 0.3860471669296; 
-                        solPntsLocalCoord2D[42][1] = 0.2279056661408; 
-                        solPntsLocalCoord2D[43][0] = 0.2279056661408; 
-                        solPntsLocalCoord2D[43][1] = 0.3860471669296;
-                        solPntsLocalCoord2D[44][0] = 0.3860471669296;
-                        solPntsLocalCoord2D[44][1] = 0.3860471669296;                      
-      } break;
-          case CFPolyOrder::ORDER9:
-      {
-                        solPntsLocalCoord2D[0][0] = 1.0000000000000;
-                        solPntsLocalCoord2D[0][1] = 0.0000000000000; 
-                        solPntsLocalCoord2D[1][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[1][1] = 1.0000000000000; 
-                        solPntsLocalCoord2D[2][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[2][1] = 0.0000000000000;
-                        solPntsLocalCoord2D[3][0] = 0.9398863583577;
-                        solPntsLocalCoord2D[3][1] = 0.0049848744634;
-                        solPntsLocalCoord2D[4][0] =0.0543806683058;
-                        solPntsLocalCoord2D[4][1] = 0.9386405618617; 
-                        solPntsLocalCoord2D[5][0] = 0.0093940049164;
-                        solPntsLocalCoord2D[5][1] = 0.0526424462697;
-                        solPntsLocalCoord2D[6][0] = 0.0164345086362; 
-                        solPntsLocalCoord2D[6][1] = 0.9469035517351; 
-                        solPntsLocalCoord2D[7][0] = 0.9469487269862;
-                        solPntsLocalCoord2D[7][1] = 0.0363373677167;
-                        solPntsLocalCoord2D[8][0] = 0.0426604005768;
-                        solPntsLocalCoord2D[8][1] = 0.0151224541799;
-                        solPntsLocalCoord2D[9][0] = 0.0122269495439;
-                        solPntsLocalCoord2D[9][1] = 0.8693773510664;
-                        solPntsLocalCoord2D[10][0] = 0.8673696521047; 
-                        solPntsLocalCoord2D[10][1] = 0.1204917285774;
-                        solPntsLocalCoord2D[11][0] = 0.8456744021389;
-                        solPntsLocalCoord2D[11][1] = 0.0157763967870;
-                        solPntsLocalCoord2D[12][0] = 0.1395759632103;
-                        solPntsLocalCoord2D[12][1] = 0.8448120870375;
-                        solPntsLocalCoord2D[13][0] = 0.1317821743231;
-                        solPntsLocalCoord2D[13][1] = 0.0135009605584;
-                        solPntsLocalCoord2D[14][0] = 0.0157955126300;
-                        solPntsLocalCoord2D[14][1] = 0.1455274938536;
-                        solPntsLocalCoord2D[15][0] = 0.7365462884436;
-                        solPntsLocalCoord2D[15][1] = 0.0155697540908;
-                        solPntsLocalCoord2D[16][0] = 0.0139688430330;
-                        solPntsLocalCoord2D[16][1] = 0.7379836894450;
-                        solPntsLocalCoord2D[17][0] = 0.2547895186039; 
-                        solPntsLocalCoord2D[17][1] = 0.7297615689771;
-                        solPntsLocalCoord2D[18][0] = 0.7316386522555;
-                        solPntsLocalCoord2D[18][1] = 0.2543076683315;
-                        solPntsLocalCoord2D[19][0] = 0.0157253728951;
-                        solPntsLocalCoord2D[19][1] = 0.2696239795791;
-                        solPntsLocalCoord2D[20][0] = 0.2662302843647; 
-                        solPntsLocalCoord2D[20][1] = 0.0144783956308;
-                        solPntsLocalCoord2D[21][0] = 0.8673504065214; 
-                        solPntsLocalCoord2D[21][1] = 0.0591679410400;
-                        solPntsLocalCoord2D[22][0] = 0.0741493666957; 
-                        solPntsLocalCoord2D[22][1] = 0.8634782575061;
-                        solPntsLocalCoord2D[23][0] = 0.0159285948360;
-                        solPntsLocalCoord2D[23][1] = 0.4191238955238;
-                        solPntsLocalCoord2D[24][0] = 0.0156061028068;
-                        solPntsLocalCoord2D[24][1] = 0.5809222921146;
-                        solPntsLocalCoord2D[25][0] = 0.5910094817484;
-                        solPntsLocalCoord2D[25][1] = 0.0159251452651;
-                        solPntsLocalCoord2D[26][0] = 0.4034771496889; 
-                        solPntsLocalCoord2D[26][1] = 0.5806700368104;
-                        solPntsLocalCoord2D[27][0] = 0.5694745628526; 
-                        solPntsLocalCoord2D[27][1] = 0.4149495146302;
-                        solPntsLocalCoord2D[28][0] = 0.0678493700650;
-                        solPntsLocalCoord2D[28][1] = 0.0761218678591;
-                        solPntsLocalCoord2D[29][0] = 0.4265968590272; 
-                        solPntsLocalCoord2D[29][1] = 0.0157509692312;
-                        solPntsLocalCoord2D[30][0] = 0.0670982507890;
-                        solPntsLocalCoord2D[30][1] = 0.7741898312421;
-                        solPntsLocalCoord2D[31][0] = 0.7528310231480;
-                        solPntsLocalCoord2D[31][1] = 0.0819119495639;
-                        solPntsLocalCoord2D[32][0] = 0.7753727783557;
-                        solPntsLocalCoord2D[32][1] = 0.1577128457292;
-                        solPntsLocalCoord2D[33][0] = 0.1689073157787; 
-                        solPntsLocalCoord2D[33][1] = 0.7503943099742;
-                        solPntsLocalCoord2D[34][0] = 0.1687335832919; 
-                        solPntsLocalCoord2D[34][1] = 0.0708311507268;
-                        solPntsLocalCoord2D[35][0] = 0.0821244708436;
-                        solPntsLocalCoord2D[35][1] = 0.1762996626771;
-                        solPntsLocalCoord2D[36][0] = 0.6288705363345; 
-                        solPntsLocalCoord2D[36][1] = 0.0807744953317; 
-                        solPntsLocalCoord2D[37][0] = 0.0811413015266; 
-                        solPntsLocalCoord2D[37][1] = 0.3054373589776; 
-                        solPntsLocalCoord2D[38][0] = 0.2969112065080;
-                        solPntsLocalCoord2D[38][1] = 0.6227485988871;
-                        solPntsLocalCoord2D[39][0] = 0.0767542314171;
-                        solPntsLocalCoord2D[39][1] = 0.6247247149546;
-                        solPntsLocalCoord2D[40][0] = 0.6223022333845;
-                        solPntsLocalCoord2D[40][1] = 0.3011485821166; 
-                        solPntsLocalCoord2D[41][0] = 0.3103786288051;
-                        solPntsLocalCoord2D[41][1] = 0.0779098365079;
-                        solPntsLocalCoord2D[42][0] = 0.0819218215187; 
-                        solPntsLocalCoord2D[42][1] = 0.4603633038351; 
-                        solPntsLocalCoord2D[43][0] = 0.4717022665013; 
-                        solPntsLocalCoord2D[43][1] = 0.0821554006797;
-                        solPntsLocalCoord2D[44][0] = 0.4546603415250;
-                        solPntsLocalCoord2D[44][1] = 0.4637565033890;
-                        solPntsLocalCoord2D[45][0] = 0.1701091339237;
-                        solPntsLocalCoord2D[45][1] = 0.6422277808188; 
-                        solPntsLocalCoord2D[46][0] = 0.6406004329487;
-                        solPntsLocalCoord2D[46][1] = 0.1898293537256; 
-                        solPntsLocalCoord2D[47][0] = 0.1912267583717;
-                        solPntsLocalCoord2D[47][1] = 0.1739955685343;
-                        solPntsLocalCoord2D[48][0] = 0.1885315767070;                        
-                        solPntsLocalCoord2D[48][1] = 0.4798914070406;
-                        solPntsLocalCoord2D[49][0] = 0.4772929957691;
-                        solPntsLocalCoord2D[49][1] = 0.3348356598119; 
-                        solPntsLocalCoord2D[50][0] = 0.3126974621760;
-                        solPntsLocalCoord2D[50][1] = 0.4957972197259;
-                        solPntsLocalCoord2D[51][0] = 0.4961225945946; 
-                        solPntsLocalCoord2D[51][1] = 0.1927553668904; 
-                        solPntsLocalCoord2D[52][0] = 0.1928805312867;
-                        solPntsLocalCoord2D[52][1] = 0.3161015807261;
-                        solPntsLocalCoord2D[53][0] = 0.3360041453816;
-                        solPntsLocalCoord2D[53][1] = 0.1894892801290;
-                        solPntsLocalCoord2D[54][0] = 0.3337280550848;
-                        solPntsLocalCoord2D[54][1] = 0.3343571021811;
-                      
-      } break;
       default:
       {
         throw Common::NotImplementedException (FromHere(),"Quadrature Points not implemented for order "
@@ -795,52 +450,53 @@ switch(polyOrder)
 
 
       } break;
-      case CFPolyOrder::ORDER4:   
+        case CFPolyOrder::ORDER4:   
       {
                         solPntsLocalCoord2D[0][0] = 0.035870877695734; 
                         solPntsLocalCoord2D[0][1] = 0.035870877695734;
 
-                        solPntsLocalCoord2D[1][0] = 0.928258244608533; 
-                        solPntsLocalCoord2D[1][1] = 0.035870877695734;
+                        solPntsLocalCoord2D[1][0] = 0.201503881881800; 
+                        solPntsLocalCoord2D[1][1] =  0.047312487011716;
 
-                        solPntsLocalCoord2D[2][0] = 0.035870877695734; 
-                        solPntsLocalCoord2D[2][1] = 0.928258244608533; 
+                        solPntsLocalCoord2D[2][0] = 0.474308787777079;
+                        solPntsLocalCoord2D[2][1] = 0.051382424445843; 
 
-                        solPntsLocalCoord2D[3][0] = 0.241729395767967;
-                        solPntsLocalCoord2D[3][1] = 0.241729395767967;
+                        solPntsLocalCoord2D[3][0] = 0.751183631106484; 
+                        solPntsLocalCoord2D[3][1] = 0.047312487011716;
 
-                        solPntsLocalCoord2D[4][0] = 0.516541208464066; 
-                        solPntsLocalCoord2D[4][1] = 0.241729395767967; 
+                        solPntsLocalCoord2D[4][0] = 0.928258244608533; 
+                        solPntsLocalCoord2D[4][1] = 0.035870877695734;
 
-                        solPntsLocalCoord2D[5][0] = 0.241729395767967; 
-                        solPntsLocalCoord2D[5][1] = 0.516541208464066; 
 
-                        solPntsLocalCoord2D[6][0] = 0.474308787777079;
-                        solPntsLocalCoord2D[6][1] = 0.051382424445843; 
+                        solPntsLocalCoord2D[5][0] = 0.047312487011716;
+                        solPntsLocalCoord2D[5][1] = 0.201503881881800;
 
-                        solPntsLocalCoord2D[7][0] = 0.051382424445843;
-                        solPntsLocalCoord2D[7][1] = 0.474308787777079;
+                        solPntsLocalCoord2D[6][0] = 0.241729395767967;
+                        solPntsLocalCoord2D[6][1] = 0.241729395767967;
 
-                        solPntsLocalCoord2D[8][0] = 0.474308787777079; 
-                        solPntsLocalCoord2D[8][1] = 0.474308787777079;
+                        solPntsLocalCoord2D[7][0] = 0.516541208464066; 
+                        solPntsLocalCoord2D[7][1] = 0.241729395767967; 
 
-                        solPntsLocalCoord2D[9][0] = 0.751183631106484; 
-                        solPntsLocalCoord2D[9][1] = 0.047312487011716;
+                        solPntsLocalCoord2D[8][0] = 0.751183631106484; 
+                        solPntsLocalCoord2D[8][1] = 0.201503881881800;
 
-                        solPntsLocalCoord2D[10][0] = 0.047312487011716; 
-                        solPntsLocalCoord2D[10][1] = 0.751183631106484;
+                        solPntsLocalCoord2D[9][0] = 0.051382424445843;
+                        solPntsLocalCoord2D[9][1] = 0.474308787777079;
 
-                        solPntsLocalCoord2D[11][0] =  0.201503881881800;
-                        solPntsLocalCoord2D[11][1] =  0.751183631106484;
+                        solPntsLocalCoord2D[10][0] = 0.241729395767967; 
+                        solPntsLocalCoord2D[10][1] = 0.516541208464066; 
 
-                        solPntsLocalCoord2D[12][0] = 0.201503881881800; 
-                        solPntsLocalCoord2D[12][1] =  0.047312487011716;
+                        solPntsLocalCoord2D[11][0] = 0.474308787777079; 
+                        solPntsLocalCoord2D[11][1] = 0.474308787777079;
 
-                        solPntsLocalCoord2D[13][0] = 0.047312487011716;
-                        solPntsLocalCoord2D[13][1] = 0.201503881881800;
+                        solPntsLocalCoord2D[12][0] = 0.047312487011716; 
+                        solPntsLocalCoord2D[12][1] = 0.751183631106484;
 
-                        solPntsLocalCoord2D[14][0] = 0.751183631106484; 
-                        solPntsLocalCoord2D[14][1] = 0.201503881881800;
+                        solPntsLocalCoord2D[13][0] =  0.201503881881800;
+                        solPntsLocalCoord2D[13][1] =  0.751183631106484;
+
+                        solPntsLocalCoord2D[14][0] = 0.035870877695734; 
+                        solPntsLocalCoord2D[14][1] = 0.928258244608533; 
 
       } break;
 
@@ -848,416 +504,69 @@ switch(polyOrder)
       {
                         solPntsLocalCoord2D[0][0] = 0.028112952182664; 
                         solPntsLocalCoord2D[0][1] = 0.028112952182664; 
+ 
+                        solPntsLocalCoord2D[1][0] = 0.148565812270887; 
+                        solPntsLocalCoord2D[1][1] = 0.033533207700614; 
 
-                        solPntsLocalCoord2D[1][0] = 0.943774095634672;
-                        solPntsLocalCoord2D[1][1] = 0.028112952182664; 
+                        solPntsLocalCoord2D[2][0] = 0.357196298615681; 
+                        solPntsLocalCoord2D[2][1] = 0.037824789609186;
 
-                        solPntsLocalCoord2D[2][0] = 0.028112952182664;
-                        solPntsLocalCoord2D[2][1] = 0.943774095634672;
+                        solPntsLocalCoord2D[3][0] = 0.604978911775132; 
+                        solPntsLocalCoord2D[3][1] = 0.037824789609186;
 
-                        solPntsLocalCoord2D[3][0] = 0.177139098469317;
-                        solPntsLocalCoord2D[3][1] = 0.177139098469317;
+                        solPntsLocalCoord2D[4][0] = 0.817900980028499; 
+                        solPntsLocalCoord2D[4][1] = 0.033533207700614;
 
-                        solPntsLocalCoord2D[4][0] = 0.645721803061365; 
-                        solPntsLocalCoord2D[4][1] = 0.177139098469317;
+                        solPntsLocalCoord2D[5][0] = 0.943774095634672;
+                        solPntsLocalCoord2D[5][1] = 0.028112952182664;
 
-                        solPntsLocalCoord2D[5][0] = 0.177139098469317;
-                        solPntsLocalCoord2D[5][1] = 0.645721803061365;
+                        solPntsLocalCoord2D[6][0] = 0.033533207700614;
+                        solPntsLocalCoord2D[6][1] = 0.148565812270887;
 
-                        solPntsLocalCoord2D[6][0] = 0.405508595867433;
-                        solPntsLocalCoord2D[6][1] = 0.188982808265134;
-
-                        solPntsLocalCoord2D[7][0] = 0.188982808265134;
-                        solPntsLocalCoord2D[7][1] = 0.405508595867433;
+                        solPntsLocalCoord2D[7][0] = 0.177139098469317;
+                        solPntsLocalCoord2D[7][1] = 0.177139098469317;
 
                         solPntsLocalCoord2D[8][0] = 0.405508595867433;
-                        solPntsLocalCoord2D[8][1] = 0.405508595867433;
+                        solPntsLocalCoord2D[8][1] = 0.188982808265134;
 
-                        solPntsLocalCoord2D[9][0] = 0.817900980028499; 
-                        solPntsLocalCoord2D[9][1] = 0.033533207700614;
+                        solPntsLocalCoord2D[9][0] = 0.645721803061365; 
+                        solPntsLocalCoord2D[9][1] = 0.177139098469317;
 
-                        solPntsLocalCoord2D[10][0] = 0.033533207700614; 
-                        solPntsLocalCoord2D[10][1] = 0.817900980028499;
+                        solPntsLocalCoord2D[10][0] = 0.817900980028499;
+                        solPntsLocalCoord2D[10][1] = 0.148565812270887;
 
-                        solPntsLocalCoord2D[11][0] = 0.148565812270887;
-                        solPntsLocalCoord2D[11][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[12][0] = 0.148565812270887; 
-                        solPntsLocalCoord2D[12][1] = 0.033533207700614; 
+                        solPntsLocalCoord2D[11][0] = 0.037824789609186; 
+                        solPntsLocalCoord2D[11][1] = 0.357196298615681; 
 
-                        solPntsLocalCoord2D[13][0] = 0.033533207700614;
-                        solPntsLocalCoord2D[13][1] = 0.148565812270887;
+                        solPntsLocalCoord2D[12][0] = 0.188982808265134;
+                        solPntsLocalCoord2D[12][1] = 0.405508595867433;
 
-                        solPntsLocalCoord2D[14][0] = 0.817900980028499;
-                        solPntsLocalCoord2D[14][1] = 0.148565812270887;
+                        solPntsLocalCoord2D[13][0] = 0.405508595867433;
+                        solPntsLocalCoord2D[13][1] = 0.405508595867433;
 
-                        solPntsLocalCoord2D[15][0] = 0.604978911775132; 
-                        solPntsLocalCoord2D[15][1] = 0.037824789609186;
+                        solPntsLocalCoord2D[14][0] = 0.604978911775132; 
+                        solPntsLocalCoord2D[14][1] = 0.357196298615681; 
 
-                        solPntsLocalCoord2D[16][0] = 0.037824789609186; 
-                        solPntsLocalCoord2D[16][1] = 0.604978911775132;
+
+                        solPntsLocalCoord2D[15][0] = 0.037824789609186; 
+                        solPntsLocalCoord2D[15][1] = 0.604978911775132;
+
+                        solPntsLocalCoord2D[16][0] = 0.177139098469317;
+                        solPntsLocalCoord2D[16][1] = 0.645721803061365;
 
                         solPntsLocalCoord2D[17][0] = 0.357196298615681;
                         solPntsLocalCoord2D[17][1] = 0.604978911775132;
 
-                        solPntsLocalCoord2D[18][0] = 0.357196298615681; 
-                        solPntsLocalCoord2D[18][1] = 0.037824789609186;
+                        solPntsLocalCoord2D[18][0] = 0.033533207700614; 
+                        solPntsLocalCoord2D[18][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[19][0] = 0.037824789609186; 
-                        solPntsLocalCoord2D[19][1] = 0.357196298615681; 
+                        solPntsLocalCoord2D[19][0] = 0.148565812270887;
+                        solPntsLocalCoord2D[19][1] = 0.817900980028499;
 
-                        solPntsLocalCoord2D[20][0] = 0.604978911775132; 
-                        solPntsLocalCoord2D[20][1] = 0.357196298615681; 
+                        solPntsLocalCoord2D[20][0] = 0.028112952182664;
+                        solPntsLocalCoord2D[20][1] = 0.943774095634672;
 
-      } break;
-
-
-   case CFPolyOrder::ORDER6:
-      {  
-                        solPntsLocalCoord2D[0][0] =  0.0000000000000;
-                        solPntsLocalCoord2D[0][1] =  0.9451704450174; 
-                        solPntsLocalCoord2D[1][0] =  0.9451704450173; 
-                        solPntsLocalCoord2D[1][1] =  0.0000000000000; 
-                        solPntsLocalCoord2D[2][0] =  0.9289002405719;
-                        solPntsLocalCoord2D[2][1] =  0.0685505797224;
-                        solPntsLocalCoord2D[3][0] =  0.0685505797224;
-                        solPntsLocalCoord2D[3][1] =  0.9289002405717;
-                        solPntsLocalCoord2D[4][0] =  0.0243268355615;
-                        solPntsLocalCoord2D[4][1] =  0.0243268355616; 
-                        solPntsLocalCoord2D[5][0] =  0.1279662835335;
-                        solPntsLocalCoord2D[5][1] =  0.0277838749488;
-                        solPntsLocalCoord2D[6][0] =  0.0277838749488; 
-                        solPntsLocalCoord2D[6][1] =  0.1279662835337; 
-                        solPntsLocalCoord2D[7][0] =  0.0287083428360; 
-                        solPntsLocalCoord2D[7][1] =  0.7498347588657;
-                        solPntsLocalCoord2D[8][0] =  0.7498347588656;
-                        solPntsLocalCoord2D[8][1] =  0.0287083428360;
-                        solPntsLocalCoord2D[9][0] =  0.7228007909707;
-                        solPntsLocalCoord2D[9][1] =  0.2497602062385;
-                        solPntsLocalCoord2D[10][0] = 0.2497602062386; 
-                        solPntsLocalCoord2D[10][1] = 0.7228007909707;
-                        solPntsLocalCoord2D[11][0] = 0.0865562992839;
-                        solPntsLocalCoord2D[11][1] = 0.8325513856997;
-                        solPntsLocalCoord2D[12][0] = 0.8325513856998;
-                        solPntsLocalCoord2D[12][1] = 0.0865562992839;
-                        solPntsLocalCoord2D[13][0] = 0.3061619157672;
-                        solPntsLocalCoord2D[13][1] = 0.0303526617491;
-                        solPntsLocalCoord2D[14][0] = 0.0303526617491;
-                        solPntsLocalCoord2D[14][1] = 0.3061619157675;
-                        solPntsLocalCoord2D[15][0] = 0.4868610595047;
-                        solPntsLocalCoord2D[15][1] = 0.4868610595047;
-                        solPntsLocalCoord2D[16][0] = 0.6657904293017;
-                        solPntsLocalCoord2D[16][1] = 0.1765456154219;
-                        solPntsLocalCoord2D[17][0] = 0.1765456154221; 
-                        solPntsLocalCoord2D[17][1] = 0.6657904293016;
-                        solPntsLocalCoord2D[18][0] = 0.0293121007360; 
-                        solPntsLocalCoord2D[18][1] = 0.5295657488669;
-                        solPntsLocalCoord2D[19][0] = 0.5295657488667;
-                        solPntsLocalCoord2D[19][1] = 0.0293121007360;
-                        solPntsLocalCoord2D[20][0] = 0.1444673824391; 
-                        solPntsLocalCoord2D[20][1] = 0.1444673824391;
-                        solPntsLocalCoord2D[21][0] = 0.3299740111411; 
-                        solPntsLocalCoord2D[21][1] = 0.5361815729050;
-                        solPntsLocalCoord2D[22][0] = 0.5361815729052; 
-                        solPntsLocalCoord2D[22][1] = 0.3299740111409;
-                        solPntsLocalCoord2D[23][0] = 0.5511507516862;
-                        solPntsLocalCoord2D[23][1] = 0.1437790861923;
-                        solPntsLocalCoord2D[24][0] = 0.1437790861923;
-                        solPntsLocalCoord2D[24][1] = 0.5511507516862;
-                        solPntsLocalCoord2D[25][0] = 0.3348066587327; 
-                        solPntsLocalCoord2D[25][1] = 0.1529619437161;
-                        solPntsLocalCoord2D[26][0] = 0.1529619437161; 
-                        solPntsLocalCoord2D[26][1] = 0.3348066587327;
-                        solPntsLocalCoord2D[27][0] = 0.3430183498147; 
-                        solPntsLocalCoord2D[27][1] = 0.3430183498147;
-                      
-      } break;
-
-
-      case CFPolyOrder::ORDER7:
-      {
-                        solPntsLocalCoord2D[0][0] = 0.0242935351590;
-                        solPntsLocalCoord2D[0][1] = 0.9493059293846; 
-                        solPntsLocalCoord2D[1][0] = 0.0265193427722;
-                        solPntsLocalCoord2D[1][1] = 0.0242695130640; 
-                        solPntsLocalCoord2D[2][0] = 0.9492126023551;
-                        solPntsLocalCoord2D[2][1] = 0.0265067966437;
-                        solPntsLocalCoord2D[3][0] = 0.0033775763749;
-                        solPntsLocalCoord2D[3][1] = 0.4767316412363;
-                        solPntsLocalCoord2D[4][0] = 0.4757672298101;
-                        solPntsLocalCoord2D[4][1] = 0.5198921829102; 
-                        solPntsLocalCoord2D[5][0] = 0.5190783193471;
-                        solPntsLocalCoord2D[5][1] = 0.0055912706202;
-                        solPntsLocalCoord2D[6][0] = 0.8616839745321; 
-                        solPntsLocalCoord2D[6][1] = 0.0133996048618; 
-                        solPntsLocalCoord2D[7][0] = 0.1249209759926;
-                        solPntsLocalCoord2D[7][1] = 0.8613054321334;
-                        solPntsLocalCoord2D[8][0] = 0.0138565453861;
-                        solPntsLocalCoord2D[8][1] = 0.1247733717358;
-                        solPntsLocalCoord2D[9][0] = 0.0211887064222;
-                        solPntsLocalCoord2D[9][1] = 0.8438438351223;
-                        solPntsLocalCoord2D[10][0]  =0.8432296787219; 
-                        solPntsLocalCoord2D[10][1] = 0.1354563645830;
-                        solPntsLocalCoord2D[11][0] = 0.1354231797865;
-                        solPntsLocalCoord2D[11][1] = 0.0213482820656;
-                        solPntsLocalCoord2D[12][0] = 0.3088853510679;
-                        solPntsLocalCoord2D[12][1] = 0.0221919663014;
-                        solPntsLocalCoord2D[13][0] = 0.6685057595169;
-                        solPntsLocalCoord2D[13][1] = 0.3089012879389;
-                        solPntsLocalCoord2D[14][0] = 0.0226545012557;
-                        solPntsLocalCoord2D[14][1] = 0.6691709943321;
-                        solPntsLocalCoord2D[15][0] = 0.2808515408772;
-                        solPntsLocalCoord2D[15][1] = 0.6924718155106;
-                        solPntsLocalCoord2D[16][0] = 0.6922446749051;
-                        solPntsLocalCoord2D[16][1] = 0.0268723345026;
-                        solPntsLocalCoord2D[17][0] = 0.0268617447119; 
-                        solPntsLocalCoord2D[17][1] = 0.2810093973222;
-                        solPntsLocalCoord2D[18][0] = 0.1141778485470; 
-                        solPntsLocalCoord2D[18][1] = 0.7973581413586;
-                        solPntsLocalCoord2D[19][0] = 0.7974807922061;
-                        solPntsLocalCoord2D[19][1] = 0.0879806508791;
-                        solPntsLocalCoord2D[20][0] = 0.0892807293894; 
-                        solPntsLocalCoord2D[20][1] = 0.1145020561128;
-                        solPntsLocalCoord2D[21][0] = 0.1052487892455; 
-                        solPntsLocalCoord2D[21][1] = 0.6686904119922;
-                        solPntsLocalCoord2D[22][0] = 0.6663022280740; 
-                        solPntsLocalCoord2D[22][1] = 0.2275051631832;
-                        solPntsLocalCoord2D[23][0] = 0.2307803737547;
-                        solPntsLocalCoord2D[23][1] = 0.1054572561221;
-                        solPntsLocalCoord2D[24][0] = 0.1705059157540;
-                        solPntsLocalCoord2D[24][1] = 0.5174064398658;
-                        solPntsLocalCoord2D[25][0] = 0.5086593973043; 
-                        solPntsLocalCoord2D[25][1] = 0.3170523855209;
-                        solPntsLocalCoord2D[26][0] = 0.3141823862281; 
-                        solPntsLocalCoord2D[26][1] = 0.1810706361659;
-                        solPntsLocalCoord2D[27][0] = 0.4617460817864; 
-                        solPntsLocalCoord2D[27][1] = 0.4678594539804;
-                        solPntsLocalCoord2D[28][0] = 0.0693087496081; 
-                        solPntsLocalCoord2D[28][1] = 0.4622856042085;
-                        solPntsLocalCoord2D[29][0] = 0.4622856042085; 
-                        solPntsLocalCoord2D[29][1] = 0.0724357805669;
-                        solPntsLocalCoord2D[30][0] = 0.2578625857893;
-                        solPntsLocalCoord2D[30][1] = 0.6131395039177;
-                        solPntsLocalCoord2D[31][0] = 0.6112627766779;
-                        solPntsLocalCoord2D[31][1] = 0.1300360834609;
-                        solPntsLocalCoord2D[32][0] = 0.1305182135934;
-                        solPntsLocalCoord2D[32][1] = 0.2581713828884;
-                        solPntsLocalCoord2D[33][0] = 0.4281437991828; 
-                        solPntsLocalCoord2D[33][1] = 0.2362005969817;
-                        solPntsLocalCoord2D[34][0] = 0.3356995783730; 
-                        solPntsLocalCoord2D[34][1] = 0.4311026308588;
-                        solPntsLocalCoord2D[35][0] = 0.2305424298836; 
-                        solPntsLocalCoord2D[35][1] = 0.3456013949376;
-
-                      
-      } break;
-
-        case CFPolyOrder::ORDER8:
-      {
-                        solPntsLocalCoord2D[0][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[0][1] = 1.0000000000000; 
-                        solPntsLocalCoord2D[1][0] = 1.0000000000000;
-                        solPntsLocalCoord2D[1][1] = 0.0000000000000; 
-                        solPntsLocalCoord2D[2][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[2][1] = 0.0000000000000;
-                        solPntsLocalCoord2D[3][0] = 0.0573330873026;
-                        solPntsLocalCoord2D[3][1] = 0.0151382269814;
-                        solPntsLocalCoord2D[4][0] = 0.0573330873026;
-                        solPntsLocalCoord2D[4][1] = 0.9275286857160; 
-                        solPntsLocalCoord2D[5][0] = 0.9275286857160;
-                        solPntsLocalCoord2D[5][1] = 0.0573330873026;
-                        solPntsLocalCoord2D[6][0] = 0.0151382269814; 
-                        solPntsLocalCoord2D[6][1] = 0.0573330873026; 
-                        solPntsLocalCoord2D[7][0] = 0.9275286857160;
-                        solPntsLocalCoord2D[7][1] = 0.0151382269814;
-                        solPntsLocalCoord2D[8][0] = 0.0151382269814;
-                        solPntsLocalCoord2D[8][1] = 0.9275286857160;
-                        solPntsLocalCoord2D[9][0] = 0.8159625040711;
-                        solPntsLocalCoord2D[9][1] = 0.1659719969565;
-                        solPntsLocalCoord2D[10][0]  =0.8159625040711; 
-                        solPntsLocalCoord2D[10][1] = 0.0180654989724;
-                        solPntsLocalCoord2D[11][0] = 0.1659719969565;
-                        solPntsLocalCoord2D[11][1] = 0.8159625040711;
-                        solPntsLocalCoord2D[12][0] = 0.0180654989724;
-                        solPntsLocalCoord2D[12][1] = 0.8159625040711;
-                        solPntsLocalCoord2D[13][0] = 0.1659719969565;
-                        solPntsLocalCoord2D[13][1] = 0.0180654989724;
-                        solPntsLocalCoord2D[14][0] = 0.0180654989724;
-                        solPntsLocalCoord2D[14][1] = 0.1659719969565;
-                        solPntsLocalCoord2D[15][0] = 0.3165475556378;
-                        solPntsLocalCoord2D[15][1] = 0.0186886898773;
-                        solPntsLocalCoord2D[16][0] = 0.6647637544849;
-                        solPntsLocalCoord2D[16][1] = 0.0186886898773;
-                        solPntsLocalCoord2D[17][0] = 0.0186886898773; 
-                        solPntsLocalCoord2D[17][1] = 0.6647637544849;
-                        solPntsLocalCoord2D[18][0] = 0.0186886898773; 
-                        solPntsLocalCoord2D[18][1] = 0.3165475556378;
-                        solPntsLocalCoord2D[19][0] = 0.3165475556378;
-                        solPntsLocalCoord2D[19][1] = 0.6647637544849;
-                        solPntsLocalCoord2D[20][0] = 0.6647637544849; 
-                        solPntsLocalCoord2D[20][1] = 0.3165475556378;
-                        solPntsLocalCoord2D[21][0] = 0.0192662192492; 
-                        solPntsLocalCoord2D[21][1] = 0.4903668903754;
-                        solPntsLocalCoord2D[22][0] = 0.4903668903754; 
-                        solPntsLocalCoord2D[22][1] = 0.0192662192492;
-                        solPntsLocalCoord2D[23][0] = 0.4903668903754;
-                        solPntsLocalCoord2D[23][1] = 0.4903668903754;
-                        solPntsLocalCoord2D[24][0] = 0.0875134669581;
-                        solPntsLocalCoord2D[24][1] = 0.8249730660837;
-                        solPntsLocalCoord2D[25][0] = 0.0875134669581; 
-                        solPntsLocalCoord2D[25][1] = 0.0875134669581;
-                        solPntsLocalCoord2D[26][0] = 0.8249730660837; 
-                        solPntsLocalCoord2D[26][1] = 0.0875134669581;
-                        solPntsLocalCoord2D[27][0] = 0.0935526036219; 
-                        solPntsLocalCoord2D[27][1] = 0.2079865423167;
-                        solPntsLocalCoord2D[28][0] = 0.0935526036219; 
-                        solPntsLocalCoord2D[28][1] = 0.6984608540613;
-                        solPntsLocalCoord2D[29][0] = 0.2079865423167; 
-                        solPntsLocalCoord2D[29][1] = 0.0935526036219;
-                        solPntsLocalCoord2D[30][0] = 0.6984608540613;
-                        solPntsLocalCoord2D[30][1] = 0.0935526036219;
-                        solPntsLocalCoord2D[31][0] = 0.6984608540613;
-                        solPntsLocalCoord2D[31][1] = 0.2079865423167;
-                        solPntsLocalCoord2D[32][0] = 0.2079865423167;
-                        solPntsLocalCoord2D[32][1] = 0.6984608540613;
-                        solPntsLocalCoord2D[33][0] = 0.0974892983467; 
-                        solPntsLocalCoord2D[33][1] = 0.5380088595149;
-                        solPntsLocalCoord2D[34][0] = 0.3645018421383; 
-                        solPntsLocalCoord2D[34][1] = 0.0974892983467;
-                        solPntsLocalCoord2D[35][0] = 0.5380088595149;
-                        solPntsLocalCoord2D[35][1] = 0.0974892983467;
-                        solPntsLocalCoord2D[36][0] = 0.5380088595149; 
-                        solPntsLocalCoord2D[36][1] = 0.3645018421383; 
-                        solPntsLocalCoord2D[37][0] = 0.3645018421383; 
-                        solPntsLocalCoord2D[37][1] = 0.5380088595149; 
-                        solPntsLocalCoord2D[38][0] = 0.0974892983467;
-                        solPntsLocalCoord2D[38][1] = 0.3645018421383;
-                        solPntsLocalCoord2D[39][0] = 0.2217145894873;
-                        solPntsLocalCoord2D[39][1] = 0.5565708210253;
-                        solPntsLocalCoord2D[40][0] = 0.5565708210253;
-                        solPntsLocalCoord2D[40][1] = 0.2217145894873; 
-                        solPntsLocalCoord2D[41][0] = 0.2217145894873;
-                        solPntsLocalCoord2D[41][1] = 0.2217145894873;
-                        solPntsLocalCoord2D[42][0] = 0.3860471669296; 
-                        solPntsLocalCoord2D[42][1] = 0.2279056661408; 
-                        solPntsLocalCoord2D[43][0] = 0.2279056661408; 
-                        solPntsLocalCoord2D[43][1] = 0.3860471669296;
-                        solPntsLocalCoord2D[44][0] = 0.3860471669296;
-                        solPntsLocalCoord2D[44][1] = 0.3860471669296;                      
-      } break;
-          case CFPolyOrder::ORDER9:
-      {
-                        solPntsLocalCoord2D[0][0] = 1.0000000000000;
-                        solPntsLocalCoord2D[0][1] = 0.0000000000000; 
-                        solPntsLocalCoord2D[1][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[1][1] = 1.0000000000000; 
-                        solPntsLocalCoord2D[2][0] = 0.0000000000000;
-                        solPntsLocalCoord2D[2][1] = 0.0000000000000;
-                        solPntsLocalCoord2D[3][0] = 0.9398863583577;
-                        solPntsLocalCoord2D[3][1] = 0.0049848744634;
-                        solPntsLocalCoord2D[4][0] =0.0543806683058;
-                        solPntsLocalCoord2D[4][1] = 0.9386405618617; 
-                        solPntsLocalCoord2D[5][0] = 0.0093940049164;
-                        solPntsLocalCoord2D[5][1] = 0.0526424462697;
-                        solPntsLocalCoord2D[6][0] = 0.0164345086362; 
-                        solPntsLocalCoord2D[6][1] = 0.9469035517351; 
-                        solPntsLocalCoord2D[7][0] = 0.9469487269862;
-                        solPntsLocalCoord2D[7][1] = 0.0363373677167;
-                        solPntsLocalCoord2D[8][0] = 0.0426604005768;
-                        solPntsLocalCoord2D[8][1] = 0.0151224541799;
-                        solPntsLocalCoord2D[9][0] = 0.0122269495439;
-                        solPntsLocalCoord2D[9][1] = 0.8693773510664;
-                        solPntsLocalCoord2D[10][0] = 0.8673696521047; 
-                        solPntsLocalCoord2D[10][1] = 0.1204917285774;
-                        solPntsLocalCoord2D[11][0] = 0.8456744021389;
-                        solPntsLocalCoord2D[11][1] = 0.0157763967870;
-                        solPntsLocalCoord2D[12][0] = 0.1395759632103;
-                        solPntsLocalCoord2D[12][1] = 0.8448120870375;
-                        solPntsLocalCoord2D[13][0] = 0.1317821743231;
-                        solPntsLocalCoord2D[13][1] = 0.0135009605584;
-                        solPntsLocalCoord2D[14][0] = 0.0157955126300;
-                        solPntsLocalCoord2D[14][1] = 0.1455274938536;
-                        solPntsLocalCoord2D[15][0] = 0.7365462884436;
-                        solPntsLocalCoord2D[15][1] = 0.0155697540908;
-                        solPntsLocalCoord2D[16][0] = 0.0139688430330;
-                        solPntsLocalCoord2D[16][1] = 0.7379836894450;
-                        solPntsLocalCoord2D[17][0] = 0.2547895186039; 
-                        solPntsLocalCoord2D[17][1] = 0.7297615689771;
-                        solPntsLocalCoord2D[18][0] = 0.7316386522555;
-                        solPntsLocalCoord2D[18][1] = 0.2543076683315;
-                        solPntsLocalCoord2D[19][0] = 0.0157253728951;
-                        solPntsLocalCoord2D[19][1] = 0.2696239795791;
-                        solPntsLocalCoord2D[20][0] = 0.2662302843647; 
-                        solPntsLocalCoord2D[20][1] = 0.0144783956308;
-                        solPntsLocalCoord2D[21][0] = 0.8673504065214; 
-                        solPntsLocalCoord2D[21][1] = 0.0591679410400;
-                        solPntsLocalCoord2D[22][0] = 0.0741493666957; 
-                        solPntsLocalCoord2D[22][1] = 0.8634782575061;
-                        solPntsLocalCoord2D[23][0] = 0.0159285948360;
-                        solPntsLocalCoord2D[23][1] = 0.4191238955238;
-                        solPntsLocalCoord2D[24][0] = 0.0156061028068;
-                        solPntsLocalCoord2D[24][1] = 0.5809222921146;
-                        solPntsLocalCoord2D[25][0] = 0.5910094817484;
-                        solPntsLocalCoord2D[25][1] = 0.0159251452651;
-                        solPntsLocalCoord2D[26][0] = 0.4034771496889; 
-                        solPntsLocalCoord2D[26][1] = 0.5806700368104;
-                        solPntsLocalCoord2D[27][0] = 0.5694745628526; 
-                        solPntsLocalCoord2D[27][1] = 0.4149495146302;
-                        solPntsLocalCoord2D[28][0] = 0.0678493700650;
-                        solPntsLocalCoord2D[28][1] = 0.0761218678591;
-                        solPntsLocalCoord2D[29][0] = 0.4265968590272; 
-                        solPntsLocalCoord2D[29][1] = 0.0157509692312;
-                        solPntsLocalCoord2D[30][0] = 0.0670982507890;
-                        solPntsLocalCoord2D[30][1] = 0.7741898312421;
-                        solPntsLocalCoord2D[31][0] = 0.7528310231480;
-                        solPntsLocalCoord2D[31][1] = 0.0819119495639;
-                        solPntsLocalCoord2D[32][0] = 0.7753727783557;
-                        solPntsLocalCoord2D[32][1] = 0.1577128457292;
-                        solPntsLocalCoord2D[33][0] = 0.1689073157787; 
-                        solPntsLocalCoord2D[33][1] = 0.7503943099742;
-                        solPntsLocalCoord2D[34][0] = 0.1687335832919; 
-                        solPntsLocalCoord2D[34][1] = 0.0708311507268;
-                        solPntsLocalCoord2D[35][0] = 0.0821244708436;
-                        solPntsLocalCoord2D[35][1] = 0.1762996626771;
-                        solPntsLocalCoord2D[36][0] = 0.6288705363345; 
-                        solPntsLocalCoord2D[36][1] = 0.0807744953317; 
-                        solPntsLocalCoord2D[37][0] = 0.0811413015266; 
-                        solPntsLocalCoord2D[37][1] = 0.3054373589776; 
-                        solPntsLocalCoord2D[38][0] = 0.2969112065080;
-                        solPntsLocalCoord2D[38][1] = 0.6227485988871;
-                        solPntsLocalCoord2D[39][0] = 0.0767542314171;
-                        solPntsLocalCoord2D[39][1] = 0.6247247149546;
-                        solPntsLocalCoord2D[40][0] = 0.6223022333845;
-                        solPntsLocalCoord2D[40][1] = 0.3011485821166; 
-                        solPntsLocalCoord2D[41][0] = 0.3103786288051;
-                        solPntsLocalCoord2D[41][1] = 0.0779098365079;
-                        solPntsLocalCoord2D[42][0] = 0.0819218215187; 
-                        solPntsLocalCoord2D[42][1] = 0.4603633038351; 
-                        solPntsLocalCoord2D[43][0] = 0.4717022665013; 
-                        solPntsLocalCoord2D[43][1] = 0.0821554006797;
-                        solPntsLocalCoord2D[44][0] = 0.4546603415250;
-                        solPntsLocalCoord2D[44][1] = 0.4637565033890;
-                        solPntsLocalCoord2D[45][0] = 0.1701091339237;
-                        solPntsLocalCoord2D[45][1] = 0.6422277808188; 
-                        solPntsLocalCoord2D[46][0] = 0.6406004329487;
-                        solPntsLocalCoord2D[46][1] = 0.1898293537256; 
-                        solPntsLocalCoord2D[47][0] = 0.1912267583717;
-                        solPntsLocalCoord2D[47][1] = 0.1739955685343;
-                        solPntsLocalCoord2D[48][0] = 0.1885315767070;                        
-                        solPntsLocalCoord2D[48][1] = 0.4798914070406;
-                        solPntsLocalCoord2D[49][0] = 0.4772929957691;
-                        solPntsLocalCoord2D[49][1] = 0.3348356598119; 
-                        solPntsLocalCoord2D[50][0] = 0.3126974621760;
-                        solPntsLocalCoord2D[50][1] = 0.4957972197259;
-                        solPntsLocalCoord2D[51][0] = 0.4961225945946; 
-                        solPntsLocalCoord2D[51][1] = 0.1927553668904; 
-                        solPntsLocalCoord2D[52][0] = 0.1928805312867;
-                        solPntsLocalCoord2D[52][1] = 0.3161015807261;
-                        solPntsLocalCoord2D[53][0] = 0.3360041453816;
-                        solPntsLocalCoord2D[53][1] = 0.1894892801290;
-                        solPntsLocalCoord2D[54][0] = 0.3337280550848;
-                        solPntsLocalCoord2D[54][1] = 0.3343571021811;
-                      
       } break;
       default:
       {
@@ -1481,69 +790,69 @@ void PrismFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
     case CFPolyOrder::ORDER2:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.054975871827667;
-        m_faceIntegrationCoefsPerType[0][1] = 0.054975871827667;
+        m_faceIntegrationCoefsPerType[0][1] = 0.111690794839000;
         m_faceIntegrationCoefsPerType[0][2] = 0.054975871827667;
         m_faceIntegrationCoefsPerType[0][3] = 0.111690794839000;
         m_faceIntegrationCoefsPerType[0][4] = 0.111690794839000;
-        m_faceIntegrationCoefsPerType[0][5] = 0.111690794839000;
+        m_faceIntegrationCoefsPerType[0][5] = 0.054975871827667;
     } break;
     
     case CFPolyOrder::ORDER3:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][1] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][2] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][3] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][1] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][2] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][3] = 0.020977756498325;
         m_faceIntegrationCoefsPerType[0][4] = 0.056049206035444;
-        m_faceIntegrationCoefsPerType[0][5] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][5] = 0.100771494292365;
         m_faceIntegrationCoefsPerType[0][6] = 0.056049206035444;
         m_faceIntegrationCoefsPerType[0][7] = 0.056049206035444;
         m_faceIntegrationCoefsPerType[0][8] = 0.056049206035444;
-        m_faceIntegrationCoefsPerType[0][9] = 0.100771494292365;
+        m_faceIntegrationCoefsPerType[0][9] = 0.020977756498325;
     } break;
 
     case CFPolyOrder::ORDER4:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][1] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][2] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][3] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][1] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][2] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][3] = 0.055749810027115;
         m_faceIntegrationCoefsPerType[0][4] = 0.063856097940632;
-        m_faceIntegrationCoefsPerType[0][5] = 0.063856097940632;
-        m_faceIntegrationCoefsPerType[0][6] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][7] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][8] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][9] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][10] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][11] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][5] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][6] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][7] = 0.127712195881265;
+        m_faceIntegrationCoefsPerType[0][8] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][9] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][10] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][11] = 0.055749810027115;
         m_faceIntegrationCoefsPerType[0][12] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][13] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][14] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][13] = 0.055749810027115;
+        m_faceIntegrationCoefsPerType[0][14] = 0.008957727506152;
     } break;
 
     case CFPolyOrder::ORDER5:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][1] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][2] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][3] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][4] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][5] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][6] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][7] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][8] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][9] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][10] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][11] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][1] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][2] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][3] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][4] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][5] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][6] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][7] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][8] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][9] = 0.075394884326738;
+        m_faceIntegrationCoefsPerType[0][10] = 0.048773901186621;
+        m_faceIntegrationCoefsPerType[0][11] = 0.037697442163369;
         m_faceIntegrationCoefsPerType[0][12] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][13] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][14] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][15] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][13] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][14] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][15] = 0.046046366595935;
         m_faceIntegrationCoefsPerType[0][16] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][17] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][18] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][19] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][20] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][17] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][18] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][19] = 0.075394884326738;
+        m_faceIntegrationCoefsPerType[0][20] = 0.005179687348269;
     } break;
 
     default:
@@ -2349,43 +1658,26 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
   // resize m_cellAvgSolCoefs
   m_cellAvgSolCoefs.resize(nbrSolPnts);
 
-  // create TensorProductGaussIntegrator
-  /*TensorProductGaussIntegrator tpIntegrator(DIM_3D,m_polyOrder);
+  const CFuint nbrSolPnts2D = (m_polyOrder+1)*(m_polyOrder+2)/2;
 
-  // create cell node local coordinates
-  vector< RealVector > nodeCoord(8);
-  nodeCoord[0].resize(3);
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  RealVector oneDcoeffs;
+  RealVector twoDcoeffs;
+
+  // resize oneDcoeffs
+  oneDcoeffs.resize(nbrFlxPnts1D);
+
+  // create TensorProductGaussIntegrator
+  TensorProductGaussIntegrator tpIntegrator(DIM_1D,m_polyOrder);
+
+  // create face node local coordinates
+  vector< RealVector > nodeCoord(2);
+  nodeCoord[0].resize(1);
   nodeCoord[0][KSI] = -1.0;
-  nodeCoord[0][ETA] = -1.0;
-  nodeCoord[0][ZTA] = -1.0;
-  nodeCoord[1].resize(3);
+  nodeCoord[1].resize(1);
   nodeCoord[1][KSI] = +1.0;
-  nodeCoord[1][ETA] = -1.0;
-  nodeCoord[1][ZTA] = -1.0;
-  nodeCoord[2].resize(3);
-  nodeCoord[2][KSI] = +1.0;
-  nodeCoord[2][ETA] = +1.0;
-  nodeCoord[2][ZTA] = -1.0;
-  nodeCoord[3].resize(3);
-  nodeCoord[3][KSI] = -1.0;
-  nodeCoord[3][ETA] = +1.0;
-  nodeCoord[3][ZTA] = -1.0;
-  nodeCoord[4].resize(3);
-  nodeCoord[4][KSI] = -1.0;
-  nodeCoord[4][ETA] = -1.0;
-  nodeCoord[4][ZTA] = +1.0;
-  nodeCoord[5].resize(3);
-  nodeCoord[5][KSI] = +1.0;
-  nodeCoord[5][ETA] = -1.0;
-  nodeCoord[5][ZTA] = +1.0;
-  nodeCoord[6].resize(3);
-  nodeCoord[6][KSI] = +1.0;
-  nodeCoord[6][ETA] = +1.0;
-  nodeCoord[6][ZTA] = +1.0;
-  nodeCoord[7].resize(3);
-  nodeCoord[7][KSI] = -1.0;
-  nodeCoord[7][ETA] = +1.0;
-  nodeCoord[7][ZTA] = +1.0;
 
   // get quadrature point coordinates and wheights
   vector< RealVector > quadPntCoords   = tpIntegrator.getQuadPntsCoords  (nodeCoord);
@@ -2393,85 +1685,167 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
   const CFuint nbrQPnts = quadPntCoords.size();
   cf_assert(quadPntWheights.size() == nbrQPnts);
 
-  // get the solution polynomial values at the quadrature points
-  vector< vector< CFreal > > quadPntPolyVals = getSolPolyValsAtNode(quadPntCoords);
-
   // compute the coefficients for integration over a face
-  // loop over solution points
-  for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
+  // loop over flux points
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx)
   {
-    m_cellAvgSolCoefs[iSol] = 0.0;
+    oneDcoeffs[iFlx] = 0.0;
+
+    const CFreal ksiFlx = m_flxPntsLocalCoord1D[iFlx];
     for (CFuint iQPnt = 0; iQPnt < nbrQPnts; ++iQPnt)
     {
-      m_cellAvgSolCoefs[iSol] += quadPntWheights[iQPnt]*quadPntPolyVals[iQPnt][iSol];
+      // quadrature point local coordinate on the face
+      const CFreal ksiQPnt = quadPntCoords[iQPnt][KSI];
+
+      // evaluate polynomial value in quadrature point
+      CFreal quadPntPolyVal = 1.;
+      for (CFuint iFac = 0; iFac < nbrFlxPnts1D; ++iFac)
+      {
+        if (iFac != iFlx)
+        {
+          const CFreal ksiFac = m_flxPntsLocalCoord1D[iFac];
+          quadPntPolyVal *= (ksiQPnt-ksiFac)/(ksiFlx-ksiFac);
+        }
+      }
+
+      // add contribution of quadrature point to integration coefficient
+      oneDcoeffs[iFlx] += quadPntWheights[iQPnt]*quadPntPolyVal;
     }
-    m_cellAvgSolCoefs[iSol] *= 0.125;
     
-  }*/
+  }
 
 
-   m_cellAvgSolCoefs.resize(nbrSolPnts);
+  m_cellAvgSolCoefs.resize(nbrSolPnts);
+  twoDcoeffs.resize(nbrSolPnts2D);
 
-    switch(m_polyOrder)
+
+  switch(m_polyOrder)
+  {
+    case CFPolyOrder::ORDER0:
+    {
+      m_cellAvgSolCoefs[0] = 1.0;
+    } break;
+    case CFPolyOrder::ORDER1:
+    {
+      twoDcoeffs[0] = 0.166666666666667;
+      twoDcoeffs[1] = 0.166666666666667;
+      twoDcoeffs[2] = 0.166666666666667;
+
+      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
       {
-        case CFPolyOrder::ORDER0:
+        for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[0] = 1.0;
-        } break;
-        case CFPolyOrder::ORDER1:
-        {
-          m_cellAvgSolCoefs[0] = 0.166666666666667;
-          m_cellAvgSolCoefs[1] = 0.166666666666667;
-          m_cellAvgSolCoefs[2] = 0.166666666666667;
-          m_cellAvgSolCoefs[3] = 0.166666666666667;
-          m_cellAvgSolCoefs[4] = 0.166666666666667;
-          m_cellAvgSolCoefs[5] = 0.166666666666667;
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];  // Sum should be = 1 so twoDcoeffs * 2
+        }  
+      }
 
-         } break;
-        case CFPolyOrder::ORDER2:
-        {
-          m_cellAvgSolCoefs[0] = 0.055555555555556;
-          m_cellAvgSolCoefs[1] = 0.055555555555556;
-          m_cellAvgSolCoefs[2] = 0.055555555555556;
-          m_cellAvgSolCoefs[3] = 0.055555555555556;
-          m_cellAvgSolCoefs[4] = 0.055555555555556;
-          m_cellAvgSolCoefs[5] = 0.055555555555556;
-          m_cellAvgSolCoefs[6] = 0.055555555555556;
-          m_cellAvgSolCoefs[7] = 0.055555555555556;
-          m_cellAvgSolCoefs[8] = 0.055555555555556;
-          m_cellAvgSolCoefs[8] = 0.055555555555556;
-          m_cellAvgSolCoefs[10] = 0.055555555555556;
-          m_cellAvgSolCoefs[11] = 0.055555555555556;
-          m_cellAvgSolCoefs[12] = 0.055555555555556;
-          m_cellAvgSolCoefs[13] = 0.055555555555556;
-          m_cellAvgSolCoefs[14] = 0.055555555555556;
-          m_cellAvgSolCoefs[15] = 0.055555555555556;
-          m_cellAvgSolCoefs[16] = 0.055555555555556;
-          m_cellAvgSolCoefs[17] = 0.055555555555556;
+      } break;
 
-         } break;
-        case CFPolyOrder::ORDER3:
-        {
-          for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-          {
-            m_cellAvgSolCoefs[iSol]=1./nbrSolPnts;
-          }
+    case CFPolyOrder::ORDER2:
+    {
+      twoDcoeffs[0] = 0.054975871827667;
+      twoDcoeffs[1] = 0.111690794839000;
+      twoDcoeffs[2] = 0.054975871827667;
+      twoDcoeffs[3] = 0.111690794839000;
+      twoDcoeffs[4] = 0.111690794839000;
+      twoDcoeffs[5] = 0.054975871827667;
 
-        } break;
-        case CFPolyOrder::ORDER4:
-        {
-          for (CFuint iSol = 0; iSol < nbrSolPnts; ++iSol)
-          {
-            m_cellAvgSolCoefs[iSol]=1./nbrSolPnts;
-          }
-         } break;   
-      default:
+      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
       {
-        throw Common::NotImplementedException (FromHere(),"m_cellAvgSolCoefs not implemented for order "
-                                      + StringOps::to_str(m_polyOrder) + ".");
+        for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
+        {
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+        }  
       }
+    } break;
+
+    case CFPolyOrder::ORDER3:
+    {
+      twoDcoeffs[0] = 0.020977756498325;
+      twoDcoeffs[1] = 0.056049206035444;
+      twoDcoeffs[2] = 0.056049206035444;
+      twoDcoeffs[3] = 0.020977756498325;
+      twoDcoeffs[4] = 0.056049206035444;
+      twoDcoeffs[5] = 0.100771494292365;
+      twoDcoeffs[6] = 0.056049206035444;
+      twoDcoeffs[7] = 0.056049206035444;
+      twoDcoeffs[8] = 0.056049206035444;
+      twoDcoeffs[9] = 0.020977756498325;
+
+      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+      {
+        for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
+        {
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+        }  
       }
-  
+    } break;
+
+    case CFPolyOrder::ORDER4:
+    {
+      twoDcoeffs[0] = 0.008957727506152;
+      twoDcoeffs[1] = 0.027874905013558;
+      twoDcoeffs[2] = 0.038103031192768;
+      twoDcoeffs[3] = 0.055749810027115;
+      twoDcoeffs[4] = 0.063856097940632;
+      twoDcoeffs[5] = 0.027874905013558;
+      twoDcoeffs[6] = 0.063856097940632;
+      twoDcoeffs[7] = 0.127712195881265;
+      twoDcoeffs[8] = 0.063856097940632;
+      twoDcoeffs[9] = 0.038103031192768;
+      twoDcoeffs[10] = 0.038103031192768;
+      twoDcoeffs[11] = 0.055749810027115;
+      twoDcoeffs[12] = 0.027874905013558;
+      twoDcoeffs[13] = 0.055749810027115;
+      twoDcoeffs[14] = 0.008957727506152;
+
+      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+      {
+        for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
+        {
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+        }  
+      }
+    } break;
+
+    case CFPolyOrder::ORDER5:
+    {
+      twoDcoeffs[0] = 0.005179687348269;
+      twoDcoeffs[1] = 0.014484634686237;
+      twoDcoeffs[2] = 0.023023183297967;
+      twoDcoeffs[3] = 0.023023183297967;
+      twoDcoeffs[4] = 0.028969269372473;
+      twoDcoeffs[5] = 0.014484634686237;
+      twoDcoeffs[6] = 0.037697442163369;
+      twoDcoeffs[7] = 0.023023183297967;
+      twoDcoeffs[8] = 0.037697442163369;
+      twoDcoeffs[9] = 0.075394884326738;
+      twoDcoeffs[10] = 0.048773901186621;
+      twoDcoeffs[11] = 0.037697442163369;
+      twoDcoeffs[12] = 0.014484634686237;
+      twoDcoeffs[13] = 0.028969269372473;
+      twoDcoeffs[14] = 0.028969269372473;
+      twoDcoeffs[15] = 0.046046366595935;
+      twoDcoeffs[16] = 0.023023183297967;
+      twoDcoeffs[17] = 0.037697442163369;
+      twoDcoeffs[18] = 0.014484634686237;
+      twoDcoeffs[19] = 0.075394884326738;
+      twoDcoeffs[20] = 0.005179687348269;
+
+      for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+      {
+        for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
+        {
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+        }  
+      }
+    } break;  
+    default:
+    {
+      throw Common::NotImplementedException (FromHere(),"m_cellAvgSolCoefs not implemented for order "
+                                    + StringOps::to_str(m_polyOrder) + ".");
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -2564,7 +2564,6 @@ void TetraFluxReconstructionElementData::createFaceNodeConnectivityPerOrient()
 
 
 //////////////////////////////////////////////////////////////////////
-// !!!! to be checked
 
 void TetraFluxReconstructionElementData::createFaceIntegrationCoefs()
 {
@@ -2583,82 +2582,82 @@ void TetraFluxReconstructionElementData::createFaceIntegrationCoefs()
   {
     case CFPolyOrder::ORDER0:
     {
-       m_faceIntegrationCoefs[0] = 0.5;
+        m_faceIntegrationCoefs[0] = 0.5;
     } break;
 
     case CFPolyOrder::ORDER1:
     {
-       m_faceIntegrationCoefs[0] = 0.166666666666667;
-       m_faceIntegrationCoefs[1] = 0.166666666666667;
-       m_faceIntegrationCoefs[2] = 0.166666666666667;
+        m_faceIntegrationCoefs[0] = 0.166666666666667;
+        m_faceIntegrationCoefs[1] = 0.166666666666667;
+        m_faceIntegrationCoefs[2] = 0.166666666666667;
     } break;
 
     case CFPolyOrder::ORDER2:
     {
-       m_faceIntegrationCoefs[0] = 0.054975871827667;
-       m_faceIntegrationCoefs[1] = 0.054975871827667;
-       m_faceIntegrationCoefs[2] = 0.054975871827667;
-       m_faceIntegrationCoefs[3] = 0.111690794839000;
-       m_faceIntegrationCoefs[4] = 0.111690794839000;
-       m_faceIntegrationCoefs[5] = 0.111690794839000;
+        m_faceIntegrationCoefs[0] = 0.054975871827667; // Original index 0
+        m_faceIntegrationCoefs[1] = 0.111690794839000; // Original index 3
+        m_faceIntegrationCoefs[2] = 0.054975871827667; // Original index 1
+        m_faceIntegrationCoefs[3] = 0.111690794839000; // Original index 4
+        m_faceIntegrationCoefs[4] = 0.111690794839000; // Original index 5
+        m_faceIntegrationCoefs[5] = 0.054975871827667; // Original index 2
     } break;
 
     case CFPolyOrder::ORDER3:
     {
-       m_faceIntegrationCoefs[0] = 0.020977756498325;
-       m_faceIntegrationCoefs[1] = 0.020977756498325;
-       m_faceIntegrationCoefs[2] = 0.020977756498325;
-       m_faceIntegrationCoefs[3] = 0.056049206035444;
-       m_faceIntegrationCoefs[4] = 0.056049206035444;
-       m_faceIntegrationCoefs[5] = 0.056049206035444;
-       m_faceIntegrationCoefs[6] = 0.056049206035444;
-       m_faceIntegrationCoefs[7] = 0.056049206035444;
-       m_faceIntegrationCoefs[8] = 0.056049206035444;
-       m_faceIntegrationCoefs[9] = 0.100771494292365;
+        m_faceIntegrationCoefs[0] = 0.020977756498325; // Original index 0
+        m_faceIntegrationCoefs[1] = 0.056049206035444; // Original index 6
+        m_faceIntegrationCoefs[2] = 0.056049206035444; // Original index 3
+        m_faceIntegrationCoefs[3] = 0.020977756498325; // Original index 1
+        m_faceIntegrationCoefs[4] = 0.056049206035444; // Original index 7
+        m_faceIntegrationCoefs[5] = 0.100771494292365; // Original index 9
+        m_faceIntegrationCoefs[6] = 0.056049206035444; // Original index 8
+        m_faceIntegrationCoefs[7] = 0.056049206035444; // Original index 4
+        m_faceIntegrationCoefs[8] = 0.056049206035444; // Original index 5
+        m_faceIntegrationCoefs[9] = 0.020977756498325; // Original index 2
     } break;
 
     case CFPolyOrder::ORDER4:
     {
-       m_faceIntegrationCoefs[0] = 0.008957727506152;
-       m_faceIntegrationCoefs[1] = 0.008957727506152;
-       m_faceIntegrationCoefs[2] = 0.008957727506152;
-       m_faceIntegrationCoefs[3] = 0.063856097940632;
-       m_faceIntegrationCoefs[4] = 0.063856097940632;
-       m_faceIntegrationCoefs[5] = 0.063856097940632;
-       m_faceIntegrationCoefs[6] = 0.038103031192768;
-       m_faceIntegrationCoefs[7] = 0.038103031192768;
-       m_faceIntegrationCoefs[8] = 0.038103031192768;
-       m_faceIntegrationCoefs[9] = 0.027874905013558;
-       m_faceIntegrationCoefs[10] = 0.027874905013558;
-       m_faceIntegrationCoefs[11] = 0.027874905013558;
-       m_faceIntegrationCoefs[12] = 0.027874905013558;
-       m_faceIntegrationCoefs[13] = 0.027874905013558;
-       m_faceIntegrationCoefs[14] = 0.027874905013558;
+        m_faceIntegrationCoefs[0] = 0.008957727506152; // Original index 0
+        m_faceIntegrationCoefs[1] = 0.027874905013558; // Original index 12
+        m_faceIntegrationCoefs[2] = 0.038103031192768; // Original index 6
+        m_faceIntegrationCoefs[3] = 0.055749810027115; // Original index 9
+        m_faceIntegrationCoefs[4] = 0.063856097940632; // Original index 4
+        m_faceIntegrationCoefs[5] = 0.027874905013558; // Original index 5
+        m_faceIntegrationCoefs[6] = 0.063856097940632; // Original index 1
+        m_faceIntegrationCoefs[7] = 0.127712195881265; // Original index 3
+        m_faceIntegrationCoefs[8] = 0.063856097940632; // Original index 7
+        m_faceIntegrationCoefs[9] = 0.038103031192768; // Original index 2
+        m_faceIntegrationCoefs[10] = 0.038103031192768; // Original index 10
+        m_faceIntegrationCoefs[11] = 0.055749810027115; // Original index 11
+        m_faceIntegrationCoefs[12] = 0.027874905013558; // Original index 13
+        m_faceIntegrationCoefs[13] = 0.055749810027115; // Original index 8
+        m_faceIntegrationCoefs[14] = 0.008957727506152; // Original index 14
     } break;
 
     case CFPolyOrder::ORDER5:
     {
-       m_faceIntegrationCoefs[0] = 0.005179687348269;
-       m_faceIntegrationCoefs[1] = 0.005179687348269;
-       m_faceIntegrationCoefs[2] = 0.005179687348269;
-       m_faceIntegrationCoefs[3] = 0.037697442163369;
-       m_faceIntegrationCoefs[4] = 0.037697442163369;
-       m_faceIntegrationCoefs[5] = 0.037697442163369;
-       m_faceIntegrationCoefs[6] = 0.048773901186621;
-       m_faceIntegrationCoefs[7] = 0.048773901186621;
-       m_faceIntegrationCoefs[8] = 0.048773901186621;
-       m_faceIntegrationCoefs[9] = 0.014484634686237;
-       m_faceIntegrationCoefs[10] = 0.014484634686237;
-       m_faceIntegrationCoefs[11] = 0.014484634686237;
-       m_faceIntegrationCoefs[12] = 0.014484634686237;
-       m_faceIntegrationCoefs[13] = 0.014484634686237;
-       m_faceIntegrationCoefs[14] = 0.014484634686237;
-       m_faceIntegrationCoefs[15] = 0.023023183297967;
-       m_faceIntegrationCoefs[16] = 0.023023183297967;
-       m_faceIntegrationCoefs[17] = 0.023023183297967;
-       m_faceIntegrationCoefs[18] = 0.023023183297967;
-       m_faceIntegrationCoefs[19] = 0.023023183297967;
-       m_faceIntegrationCoefs[20] = 0.023023183297967;
+        m_faceIntegrationCoefs[0] = 0.005179687348269; // Original index 0
+        m_faceIntegrationCoefs[1] = 0.014484634686237; // Original index 18
+        m_faceIntegrationCoefs[2] = 0.023023183297967; // Original index 15
+        m_faceIntegrationCoefs[3] = 0.023023183297967; // Original index 3
+        m_faceIntegrationCoefs[4] = 0.028969269372473; // Original index 4
+        m_faceIntegrationCoefs[5] = 0.014484634686237; // Original index 6
+        m_faceIntegrationCoefs[6] = 0.037697442163369; // Original index 1
+        m_faceIntegrationCoefs[7] = 0.023023183297967; // Original index 2
+        m_faceIntegrationCoefs[8] = 0.037697442163369; // Original index 7
+        m_faceIntegrationCoefs[9] = 0.075394884326738; // Original index 9
+        m_faceIntegrationCoefs[10] = 0.048773901186621; // Original index 10
+        m_faceIntegrationCoefs[11] = 0.037697442163369; // Original index 11
+        m_faceIntegrationCoefs[12] = 0.014484634686237; // Original index 19
+        m_faceIntegrationCoefs[13] = 0.028969269372473; // Original index 12
+        m_faceIntegrationCoefs[14] = 0.028969269372473; // Original index 13
+        m_faceIntegrationCoefs[15] = 0.046046366595935; // Original index 14
+        m_faceIntegrationCoefs[16] = 0.023023183297967; // Original index 16
+        m_faceIntegrationCoefs[17] = 0.037697442163369; // Original index 17
+        m_faceIntegrationCoefs[18] = 0.014484634686237; // Original index 5
+        m_faceIntegrationCoefs[19] = 0.075394884326738; // Original index 8
+        m_faceIntegrationCoefs[20] = 0.005179687348269; // Original index 20
     } break;
     
     default:
@@ -2686,152 +2685,152 @@ void TetraFluxReconstructionElementData::createCellAvgSolCoefs()
   {
     case CFPolyOrder::ORDER0:
     {
-      m_cellAvgSolCoefs[0] = 1.333333333333333;
+      m_cellAvgSolCoefs[0] = 1.;
     } break;
     case CFPolyOrder::ORDER1:
     {
-      m_cellAvgSolCoefs[0] = 0.333333333333333;
-      m_cellAvgSolCoefs[1] = 0.333333333333333;
-      m_cellAvgSolCoefs[2] = 0.333333333333333;
-      m_cellAvgSolCoefs[3] = 0.333333333333333;
+      m_cellAvgSolCoefs[0] = 0.2500000000000000;
+      m_cellAvgSolCoefs[1] = 0.2500000000000000;
+      m_cellAvgSolCoefs[2] = 0.2500000000000000;
+      m_cellAvgSolCoefs[3] = 0.2500000000000000;
 
     } break;
     case CFPolyOrder::ORDER2:
     {
-      m_cellAvgSolCoefs[0] = 0.063510846457611867;
-      m_cellAvgSolCoefs[1] = 0.063510846457611867;
-      m_cellAvgSolCoefs[2] = 0.063510846457611867;
-      m_cellAvgSolCoefs[3] = 0.063510846457611867;
-      m_cellAvgSolCoefs[4] = 0.179881657917148;
-      m_cellAvgSolCoefs[5] = 0.179881657917148;
-      m_cellAvgSolCoefs[6] = 0.179881657917148;
-      m_cellAvgSolCoefs[7] = 0.179881657917148;
-      m_cellAvgSolCoefs[8] = 0.179881657917148;
-      m_cellAvgSolCoefs[9] = 0.179881657917148;
+      m_cellAvgSolCoefs[0] = 0.0476331348432089;
+      m_cellAvgSolCoefs[1] = 0.0476331348432089;
+      m_cellAvgSolCoefs[2] = 0.0476331348432089;
+      m_cellAvgSolCoefs[3] = 0.0476331348432089;
+      m_cellAvgSolCoefs[4] = 0.1349112434378610;
+      m_cellAvgSolCoefs[5] = 0.1349112434378610;
+      m_cellAvgSolCoefs[6] = 0.1349112434378610;
+      m_cellAvgSolCoefs[7] = 0.1349112434378610;
+      m_cellAvgSolCoefs[8] = 0.1349112434378610;
+      m_cellAvgSolCoefs[9] = 0.1349112434378610;
 
     } break;
     case CFPolyOrder::ORDER3:
     {
-      m_cellAvgSolCoefs[0] = 0.009422766392626;
-      m_cellAvgSolCoefs[1] = 0.009422766392626;
-      m_cellAvgSolCoefs[2] = 0.009422766392626;
-      m_cellAvgSolCoefs[3] = 0.009422766392626;
+      m_cellAvgSolCoefs[0] = 0.0070670747944695;
+      m_cellAvgSolCoefs[1] = 0.0070670747944695;
+      m_cellAvgSolCoefs[2] = 0.0070670747944695;
+      m_cellAvgSolCoefs[3] = 0.0070670747944695;
 
-      m_cellAvgSolCoefs[4] = 0.062664891962516933;
-      m_cellAvgSolCoefs[5] = 0.062664891962516933;
-      m_cellAvgSolCoefs[6] = 0.062664891962516933;
-      m_cellAvgSolCoefs[7] = 0.062664891962516933;
-      m_cellAvgSolCoefs[8] = 0.062664891962516933;
-      m_cellAvgSolCoefs[9] = 0.062664891962516933;
-      m_cellAvgSolCoefs[10] = 0.062664891962516933;
-      m_cellAvgSolCoefs[11] = 0.062664891962516933;
-      m_cellAvgSolCoefs[12] = 0.062664891962516933;
-      m_cellAvgSolCoefs[13] = 0.062664891962516933;
-      m_cellAvgSolCoefs[14] = 0.062664891962516933;
-      m_cellAvgSolCoefs[15] = 0.062664891962516933;
+      m_cellAvgSolCoefs[4] = 0.0469986689718877;
+      m_cellAvgSolCoefs[5] = 0.0469986689718877;
+      m_cellAvgSolCoefs[6] = 0.0469986689718877;
+      m_cellAvgSolCoefs[7] = 0.0469986689718877;
+      m_cellAvgSolCoefs[8] = 0.0469986689718877;
+      m_cellAvgSolCoefs[9] = 0.0469986689718877;
+      m_cellAvgSolCoefs[10] = 0.0469986689718877;
+      m_cellAvgSolCoefs[11] = 0.0469986689718877;
+      m_cellAvgSolCoefs[12] = 0.0469986689718877;
+      m_cellAvgSolCoefs[13] = 0.0469986689718877;
+      m_cellAvgSolCoefs[14] = 0.0469986689718877;
+      m_cellAvgSolCoefs[15] = 0.0469986689718877;
 
-      m_cellAvgSolCoefs[16] = 0.13591589105315733;
-      m_cellAvgSolCoefs[17] = 0.13591589105315733;
-      m_cellAvgSolCoefs[18] = 0.13591589105315733;
-      m_cellAvgSolCoefs[19] = 0.13591589105315733;
+      m_cellAvgSolCoefs[16] = 0.1019369182898680;
+      m_cellAvgSolCoefs[17] = 0.1019369182898680;
+      m_cellAvgSolCoefs[18] = 0.1019369182898680;
+      m_cellAvgSolCoefs[19] = 0.1019369182898680;
       
     } break;
         case CFPolyOrder::ORDER4:
     {
-      m_cellAvgSolCoefs[0]=0.124232764159378;
-      m_cellAvgSolCoefs[1]=0.00292006186205173;
-      m_cellAvgSolCoefs[2]=0.00292006186205173;
-      m_cellAvgSolCoefs[3]=0.00292006186205173;
-      m_cellAvgSolCoefs[4]=0.00292006186205173;
-      m_cellAvgSolCoefs[5]=0.0333740527582328;
-      m_cellAvgSolCoefs[6]=0.0333740527582328;
-      m_cellAvgSolCoefs[7]=0.0333740527582328;
-      m_cellAvgSolCoefs[8]=0.0333740527582328;
-      m_cellAvgSolCoefs[9]=0.0333740527582328;
-      m_cellAvgSolCoefs[10]=0.0333740527582328;
-      m_cellAvgSolCoefs[11]=0.0191194226903553;
-      m_cellAvgSolCoefs[12]=0.0191194226903553;
-      m_cellAvgSolCoefs[13]=0.0191194226903553;
-      m_cellAvgSolCoefs[14]=0.0191194226903553;
-      m_cellAvgSolCoefs[15]=0.0191194226903553;
-      m_cellAvgSolCoefs[16]=0.0191194226903553;
-      m_cellAvgSolCoefs[17]=0.0191194226903553;
-      m_cellAvgSolCoefs[18]=0.0191194226903553;
-      m_cellAvgSolCoefs[19]=0.0191194226903553;
-      m_cellAvgSolCoefs[20]=0.0191194226903553;
-      m_cellAvgSolCoefs[21]=0.0191194226903553;
-      m_cellAvgSolCoefs[22]=0.0191194226903553;
-      m_cellAvgSolCoefs[23]=0.0639785777410072;
-      m_cellAvgSolCoefs[24]=0.0639785777410072;
-      m_cellAvgSolCoefs[25]=0.0639785777410072;
-      m_cellAvgSolCoefs[26]=0.0639785777410072;
-      m_cellAvgSolCoefs[27]=0.0639785777410072;
-      m_cellAvgSolCoefs[28]=0.0639785777410072;
-      m_cellAvgSolCoefs[29]=0.0639785777410072;
-      m_cellAvgSolCoefs[30]=0.0639785777410072;
-      m_cellAvgSolCoefs[31]=0.0639785777410072;
-      m_cellAvgSolCoefs[32]=0.0639785777410072;
-      m_cellAvgSolCoefs[33]=0.0639785777410072;
-      m_cellAvgSolCoefs[34]=0.0639785777410072; 
+      m_cellAvgSolCoefs[0]=0.0931745731195340;
+      m_cellAvgSolCoefs[1]=0.0021900463965388;
+      m_cellAvgSolCoefs[2]=0.0021900463965388;
+      m_cellAvgSolCoefs[3]=0.0021900463965388;
+      m_cellAvgSolCoefs[4]=0.0021900463965388;
+      m_cellAvgSolCoefs[5]=0.0250305395686746;
+      m_cellAvgSolCoefs[6]=0.0250305395686746;
+      m_cellAvgSolCoefs[7]=0.0250305395686746;
+      m_cellAvgSolCoefs[8]=0.0250305395686746;
+      m_cellAvgSolCoefs[9]=0.0250305395686746;
+      m_cellAvgSolCoefs[10]=0.0250305395686746;
+      m_cellAvgSolCoefs[11]=0.0143395670177665;
+      m_cellAvgSolCoefs[12]=0.0143395670177665;
+      m_cellAvgSolCoefs[13]=0.0143395670177665;
+      m_cellAvgSolCoefs[14]=0.0143395670177665;
+      m_cellAvgSolCoefs[15]=0.0143395670177665;
+      m_cellAvgSolCoefs[16]=0.0143395670177665;
+      m_cellAvgSolCoefs[17]=0.0143395670177665;
+      m_cellAvgSolCoefs[18]=0.0143395670177665;
+      m_cellAvgSolCoefs[19]=0.0143395670177665;
+      m_cellAvgSolCoefs[20]=0.0143395670177665;
+      m_cellAvgSolCoefs[21]=0.0143395670177665;
+      m_cellAvgSolCoefs[22]=0.0143395670177665;
+      m_cellAvgSolCoefs[23]=0.0479839333057554;
+      m_cellAvgSolCoefs[24]=0.0479839333057554;
+      m_cellAvgSolCoefs[25]=0.0479839333057554;
+      m_cellAvgSolCoefs[26]=0.0479839333057554;
+      m_cellAvgSolCoefs[27]=0.0479839333057554;
+      m_cellAvgSolCoefs[28]=0.0479839333057554;
+      m_cellAvgSolCoefs[29]=0.0479839333057554;
+      m_cellAvgSolCoefs[30]=0.0479839333057554;
+      m_cellAvgSolCoefs[31]=0.0479839333057554;
+      m_cellAvgSolCoefs[32]=0.0479839333057554;
+      m_cellAvgSolCoefs[33]=0.0479839333057554;
+      m_cellAvgSolCoefs[34]=0.0479839333057554; 
     } break;
         case CFPolyOrder::ORDER5:
     {
-      m_cellAvgSolCoefs[0]=0.00138308164481866;
-      m_cellAvgSolCoefs[1]=0.00138308164481866;
-      m_cellAvgSolCoefs[2]=0.00138308164481866;
-      m_cellAvgSolCoefs[3]=0.00138308164481866;
-      m_cellAvgSolCoefs[4]=0.0488388488540144;
-      m_cellAvgSolCoefs[5]=0.0488388488540144;
-      m_cellAvgSolCoefs[6]=0.0488388488540144;
-      m_cellAvgSolCoefs[7]=0.0488388488540144;
-      m_cellAvgSolCoefs[8]=0.0128022193865973;
-      m_cellAvgSolCoefs[9]=0.0128022193865973;
-      m_cellAvgSolCoefs[10]=0.0128022193865973;
-      m_cellAvgSolCoefs[11]=0.0128022193865973;
-      m_cellAvgSolCoefs[12]=0.0128022193865973;
-      m_cellAvgSolCoefs[13]=0.0128022193865973;
-      m_cellAvgSolCoefs[14]=0.0128022193865973;
-      m_cellAvgSolCoefs[15]=0.0128022193865973;
-      m_cellAvgSolCoefs[16]=0.0128022193865973;
-      m_cellAvgSolCoefs[17]=0.0128022193865973;
-      m_cellAvgSolCoefs[18]=0.0128022193865973;
-      m_cellAvgSolCoefs[19]=0.0128022193865973;
-      m_cellAvgSolCoefs[20]=0.0219325302397642;
-      m_cellAvgSolCoefs[21]=0.0219325302397642;
-      m_cellAvgSolCoefs[22]=0.0219325302397642;
-      m_cellAvgSolCoefs[23]=0.0219325302397642;
-      m_cellAvgSolCoefs[24]=0.0219325302397642;
-      m_cellAvgSolCoefs[25]=0.0219325302397642;
-      m_cellAvgSolCoefs[26]=0.0219325302397642;
-      m_cellAvgSolCoefs[27]=0.0219325302397642;
-      m_cellAvgSolCoefs[28]=0.0219325302397642;
-      m_cellAvgSolCoefs[29]=0.0219325302397642;
-      m_cellAvgSolCoefs[30]=0.0219325302397642;
-      m_cellAvgSolCoefs[31]=0.0219325302397642;
-      m_cellAvgSolCoefs[32]=0.0204997022017746;
-      m_cellAvgSolCoefs[33]=0.0204997022017746;
-      m_cellAvgSolCoefs[34]=0.0204997022017746;
-      m_cellAvgSolCoefs[35]=0.0204997022017746;
-      m_cellAvgSolCoefs[36]=0.0204997022017746;
-      m_cellAvgSolCoefs[37]=0.0204997022017746;
-      m_cellAvgSolCoefs[38]=0.0204997022017746;
-      m_cellAvgSolCoefs[39]=0.0204997022017746;
-      m_cellAvgSolCoefs[40]=0.0204997022017746;
-      m_cellAvgSolCoefs[41]=0.0204997022017746;
-      m_cellAvgSolCoefs[42]=0.0204997022017746;
-      m_cellAvgSolCoefs[43]=0.0204997022017746;
-      m_cellAvgSolCoefs[44]=0.039136015783364;
-      m_cellAvgSolCoefs[45]=0.039136015783364;
-      m_cellAvgSolCoefs[46]=0.039136015783364;
-      m_cellAvgSolCoefs[47]=0.039136015783364;
-      m_cellAvgSolCoefs[48]=0.039136015783364;
-      m_cellAvgSolCoefs[49]=0.039136015783364;
-      m_cellAvgSolCoefs[50]=0.039136015783364;
-      m_cellAvgSolCoefs[51]=0.039136015783364;
-      m_cellAvgSolCoefs[52]=0.039136015783364;
-      m_cellAvgSolCoefs[53]=0.039136015783364;
-      m_cellAvgSolCoefs[54]=0.039136015783364;
-      m_cellAvgSolCoefs[55]=0.039136015783364;
+      m_cellAvgSolCoefs[0]=0.0010373112336140;
+      m_cellAvgSolCoefs[1]=0.0010373112336140;
+      m_cellAvgSolCoefs[2]=0.0010373112336140;
+      m_cellAvgSolCoefs[3]=0.0010373112336140;
+      m_cellAvgSolCoefs[4]=0.0366291366405108;
+      m_cellAvgSolCoefs[5]=0.0366291366405108;
+      m_cellAvgSolCoefs[6]=0.0366291366405108;
+      m_cellAvgSolCoefs[7]=0.0366291366405108;
+      m_cellAvgSolCoefs[8]=0.0096016645399480;
+      m_cellAvgSolCoefs[9]=0.0096016645399480;
+      m_cellAvgSolCoefs[10]=0.0096016645399480;
+      m_cellAvgSolCoefs[11]=0.0096016645399480;
+      m_cellAvgSolCoefs[12]=0.0096016645399480;
+      m_cellAvgSolCoefs[13]=0.0096016645399480;
+      m_cellAvgSolCoefs[14]=0.0096016645399480;
+      m_cellAvgSolCoefs[15]=0.0096016645399480;
+      m_cellAvgSolCoefs[16]=0.0096016645399480;
+      m_cellAvgSolCoefs[17]=0.0096016645399480;
+      m_cellAvgSolCoefs[18]=0.0096016645399480;
+      m_cellAvgSolCoefs[19]=0.0096016645399480;
+      m_cellAvgSolCoefs[20]=0.0164493976798232;
+      m_cellAvgSolCoefs[21]=0.0164493976798232;
+      m_cellAvgSolCoefs[22]=0.0164493976798232;
+      m_cellAvgSolCoefs[23]=0.0164493976798232;
+      m_cellAvgSolCoefs[24]=0.0164493976798232;
+      m_cellAvgSolCoefs[25]=0.0164493976798232;
+      m_cellAvgSolCoefs[26]=0.0164493976798232;
+      m_cellAvgSolCoefs[27]=0.0164493976798232;
+      m_cellAvgSolCoefs[28]=0.0164493976798232;
+      m_cellAvgSolCoefs[29]=0.0164493976798232;
+      m_cellAvgSolCoefs[30]=0.0164493976798232;
+      m_cellAvgSolCoefs[31]=0.0164493976798232;
+      m_cellAvgSolCoefs[32]=0.0153747766513310;
+      m_cellAvgSolCoefs[33]=0.0153747766513310;
+      m_cellAvgSolCoefs[34]=0.0153747766513310;
+      m_cellAvgSolCoefs[35]=0.0153747766513310;
+      m_cellAvgSolCoefs[36]=0.0153747766513310;
+      m_cellAvgSolCoefs[37]=0.0153747766513310;
+      m_cellAvgSolCoefs[38]=0.0153747766513310;
+      m_cellAvgSolCoefs[39]=0.0153747766513310;
+      m_cellAvgSolCoefs[40]=0.0153747766513310;
+      m_cellAvgSolCoefs[41]=0.0153747766513310;
+      m_cellAvgSolCoefs[42]=0.0153747766513310;
+      m_cellAvgSolCoefs[43]=0.0153747766513310;
+      m_cellAvgSolCoefs[44]=0.0293520118375230;
+      m_cellAvgSolCoefs[45]=0.0293520118375230;
+      m_cellAvgSolCoefs[46]=0.0293520118375230;
+      m_cellAvgSolCoefs[47]=0.0293520118375230;
+      m_cellAvgSolCoefs[48]=0.0293520118375230;
+      m_cellAvgSolCoefs[49]=0.0293520118375230;
+      m_cellAvgSolCoefs[50]=0.0293520118375230;
+      m_cellAvgSolCoefs[51]=0.0293520118375230;
+      m_cellAvgSolCoefs[52]=0.0293520118375230;
+      m_cellAvgSolCoefs[53]=0.0293520118375230;
+      m_cellAvgSolCoefs[54]=0.0293520118375230;
+      m_cellAvgSolCoefs[55]=0.0293520118375230;
     } break;
     default:
     {
@@ -3213,69 +3212,69 @@ void TetraFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
     case CFPolyOrder::ORDER2:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.054975871827667;
-        m_faceIntegrationCoefsPerType[0][1] = 0.054975871827667;
+        m_faceIntegrationCoefsPerType[0][1] = 0.111690794839000;
         m_faceIntegrationCoefsPerType[0][2] = 0.054975871827667;
         m_faceIntegrationCoefsPerType[0][3] = 0.111690794839000;
         m_faceIntegrationCoefsPerType[0][4] = 0.111690794839000;
-        m_faceIntegrationCoefsPerType[0][5] = 0.111690794839000;
+        m_faceIntegrationCoefsPerType[0][5] = 0.054975871827667;
     } break;
     
     case CFPolyOrder::ORDER3:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][1] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][2] = 0.020977756498325;
-        m_faceIntegrationCoefsPerType[0][3] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][1] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][2] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][3] = 0.020977756498325;
         m_faceIntegrationCoefsPerType[0][4] = 0.056049206035444;
-        m_faceIntegrationCoefsPerType[0][5] = 0.056049206035444;
+        m_faceIntegrationCoefsPerType[0][5] = 0.100771494292365;
         m_faceIntegrationCoefsPerType[0][6] = 0.056049206035444;
         m_faceIntegrationCoefsPerType[0][7] = 0.056049206035444;
         m_faceIntegrationCoefsPerType[0][8] = 0.056049206035444;
-        m_faceIntegrationCoefsPerType[0][9] = 0.100771494292365;
+        m_faceIntegrationCoefsPerType[0][9] = 0.020977756498325;
     } break;
 
     case CFPolyOrder::ORDER4:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][1] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][2] = 0.008957727506152;
-        m_faceIntegrationCoefsPerType[0][3] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][1] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][2] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][3] = 0.055749810027115;
         m_faceIntegrationCoefsPerType[0][4] = 0.063856097940632;
-        m_faceIntegrationCoefsPerType[0][5] = 0.063856097940632;
-        m_faceIntegrationCoefsPerType[0][6] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][7] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][8] = 0.038103031192768;
-        m_faceIntegrationCoefsPerType[0][9] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][10] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][11] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][5] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][6] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][7] = 0.127712195881265;
+        m_faceIntegrationCoefsPerType[0][8] = 0.063856097940632;
+        m_faceIntegrationCoefsPerType[0][9] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][10] = 0.038103031192768;
+        m_faceIntegrationCoefsPerType[0][11] = 0.055749810027115;
         m_faceIntegrationCoefsPerType[0][12] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][13] = 0.027874905013558;
-        m_faceIntegrationCoefsPerType[0][14] = 0.027874905013558;
+        m_faceIntegrationCoefsPerType[0][13] = 0.055749810027115;
+        m_faceIntegrationCoefsPerType[0][14] = 0.008957727506152;
     } break;
 
     case CFPolyOrder::ORDER5:
     {
         m_faceIntegrationCoefsPerType[0][0] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][1] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][2] = 0.005179687348269;
-        m_faceIntegrationCoefsPerType[0][3] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][4] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][5] = 0.037697442163369;
-        m_faceIntegrationCoefsPerType[0][6] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][7] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][8] = 0.048773901186621;
-        m_faceIntegrationCoefsPerType[0][9] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][10] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][11] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][1] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][2] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][3] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][4] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][5] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][6] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][7] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][8] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][9] = 0.075394884326738;
+        m_faceIntegrationCoefsPerType[0][10] = 0.048773901186621;
+        m_faceIntegrationCoefsPerType[0][11] = 0.037697442163369;
         m_faceIntegrationCoefsPerType[0][12] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][13] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][14] = 0.014484634686237;
-        m_faceIntegrationCoefsPerType[0][15] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][13] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][14] = 0.028969269372473;
+        m_faceIntegrationCoefsPerType[0][15] = 0.046046366595935;
         m_faceIntegrationCoefsPerType[0][16] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][17] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][18] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][19] = 0.023023183297967;
-        m_faceIntegrationCoefsPerType[0][20] = 0.023023183297967;
+        m_faceIntegrationCoefsPerType[0][17] = 0.037697442163369;
+        m_faceIntegrationCoefsPerType[0][18] = 0.014484634686237;
+        m_faceIntegrationCoefsPerType[0][19] = 0.075394884326738;
+        m_faceIntegrationCoefsPerType[0][20] = 0.005179687348269;
     } break;
     
     default:
