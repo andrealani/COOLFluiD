@@ -1735,7 +1735,7 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
       {
         for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];  // Sum should be = 1 so twoDcoeffs * 2
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=twoDcoeffs[iFlx]*oneDcoeffs[iZta]; 
         }  
       }
 
@@ -1754,7 +1754,7 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
       {
         for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=twoDcoeffs[iFlx]*oneDcoeffs[iZta];
         }  
       }
     } break;
@@ -1776,7 +1776,7 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
       {
         for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=twoDcoeffs[iFlx]*oneDcoeffs[iZta];
         }  
       }
     } break;
@@ -1803,7 +1803,7 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
       {
         for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=twoDcoeffs[iFlx]*oneDcoeffs[iZta];
         }  
       }
     } break;
@@ -1836,7 +1836,7 @@ void PrismFluxReconstructionElementData::createCellAvgSolCoefs()
       {
         for (CFuint iFlx = 0; iFlx < nbrSolPnts2D; ++iFlx)
         {
-          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=(twoDcoeffs[iFlx]*2.)*oneDcoeffs[iZta];
+          m_cellAvgSolCoefs[iZta*nbrSolPnts2D+iFlx]=twoDcoeffs[iFlx]*oneDcoeffs[iZta];
         }  
       }
     } break;  
