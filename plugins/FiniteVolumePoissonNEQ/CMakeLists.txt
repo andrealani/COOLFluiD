@@ -7,6 +7,8 @@ PoissonNEQBC.cxx
 PoissonNEQBC.hh
 PoissonNEQST.cxx
 PoissonNEQST.hh
+PoissonCNEQST.cxx
+PoissonCNEQST.hh
 )
 
 LIST ( APPEND FiniteVolumePoissonNEQ_requires_mods NavierStokes NEQ PoissonNEQ FiniteVolume FiniteVolumeNavierStokes FiniteVolumeNEQ )

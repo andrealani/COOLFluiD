@@ -10,6 +10,7 @@ template <typename BASE>
 void PoissonNEQTerm<BASE>::defineConfigOptions(Config::OptionList& options)
 {
   options.template addConfigOption< bool >("AxiModel","Use the axialsymmetric model.");
+  options.template addConfigOption< bool >("CNEQST","Use the CNEQST model.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -22,6 +23,9 @@ PoissonNEQTerm<BASE>::PoissonNEQTerm(const std::string& name) :
 
   m_axiModel = false;
   this->setParameter("AxiModel",&m_axiModel);
+  m_CNEQST = false;
+  this->setParameter("CNEQST",&m_CNEQST);
+
 }
       
 //////////////////////////////////////////////////////////////////////////////

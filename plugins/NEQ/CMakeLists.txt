@@ -107,6 +107,8 @@ Euler3DNEQRhoivtTv.cxx
 Euler3DNEQRhoivtTv.hh
 Euler3DNEQRhoivtTvToCons.cxx
 Euler3DNEQRhoivtTvToCons.hh
+Euler3DNEQRhovtXiToRhoivtTv.cxx #new addition: Vatsalya
+Euler3DNEQRhovtXiToRhoivtTv.hh
 EulerNEQ.ci
 EulerNEQ.cxx
 EulerNEQ.hh

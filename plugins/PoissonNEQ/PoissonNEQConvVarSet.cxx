@@ -4,6 +4,7 @@
 #include "NEQ/Euler2DNEQRhoivtTv.hh"
 #include "NEQ/Euler3DNEQCons.hh"
 #include "NEQ/Euler3DNEQRhoivtTv.hh"
+#include "NEQ/Euler3DNEQRhoivt.hh"
 #include "Environment/ObjectProvider.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -41,6 +42,10 @@ poissonNEQ3DConsConvProvider("PoissonNEQ3DCons");
 Environment::ObjectProvider<PoissonNEQConvVarSet<Euler3DNEQRhoivtTv>, 
 			    ConvectiveVarSet, PoissonNEQModule, 1> 
 poissonNEQ3DRhoivtTvConvProvider("PoissonNEQ3DRhoivtTv");
+
+Environment::ObjectProvider<PoissonNEQConvVarSet<Euler3DNEQRhoivt>, 
+			    ConvectiveVarSet, PoissonNEQModule, 1> 
+poissonNEQ3DRhoivtConvProvider("PoissonNEQ3DRhoivt"); // VS: New Addition
 
 //////////////////////////////////////////////////////////////////////////////
 

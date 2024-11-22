@@ -226,7 +226,10 @@ public:
   CFdouble sigma(CFdouble& temp,
      CFdouble& pressure,
      CFreal* tVec);
-
+  // Vatsalya
+ virtual CFdouble sigma_debug(CFdouble& temp, CFdouble& pressure, CFreal* tVec, CFuint elem_no){ 
+    return 0;
+  }
   /**
    * Calculates the specific heat ratio and the speed of sound in
    * thermal equilibrium.

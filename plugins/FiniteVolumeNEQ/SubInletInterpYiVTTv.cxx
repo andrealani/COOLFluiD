@@ -34,6 +34,9 @@ void SubInletInterpYiVTTv::defineConfigOptions(Config::OptionList& options)
   
   options.addConfigOption< CFreal >
     ("BlowVelocity", "Blowing velocity to stabilize the flow.");
+  
+  options.addConfigOption< CFreal >
+    ("AdditionalVariables", "Additional variables like phi etc."); //Vatsalya: this is added to handle phi for COMET. 
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -56,6 +59,9 @@ SubInletInterpYiVTTv::SubInletInterpYiVTTv(const std::string& name) :
   setParameter("BlowVelocity",&m_blowVelocity);
   
   this->m_sInterpolatorStr = "Lookup";
+
+  m_addVar = 0.;
+  setParameter("AdditionalVariables",&m_addVar);
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -84,7 +90,7 @@ void SubInletInterpYiVTTv::setGhostState(GeometricEntity *const face)
   const bool readFile = (m_yiVTTv.size() == 0);
   if (readFile) {
     const CFreal yCoord = 0.5*(ghostState.getCoordinates()[YY] + innerState.getCoordinates()[YY]);
-    const CFuint nbEqs = innerState.size();
+    const CFuint nbEqs = innerState.size()-m_addVar; //Vatsalya: removed the add var to make it work for org variables
     for (CFuint i = 0; i < nbEqs; ++i) {
       // interpolated state value in input variables
       interp->interpolate(i, yCoord, (*m_tstate)[i]);
@@ -128,7 +134,7 @@ void SubInletInterpYiVTTv::setGhostState(GeometricEntity *const face)
   }
   
   const CFuint tempID = nbSpecies + dim;
-  const CFuint nbEqs = innerState.size();
+  const CFuint nbEqs = innerState.size() -m_addVar; //Vatsalya: removed the add var to make it work for org variables. 
   
   CFuint idx = 0;
   for (CFuint i = 0; i < nbEqs; ++i) {

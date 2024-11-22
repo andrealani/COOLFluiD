@@ -179,13 +179,24 @@ public:
    * @param pressure pressure
    */
    CFdouble lambdaEQ(CFdouble& temp, CFdouble& pressure);
-  
+  /*!
+   * VS: Calculates 2nd order PRS electrical conductivity for Argon
+   * mass fraction _Xi should be calculated before calling this
+   */
+  CFdouble sigma_PRS2O(CFdouble& E);
+  /*!
+   * VS: Calculates degree of ionization. 
+   * mass fraction _Xi should be calculated before calling this
+   */
+  CFdouble getalpha();
   /*!
    * Calculates the electrical conductivity given temperature and pressure
    * @param temp temperature
    * @param pressure pressure
    */
   CFdouble sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec);
+  // Vatsalya
+  CFdouble sigma_debug(CFdouble& temp, CFdouble& pressure, CFreal* tVec, CFuint elem_no);
   
   /*!
    * Calculates the specific heat ratio and the speed of sound in
@@ -538,6 +549,14 @@ protected:
 
   /*Tolerance on mole fractions*/
   CFdouble _Xtol;
+
+  /*Scaling factor for Plato's electrical conductivity*/ //Vatsalya
+  CFdouble _scalingfactor;
+  /*Set gamma externally for specific cases like IRS WP3, only one value*/ //Vatsalya
+  CFdouble _external_gamma;
+
+  /*Set flag if gamma has to be set externally*/ //Vatsalya
+  CFdouble _external_gamma_flag;
 
   /*Mass fractions*/
   RealVector _Yi;

@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonNEQST_hh
-#define COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonNEQST_hh
+#ifndef COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonCNEQST_hh
+#define COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonCNEQST_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,7 +30,7 @@ namespace COOLFluiD {
  * @author Andrea Lani
  *
  */
-class PoissonNEQST : public FiniteVolume::ComputeSourceTermFVMCC {
+class PoissonCNEQST : public FiniteVolume::ComputeSourceTermFVMCC {
 
 public:
 
@@ -38,12 +38,12 @@ public:
    * Constructor
    * @see ComputeSourceTermFVMCC
    */
-  PoissonNEQST(const std::string& name);
+  PoissonCNEQST(const std::string& name);
 
   /**
    * Default destructor
    */
-  ~PoissonNEQST();
+  ~PoissonCNEQST();
 
   /**
    * Configure the object
@@ -88,6 +88,16 @@ public:
   
 private: // data
     
+  /// socket for B field (Bx, By, Bz)
+  // Framework::DataSocketSink<CFreal> socket_Bfield_In;
+
+  /// pointer to the physical-chemical library
+  Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
+  /// socket for the Bfield in cells, new
+  Framework::DataSocketSink<CFreal> socket_Bfield;
+
+  /// socket for the Bfield in faces, new
+  Framework::DataSocketSink<CFreal> socket_BfieldFaces;
   /*************************** New addition of source sockets : VS ******************/
   /// socket for storing the Lorentz force
   Framework::DataSocketSource<CFreal> socket_LorentzForce;
@@ -101,17 +111,6 @@ private: // data
   Framework::DataSocketSource<CFreal> socket_E;
 
   /*****************************************************************/
-  /// socket for B field (Bx, By, Bz)
-  // Framework::DataSocketSink<CFreal> socket_Bfield_In;
-
-  /// pointer to the physical-chemical library
-  Common::SafePtr<Framework::PhysicalChemicalLibrary> m_library;
-  /// socket for the Bfield in cells, new
-  Framework::DataSocketSink<CFreal> socket_Bfield;
-
-  /// socket for the Bfield in faces, new
-  Framework::DataSocketSink<CFreal> socket_BfieldFaces;
-
  /// reaction term
   //Common::SafePtr<PoissonNEQTerm<typename BASEVS::DTERM> > m_diffModel; // poisson NEQST not declared // check m_diffModel(NULL) in .cxx for comments
   
@@ -158,7 +157,7 @@ private: // data
   /// mid face coordinates
  // RealVector m_xf;
   
-}; // end of class PoissonNEQST
+}; // end of class PoissonCNEQST
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -170,4 +169,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonNEQST_hh
+#endif // COOLFluiD_Numerics_FiniteVolumePoissonNEQ_PoissonCNEQST_hh

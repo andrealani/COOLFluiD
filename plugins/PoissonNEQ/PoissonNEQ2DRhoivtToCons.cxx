@@ -1,5 +1,5 @@
 #include "PoissonNEQ/PoissonNEQ.hh"
-#include "PoissonNEQ2DRhoivtTvToCons.hh"
+#include "PoissonNEQ2DRhoivtToCons.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Framework/PhysicalChemicalLibrary.hh"
@@ -22,31 +22,31 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////
 
-Environment::ObjectProvider<PoissonNEQ2DRhoivtTvToCons, VarSetTransformer, PoissonNEQModule,1>
-poissonNEQ2DRhoivtTvToConsProvider("PoissonNEQ2DRhoivtTvToCons");
+Environment::ObjectProvider<PoissonNEQ2DRhoivtToCons, VarSetTransformer, PoissonNEQModule,1>
+PoissonNEQ2DRhoivtToConsProvider("PoissonNEQ2DRhoivtToCons");
 
 //////////////////////////////////////////////////////////////////////
 
-PoissonNEQ2DRhoivtTvToCons::PoissonNEQ2DRhoivtTvToCons
+PoissonNEQ2DRhoivtToCons::PoissonNEQ2DRhoivtToCons
 (Common::SafePtr<Framework::PhysicalModelImpl> model) :
-  Euler2DNEQRhoivtTvToCons(model)
+  Euler2DNEQRhoivtToCons(model)
 {
   cf_assert(model.isNotNull());
 }
       
 //////////////////////////////////////////////////////////////////////
       
-PoissonNEQ2DRhoivtTvToCons::~PoissonNEQ2DRhoivtTvToCons()
+PoissonNEQ2DRhoivtToCons::~PoissonNEQ2DRhoivtToCons()
 {
 }
 
 //////////////////////////////////////////////////////////////////////
 
-void PoissonNEQ2DRhoivtTvToCons::transform(const State& state, State& result)
+void PoissonNEQ2DRhoivtToCons::transform(const State& state, State& result)
 {
-  //cout<<"PoissonNEQ2DRhoivtTvToCons\n";
-  Euler2DNEQRhoivtTvToCons::transform(state, result);
-  //cout<<"PoissonNEQ2DRhoivtTvToCons2\n";
+  //cout<< "PoissonNEQ2DRhoivtToCons__\n";
+  Euler2DNEQRhoivtToCons::transform(state, result);
+ // cout<< "PoissonNEQ2DRhoivtToCons\n";
   // here we assume that phi is the last component
   const CFuint startE = result.size()-1;
   result[startE]   = state[startE];
@@ -54,10 +54,9 @@ void PoissonNEQ2DRhoivtTvToCons::transform(const State& state, State& result)
       
 //////////////////////////////////////////////////////////////////////
       
-void PoissonNEQ2DRhoivtTvToCons::transformFromRef(const RealVector& data, State& result)
+void PoissonNEQ2DRhoivtToCons::transformFromRef(const RealVector& data, State& result)
 { 
-  //cout<<"here 8b\n";
-  Euler2DNEQRhoivtTvToCons::transformFromRef(data, result);
+  Euler2DNEQRhoivtToCons::transformFromRef(data, result);
 
   // here we assume that phi is the last component
   const CFuint firstScalarVar = _model->getDataSize() - 1;

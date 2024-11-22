@@ -13,7 +13,7 @@
 #include "Common/StringOps.hh"
 #include <fstream>
 #include <cstdlib>
- 
+//#include <mutation++.h> 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -45,6 +45,7 @@ void PlatoLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("reactionName","Name of the reaction.");
   options.addConfigOption< std::string >("transfName","Name of the transfer file.");
   options.addConfigOption< CFdouble >("Xtol","Tolerance on mole fraction for transport properties.");
+  options.addConfigOption< CFdouble >("scaleElectricalConductivity","Scaling factor for PLATO's electrical conductivity"); // Vatsalya : Plato version June-2022.
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -91,6 +92,15 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
 
   _Xtol = 1.e-12;
   setParameter("Xtol",&_Xtol);
+
+  _scalingfactor = 1.0; // Vatsalya : Use 2.85 for Argon ; 
+  setParameter("scaleElectricalConductivity",&_scalingfactor);
+
+  //_external_gamma_flag = 0; //Vatsalya : Set it as 5 in test case to enable gamma from testcase. '5' is random so no mistakes
+  //setParameter("set_external_gamma_flag",&_external_gamma_flag);
+
+  //_external_gamma = 1.4; //Vatsalya : after the previous flag is made 1 set this value of gamma from testcase
+  //setParameter("set_external_gamma",&_external_gamma);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -145,7 +155,7 @@ void PlatoLibrary::setLibrarySequentially()
  // }
  // const int lpath = strlen(envPlato.c_str());
   CFLog(ERROR, "PlatoLibrary::setLibrarySequentially() => lpath is: " << envPlato << '\n'); 
-  
+  CFout <<"_transfName = "<<_transfName.c_str()<<"\n";
   /*Initialize the PLATO library*/
   initializeC(solver, _mixtureName.c_str(), _reactionName.c_str(), _transfName.c_str(), 
 	      envPlato.c_str(), lsolver, lmixture, lreaction, ltransfer, lpath);
@@ -158,24 +168,30 @@ void PlatoLibrary::setLibrarySequentially()
   _NS   = get_nb_species();
   _nAt  = get_nb_at_species();
   _nMol = get_nb_mol_species();
-
+ 
   /*Number of temperatures (total, vibrationa;, free-electron-electronic)*/
   _nTemp  = get_nb_temp();
   _nbTvib = get_nb_vib_temp();
   _nbTe   = get_nb_el_temp();
-
+  
   /*Free-electron energy ID (C/C++ array)*/
   _electrEnergyID = 0;
   if (getNbTe() == 1) {
     _electrEnergyID = _nbTvib;
   }
+// nb_e print for each mixture
 
+  const int nb_elec = get_nb_e();
+  const int nb_compo = get_nb_comp();
+  const int nb_atoms = get_nb_at();
+  const int nb_molecules  = get_nb_mol();
+  CFout << "nb_elec = " << nb_elec << "\t"<< "nb_compo  = " << nb_compo << "\t nb_atoms=" << nb_atoms<<"\t nb_molecules=" << nb_molecules<<"\t _NS=" << _NS<<"\t _nAt=" << _nAt<<"\t _nMol=" << _nMol<<"\n"; //Vatsalya
   /*Number of dimensions*/
   _nDim = PhysicalModelStack::getActive()->getDim();
 
   /*Number of governing equations*/
   _nEqs = _NS + _nDim + _nTemp;
-
+ CFout << "_nbTe = " << _nbTe << "\t"<< "_nbTvib  = " << _nbTvib << "\t getNbTe()=" << getNbTe()<<"\t _nTemp=" << _nTemp<<"\t _nDim=" << _nDim<<"\t _nEqs=" << _nEqs<<"\n"; //Vatsalya
   /*Allocate working arrays*/
   _Xi.resize(_NS);
   _Xitol.resize(_NS);
@@ -207,7 +223,8 @@ void PlatoLibrary::setLibrarySequentially()
  
   /*Gas constants [J/(kg*K)]*/
   get_Ri(&_Ri[0]);
- 
+  
+
   /*Charges*/ 
   get_qi(&_qi[0]);
   
@@ -221,7 +238,7 @@ void PlatoLibrary::setLibrarySequentially()
 
   /*Universal gas constant [J/(mol*K)]*/
    _Rgas = URU;
-
+  CFout << " _Rgas = " <<_Rgas<<"\n";
   /*Set flag to indicate is the mixture is neutral or ionized*/
   _hasElectrons = (get_nb_e() == 1) ? true : false;
 
@@ -238,6 +255,13 @@ void PlatoLibrary::setLibrarySequentially()
   CFint flag =0;
   get_eq_composition_mole(&press, &temp, &_Xc[0], &_Xi[0], &flag);
 
+  CFout << "_Ri is in [J/(kg*K)] and molar mass (_mmi) is in [kg/mol]" << "\n";
+  for (CFint i = 0; i < _NS; ++i) {
+
+    CFout << i<<" _Ri = " <<_Ri[i]<<"\n"; // vatsalya: added for more understanding
+    CFout << i<<" _mmi = " <<_mmi[i]<<"\n";
+    CFout << i<<" _Xi[0] = " <<_Xi[i]<<"\n";
+  }
   
 }
  
@@ -334,6 +358,7 @@ void PlatoLibrary::getMolarMasses(RealVector& mm)
 {
   for(CFint is = 0; is < _NS; ++is) {
     mm[is] = _mmi[is];
+    // CFout << is<<" mm[0] = " <<mm[is]<<"\n"; //  vatsalya
   }
 }
 
@@ -442,8 +467,86 @@ void PlatoLibrary::lambdaVibNEQ(CFreal& temp, RealVector& tVec,  CFdouble& press
     lambdaInt[i - 1] = _lambdavec[i];
   }
 }
+//////////////////////////////////////////////////////////////////////////////
+/*!
+  * VS: This function is meant for calculating Chapman cowling electrical conductivity. This returns degree of ionization
+  * meant for (T)CNEQ-MHD solver for MEESST
+  * Works for Ar, need to change for air etc
+  * (the mole fractions are stored in the vector "_Xi" which has to be filled before invoking this function)
+*/
+
+CFdouble PlatoLibrary::getalpha()
+{
+  /*
+  CFdouble X_ = 0;
+  for(CFint is = 0; is < _NS; ++is) {
+    X_ += _Xi[is];
+  }
+  X_ -= Xi[2]; // remove Ar from sum
+  
+
+  return X_;
+  */
+ 
+ return _Xi[2]; // we send only Ar+ for now
+}
+//////////////////////////////////////////////////////////////////////////////
+/*!
+  * VS: This function is meant for calculating 2nd order PRS  electrical conductivity. This returns sigma
+  * meant for (T)CNEQ-MHD solver for MEESST
+  * Works for Ar, need to change for air etc
+  * (the mole fractions are stored in the vector "_Xi" which has to be filled before invoking this function)
+*/
+
+CFdouble PlatoLibrary::sigma_PRS2O(CFdouble& E)
+{
+  /*
+  CFdouble value = 0;
+   for (CFint i = 0; i < _nDim; ++i) {
+     value += gradphi[i]*gradphi[i];
+   }
+   CFdouble E = sqrt(value);
+   */
+  // get N which is total gas number density from Plato for Argon.
+  // Make E=0 for now.
+  CFdouble N = 1;
+ //E = 0;
+ //cout <<"E = "<< E <<"\n";
+ CFdouble norm_E = 0.0;//E/N;
+ CFdouble T1 = -842.64 + 128.02*(norm_E) + 2558.25*_Xi[1] - 4112.52*_Xi[2];  // _Xi[1] is Ar, _Xi[2] is Ar+
+ CFdouble T2 = -4.82*(norm_E)*(norm_E) - 118.25*(norm_E)*_Xi[1] - 121.33*norm_E*_Xi[2];
+ CFdouble T3 = -1732.34*((_Xi[1])*(_Xi[1])) + 3229.51*_Xi[1]*_Xi[2] - 7342.51*(_Xi[2])*(_Xi[2]);
+
+ CFdouble PRS  = T1 + T2 + T3;
+ CFdouble sigma = _Xi[0]/exp(PRS);
+ return sigma;
+}
 
 //////////////////////////////////////////////////////////////////////////////
+
+// Vatsalya : created this to check sigma
+CFdouble PlatoLibrary::sigma_debug(CFdouble& temp, CFdouble& pressure, CFreal* tVec, CFuint elem_no)
+{
+  /*Heavy-particle and free-electron temperatures*/
+  CFdouble Th = temp;
+  CFdouble Te = get_el_temp(temp, tVec);
+  
+  /*Electron mole fraction*/
+  CFdouble Xe = _Xi[0];
+  CFdouble M_e = _Yi[0];// mass fraction
+  /*Compute number density*/
+  CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
+
+  /*Compute electrical conductivity*/
+  CFdouble sigma_ = get_sigma_e(&nd, &Th, &Te, &_Xi[0]);
+  CFdouble me = nd * 9.10938356*pow(10,-31); // 5.485799*pow(10,-7) ; // molar mass  //9.10938356*pow(10,-31); // mass in kg
+  CFdouble density = get_density(&nd, &_Xi[0]);
+  if(elem_no == 7){  
+    cout<<" elem_no = " << elem_no << " Xe = " << Xe << " nd = " << nd << " M_e = " << M_e << " rho_e = " << me << " pressure = " << pressure << " sigma_vol = " << sigma_<<" Th = " <<Th << " Te = "<< Te<< "\n";
+  }
+  CFdouble sigma = sigma_/_scalingfactor ;
+  return sigma;
+}
 /*!
  * This function returns the electrical conductivity given the pressure and the
  * temperatures (the mole fractions are stored in the vector "_Xi" which has 
@@ -462,8 +565,12 @@ CFdouble PlatoLibrary::sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
 
   /*Compute electrical conductivity*/
-  CFdouble sigma = get_sigma_e(&nd, &Th, &Te, &_Xi[0]);
-
+   CFdouble sigma_ = get_sigma_e(&nd, &Th, &Te, &_Xi[0]); // commented for PG2002 case
+   CFdouble sigma = sigma_/_scalingfactor ; //3.0;  // Vatsalya : Added a correction factor, works well for Argon, need to check for Air, Mars etc
+  // CFdouble sigma = 2000.0; // only for PG2002 case
+  
+ // CFdouble me = nd * 9.10938356*pow(10,-31);
+ // cout<< "Xe = " << Xe<< "nd = " << nd << "rho_e = " << me << " pressure = " << pressure << " sigma_vol = " << sigma<<" Th = " <<Th << " Te = "<< Te<< "_scalingfactor = " << _scalingfactor << "\n";
   return sigma;
 }
 
@@ -475,12 +582,14 @@ CFdouble PlatoLibrary::sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
  */
 void PlatoLibrary::gammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, CFdouble& rho, CFdouble& gamma, CFdouble& soundSpeed)
 {
+  //CFout <<"here 2\n"; // Vatsalya : Not for TTv
   get_eq_gamma_sound_speed(&pressure, &temp, &_Xi[0], &gamma, &soundSpeed);  
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////      
 /*!
- * This function returns the frozen speed of sound and the specific heat ratio 
+ * This function returns the frozen speed of sound and the specific heat ratio (gamma)
  * (the mole fractions are stored in the vector "_Xi" which has to be filled before invoking this functio)
  */
 void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, CFdouble& rho, CFdouble& gamma, CFdouble& soundSpeed, RealVector* tVec)
@@ -490,7 +599,7 @@ void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, 
   for (CFint i = 1; i < _nTemp; ++i) {
     _tvec[i] = (*tVec)[i - 1];
   }
-
+  //CFout <<"here 3\n"; // Vatsalya : only this works for TTv
   /*Partial densities*/
   for (CFint i = 0; i < _NS; ++i) {
     _rhoi[i] = rho*_Yi[i];
@@ -498,6 +607,25 @@ void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, 
 
   /*Get frozen specific heat ratio and speed of sound*/  
   get_frozen_gamma_sound_speed(&pressure, &rho, &_rhoi[0], &_tvec[0], &gamma, &soundSpeed);
+
+ 
+  /*
+  cout << "pressure = " << pressure <<"\t rho = " << rho <<"\n"; 
+
+  for (CFint i = 0; i < _NS; ++i) {
+    cout << "_rho["<<i<<"] = "<< _rhoi[i] << "\n";
+  }
+  cout << "gamma = " << gamma <<"\t soundSpeed = " << soundSpeed <<"\n"; 
+  //*/
+ 
+ /* //Not using for now : Vatsalya
+  if(_external_gamma_flag ==5){
+   
+    gamma = _external_gamma ;
+    soundSpeed = sqrt((gamma*pressure/rho)); 
+  }
+  cout << "new_gamma = " << gamma <<"\t new_soundSpeed = " << soundSpeed <<"\n"; 
+  */
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -508,7 +636,7 @@ void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, 
 CFdouble PlatoLibrary::soundSpeed(CFdouble& temp, CFdouble& pressure)
 {
   CFdouble gamma, soundSpeed;
-
+  // CFout <<"here 4\n"; // Vatsalya : Not for TTv
   /*Compute equilibrium sound speed*/
   get_eq_gamma_sound_speed(&pressure, &temp, &_Xi[0], &gamma, &soundSpeed);
 
@@ -568,7 +696,7 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp, CFdouble& pressure, 
     rho += _Xi[i]*_mmi[i];
   }
   rho *= pressure/(_Rgas*temp);
-
+  // CFout << " rho computed = " <<rho<<"\n";
   /*Density, specific enthalpy and specific energy*/
   dhe[0] = rho;
   dhe[1] = h;
@@ -607,6 +735,7 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
   /*Compute energy densities. By passing the mass fractions we obtain quantities per unit mass*/
   get_energy_densities(&_Yi[0], &_tvec[0], &_rhoe[0]);
   CFdouble et = _rhoe[0];
+  //CFout <<"here 4\n"; // function is used during tcneq computations: vatsalya
 
   /*Density, mixture enthalpy and specific energy, and non-equilibrium energies*/
   dhe[0] = rho;
@@ -615,7 +744,7 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
   for (CFint i = 1; i < _nTemp; ++i) {
     dhe[2 + i] = _rhoe[i];
   }
-
+  //cout << " Xe = " << Xe << " nd = " << nd << " pressure = " << pressure <<" rho = " << rho << " _rhoe[0] = " << _rhoe[0]<<"  Th = " <<Th << " Te = "<< Te<< "\n";
   if (storeExtraData) {
      CFLog(ERROR,  "Extra data not available:: PlatoLibrary::setDensityEnthalpyEnergy()\n");
      throw NotImplementedException(FromHere(),"PlatoLibrary::setDensityEnthalpyEnergy()");
@@ -641,7 +770,7 @@ CFdouble PlatoLibrary::density(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
 
   /*Compute density*/
   CFdouble rho = get_density(&nd, &_Xi[0]);
-
+  //CFout <<"here 4\n";
   return rho;
 }
 
@@ -659,7 +788,14 @@ CFdouble PlatoLibrary::pressure(CFdouble& rho, CFdouble& temp, CFreal* tVec)
   /*Compute pressure (note that we multiply by the density since the PLATO function
    *assumes as input arguments the partial densities of the chemical components)*/
   CFdouble pressure = rho*(get_pressure(&Th, &Te, &_Yc[0]));
-
+  //cout << "pressure = " << pressure <<"\t rho = " << rho <<"\t"; 
+  //cout << "Th = " << Th <<"\t Te = " << Te <<"\n"; 
+  
+  /*
+  for (CFint i = 0; i < _NS; ++i) {
+    cout << "_X["<<i<<"] = "<< rho*_Yc[i] << "\n";
+  }
+  */
   return pressure;
 }
 
@@ -739,10 +875,10 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
    // std::cout << is << "\n";
    // std::cout << ys << "\n";
    // std::cout <<_Yi;
-       cf_assert(_Yi[is] < 1.1);
+       cf_assert(_Yi[is] < 1.1); //new
       
   }
-
+  //CFout<<"******computed here/////////// \n"; // we go here in TCNEQ
   /*Set mass fractions of chemical components*/
   get_comp_fractions(&_Yi[0], &_Yc[0]);
 
@@ -751,6 +887,15 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
 
   /*Get mole fractions of chemical components*/
   get_comp_fractions(&_Xi[0], &_Xc[0]);
+  /* vatsalya //// 
+  for (CFint i = 0; i < _NS; ++i) {
+    CFout << i<<" ys[0] = " <<ys[i]<<"\t";
+    CFout << i<<" _Yc[0] = " <<_Yc[i]<<"\t";
+    CFout << i<<" _Xi[0] = " <<_Xi[i]<<"\t";
+    CFout << i<<" _Xc[0] = " <<_Xc[i]<<"\n";
+
+  }
+  //*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1065,9 +1210,9 @@ void PlatoLibrary::getSourceEE(CFdouble& temperature,
   CFLog(ERROR,  "PLATO interface STOP:: getSourceEE\n"); 
   throw NotImplementedException(FromHere(),"PlatoLibrary::getSourceEE()");
 }
-      
+
 //////////////////////////////////////////////////////////////////////////////
-      
+
 } // namespace Plato
 
 } // namespace Physics

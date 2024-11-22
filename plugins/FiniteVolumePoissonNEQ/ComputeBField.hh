@@ -84,6 +84,8 @@ private:
    * Read the file defining the vectorial functions
    */
   virtual void readFunctionsFile();
+  virtual void readFile();  // Vatsalya: to read a file with Bx,By,Bz
+  virtual void CopyFromNameSpace(); // Vatsalya : To copy data from one Name space to another
   
 private: //data
   
@@ -93,9 +95,18 @@ private: //data
   /// the socket to the data handle of the state's
   Framework::DataSocketSink < Framework::State* , Framework::GLOBAL > socket_states;
   
+  Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_otherStates;
   /// the socket to the data handle of the nodal state's
   Framework::DataSocketSink<Framework::State*> socket_gstates;
 
+  /// socket for BX values
+  //Framework::DataSocketSink<CFreal> socket_otherBX;
+  
+  /// socket for BY values
+  //Framework::DataSocketSink<CFreal> socket_otherBY;
+
+  /// socket for BZ values
+  //Framework::DataSocketSink<CFreal> socket_otherBZ;
   /// storage of face centroids
   Framework::DataSocketSink<CFreal> socket_faceCenters;
   
@@ -104,7 +115,8 @@ private: //data
 
   /// socket for the Bfield in faces
   Framework::DataSocketSource<CFreal> socket_BfieldFaces;
-
+  
+  
   // dummy state vector
   RealVector m_input;
   
@@ -116,6 +128,12 @@ private: //data
   
   /// name of the file where strings holding the functions are defined
   std::string m_functionsFileName;
+
+   /// name of the file where strings holding the functions are defined
+  std::string m_dataFileName;
+
+  /// name of the other namespace (providing the BField using Dummy system)
+  std::string m_otherNamespace;
   
   // the VectorialFunction to use
   Framework::VectorialFunction m_vFunction;

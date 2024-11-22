@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Physics_NEQ_Euler3DNEQRhoivtTvToCons_hh
-#define COOLFluiD_Physics_NEQ_Euler3DNEQRhoivtTvToCons_hh
+#ifndef COOLFluiD_Physics_NEQ_Euler3DNEQRhovtXiToRhoivtTv_hh
+#define COOLFluiD_Physics_NEQ_Euler3DNEQRhovtXiToRhoivtTv_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -19,27 +19,26 @@ namespace COOLFluiD {
 
 /**
  * This class represents a transformer of variables from primitive
- * [p u v T] to conservative variables with LTE and Demixing
+ * [rho u v w T] to conservative variables with LTE and Demixing
  *
- * @author Andrea Lani
- * @author Janos Molnar
+ * @author Vatsalya Sharma
  *
  */
-class Euler3DNEQRhoivtTvToCons : public Framework::VarSetTransformer {
+class Euler3DNEQRhovtXiToRhoivtTv : public Framework::VarSetTransformer {
 public:
   
   typedef Framework::MultiScalarTerm<NavierStokes::EulerTerm> NEQTerm;
-  
+    
   /**
    * Default constructor without arguments
    */
-  Euler3DNEQRhoivtTvToCons(Common::SafePtr<Framework::PhysicalModelImpl> model);
+  Euler3DNEQRhovtXiToRhoivtTv(Common::SafePtr<Framework::PhysicalModelImpl> model);
 
   /**
    * Default destructor
    */
-  ~Euler3DNEQRhoivtTvToCons();
-  
+  ~Euler3DNEQRhovtXiToRhoivtTv();
+
   /**
    * Transform a state into another one
    */
@@ -49,32 +48,23 @@ public:
    * Transform a state into another one from reference precomputed
    * values (physical data)associated to the given state
    */
-  void transformFromRef(const RealVector& data, Framework::State& result);
-  
-protected: // was private earlier : Vatsalya
-  
+  void transformFromRef(const RealVector& data, Framework::State& result)
+  {
+    throw Common::NotImplementedException (FromHere(),"Euler3DNEQRhovtXiToRhoivtTv::transformFromRef()");
+  }
+    
+protected: //Vatsalya: was private earlier.
+
   /// acquaintance of the model
   Common::SafePtr<NEQTerm> _model;
-   
-  /// Vector storing the elemental composition
+  
+  /// Vector storing the mass fractions
   RealVector _ye;
   
-  /// array to store density, enthalpy and energy
-  RealVector _dhe;
-  
-  /// array with all different vibrational dimensional temperatures
-  RealVector _tvDim;
- 
-  /// array with all different temperature
-  RealVector _tDim;
-  
-  /// array with all different vibrational dimensional energies
-  RealVector _evDim;
+  /// Vector storing the molar fractions
+  RealVector _xe;
 
-  /// array with partial densities 
-  RealVector _rhoi; 
-
-}; // end of class Euler2DNEQRhoivtTvToCons
+}; // end of class Euler1DNEQPvtToRhoivtTv
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -86,4 +76,4 @@ protected: // was private earlier : Vatsalya
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Physics_NEQ_Euler3DNEQRhoivtTvToCons_hh
+#endif // COOLFluiD_Physics_NEQ_Euler3DNEQRhovtXiToRhoivtTv_hh

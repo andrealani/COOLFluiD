@@ -38,7 +38,12 @@ void PoissonNEQDiffVarSet<BASEVS>::setup()
   BASEVS::setup();
   
   m_tVec.resize(this->_eulerModel->getNbScalarVars(1));
-  cf_assert(m_tVec.size() > 0);
+  /*
+  if(!m_diffModel->useCNEQST()){
+    cf_assert(m_tVec.size() > 0); // only for TCNEQ
+  }
+  */
+  
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -82,10 +87,21 @@ RealVector& PoissonNEQDiffVarSet<BASEVS>::getFlux
       cf_assert(rho > 0.);
       const CFuint TvID = this->_TID+1;
       for (CFuint iTv = 0; iTv < m_tVec.size(); ++iTv) {
-	m_tVec[iTv] = values[TvID+iTv];
+	        m_tVec[iTv] = values[TvID+iTv];
       }
       
-      CFreal* tVec = &m_tVec[0];
+      CFreal* tVec;
+      
+      if(!m_diffModel->useCNEQST()){
+        tVec = &m_tVec[0];  // TCNEQ
+        //cout<<"TCNEQ\n";
+      }
+      else{
+        tVec = CFNULL;   // CNEQ
+        //cout<<"CNEQ\n";
+      }
+      //*/     
+      // CFreal* tVec = CFNULL; //CNEQ
       CFreal pdim = this->_library->pressure(rho, Tdim, tVec); 
       cf_assert(pdim > 0.01);
       
@@ -96,22 +112,26 @@ RealVector& PoissonNEQDiffVarSet<BASEVS>::getFlux
       const CFuint Bx = BfieldFaces[startIdx];
       const CFuint By = BfieldFaces[startIdx+1];
       const CFuint Bz = BfieldFaces[startIdx+2];
-      nsData[sigmaID] = this->_library->sigma(Tdim, pdim, tVec);
+      nsData[sigmaID] = this->_library->sigma(Tdim, pdim, tVec); //Plato
       
       if (this->_setBackUpValues) {
-	cf_assert(!this->_freezeDiffCoeff);
-	m_sigmaCoeff = nsData[sigmaID];
+          cf_assert(!this->_freezeDiffCoeff);
+          m_sigmaCoeff = nsData[sigmaID];
       }
     }    
     
     const CFreal sigma = nsData[sigmaID];
-    cf_assert(sigma > 0.);
+    //cf_assert(sigma > 0.); //Vatsalya: commented it as sigma is 0 in ambient air during re-entry
     
     // assumption: phi is in the last equation
     const CFuint phiID = totalNbEqs -1;
     const RealVector& gradPhi = *gradients[phiID];
     const CFuint dim = PhysicalModelStack::getActive()->getDim();
-    
+    /*
+    if(sigma<0){
+      cout << "sigma = "<< sigma << "\n";
+    }
+    */
     this->_flux[phiID] = 0.0;
     for (CFuint i = 0; i < dim; ++i) {
       this->_flux[phiID] += sigma*gradPhi[i]*normal[i];
@@ -119,9 +139,11 @@ RealVector& PoissonNEQDiffVarSet<BASEVS>::getFlux
 	    << ", normal["<< i <<"] = " << normal[i] <<  "\n");
     }
     
-    if (m_diffModel->useAxiModel()) {
+    /*
+    if (m_diffModel->useAxiModel()) {  //change to TCNEQ
       // ...
     }
+    */
   }
   
   return this->_flux;
@@ -145,5 +167,3 @@ CFreal PoissonNEQDiffVarSet<BASEVS>::getCurrUpdateDiffCoeff(CFuint iEqSS)
   } // namespace Physics
 
 } // namespace COOLFluiD
-
-//////////////////////////////////////////////////////////////////////////////

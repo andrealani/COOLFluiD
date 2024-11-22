@@ -50,7 +50,7 @@ public:
    */
   void transformFromRef(const RealVector& data, Framework::State& result);
     
-private:
+protected: // was private earlier : Vatsalya
 
   /// acquaintance of the model
   Common::SafePtr<EulerNEQTerm> _model;

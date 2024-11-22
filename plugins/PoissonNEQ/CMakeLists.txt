@@ -1,7 +1,15 @@
 LIST ( APPEND PoissonNEQ_files
 PoissonNEQ.hh
-PoissonNEQ2DRhoivtTvToCons.cxx
-PoissonNEQ2DRhoivtTvToCons.hh
+PoissonNEQ2DRhoivtTvToCons.cxx #Vatsalya New addition
+PoissonNEQ2DRhoivtTvToCons.hh   #Vatsalya New addition
+PoissonNEQ3DRhoivtTvToCons.cxx  #Vatsalya New addition
+PoissonNEQ3DRhoivtTvToCons.hh   #Vatsalya New addition
+PoissonNEQ3DRhovtXiToRhoivtTv.cxx #Vatsalya: New addition
+PoissonNEQ3DRhovtXiToRhoivtTv.hh # Vatsalya: New addition
+PoissonNEQ2DRhoivtToCons.cxx
+PoissonNEQ2DRhoivtToCons.hh
+PoissonNEQ3DRhoivtToCons.cxx
+PoissonNEQ3DRhoivtToCons.hh
 PoissonNEQConvVarSet.ci
 PoissonNEQConvVarSet.cxx
 PoissonNEQConvVarSet.hh

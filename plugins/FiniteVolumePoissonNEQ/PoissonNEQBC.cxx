@@ -8,7 +8,10 @@
 #include "NavierStokes/EulerTerm.hh"
 #include "NavierStokes/EulerVarSet.hh"
 #include "Framework/MethodCommandProvider.hh"
-
+//Vatsalya: new headers
+#include "FiniteVolumeNEQ/SubOutletEulerP.hh"
+#include "NavierStokes/Euler3DVarSet.hh" //since we do 3D only
+#include "FiniteVolumeNEQ/SubInletInterpYiVTTv.hh"
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -46,6 +49,18 @@ MethodCommandProvider<PoissonNEQBC<NoSlipWallIsothermalNSrvt<MultiScalarTerm<Eul
 		      CellCenterFVMData, 
 		      FiniteVolumePoissonNEQModule> 
 noSlipWallIsothermalNSrvtMultiPoissonNEQFVMCCProvider("NoSlipWallIsothermalNSrvtMultiPoissonNEQFVMCC");
+
+//vatsalya:new bc for ICP
+MethodCommandProvider<PoissonNEQBC<SubOutletEulerP<Euler3DVarSet> >,
+		      CellCenterFVMData, 
+		      FiniteVolumePoissonNEQModule> 
+subOutletEuler3DPPoissonNEQFVMCCProvider("SubOutletEuler3DPPoissonNEQFVMCC");
+
+MethodCommandProvider<PoissonNEQBC<SubInletInterpYiVTTv>, 
+		      CellCenterFVMData, 
+		      FiniteVolumePoissonNEQModule> 
+subInletInterpYiVTTvPoissonNEQFVMCCProvider("SubInletInterpYiVTTvPoissonNEQFVMCC");
+
 
 //////////////////////////////////////////////////////////////////////////////
 

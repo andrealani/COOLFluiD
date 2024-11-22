@@ -1,6 +1,7 @@
 #include "PoissonNEQ/PoissonNEQ.hh"
 #include "PoissonNEQ/PoissonNEQDiffVarSet.hh"
 #include "NEQ/NavierStokesTCNEQVarSet.hh"
+#include "NEQ/NavierStokesCNEQVarSet.hh"
 #include "NEQ/NavierStokesNEQRhoivt.hh"
 #include "NavierStokes/NavierStokes2DVarSet.hh"
 #include "NavierStokes/NavierStokes3DVarSet.hh"
@@ -35,6 +36,12 @@ Environment::ObjectProvider<PoissonNEQDiffVarSet
 			    DiffusiveVarSet, 
 			    PoissonNEQModule, 2> 
 poissonNEQ3DRhoivtTvDiffProvider("PoissonNEQ3DRhoivtTv");
+
+Environment::ObjectProvider<PoissonNEQDiffVarSet
+			    <NavierStokesNEQRhoivt<NavierStokesCNEQVarSet<NavierStokes3DVarSet> > >,
+			    DiffusiveVarSet, 
+			    PoissonNEQModule, 2> 
+poissonNEQ3DRhoivtDiffProvider("PoissonNEQ3DRhoivt"); // VS: new addition 
 
 //////////////////////////////////////////////////////////////////////////////
 

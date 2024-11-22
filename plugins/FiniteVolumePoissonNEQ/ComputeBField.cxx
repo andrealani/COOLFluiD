@@ -49,6 +49,8 @@ void ComputeBField::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("Vars","Definition of the Variables.");
   options.addConfigOption< std::vector<std::string> >("Def","Definition of the Functions.");
   options.addConfigOption< std::string >("DefFileName","Name of file where Functions are defined.");
+  options.addConfigOption< std::string >("DataFileName","Name of file where Bx By Bz are given."); // Vatsalya: NEw
+  options.addConfigOption< std::string >("OtherNamespace","Name of OtherNamespace where Bx By Bz are present."); // Vatsalya: NEw
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -58,9 +60,13 @@ ComputeBField::ComputeBField(const std::string& name) :
   socket_nodes("nodes"),
   socket_states("states"),
   socket_gstates("gstates"),
+//  socket_otherBX("BX"),
+//  socket_otherBY("BY"),
+//  socket_otherBZ("BZ"),
   socket_faceCenters("faceCenters"),
   socket_Bfield("Bfield"),
-  socket_BfieldFaces("BfieldFaces"),
+  socket_BfieldFaces("BfieldFaces"), 
+  socket_otherStates("states"),
   m_input()
 {
   this->addConfigOptionsTo(this);
@@ -73,6 +79,13 @@ ComputeBField::ComputeBField(const std::string& name) :
 
   m_functionsFileName = "";
   setParameter("DefFileName",&m_functionsFileName);
+
+  m_dataFileName = "";
+  setParameter("DataFileName",&m_dataFileName);
+
+  m_otherNamespace = "";
+  setParameter("OtherNamespace", &m_otherNamespace);
+  
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -91,6 +104,10 @@ ComputeBField::needsSockets()
   result.push_back(&socket_states);
   result.push_back(&socket_gstates);
   result.push_back(&socket_faceCenters);
+  result.push_back(&socket_otherStates);
+ // result.push_back(&socket_otherBX);
+ // result.push_back(&socket_otherBY);
+ // result.push_back(&socket_otherBZ);
   return result;
 }
 
@@ -102,6 +119,7 @@ ComputeBField::providesSockets()
   std::vector<Common::SafePtr<Framework::BaseDataSocketSource> > result;
   result.push_back(&socket_Bfield);
   result.push_back(&socket_BfieldFaces);
+ 
   return result;
 }
 
@@ -113,10 +131,13 @@ void ComputeBField::setup()
   
   DataProcessingCom::setup();
   
-  m_input.resize(3);
+  
   
   // B in cells
   const CFuint nbStates = socket_states.getDataHandle().size();
+
+  m_input.resize(3*nbStates);  // Vatsalya : This is new, *3 to resize it for B
+
   Framework::DataHandle< CFreal> Bfield = socket_Bfield.getDataHandle();
   Bfield.resize(nbStates*3);
   
@@ -124,6 +145,7 @@ void ComputeBField::setup()
   const CFuint nbFaces = MeshDataStack::getActive()->Statistics().getNbFaces();
   Framework::DataHandle< CFreal> BfieldFaces = socket_BfieldFaces.getDataHandle();
   BfieldFaces.resize(nbFaces*3);
+  
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -148,8 +170,7 @@ void ComputeBField::configure ( Config::ConfigArgs& args )
     Common::SafePtr<Namespace> nsp = NamespaceSwitcher::getInstance
       (SubSystemStatusStack::getCurrentName()).getNamespace(name);
     runSerial<void, ComputeBField, &ComputeBField::readFunctionsFile>(this, name);
-  }
-  
+  }  
   m_vFunction.setFunctions(m_functions);
   m_vFunction.setVariables(m_vars);
   try {
@@ -159,6 +180,15 @@ void ComputeBField::configure ( Config::ConfigArgs& args )
     CFout << e.what() << "\n";
     throw; // retrow the exception to signal the error to the user
   }
+  if(m_otherNamespace != ""){
+  CFLog(INFO, "ComputeFieldFromPotential::configure() => m_otherNamespace = " <<	m_otherNamespace << "\n");
+ // socket_otherBX.setDataSocketNamespace(m_otherNamespace);
+ // socket_otherBY.setDataSocketNamespace(m_otherNamespace);
+ // socket_otherBZ.setDataSocketNamespace(m_otherNamespace);
+	socket_otherStates.setDataSocketNamespace(m_otherNamespace);
+  
+}
+  
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -168,19 +198,60 @@ void ComputeBField::execute()
   Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = socket_nodes.getDataHandle();
   Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
   Framework::DataHandle< CFreal> Bfield = socket_Bfield.getDataHandle();
+
+
   const CFuint nbStates = states.size(); 
-  
+  const CFuint totState = nbStates*3 ;
+  if(m_dataFileName != "" && m_otherNamespace == ""){    // Vatsalya : New addition. datafile is present, namespace is not present
+     this->readFile();   // put this in if else
   // fill in the cell centered B field values
-  for (CFuint iState = 0; iState < nbStates; ++iState) {
-    const CFuint startID = iState*3;
-    m_vFunction.evaluate(states[iState]->getCoordinates(), m_input);
-    
-    Bfield[startID]   = m_input[0];
-    Bfield[startID+1] = m_input[1];
-    Bfield[startID+2] = m_input[2];
-    CFLog(DEBUG_MIN, "[Bx, By, By] = " << m_input << "\n");
+    cout << m_input.size() << "\t = m_input.size() \n";
+    cout<< "m_input[3] = \t " << m_input[3] <<"\n";
+    for (CFuint startID = 0; startID < totState; startID++) {   
+      Bfield[startID]   = m_input[startID];
+    }
+    cout<< "Bfield[3] = \t " << Bfield[3] <<"\n";
   }
-  
+  if(m_dataFileName == "" && m_otherNamespace == ""){  // no datafile and no other namespace, use expression
+    // fill in the cell centered B field values
+    for (CFuint iState = 0; iState < nbStates; ++iState) {
+      const CFuint startID = iState*3;
+      m_vFunction.evaluate(states[iState]->getCoordinates(), m_input);
+      
+      Bfield[startID]   = m_input[0];
+      Bfield[startID+1] = m_input[1];
+      Bfield[startID+2] = m_input[2];
+     // CFLog(INFO, "[Bx, By, By] = " << m_input << "\n");
+    }
+	cout<< "Bfield[3] = \t " << Bfield[3] <<"\n";
+  }
+  if(m_dataFileName == "" && m_otherNamespace != ""){  // Vatsalya : no data file but copy from othernamespace
+  //  this->CopyFromNameSpace(); // copy data from namespace
+    m_input.resize(3*(nbStates));
+   	// call data from other namespace
+
+	DataHandle<State*, GLOBAL> otherStates = socket_otherStates.getDataHandle();
+	const CFuint nbOtherStates = otherStates.size();
+	//cout<<"nbOtherStates = " << nbOtherStates <<"\n";
+	//cout<<"nbStates = " << nbStates <<"\n";
+	//cout<<"SubSystemStatusStack::getActive()->getName() = " << SubSystemStatusStack::getActive()->getName() <<"\n";
+
+	//const RealVector& linearData = getModel()->getPhysicalData();
+	//cout<<"*states[iState])[xVar] = " << (*otherStates[0])[0] <<"\n"; // istate is xVar is variable number
+	
+ 
+   // cout << m_input.size() << "\t = m_input.size() \n";
+   // cout<< "m_input[3] = \t " << m_input[3] <<"\n";
+    for (CFuint iState = 0; iState < nbOtherStates; ++iState) {
+      const CFuint startID = iState*3;
+        Bfield[startID]   = ((*otherStates[iState])[0])/1000; //m_input[startID];
+	Bfield[startID+1]   = ((*otherStates[iState])[1])/1000;
+	Bfield[startID+2]   = ((*otherStates[iState])[2])/1000;
+    }
+  //  cout<< "Bfield[3] = \t " << Bfield[3] <<"\n";
+  }
+
+
   // fill in the face centered B field values
   DataHandle<CFreal> faceCenters = socket_faceCenters.getDataHandle();
   DataHandle<CFreal> BfieldFaces = socket_BfieldFaces.getDataHandle();
@@ -313,8 +384,64 @@ void ComputeBField::readFunctionsFile()
   }
   
   fhandle->close();
- }
+}
 
+ void ComputeBField::readFile()
+{
+  boost::filesystem::path fpath(m_dataFileName);
+
+  CFLog(INFO, "ComputeBField::readFile() " << m_dataFileName << "\n");
+  
+  SelfRegistPtr<Environment::FileHandlerInput> fhandle = 
+    Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
+    
+  string line = "";
+  CFuint nbLines = 0;
+  ifstream& inputFile1 = fhandle->open(fpath);
+  //Vatsalya: The following don't work here, I need to get the sockets in function definition, else use proxy m_input
+ // Framework::DataHandle< CFreal> Bfield = socket_Bfield.getDataHandle();
+ // Framework::DataHandle<Framework::State*, Framework::GLOBAL> states = socket_states.getDataHandle();
+ // const CFuint nbStates = states.size(); 
+
+  if (inputFile1.is_open()) {
+    while (!inputFile1.eof()) {
+      getline (inputFile1,line);
+      ++nbLines;
+    }
+  }
+  cout<<"nblines = "<< nbLines<<"\n";
+  //cout<<"nbStates = "<< nbStates<<"\n";
+  fhandle->close();
+  double B_x, B_y, B_z;  
+  ifstream& inputFile2 = fhandle->open(fpath);
+  // Vatsalya: This should be tru --> nbLines = iState
+  //assert(nbLines == nbStates);
+  CFLog(INFO, "ComputeBField::readFile() " << m_dataFileName << "\n");
+  //cout << m_functions.size() << "\t = m_functions.size() \n";
+  m_input.resize(3*(nbLines-1));
+  cout << m_input.size() << "\t = m_input.size() \n";
+  //const CFuint startID = 0;
+  int startID = 0;
+  while( inputFile2 >> B_x >> B_y >> B_z){
+  // cout << B_x <<" = B_X \t"<< B_y<<" = B_y \t" << B_z<<"= B_z \n" ;
+    m_input[startID] = B_x/1000; // vatsalya : Magpylib gives in milli-Tesla
+    startID++;
+    m_input[startID] = B_y/1000;
+    startID++;
+    m_input[startID] = B_z/1000;
+    startID++;
+  }
+  cout<< "m_input[3] = \t " << m_input[3] <<"\n";
+  cout<< "startID = \t " << startID <<"\n";
+  cout<< "m_input[3] = \t " << m_input[3] <<"\n";
+  fhandle->close();
+}
+void ComputeBField::CopyFromNameSpace()
+{
+ CFLog(INFO, "ComputeBField::CopyFromNameSpace() " << m_dataFileName << "\n");
+
+
+}
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace FiniteVolume

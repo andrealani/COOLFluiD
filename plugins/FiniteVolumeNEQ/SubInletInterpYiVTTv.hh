@@ -82,6 +82,9 @@ protected: // data
   
   /// blowing velocity
   CFreal m_blowVelocity;
+
+  /// Vatsalya: Additional variables like phi
+  CFreal m_addVar;
   
 }; // end of class SubInletInterpYiVTTv
 

@@ -389,7 +389,7 @@ void NavierStokesSkinFrictionHeatFluxCC::updateOutputFileWall()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NavierStokesSkinFrictionHeatFluxCC::updateWriteData()
+void NavierStokesSkinFrictionHeatFluxCC::updateWriteData() // Vastalya: this is used to write wall data
 {  
   const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
   const CFreal heatFluxRef = m_updateVarSet->getModel()->getTempRef()/refLength;
@@ -430,7 +430,7 @@ void NavierStokesSkinFrictionHeatFluxCC::updateWriteData()
     stantonNumber = heatFlux/(m_updateVarSet->getModel()->getCp()*(m_TInf - TDim)*rhoInf*m_uInf);
     break;
   }
-  
+  //stantonNumber =  -6; //Vatsalya: just for trial //  it works
   CFreal Cp = (pDim - m_pInf);
   Cp /= (0.5*rhoInf*m_uInf*m_uInf);
   

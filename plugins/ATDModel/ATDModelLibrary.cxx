@@ -385,6 +385,13 @@ CFdouble ATDModelLibrary::sigma(CFdouble& temp,
   throw Common::NotImplementedException(FromHere(),"ATDModelLibrary::sigma()");
   return 0;
 }
+CFdouble ATDModelLibrary::sigma_debug(CFdouble& temp, CFdouble& pressure, CFreal* tVec, CFuint elem_no)
+{
+  // Vatsalya
+  CFout << "Function not implemented: ATDModelLibrary::sigma_debug() \n";
+  throw Common::NotImplementedException(FromHere(),"ATDModelLibrary::sigma()");
+  return 0;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

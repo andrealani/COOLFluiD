@@ -84,11 +84,15 @@ public:
 
   /// get flag telling whether to use the axial symmetric model
   bool useAxiModel() const {return m_axiModel;}
+  /// Vastalya: get flag telling whether to use the CNEQST(1T) model
+  bool useCNEQST() const {return m_CNEQST;}
 
 private:
 
   /// flag telling whether to use the axial symmetric model
   bool m_axiModel;
+  // Vatsalya: flag to see if I want to use NEQST (2T) model or CNEQST (1T). If this is 1, then CNEQST else NEQST
+  bool m_CNEQST; 
   
 }; // end of class PoissonNEQTerm
 
