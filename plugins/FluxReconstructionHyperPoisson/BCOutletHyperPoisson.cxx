@@ -44,6 +44,8 @@ BCOutletHyperPoisson::BCOutletHyperPoisson(const std::string& name) :
   m_refPhi = 0.0;
   setParameter("refPhi",&m_refPhi);
   
+  m_dipole = false;
+  setParameter("isDipole",&m_dipole);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -57,7 +59,8 @@ BCOutletHyperPoisson::~BCOutletHyperPoisson()
 
 void BCOutletHyperPoisson::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFreal >("refPhi","Reference phi value imposed at the supersonic outlet.");
+  options.addConfigOption< CFreal >("refPhi","Reference phi value imposed at the outlet.");
+  options.addConfigOption< bool >("isDipole","Prescribe analytical dipole phi.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -89,8 +92,12 @@ void BCOutletHyperPoisson::computeGhostStates(const vector< State* >& intStates,
     const CFreal y = coords[iState][YY];
     const CFreal z = coords[iState][ZZ];
     const CFreal r = (coords[iState]).norm2();
+    if (m_dipole)
+    {
+      m_refPhi=-1.0/3.0*0.666*z/(r*r*r);
+    }
     //phi
-    ghostState[0] = (2.*m_refPhi)-intState[0]; // For Dipole case: 2*(-1.0/3.0*0.666*z/(r*r*r))-intState[0];     
+    ghostState[0] = (2.*m_refPhi)-intState[0];
   }
 }
 

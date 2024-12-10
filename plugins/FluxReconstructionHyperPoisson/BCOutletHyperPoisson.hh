@@ -86,6 +86,9 @@ protected: // data
   CFuint m_nbrFaceFlxPnts;
   
   CFreal m_refPhi;
+
+  /// flag to prescribe analytical dipole phi
+  bool m_dipole;
   
   /// inner states
   std::vector< RealVector > m_tempStates;
