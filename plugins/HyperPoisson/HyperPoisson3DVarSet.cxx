@@ -67,9 +67,9 @@ void HyperPoisson3DVarSet::computeEigenValues(const RealVector& data,
   const vector<CFuint>& varIDs = HyperPoisson3DVarSet::getEqSetData()[0].getEqSetVarIDs();
   
     result[varIDs[0]] = 0.;
-    result[varIDs[1]] = 1.;
-    result[varIDs[2]] = 1.;
-    result[varIDs[3]] = 1.;
+    result[varIDs[1]] = 0.;
+    result[varIDs[2]] = sqrt(3.);
+    result[varIDs[3]] = -sqrt(3.);
   
 }
 

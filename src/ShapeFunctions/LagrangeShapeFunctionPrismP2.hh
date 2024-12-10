@@ -282,14 +282,83 @@ public:
   /// Get the volume
   static CFreal computeVolume(const std::vector<Framework::Node*>& nodes)
   {
-    /// @todo this is only an approximate volume, of a P1 prism
+    /// Sum of Q1 subprisms
     static Framework::VolumeCalculator volumeCalc;
     std::vector<Framework::Node*> nodesP1(6);
-    for (CFuint in = 0; in < 6; ++in)
-    {
-      nodesP1[in] = nodes[in];
-    }
-    return volumeCalc.calculatePrismVolume(nodesP1);
+    CFreal volume;
+      nodesP1[0] = nodes[0];
+      nodesP1[1] = nodes[6];
+      nodesP1[2] = nodes[8];
+      nodesP1[3] = nodes[9];
+      nodesP1[4] = nodes[10];
+      nodesP1[5] = nodes[14];
+
+      volume= volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[6];
+      nodesP1[1] = nodes[1];
+      nodesP1[2] = nodes[7];
+      nodesP1[3] = nodes[10];
+      nodesP1[4] = nodes[11];
+      nodesP1[5] = nodes[12];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[8];
+      nodesP1[1] = nodes[6];
+      nodesP1[2] = nodes[7];
+      nodesP1[3] = nodes[14];
+      nodesP1[4] = nodes[10];
+      nodesP1[5] = nodes[12];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[8];
+      nodesP1[1] = nodes[7];
+      nodesP1[2] = nodes[2];
+      nodesP1[3] = nodes[14];
+      nodesP1[4] = nodes[12];
+      nodesP1[5] = nodes[13];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[9];
+      nodesP1[1] = nodes[10];
+      nodesP1[2] = nodes[14];
+      nodesP1[3] = nodes[3];
+      nodesP1[4] = nodes[15];
+      nodesP1[5] = nodes[17];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[10];
+      nodesP1[1] = nodes[11];
+      nodesP1[2] = nodes[12];
+      nodesP1[3] = nodes[15];
+      nodesP1[4] = nodes[4];
+      nodesP1[5] = nodes[16];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[14];
+      nodesP1[1] = nodes[10];
+      nodesP1[2] = nodes[12];
+      nodesP1[3] = nodes[17];
+      nodesP1[4] = nodes[15];
+      nodesP1[5] = nodes[16];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+      nodesP1[0] = nodes[14];
+      nodesP1[1] = nodes[12];
+      nodesP1[2] = nodes[13];
+      nodesP1[3] = nodes[17];
+      nodesP1[4] = nodes[16];
+      nodesP1[5] = nodes[5];
+
+      volume += volumeCalc.calculatePrismVolume(nodesP1);
+
+    return volume;
   }
 
   /// Get the centroid

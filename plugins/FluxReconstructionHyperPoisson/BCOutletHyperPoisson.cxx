@@ -85,11 +85,12 @@ void BCOutletHyperPoisson::computeGhostStates(const vector< State* >& intStates,
     {
       ghostState[iEq] = intState[iEq];
     }
-    
+    const CFreal x = coords[iState][XX];
+    const CFreal y = coords[iState][YY];
+    const CFreal z = coords[iState][ZZ];
+    const CFreal r = (coords[iState]).norm2();
     //phi
-    ghostState[0] = -intState[0];
-    
-       
+    ghostState[0] = (2.*m_refPhi)-intState[0]; // For Dipole case: 2*(-1.0/3.0*0.666*z/(r*r*r))-intState[0];     
   }
 }
 

@@ -57,14 +57,14 @@ void HyperPoisson3DCons::setConstJacob()
 {
   vector<RealMatrix>* const jacobians = PhysicalModelStack::getActive()->getImplementor()->getJacobians();
 
-  (*jacobians)[0](0,1) = 1.0;
-  (*jacobians)[0](1,0) = 1.0;
+  (*jacobians)[0](0,1) = -1.0;
+  (*jacobians)[0](1,0) = -1.0;
 
-  (*jacobians)[1](0,2) = 1.0;
-  (*jacobians)[1](2,0) = 1.0;
+  (*jacobians)[1](0,2) = -1.0;
+  (*jacobians)[1](2,0) = -1.0;
 
-  (*jacobians)[2](0,3) = 1.0;
-  (*jacobians)[2](3,0) = 1.0;
+  (*jacobians)[2](0,3) = -1.0;
+  (*jacobians)[2](3,0) = -1.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
