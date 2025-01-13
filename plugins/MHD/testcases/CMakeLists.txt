@@ -1,5 +1,7 @@
 #cf_add_case( MPI 8 CASEDIR COCONUT_Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT_Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
+#cf_add_case( MPI 8 CASEDIR COCONUT_Dipole_Shifted PCASE minimum_original_general.CFcase CASEFILES BCindependent5.CFmesh 2008_lmax25.dat dipole.inter ) 
+#cf_add_case( MPI 8 CASEDIR COCONUT_Dipole_Shifted PCASE minimum_2Rs.CFcase CASEFILES 2Rslvl6.CFmesh 2008_lmax25.dat dipole.inter ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT_Quadrupole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh quadrupole_axisym.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT_Map PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT_Map PCASE map_TEST_unsteady.CFcase  )
