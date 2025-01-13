@@ -104,6 +104,8 @@ UnsteadyMHD3DProjectionPolytropicPhotosphere.hh
 UnsteadyMHD3DProjectionPolytropicPhotosphere.cxx
 Venktn3DStrict.cxx
 Venktn3DStrict.hh
+SuperInletProjectionGeneral.cxx
+SuperInletProjectionGeneral.hh
 SuperInletProjectionParallelRotation.cxx
 SuperInletProjectionParallelRotation.hh
 SuperOutletMHD3DProjection9.cxx

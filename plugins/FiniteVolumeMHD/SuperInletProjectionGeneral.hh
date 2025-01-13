@@ -1,5 +1,5 @@
-#ifndef COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
-#define COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
+#ifndef COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionGeneral_hh
+#define COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionGeneral_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,7 @@ namespace COOLFluiD {
    * @author Radka Keslerova
    *
    */
-class SuperInletProjectionParallelRotation : public SuperInlet {
+class SuperInletProjectionGeneral : public SuperInlet {
 public:
 
   /**
@@ -39,12 +39,12 @@ public:
   /**
    * Constructor
    */
-  SuperInletProjectionParallelRotation(const std::string& name);
+  SuperInletProjectionGeneral(const std::string& name);
 
   /**
    * Default destructor
    */
-  virtual ~SuperInletProjectionParallelRotation();
+  virtual ~SuperInletProjectionGeneral();
 
   /**
    * Set up private data and data of the aggregated classes
@@ -57,13 +57,7 @@ public:
    * in this command after processing phase
    */
   virtual void unsetup();
-
-  /**
-   * Set the preProcesses connectivity between faces belonging to different process
-   *
-   */
-  virtual void preProcess();
-
+  
   /**
    * Apply boundary condition on the given face
    */
@@ -79,19 +73,25 @@ private: //data
   CFint _inletCoronalBC;
   CFint _Phi_divB_zero;
   CFint _Phi_divB_extrapolated;
+  CFint _hydrodynamic_limit;
+  CFint _DifferentialRotation;
   CFint _pressure_fixed;
   CFint _pressure_Neumann;
   CFreal _pBC;
   CFreal _rhoBC;
   CFreal _VrBC;  
   CFint _rotation;
+  CFreal _betamin;
+  CFreal _vAmax;
+  bool _nonhomogeneous; 
+
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;
   
   /// IDs of the variables from which values are read by file
   std::vector<CFuint> m_varIDs;
   
-}; // end of class SuperInletProjectionParallelRotation
+}; // end of class SuperInletProjectionGeneral
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -103,4 +103,4 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionParallelRotation_hh
+#endif // COOLFluiD_Numerics_FiniteVolume_SuperInletProjectionGeneral_hh
