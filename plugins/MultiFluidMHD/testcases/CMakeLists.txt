@@ -1,3 +1,5 @@
+#cf_add_case( MPI        8       CASEDIR COCONUT_2Fluid        PCASE map_2F_solarmin_TEST.CFcase CASEFILES minimum_basic.CFmesh Example_2fluid_map.inter gong_2008_lmax20_mfmhd.dat ) 
+#cf_add_case( MPI        8       CASEDIR COCONUT_2Fluid        PCASE map_2F_solarmax_TEST.CFcase CASEFILES maximum_basic.CFmesh Example_2fluid_map.inter gong_2016_lmax20_mfmhd.dat )  
 #cf_add_case( MPI        8       CASEDIR COCONUT_3Fluid        PCASE map_3F_solarmin_TEST.CFcase CASEFILES 3F_2008_restart.CFmesh Example_3F_datadriven_minimum.inter gong_2008_lmax20_mfmhd.dat )
 cf_add_case( MPI	1	CASEDIR 1_HartmannFlow		PCASE hartmannRegressionTest.CFcase  		CASEFILES hartmann.inter halfTube40X250.neu ) 
 cf_add_case( MPI	8	CASEDIR 2_MagneticReconnection 	PCASE reconnectionPsi05RegressionTest.CFcase 	CASEFILES chromosphericRec2D.inter Mesh_36x6_400x250.neu )
