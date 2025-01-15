@@ -1,3 +1,4 @@
+#cf_add_case( MPI        8       CASEDIR COCONUT_3Fluid        PCASE map_3F_solarmin_TEST.CFcase CASEFILES 3F_2008_restart.CFmesh Example_3F_datadriven_minimum.inter gong_2008_lmax20_mfmhd.dat )
 cf_add_case( MPI	1	CASEDIR 1_HartmannFlow		PCASE hartmannRegressionTest.CFcase  		CASEFILES hartmann.inter halfTube40X250.neu ) 
 cf_add_case( MPI	8	CASEDIR 2_MagneticReconnection 	PCASE reconnectionPsi05RegressionTest.CFcase 	CASEFILES chromosphericRec2D.inter Mesh_36x6_400x250.neu )
 cf_add_case( MPI        8       CASEDIR 3_Chromostrat		PCASE UNSTEADYCASE_KhMagneticFieldRegressionTest.CFcase   CASEFILES Mesh_2x2_100x1500.neu MFinteractive_unsteady.inter )

@@ -1,0 +1,6 @@
+#dissipation_change: 2300
+Simulator.SubSystem.FlowIterator.Data.CFL.Interactive.CFL = 0.0001
+Simulator.SubSystem.Flow.Data.LinearLS3D.limitRes = -400
+Simulator.SubSystem.Flow.Data.LinearLS3D.limitIter = 100000
+Simulator.SubSystem.Flow.Data.LinearLS3D.gradientFactor = 1.0
+Simulator.SubSystem.Flow.Data.LinearLS3D.StopLimiting = 0
