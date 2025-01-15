@@ -14,8 +14,18 @@ AUSMFluxMultiFluidALE.ci
 AUSMFluxMultiFluidALE.hh
 AUSMPlusUpFluxMultiFluid.ci
 AUSMPlusUpFluxMultiFluid.hh
+CoronalInlet2Fin.cxx
+CoronalInlet2Fin.hh
+CoronalInlet3Fin.cxx
+CoronalInlet3Fin.hh
 CoronalOutlet.cxx
 CoronalOutlet.hh
+CoronalSource2Fin.ci
+CoronalSource2Fin.cxx
+CoronalSource2Fin.hh
+CoronalSource3Fin.ci
+CoronalSource3Fin.cxx
+CoronalSource3Fin.hh
 DriftWaveInlet.cxx
 DriftWaveInlet.hh
 DriftWaveUnsteadyInlet.cxx
@@ -84,6 +94,10 @@ NoSlipWallIsothermalEIWRhoiViTi.hh
 NoSlipWallIsothermalPCWRhoiViTi.cxx
 NoSlipWallIsothermalPCWRhoiViTi.hh
 NSFluxMultiFluid.cxx
+OpenBoundaryEasy2Fin.cxx
+OpenBoundaryEasy2Fin.hh
+OpenBoundaryEasy3Fin.cxx
+OpenBoundaryEasy3Fin.hh
 PerfectConductingWall.cxx
 PerfectConductingWall.hh
 PerfectConductingWall2DHalf.cxx
@@ -144,6 +158,10 @@ UnsteadySubInletUVTEIWRhoiViTi.hh
 #UnsteadySubInletYUVTEIWRhoiViTi.hh
 #SubOutletPPCWRhoiViTi3D.cxx
 #SubOutletPPCWRhoiViTi3D.hh
+Venktn3DStrictT.cxx
+Venktn3DStrictT.hh
+Venktn3DStrictT3F.cxx
+Venktn3DStrictT3F.hh
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )
