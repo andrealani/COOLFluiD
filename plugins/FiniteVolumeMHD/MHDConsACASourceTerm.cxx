@@ -70,6 +70,8 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   setParameter("divQ",&_divQ);
   setParameter("divQConductivity",&_divQConductivity);
   setParameter("divQalphaCollisionless",&_divQalphaCollisionless);
+  setParameter("ViscosityAndResistivity",&_ViscosityAndResistivity);
+  setParameter("Viscosity",&_Viscosity);
   setParameter("Resistivity",&_Resistivity);
   setParameter("wavepressure", &_wave_pressure);  
   _RadiativeLossTerm = 0;
@@ -102,6 +104,8 @@ void MHDConsACASourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFint >("divQ","Switch on heat conduction.");
   options.addConfigOption< CFreal >("divQConductivity","Conductivity of heat conduction.");
   options.addConfigOption< CFreal >("divQalphaCollisionless","alpha value of heat conductivity in collisionless regime.");
+  options.addConfigOption< CFint >("ViscosityAndResistivity","Switch on viscosity and resisitivity.");
+  options.addConfigOption< CFreal >("Viscosity","nu value.");
   options.addConfigOption< CFreal >("Resistivity","eta value.");
   options.addConfigOption< CFint >("RadiativeLossTerm","Switch on optically thin approximation for radiation losses.");
   options.addConfigOption< CFint >("wavepressure", "save approximated wavepressure term.");
@@ -197,8 +201,8 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   const CFreal k = 1.3806503e-23; // Boltzmann constant in SI
   const CFreal mp = 1.67262158e-27; // mass of proton in kg
   const CFreal me = 9.10938188e-31; // mass of electron in SI
-  
   const CFreal RSun = 6.9551e8; // m
+
   CFreal x = currState->getCoordinates()[XX]*RSun;
   CFreal y = currState->getCoordinates()[YY]*RSun;
   CFreal z = (dim==DIM_3D) ? currState->getCoordinates()[ZZ]*RSun : 0.;
@@ -210,8 +214,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   CFreal r2 = x*x + y*y + z*z;
   CFreal r = std::sqrt(r2);
   CFreal rxy = std::sqrt(x*x+y*y);
-  
-  // const CFreal l0 = 6.9e8;
+
   const CFreal B0 = 2.2e-4;
   const CFreal mu0 = 1.2566e-6;
   const CFreal rhoRef = 1.67e-13; // kg/m^3
@@ -220,6 +223,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   const CFreal GMsun = 1.327474512e20; // SI value
   const CFreal gsun = 274.00; // at the surface m/s^2
   const CFreal g0 = pow(vRef,2)/RSun; // this value is 332
+ // const CFreal l0 = 6.9e8;
   //const CFreal g0 = pow(vRef,2)/l0; // this value is 332
   const CFreal g = -(GMsun/r2)/g0; // gravity term dimensionless
   const CFreal gx = g*x_dimless/r_dimless;
@@ -281,8 +285,8 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   CFreal g_AR = 0.5*(1+std::tanh((Bnorm/(1.0e-4)-Qlio_AR)/3.97));
   CFreal H_AR = H_0_AR*g_AR*std::pow((Bnorm/B_0), 1.2);
 
-//  CFreal H_CH = (H_exp + H_QS + H_AR);
-  CFreal H_CH = (H_exp  + H_AR);
+  // CFreal H_CH = (H_exp  + H_AR); // OLD
+  CFreal H_CH = (H_exp + H_QS + H_AR); // NEW -> this will change the residuals for the regression case
   // Manchester heating term
   const CFreal theta = std::atan2(std::sqrt(x_dimless*x_dimless + y_dimless*y_dimless),z_dimless);
   const CFreal th1 = (MathTools::MathConsts::CFrealPi()/180.0)*17.5;
@@ -407,153 +411,153 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
     CFreal n_x = normals[startID];
     CFreal n_y = normals[startID+1];
     CFreal n_z = normals[startID+2];
+
     if (nbEqs == 11) {
-    source[9]=0;
-    source[10]=0;
-    // Calculating the source terms for Eps equations
-    const CFreal pi = 3.141592653589793238462643383279502884197;
-    const CFuint BXID = 4;
-    const CFuint BYID = 5;
-    const CFuint BZID = 6;
-    const CFuint RHOID = 0;
-    const CFuint VXID = 1;
-    const CFuint VYID = 2;
-    const CFuint VZID = 3;
-    const CFuint gradBXID = elementID*nbEqs + BXID;
-    const CFuint gradBYID = elementID*nbEqs + BYID;
-    const CFuint gradBZID = elementID*nbEqs + BZID;
-    const CFuint gradRhoID = elementID*nbEqs + RHOID;
-    const CFuint gradVXID = elementID*nbEqs + VXID;
-    const CFuint gradVYID = elementID*nbEqs + VYID;
-    const CFuint gradVZID = elementID*nbEqs + VZID;
- //   std::cout << "definition of grad vars " << gradBXID << gradRhoID << gradVXID << endl;
-    _gradBx[XX] = this->m_ux[gradBXID];
-    _gradBx[YY] = this->m_uy[gradBXID];
-    _gradBx[ZZ] = this->m_uz[gradBXID];
-    _gradBy[XX] = this->m_ux[gradBYID];
-    _gradBy[YY] = this->m_uy[gradBYID];
-    _gradBy[ZZ] = this->m_uz[gradBYID];
-    _gradBz[XX] = this->m_ux[gradBZID];
-    _gradBz[YY] = this->m_uy[gradBZID];
-    _gradBz[ZZ] = this->m_uz[gradBZID];
-    _gradRho[XX] = this->m_ux[gradRhoID];
-    _gradRho[YY] = this->m_uy[gradRhoID];
-    _gradRho[ZZ] = this->m_uz[gradRhoID];
-    _gradVx[XX] = this->m_ux[gradVXID];
-    _gradVx[YY] = this->m_uy[gradVXID];
-    _gradVx[ZZ] = this->m_uz[gradVXID];
-    _gradVy[XX] = this->m_ux[gradVYID];
-    _gradVy[YY] = this->m_uy[gradVYID];
-    _gradVy[ZZ] = this->m_uz[gradVYID];
-    _gradVz[XX] = this->m_ux[gradVZID];
-    _gradVz[YY] = this->m_uy[gradVZID];
-    _gradVz[ZZ] = this->m_uz[gradVZID];
-//    std::cout << "d/dx bx " << _gradBx[XX] << " Bx " << Bx << " Bxref * grad " << _gradBx[XX]*2.2e-4 << endl;
-    CFreal dvaxdx = 1/std::sqrt(mu0*density)*(_gradBx[XX]*B0 - 0.5*Bx/density*_gradRho[XX]*rhoRef)/RSun;
-    CFreal dvaydy = 1/std::sqrt(mu0*density)*(_gradBy[YY]*B0 - 0.5*By/density*_gradRho[YY]*rhoRef)/RSun;
-    CFreal dvazdz = 1/std::sqrt(mu0*density)*(_gradBz[ZZ]*B0 - 0.5*Bz/density*_gradRho[ZZ]*rhoRef)/RSun;
-    CFreal dvxdx = _gradVx[XX]*vRef/RSun;
-    CFreal dvydy = _gradVy[YY]*vRef/RSun;
-    CFreal dvzdz = _gradVz[ZZ]*vRef/RSun;
-    CFreal vxdim = Vx*vRef;
-    CFreal vydim = Vy*vRef;
-    CFreal vzdim = Vz*vRef;
-    CFreal vax = Bx/std::sqrt(mu0*density);
-    CFreal vay = By/std::sqrt(mu0*density);
-    CFreal vaz = Bz/std::sqrt(mu0*density);
-    CFreal R1_p = 1/(4.*density) *((vxdim - vax)*_gradRho[XX] + (vydim - vay)*_gradRho[YY]+ (vzdim - vaz)*_gradRho[ZZ])*rhoRef/RSun;
-    CFreal R1_m = 1/(4.*density) *((vxdim + vax)*_gradRho[XX] + (vydim + vay)*_gradRho[YY]+ (vzdim + vaz)*_gradRho[ZZ])*rhoRef/RSun;
-  //  std::cout << "R1_p  " << R1_p << "  R1_m  " << R1_m << endl;
-    CFreal second_term_plus = dvxdx + dvydy + dvzdz + dvaxdx + dvaydy + dvazdz;
-    CFreal second_term_minus = dvxdx + dvydy + dvzdz - dvaxdx - dvaydy - dvazdz;
-    CFreal source_plus = (*currState)[9] * (R1_p + second_term_plus);
-    CFreal source_minus = (*currState)[10] * (R1_m + second_term_minus);
-//   std::cout << "source 9 before " << source[9] << " source 10 before " << source[10] << endl; 
-//    source[9] += source_plus*RSun/vRef*volumes[elementID];
-//    source[10] += source_minus*RSun/vRef*volumes[elementID];
-    source[9] = 0.0;
-    source[10] = 0.0;
+      source[9]=0;
+      source[10]=0;
+      // Calculating the source terms for Eps equations
+      CFreal z0 = 30000; // This hardcoding should be removed... distances/coordinates are non-dimensional!!! 
+      const CFuint BXID = 4;
+      const CFuint BYID = 5;
+      const CFuint BZID = 6;
+      const CFuint RHOID = 0;
+      const CFuint VXID = 1;
+      const CFuint VYID = 2;
+      const CFuint VZID = 3;
+      const CFuint gradBXID = elementID*nbEqs + BXID;
+      const CFuint gradBYID = elementID*nbEqs + BYID;
+      const CFuint gradBZID = elementID*nbEqs + BZID;
+      const CFuint gradRhoID = elementID*nbEqs + RHOID;
+      const CFuint gradVXID = elementID*nbEqs + VXID;
+      const CFuint gradVYID = elementID*nbEqs + VYID;
+      const CFuint gradVZID = elementID*nbEqs + VZID;
+      //   std::cout << "definition of grad vars " << gradBXID << gradRhoID << gradVXID << endl;
+      _gradBx[XX] = this->m_ux[gradBXID];
+      _gradBx[YY] = this->m_uy[gradBXID];
+      _gradBx[ZZ] = this->m_uz[gradBXID];
+      _gradBy[XX] = this->m_ux[gradBYID];
+      _gradBy[YY] = this->m_uy[gradBYID];
+      _gradBy[ZZ] = this->m_uz[gradBYID];
+      _gradBz[XX] = this->m_ux[gradBZID];
+      _gradBz[YY] = this->m_uy[gradBZID];
+      _gradBz[ZZ] = this->m_uz[gradBZID];
+      _gradRho[XX] = this->m_ux[gradRhoID];
+      _gradRho[YY] = this->m_uy[gradRhoID];
+      _gradRho[ZZ] = this->m_uz[gradRhoID];
+      _gradVx[XX] = this->m_ux[gradVXID];
+      _gradVx[YY] = this->m_uy[gradVXID];
+      _gradVx[ZZ] = this->m_uz[gradVXID];
+      _gradVy[XX] = this->m_ux[gradVYID];
+      _gradVy[YY] = this->m_uy[gradVYID];
+      _gradVy[ZZ] = this->m_uz[gradVYID];
+      _gradVz[XX] = this->m_ux[gradVZID];
+      _gradVz[YY] = this->m_uy[gradVZID];
+      _gradVz[ZZ] = this->m_uz[gradVZID];
+      //    std::cout << "d/dx bx " << _gradBx[XX] << " Bx " << Bx << " Bxref * grad " << _gradBx[XX]*2.2e-4 << endl;
+      const CFreal dvaxdx = 1/std::sqrt(mu0*density)*(_gradBx[XX]*B0 - 0.5*Bx/density*_gradRho[XX]*rhoRef)/RSun;
+      const CFreal dvaydy = 1/std::sqrt(mu0*density)*(_gradBy[YY]*B0 - 0.5*By/density*_gradRho[YY]*rhoRef)/RSun;
+      const CFreal dvazdz = 1/std::sqrt(mu0*density)*(_gradBz[ZZ]*B0 - 0.5*Bz/density*_gradRho[ZZ]*rhoRef)/RSun;
+      const CFreal dvxdx = _gradVx[XX]*vRef/RSun;
+      const CFreal dvydy = _gradVy[YY]*vRef/RSun;
+      const CFreal dvzdz = _gradVz[ZZ]*vRef/RSun;
+      const CFreal vxdim = Vx*vRef;
+      const CFreal vydim = Vy*vRef;
+      const CFreal vzdim = Vz*vRef;
+      const CFreal vax = Bx/std::sqrt(mu0*density);
+      const CFreal vay = By/std::sqrt(mu0*density);
+      const CFreal vaz = Bz/std::sqrt(mu0*density);
+      const CFreal R1_p = 1./(4.*density) *((vxdim - vax)*_gradRho[XX] + (vydim - vay)*_gradRho[YY]+ (vzdim - vaz)*_gradRho[ZZ])*rhoRef/RSun;
+      const CFreal R1_m = 1./(4.*density) *((vxdim + vax)*_gradRho[XX] + (vydim + vay)*_gradRho[YY]+ (vzdim + vaz)*_gradRho[ZZ])*rhoRef/RSun;
+      //  std::cout << "R1_p  " << R1_p << "  R1_m  " << R1_m << endl;
+      const CFreal second_term_plus = dvxdx + dvydy + dvzdz + dvaxdx + dvaydy + dvazdz;
+      const CFreal second_term_minus = dvxdx + dvydy + dvzdz - dvaxdx - dvaydy - dvazdz;
+      //    CFreal source_plus = (*currState)[9] * (R1_p + second_term_plus);
+      //    CFreal source_minus = (*currState)[10] * (R1_m + second_term_minus);
+      const CFreal source_plus = (*currState)[9] * (second_term_plus);
+      const CFreal source_minus = (*currState)[10] * (second_term_minus);
+      source[9]  += source_plus*RSun/vRef*volumes[elementID]; 
+      source[10] += source_minus*RSun/vRef*volumes[elementID];
+      // CFLog(INFO, "AFTER source 9 " << source[9] << " source 10 before " << source[10] << "\n"); 
+      //    source[9] += 1000.*volumes[elementID];
+      //    source[10] += 1000.*volumes[elementID];
+      //    source[9] = 0.0;
+      //    source[10] = 0.0;
     }
-      	    // VERSION #3   
+    // VERSION #3   
+    
+    // ---- DENSITY ---------------------------------------------------------
+    source[0] = 0.0;
+    
+    // --- M O M E N T U M   D E N S I T Y ----------------------------------
+    source[1] = 0.0;
+    source[2] = 0.0;
+    source[3] = 0.0;
+    
+    if (_gravity == 1){
+      source[1] += (*currState)[0]*gx*volumes[elementID];
+      source[2] += (*currState)[0]*gy*volumes[elementID];
+      source[3] += (*currState)[0]*gz*volumes[elementID];
+      //	std::cout << "source momentum 1 " << source[1] << " density " << (*currState)[0] << " addition  " <<  (*currState)[0]*gx*volumes[elementID] << endl;
+      socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx; //*volumes[elementID];
+      socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy; //*volumes[elementID];
+      socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz; //*volumes[elementID];
+    } 
+    
+    socket_wavepressure.getDataHandle()[elementID] = 0.0;
+    if (_alfven_pressure == 1) {
+      source[1] -= dP_dx*volumes[elementID];
+      source[2] -= dP_dy*volumes[elementID];
+      source[3] -= dP_dz*volumes[elementID]; 
+      socket_wavepressure.getDataHandle()[elementID] = wave_pressure_approx;
+    }
       
-      // ---- DENSITY ---------------------------------------------------------
-      source[0] = 0.0;
-
-
-
-
-
-
-      // --- M O M E N T U M   D E N S I T Y ----------------------------------
-          source[1] = 0.0;
-          source[2] = 0.0;
-          source[3] = 0.0;
-
-      if (_gravity == 1){
-	source[1] += (*currState)[0]*gx*volumes[elementID];
-	source[2] += (*currState)[0]*gy*volumes[elementID];
-	source[3] += (*currState)[0]*gz*volumes[elementID];
-	//	std::cout << "source momentum 1 " << source[1] << " density " << (*currState)[0] << " addition  " <<  (*currState)[0]*gx*volumes[elementID] << endl;
-	socket_gravity.getDataHandle()[elementID*4]   = (*currState)[0]*gx; //*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+1] = (*currState)[0]*gy; //*volumes[elementID];
-	socket_gravity.getDataHandle()[elementID*4+2] = (*currState)[0]*gz; //*volumes[elementID];
-      } 
-      
-      socket_wavepressure.getDataHandle()[elementID] =0.0;
-      if (_alfven_pressure == 1) {
-        source[1] -= dP_dx*volumes[elementID];
-        source[2] -= dP_dy*volumes[elementID];
-        source[3] -= dP_dz*volumes[elementID]; 
-        socket_wavepressure.getDataHandle()[elementID] =wave_pressure_approx;
-      }
-      
-      source[4] = 0.0;
-      source[5] = 0.0;
-      source[6] = 0.0;
-            
-      // --- E N E R G Y   D E N S I T Y --------------------------------------
-      source[7] = 0.0;
-      
-      if (_gravity == 1){
-        CFreal Vdotg = Vx*gx + Vy*gy + Vz*gz; // dimensionless
+    source[4] = 0.0;
+    source[5] = 0.0;
+    source[6] = 0.0;
+    
+    // --- E N E R G Y   D E N S I T Y --------------------------------------
+    source[7] = 0.0;
+    
+    if (_gravity == 1){
+      CFreal Vdotg = Vx*gx + Vy*gy + Vz*gz; // dimensionless
         source[7] += (*currState)[0]*Vdotg*volumes[elementID];
 	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg; //*volumes[elementID];
-      }
+    }
+    
+    if (_Manchester == 1) {
       
-      if (_Manchester == 1) {
-
-        CFreal result_flux = 0.0;
-        if (Qh2_bool == 1) {
-          result_flux = Qh2;
-        } else if (Qh3_bool == 1) {
-          result_flux = Qh3;
-        } else if (Qh4_bool == 1) {
-          result_flux = Qh4;
-        } else if (Qh_lio_bool == 1) {
-          result_flux = H_CH;
-        }
-        source[7] += (result_flux*nondimconst)*volumes[elementID];
-	
-        socket_heating.getDataHandle()[elementID]   = result_flux;
+      CFreal result_flux = 0.0;
+      if (Qh2_bool == 1) {
+	result_flux = Qh2;
+      } else if (Qh3_bool == 1) {
+	result_flux = Qh3;
+      } else if (Qh4_bool == 1) {
+	result_flux = Qh4;
+      } else if (Qh_lio_bool == 1) {
+	result_flux = H_CH;
       }
-
-      if (_RadiativeLossTerm == 1) {
-
-        
-        source[7] -= Q_rad*nondimconst*volumes[elementID];
-	
-        socket_radiativeloss.getDataHandle()[elementID] = Q_rad;
-      }
-
-      source[8] = 0.0;
-      // Eps modification 
-  //    if (states->size() == 11) {
-  //    source[9] = source_plus/vRef*volumes[elementID];
-  //    source[10] = source_minus/vRef*volumes[elementID];
-  //    socket_zp.getDataHandle()[elementID] = source_plus/vRef;
-  //    socket_zm.getDataHandle()[elementID] = source_minus/vRef;
-  //    }
-  CFLog(DEBUG_MAX, "MHDConsACASourceTerm::computeSource() => END\n");
+      source[7] += (result_flux*nondimconst)*volumes[elementID];
+      
+      socket_heating.getDataHandle()[elementID]   = result_flux;
+    }
+    
+    if (_RadiativeLossTerm == 1) {
+      
+      
+      source[7] -= Q_rad*nondimconst*volumes[elementID];
+      
+      socket_radiativeloss.getDataHandle()[elementID] = Q_rad;
+    }
+    
+    source[8] = 0.0;
+    // Eps modification 
+    //    if (states->size() == 11) {
+    //    source[9] = source_plus/vRef*volumes[elementID];
+    //    source[10] = source_minus/vRef*volumes[elementID];
+    //    socket_zp.getDataHandle()[elementID] = source_plus/vRef;
+    //    socket_zm.getDataHandle()[elementID] = source_minus/vRef;
+    //    }
+    CFLog(DEBUG_MAX, "MHDConsACASourceTerm::computeSource() => END\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

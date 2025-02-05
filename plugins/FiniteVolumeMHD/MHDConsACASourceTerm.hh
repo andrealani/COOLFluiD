@@ -102,6 +102,8 @@ private:
   CFint _divQ;
   CFreal _divQConductivity;
   CFreal _divQalphaCollisionless;
+  CFint _ViscosityAndResistivity;
+  CFreal _Viscosity;
   CFreal _Resistivity;
   CFint _RadiativeLossTerm;
   CFint _wave_pressure;

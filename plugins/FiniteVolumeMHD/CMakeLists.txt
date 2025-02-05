@@ -108,8 +108,12 @@ SuperInletProjectionGeneral.cxx
 SuperInletProjectionGeneral.hh
 SuperInletProjectionParallelRotation.cxx
 SuperInletProjectionParallelRotation.hh
+SuperInletProjectionParallelRotationAlfven.cxx
+SuperInletProjectionParallelRotationAlfven.hh
 SuperOutletMHD3DProjection9.cxx
 SuperOutletMHD3DProjection9.hh
+SuperOutletMHD3DProjectionEps.cxx
+SuperOutletMHD3DProjectionEps.hh
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )

@@ -33,9 +33,10 @@ MHD3DProjectionEpsVarSet::~MHD3DProjectionEpsVarSet()
 
 //////////////////////////////////////////////////////////////////////////////
 
-	void MHD3DProjectionEpsVarSet::computeFlux (const RealVector& data,
-						    const RealVector& normals)
-	{
+void MHD3DProjectionEpsVarSet::computeFlux (const RealVector& data,
+					    const RealVector& normals)
+{
+  CFreal Bx0 = 0.0, By0 = 0.0, Bz0 = 0.0;
   const CFreal nx = normals[XX];
   const CFreal ny = normals[YY];
   const CFreal nz = normals[ZZ];
@@ -46,6 +47,10 @@ MHD3DProjectionEpsVarSet::~MHD3DProjectionEpsVarSet()
   const CFreal Bx = data[MHDTerm::BX];
   const CFreal By = data[MHDTerm::BY];
   const CFreal Bz = data[MHDTerm::BZ];
+  const CFreal BxTotal = data[MHDTerm::BX] + Bx0;
+  const CFreal ByTotal = data[MHDTerm::BY] + By0;
+  const CFreal BzTotal = data[MHDTerm::BZ] + Bz0;
+  const CFreal BnTotal = BxTotal*normals[XX] + ByTotal*normals[YY] + BzTotal*normals[ZZ];
   const CFreal Vn = u*nx  + v*ny + w*nz;
   const CFreal Bn = Bx*nx + By*ny + Bz*nz;
   const CFreal B2 = Bx*Bx + By*By + Bz*Bz;
@@ -60,7 +65,7 @@ MHD3DProjectionEpsVarSet::~MHD3DProjectionEpsVarSet()
   const CFreal refSpeed = getModel()->getRefSpeed();
   const CFreal refSpeedSq = refSpeed*refSpeed;
   const CFreal sqrbar = sqrt(rho);
-  const CFreal ca = std::abs(Bn)/sqrbar;
+  const CFreal ca = std::abs(BnTotal)/sqrbar;
 
 
 //  const CFreal ca = std::abs(Bn)/sqrbar;
@@ -79,8 +84,10 @@ MHD3DProjectionEpsVarSet::~MHD3DProjectionEpsVarSet()
 //  std::cout << "Bn " << Bn << " Bx, By, Bz " << Bx << By << Bz  << endl; 
 //  std::cout << "nx " << nx << "  nx*nx  " << nx*nx << endl;
 //  std::cout  << "abs(Bn) " << std::abs(Bn) << " sqrt(b2)  " << std::sqrt(B2)  << endl;
-  _fluxArray[9] =0.0; //(Vn+ca)*Epsp;
-  _fluxArray[10] =0.0; //(Vn-ca)*Epsm;
+  _fluxArray[9] =(Vn+ca)*Epsp;
+  _fluxArray[10]= (Vn-ca)*Epsm;
+
+  //  CFLog(INFO, "f[9] = " <<  _fluxArray[9] << ", f[10] = " <<  _fluxArray[10] << "\n");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -120,12 +127,17 @@ void MHD3DProjectionEpsVarSet::computeStateFlux (const RealVector& data)
   const CFreal uBz = u*Bz;
   const CFreal vBz = v*Bz;
 
+  CFreal Bx0 = 0.0, By0 = 0.0, Bz0 = 0.0;
+  const CFreal BxTotal = data[MHDTerm::BX] + Bx0;
+  const CFreal ByTotal = data[MHDTerm::BY] + By0;
+  const CFreal BzTotal = data[MHDTerm::BZ] + Bz0;
+  const CFreal Bn2 =BxTotal*BxTotal + ByTotal*ByTotal + BzTotal*BzTotal;
   const CFreal refSpeed = getModel()->getRefSpeed();
   const CFreal refSpeedSq = refSpeed*refSpeed;
   const CFreal Epsp = data[MHDProjectionEpsTerm::EPSP];
   const CFreal Epsm = data[MHDProjectionEpsTerm::EPSM];
   const CFreal sqrbar = sqrt(rho);
-  const CFreal ca =std::abs(std::sqrt(B2))/sqrbar;
+  const CFreal ca =std::abs(std::sqrt(Bn2))/sqrbar;
 
   _physFlux(0,XX) = rhoU;
   _physFlux(0,YY) = rhoV;
@@ -164,13 +176,13 @@ void MHD3DProjectionEpsVarSet::computeStateFlux (const RealVector& data)
   _physFlux(8,ZZ) = refSpeedSq*Bz;
 
   // AL: new components to implement
-  _physFlux(9,XX) = 0.0; //(u+ca*Bx/sqrt(B2))*Epsp;
-  _physFlux(9,YY) = 0.0; //(v+ca*By/sqrt(B2))*Epsp;
-  _physFlux(9,ZZ) = 0.0; //(w+ca*Bz/sqrt(B2))*Epsp;
+  _physFlux(9,XX) = (u+ca*Bx/sqrt(Bn2))*Epsp;
+  _physFlux(9,YY) = (v+ca*By/sqrt(Bn2))*Epsp;
+  _physFlux(9,ZZ) = (w+ca*Bz/sqrt(Bn2))*Epsp;
   
-  _physFlux(10,XX) = 0.0; //(u-ca*Bx/sqrt(B2))*Epsm;
-  _physFlux(10,YY) = 0.0; //(v-ca*By/sqrt(B2))*Epsm;
-  _physFlux(10,ZZ) = 0.0; //(w-ca*Bz/sqrt(B2))*Epsm;
+  _physFlux(10,XX) = (u-ca*Bx/sqrt(Bn2))*Epsm;
+  _physFlux(10,YY) = (v-ca*By/sqrt(Bn2))*Epsm;
+  _physFlux(10,ZZ) = (w-ca*Bz/sqrt(Bn2))*Epsm;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -233,8 +245,8 @@ CFreal MHD3DProjectionEpsVarSet::getMaxAbsEigenValue(const RealVector& data,
 //////////////////////////////////////////////////////////////////////////////
 
 void MHD3DProjectionEpsVarSet::computeEigenValues(const RealVector& data,
-					       const RealVector& normal,
-					       RealVector& result)
+						  const RealVector& normal,
+						  RealVector& result)
 {
   // eigenvalues for the flows not involving any background potential magnetic field are also correctly
   // calculated in this function since B0 field will automatically be zero in that case
@@ -270,8 +282,8 @@ void MHD3DProjectionEpsVarSet::computeEigenValues(const RealVector& data,
   result[8] = Vn + cf;
 
   // AL: new components to implement
-  result[9] = 0.0; //Vn + ca;
-  result[10] = 0.0; //Vn - ca;
+  result[9] = Vn + ca;
+  result[10] = Vn - ca;
 }
 
 //////////////////////////////////////////////////////////////////////////////
