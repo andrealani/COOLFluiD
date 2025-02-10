@@ -47,7 +47,7 @@ InteractiveParamReader::InteractiveParamReader(const std::string& name)
   m_filename = "";
   setParameter("FileName",&m_filename);
 
-  m_read_rate = 1;
+  m_read_rate = 10;
   setParameter("readRate",&m_read_rate);
 }
 
