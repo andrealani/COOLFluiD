@@ -36,7 +36,7 @@ sMaestroProvider("SimpleMaestro");
 
 SMaestro::SMaestro(const std::string& name) : Maestro(name)
 {
-#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79
+#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79 || defined CF_HAVE_BOOST_1_82 
    create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &SMaestro::control, this, std::placeholders::_1 ) );
 #else
    create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &SMaestro::control, this, _1 ) );

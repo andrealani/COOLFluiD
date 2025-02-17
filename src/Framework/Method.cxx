@@ -74,7 +74,7 @@ void Method::registActionListeners()
 {
   CFAUTOTRACE;
 
-#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79
+#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79 || defined CF_HAVE_BOOST_1_82 
  create_signal ( "CF_ON_MESH_UPDATE" , "Resetup method when mesh updates" )->connect( boost::bind ( &Method::resetup, this, std::placeholders::_1 ) );
 #else
   create_signal ( "CF_ON_MESH_UPDATE" , "Resetup method when mesh updates" )->connect( boost::bind ( &Method::resetup, this, _1 ) );
