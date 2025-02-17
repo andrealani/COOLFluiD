@@ -25,7 +25,7 @@
 
 #ifndef NDEBUG
 #ifndef CF_HAVE_CUDA // this is for petsc-dev
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==15 || PETSC_VERSION_MINOR==18
+#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==15 || PETSC_VERSION_MINOR==18 || PETSC_VERSION_MINOR==20
 #define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,n,(PetscErrorType)0," ");}
 #else
 #define CF_CHKERRCONTINUE(n) if (n) {PetscError(Common::PE::GetPE().GetCommunicator(Framework::MeshDataStack::getActive()->getPrimaryNamespace()),__LINE__,__FUNCT__,__FILE__,__SDIR__,n,(PetscErrorType)0," ");}
