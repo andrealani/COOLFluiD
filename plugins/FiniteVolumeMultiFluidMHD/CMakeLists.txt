@@ -64,6 +64,9 @@ HeatingMHDST3D.hh
 # to be removed after testing
 InitStateMF.cxx
 InitStateMF.hh
+LaxFriedFluxMultiFluid.ci
+LaxFriedFluxMultiFluid.cxx
+LaxFriedFluxMultiFluid.hh
 MagnetosphericWall.cxx
 MagnetosphericWall.hh
 MirrorWall.cxx
