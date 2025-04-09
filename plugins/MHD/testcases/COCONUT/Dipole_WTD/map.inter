@@ -1,0 +1,7 @@
+Simulator.SubSystem.FlowIterator.Data.CFL.Interactive.CFL = 2.0
+#Simulator.SubSystem.Flow.Data.LinearLS3D.limitRes = -4
+Simulator.SubSystem.Flow.Data.LinearLS3D.limitIter = 4000 
+Simulator.SubSystem.Flow.Data.LinearLS3D.gradientFactor = 1.0
+Simulator.SubSystem.Flow.Data.Venktn3DStrict.strictCoeff =1.0
+Simulator.SubSystem.Flow.Data.LinearLS3D.StopLimiting = 0
+Simulator.SubSystem.Flow.Data.Venktn3DStrict.coeffEpsDyn = 5.
