@@ -1,0 +1,65 @@
+#!MC 1410
+$!AlterData 
+  Equation = '{x}={x0}*6.95509927e8'
+$!AlterData 
+  Equation = '{y}={x1}*6.95509927e8'
+$!AlterData 
+  Equation = '{z}={x2}*6.95509927e8'
+$!AlterData 
+  Equation = '{rhoDim}={rho}*1.67e-13'
+$!AlterData 
+  Equation = '{num_dens} = {rhoDim}/1.67e-27'
+$!AlterData 
+  Equation = '{num_dens_cm} = {rhoDim}/1.67e-27/1e6'
+$!AlterData 
+  Equation = '{log_n} = log({num_dens})'
+$!AlterData 
+  Equation = '{uDim}={u}*480.24838996122737'
+$!AlterData 
+  Equation = '{vDim}={v}*480.24838996122737'
+$!AlterData 
+  Equation = '{wDim}={w}*480.24838996122737'
+$!AlterData 
+  Equation = '{BxDim}={Bx}*2.2e-4'
+$!AlterData 
+  Equation = '{ByDim}={By}*2.2e-4'
+$!AlterData 
+  Equation = '{BzDim}={Bz}*2.2e-4'
+$!AlterData 
+  Equation = '{pDim}={p}*0.03851'
+$!AlterData 
+  Equation = '{r}=sqrt({x}*{x}+{y}*{y}+{z}*{z})'
+$!AlterData 
+  Equation = '{theta} = atan({y}/({x}+1.0e-20))*180.0/3.14'
+$!AlterData 
+  Equation = '{rXY}=sqrt({x}*{x}+{y}*{y})+1.0e-20'
+$!AlterData 
+  Equation = '{Vr}={x}/{r}*{uDim}+{y}/{r}*{vDim}+{z}/{r}*{wDim}'
+$!AlterData 
+  Equation = '{VTheta}={x}*{z}/({rXY}*{r})*{uDim} + {y}*{z}/({rXY}*{r})*{vDim} - {rXY}/{r}*{wDim}'
+$!AlterData 
+  Equation = '{VPhi}=-{y}/{rXY}*{uDim} + {x}/{rXY}*{vDim}'
+$!AlterData 
+  Equation = '{Br}={x}/{r}*{BxDim}+{y}/{r}*{ByDim}+{z}/{r}*{BzDim}'
+$!AlterData 
+  Equation = '{BTheta}={x}*{z}/({rXY}*{r})*{BxDim}+{y}*{z}/({rXY}*{r})*{ByDim}-{rXY}/{r}*{BzDim}'
+$!AlterData 
+  Equation = '{BPhi}=-{y}/{rXY}*{BxDim} + {x}/{rXY}*{ByDim}'
+$!AlterData 
+  Equation = '{T} = {pDim}/({rhoDim}/1.6e-27)/1.38e-23/2'
+$!AlterData 
+  Equation = '{Bnorm} = sqrt({BxDim}**2 + {ByDim}**2 + {BzDim}**2)'
+$!AlterData 
+  Equation = '{v_a} = {Bnorm}/sqrt(1.25*10**(-6) * {rhoDim})/1000.0'
+$!AlterData 
+  Equation = '{Vnorm} = sqrt({uDim}**2 + {vDim}**2 + {wDim}**2)'
+$!AlterData 
+  Equation = '{mach_surface} = {Vnorm}/{v_a}'
+$!AlterData 
+  Equation = '{Bg} = {Br}*1e4'
+$!AlterData 
+  Equation = '{v_s} = (5/3*{pDim}/{rhoDim})**(1/2)'
+$!AlterData 
+  Equation = '{mach} = {Vnorm}*1000./{v_s}'
+$!AlterData 
+  Equation = '{mach_magnetosonic} = {Vnorm}/{v_a}'
