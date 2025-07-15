@@ -204,6 +204,103 @@ void MHD3DProjectionPrimE::computeStateFlux(const RealVector& data)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void MHD3DProjectionPrimE::computeEigenValues(const RealVector& data,
+					      const RealVector& normal,
+					      RealVector& result)
+{
+  // eigenvalues for the flows not involving any background potential magnetic field are also correctly
+  // calculated in this function since B0 field will automatically be zero in that case
+  // eigenvalues based on total magnetic field, Btotal
+  
+  // Haopeng: check this
+  const CFreal Bx0 = 0.0, By0 = 0.0, Bz0 = 0.0;
+  const CFreal BxTotal = data[MHDTerm::BX] + Bx0;
+  const CFreal ByTotal = data[MHDTerm::BY] + By0;
+  const CFreal BzTotal = data[MHDTerm::BZ] + Bz0;
+  const CFreal invRho = 1./data[MHDTerm::RHO];
+  const CFreal sqBTotal = BxTotal*BxTotal + ByTotal*ByTotal + BzTotal*BzTotal;
+  const CFreal p = data[MHDTerm::P];
+  const CFreal Vn = data[MHDTerm::VX]*normal[XX] + data[MHDTerm::VY]*normal[YY] + data[MHDTerm::VZ]*normal[ZZ];
+  const CFreal BnTotal = BxTotal*normal[XX] + ByTotal*normal[YY] + BzTotal*normal[ZZ];
+  const CFreal sqrbar = sqrt(data[MHDTerm::RHO]);
+  const CFreal astar2 = (getModel()->getGamma()*p + sqBTotal)*invRho;
+  const CFreal astarb = sqrt(astar2*astar2 - 4.0*getModel()->getGamma()*p*BnTotal*BnTotal*invRho*invRho);
+  const CFreal cf2 = 0.5*(astar2 + astarb);
+  const CFreal cs2 = 0.5*(astar2 - astarb);
+  const CFreal ca = std::abs(BnTotal)/sqrbar;
+  const CFreal cf = sqrt(cf2);
+  const CFreal cs = sqrt(cs2);
+  const CFreal refSpeed = getModel()->getRefSpeed();
+  
+  result[0] = Vn - cf;
+  result[1] = Vn - ca;
+  result[2] = Vn - cs;
+  result[3] = Vn;
+  result[4] = refSpeed;
+  result[5] = -refSpeed;
+  result[6] = Vn + cs;
+  result[7] = Vn + ca;
+  result[8] = Vn + cf;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal MHD3DProjectionPrimE::getMaxEigenValue(const RealVector& data,
+					      const RealVector& normal)
+{
+  // Haopeng: check this
+  const CFreal Bx0 = 0.0, By0 = 0.0, Bz0 = 0.0;
+  const CFreal Bx1 = data[MHDTerm::BX];
+  const CFreal By1 = data[MHDTerm::BY];
+  const CFreal Bz1 = data[MHDTerm::BZ];
+  const CFreal BxTotal = Bx1 + Bx0;
+  const CFreal ByTotal = By1 + By0;
+  const CFreal BzTotal = Bz1 + Bz0;
+  const CFreal invRho = 1./data[MHDTerm::RHO];
+  const CFreal sqBTotal = BxTotal*BxTotal + ByTotal*ByTotal + BzTotal*BzTotal;
+  const CFreal p = data[MHDTerm::P];
+  const CFreal Vn = data[MHDTerm::VX]*normal[XX] + data[MHDTerm::VY]*normal[YY] + data[MHDTerm::VZ]*normal[ZZ];
+  const CFreal BnTotal = BxTotal*normal[XX] + ByTotal*normal[YY] + BzTotal*normal[ZZ];
+  const CFreal sqrbar = sqrt(data[MHDTerm::RHO]);
+  const CFreal astar2 = (getModel()->getGamma()*p + sqBTotal)*invRho;
+  const CFreal astarb = sqrt(astar2*astar2 - 4.0*getModel()->getGamma()*p*BnTotal*BnTotal*invRho*invRho);
+  const CFreal cf2 = 0.5*(astar2 + astarb);
+  // const CFreal ca = std::abs(BnTotal)/sqrbar;
+  const CFreal cf = sqrt(cf2);
+  const CFreal refSpeed = getModel()->getRefSpeed();
+  const CFreal maxEigenValue = max(refSpeed,(Vn + cf));
+  return maxEigenValue;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal MHD3DProjectionPrimE::getMaxAbsEigenValue(const RealVector& data,
+						 const RealVector& normal)
+{
+  // Haopeng: check this
+  const CFreal Bx0 = 0.0, By0 = 0.0, Bz0 = 0.0;
+  const CFreal BxTotal = data[MHDTerm::BX] + Bx0;
+  const CFreal ByTotal = data[MHDTerm::BY] + By0;
+  const CFreal BzTotal = data[MHDTerm::BZ] + Bz0;
+  const CFreal invRho = 1./data[MHDTerm::RHO];
+  const CFreal sqBTotal = BxTotal*BxTotal + ByTotal*ByTotal + BzTotal*BzTotal;
+  const CFreal p = data[MHDTerm::P];
+  const CFreal Vn = data[MHDTerm::VX]*normal[XX] + data[MHDTerm::VY]*normal[YY] + data[MHDTerm::VZ]*normal[ZZ];
+  const CFreal BnTotal = BxTotal*normal[XX] + ByTotal*normal[YY] + BzTotal*normal[ZZ];
+  const CFreal sqrbar = sqrt(data[MHDTerm::RHO]);
+  const CFreal astar2 = (getModel()->getGamma()*p + sqBTotal)*invRho;
+  const CFreal astarb = sqrt(astar2*astar2 - 4.0*getModel()->getGamma()*p*BnTotal*BnTotal*invRho*invRho);
+  const CFreal cf2 = 0.5*(astar2 + astarb);
+  // const CFreal ca = std::abs(BnTotal)/sqrbar;
+  const CFreal cf = sqrt(cf2);
+  const CFreal refSpeed = getModel()->getRefSpeed();
+  
+  const CFreal maxEigenValue = max(refSpeed,(std::abs(Vn) + cf));
+  return maxEigenValue;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
     } // namespace MHD
 
   } // namespace Physics

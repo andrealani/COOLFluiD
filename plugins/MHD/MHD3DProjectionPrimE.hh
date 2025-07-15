@@ -90,6 +90,17 @@ public: //function
   virtual void computeStateFromPhysicalData(const RealVector& data,
 					    Framework::State& state);
 
+  /// Set the vector of the eigenValues
+  virtual void computeEigenValues (const RealVector& pdata, 
+				   const RealVector& normal, 
+				   RealVector& eValues);
+  
+  /// Get the maximum eigenvalue
+  virtual CFreal getMaxEigenValue(const RealVector& pdata, const RealVector& normal);
+  
+  /// Get the maximum absolute eigenvalue
+  virtual CFreal getMaxAbsEigenValue(const RealVector& pdata, const RealVector& normal);
+  
 protected:
   
   /// Computes the convective flux projected on a normal
