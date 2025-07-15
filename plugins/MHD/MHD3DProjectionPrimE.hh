@@ -1,9 +1,9 @@
-#ifndef COOLFluiD_Physics_MHD_MHD3DProjectionPrim_hh
-#define COOLFluiD_Physics_MHD_MHD3DProjectionPrim_hh
+#ifndef COOLFluiD_Physics_MHD_MHD3DProjectionPrimE_hh
+#define COOLFluiD_Physics_MHD_MHD3DProjectionPrimE_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "MHD/MHD3DProjectionVarSet.hh"
+#include "MHD/MHD3DProjectionPrim.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -17,26 +17,25 @@ namespace COOLFluiD {
 
 /**
  * This class represents a MHD physical model 3D for projection scheme
- * for primitive variables
+ * for primitive variables with decomposition of the energy equation
  *
  * @author Andrea Lani
- * @author Radka Keslerova
+ * @author Haopeng Wang
  */
-
-class MHD3DProjectionPrim : public MHD3DProjectionVarSet {
+class MHD3DProjectionPrimE : public MHD3DProjectionPrim {
 public: //function
 
   /**
    * Constructor
    * @see MHD3DProjection
    */
-  MHD3DProjectionPrim(Common::SafePtr<Framework::BaseTerm> term);
+  MHD3DProjectionPrimE(Common::SafePtr<Framework::BaseTerm> term);
 
   /**
    * Default destructor
    */
-  virtual ~MHD3DProjectionPrim();
-
+  virtual ~MHD3DProjectionPrimE();
+  
   /**
    * Set up the private data and give the maximum size of states physical
    * data to store
@@ -47,12 +46,7 @@ public: //function
    * Get extra variable names
    */
   virtual std::vector<std::string> getExtraVarNames() const;
-
-  /**
-   * Gets the block separator for this variable set
-   */
-  virtual CFuint getBlockSeparator() const;
-
+  
   /**
    * Set the jacobians
    */
@@ -95,30 +89,17 @@ public: //function
    */
   virtual void computeStateFromPhysicalData(const RealVector& data,
 					    Framework::State& state);
+
+protected:
   
+  /// Computes the convective flux projected on a normal
+  virtual void computeFlux(const RealVector& pdata, const RealVector& normals);
   
-private: // helper function
-
-  /**
-   * Set the rotation matrices
-   */
-  void setRotationMatrices(const RealVector& normals);
-
-private: // data
-  // Rotation matrix
-  RealMatrix _rm;
-
-  // Inverse rotation matrix
-  RealMatrix _rmInv;
-
-  // Temporary matrix of right eigenvectors
-  RealMatrix _rightEv;
-
-  // Temporary matrix of left eigenvectors
-  RealMatrix _leftEv;
-
-}; // end of class MHD3DProjectionPrim
-
+  /// Computes the physical convective flux
+  virtual void computeStateFlux(const RealVector& pdata);
+  
+}; // end of class MHD3DProjectionPrimE
+      
 //////////////////////////////////////////////////////////////////////////////
 
     } // namespace MHD
@@ -129,4 +110,4 @@ private: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif //COOLFluiD_Physics_MHD_MHD3DProjectionPrim_hh
+#endif //COOLFluiD_Physics_MHD_MHD3DProjectionPrimE_hh

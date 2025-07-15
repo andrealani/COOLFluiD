@@ -1,6 +1,6 @@
 #include "MHD/MHD.hh"
 
-#include "MHD3DProjectionPrim.hh"
+#include "MHD/MHD3DProjectionPrim.hh"
 #include "Common/CFLog.hh"
 #include "Framework/State.hh"
 #include "Framework/PhysicalModel.hh"
