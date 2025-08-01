@@ -32,6 +32,7 @@ void SuperInletProjectionParallelRotationAlfven::defineConfigOptions(Config::Opt
   options.addConfigOption< CFreal >("pBC","pressure at the boundary");
   options.addConfigOption< CFreal >("rhoBC","density at the boundary");
   options.addConfigOption< CFreal >("VrBC","radial velocity at the boundary");
+  options.addConfigOption< CFreal >("z0","wave turbulence amplitude at the boundary");
   options.addConfigOption< CFint >("rotation","rotation, 0 or 1");
 }
       
@@ -58,6 +59,9 @@ SuperInletProjectionParallelRotationAlfven::SuperInletProjectionParallelRotation
 
   _VrBC = 1935.07; //848.15;
   setParameter("VrBC",&_VrBC);
+
+  _z0=75000./482000.;
+  setParameter("z0",&_z0);
 
   _rotation = 0; 
   setParameter("rotation",&_rotation);
@@ -312,36 +316,24 @@ void SuperInletProjectionParallelRotationAlfven::setGhostState(GeometricEntity *
   CFreal mu0 = 1.2566e-6;
   CFreal rhoRef = 1.67e-13;
   CFreal kB = 1.38e-23;
-
-
   CFreal PressureBoundary_dimless = _pBC;
-
 
   (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7]; //0.79557002079 * 2.*PressureBoundary_dimless - (*innerState)[7];
 
-
-  
-
-
   //===== P S I   B O U N D A R Y   C O N D I T I O N S =======================
-  (*ghostState)[8] = (*innerState)[8];
-  
+  (*ghostState)[8] = -(*innerState)[8];
   
   //================== Elsasser variables boundaries ===================
-  CFreal z0 = 15000./30000.;
   if (BrI_dimless > 0.){
-    (*ghostState)[9] = 2.0*z0 - (*innerState)[9];
+    (*ghostState)[9] = 2.0*_z0 - (*innerState)[9];
     (*ghostState)[10] = rI_dimless*rI_dimless/(rG_dimless*rG_dimless)*(*innerState)[10];
   } else if (BrI_dimless < 0.) {
     (*ghostState)[9] = rI_dimless*rI_dimless/(rG_dimless*rG_dimless)*(*innerState)[9];
-    (*ghostState)[10] = -2.0*z0-(*innerState)[10];
+    (*ghostState)[10] =-2.0*_z0-(*innerState)[10];
   } else {
     (*ghostState)[9] = rI_dimless*rI_dimless/(rG_dimless*rG_dimless)*(*innerState)[9];
     (*ghostState)[10] = rI_dimless*rI_dimless/(rG_dimless*rG_dimless)*(*innerState)[10];
   } 
-  
-  //   (*ghostState)[9] = 0.0;;
-  //    (*ghostState)[10] = 0.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

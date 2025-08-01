@@ -91,7 +91,8 @@ private: //data
   CFint _JensPIni;
   CFreal _pBC;
   CFreal _rhoBC;
-  CFreal _VrBC; 
+  CFreal _VrBC;
+  CFreal _z0; 
 //  CFreal _z0; 
   CFint _rotation;
   /// array specifying the IDs for which a special treatment has to be applied

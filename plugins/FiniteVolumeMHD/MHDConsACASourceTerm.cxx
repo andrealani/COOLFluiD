@@ -42,6 +42,8 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   _gradVx(),
   _gradVy(),
   _gradVz(),
+  _gradEpsP(),
+  _gradEpsM(),
   socket_gravity("gravity"),
   socket_heating("Manchester"),
   socket_radiativeloss("RadiativeLossTerm"),
@@ -67,6 +69,10 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   setParameter("Qh3_activate", &_Qh3_activate);
   setParameter("Qh4_activate", &_Qh4_activate);
   setParameter("Qh_lio_activate", &_Qh_lio_activate);
+  setParameter("R1", &_R1);
+  setParameter("R2R3", &_R2R3);
+  
+  setParameter("Q_w", &_Q_w);
   setParameter("divQ",&_divQ);
   setParameter("divQConductivity",&_divQConductivity);
   setParameter("divQalphaCollisionless",&_divQalphaCollisionless);
@@ -96,6 +102,10 @@ void MHDConsACASourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("Qlio_AR", "Heating coefficient for the Qhlio heating function");
   options.addConfigOption< CFreal >("P0_W","amplitude for wave pressure");
   options.addConfigOption< CFint >("alfven_pressure", "flag for switching on alfven pressure");
+  options.addConfigOption< CFint >("R1", "flag for activating R1 term of elsasser euqations");
+  options.addConfigOption< CFint >("R2R3", "flag to activate all terms on the right side of the Elsasse equations");
+ 
+  options.addConfigOption< CFint >("Q_w", "add heating to the energy equation from the WTD model");
   options.addConfigOption< CFint >("Qh2_activate", "whether Qh2 heating term should be activated");
   options.addConfigOption< CFint >("Qh3_activate", "whether Qh3 heating term should be activated");
   options.addConfigOption< CFint >("Qh4_activate", "whether Qh4 heating term should be activated");
@@ -139,6 +149,9 @@ void MHDConsACASourceTerm::setup()
   _gradVx.resize(PhysicalModelStack::getActive()->getDim(),0.);
   _gradVy.resize(PhysicalModelStack::getActive()->getDim(),0.);
   _gradVz.resize(PhysicalModelStack::getActive()->getDim(),0.);
+  _gradEpsP.resize(PhysicalModelStack::getActive()->getDim(),0.);
+  _gradEpsM.resize(PhysicalModelStack::getActive()->getDim(),0.);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -378,7 +391,7 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
   
 
     // The pressure function of which we are calculating gradients analytically. 
-    CFreal wave_pressure_approx = P0_W*(x_dimless*x_dimless + y_dimless*y_dimless)/pow(r2_dimless,3);
+//    CFreal wave_pressure_approx = P0_W*(x_dimless*x_dimless + y_dimless*y_dimless)/pow(r2_dimless,3);
 //    CFreal wave_pressure_approx = 0.0; //P0_W* 1.0/r_dimless/r_dimless;
 
   
@@ -393,16 +406,17 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
    // CFreal dP_dx = 2.0*P0_W*x_dimless*(pow(z_dimless,2.0)-pow(y_dimless,2.0)-pow(x_dimless,2))/pow(r_dimless,6.0);
    // CFreal dP_dy = 2.0*P0_W*y_dimless*(pow(z_dimless,2.0)-pow(y_dimless,2.0)-pow(x_dimless,2))/pow(r_dimless,6.0); 
    // CFreal dP_dz = -4.0*P0_W*z_dimless*(pow(x_dimless,2.0)+pow(y_dimless,2.0))/pow(r_dimless,6);
-    CFreal dP_dx = 2.0*P0_W*x_dimless*(pow(z_dimless,2.0)-4.0*pow(y_dimless,2.0)-4.0*pow(x_dimless,2))/pow(r_dimless,8);
-    CFreal dP_dy = 2.0*P0_W*y_dimless*(pow(z_dimless,2.0)-4.0*pow(y_dimless,2.0)-4.0*pow(x_dimless,2))/pow(r_dimless,8);
-    CFreal dP_dz = -6.0*P0_W*z_dimless*(pow(x_dimless,2.0)+pow(y_dimless,2.0))/pow(r_dimless,8);
+///    CFreal dP_dx = 2.0*P0_W*x_dimless*(pow(z_dimless,2.0)-4.0*pow(y_dimless,2.0)-4.0*pow(x_dimless,2))/pow(r_dimless,8);
+//    CFreal dP_dy = 2.0*P0_W*y_dimless*(pow(z_dimless,2.0)-4.0*pow(y_dimless,2.0)-4.0*pow(x_dimless,2))/pow(r_dimless,8);
+//    CFreal dP_dz = -6.0*P0_W*z_dimless*(pow(x_dimless,2.0)+pow(y_dimless,2.0))/pow(r_dimless,8);
 
-    CFreal lambd = 4.4/std::sqrt((*currState)[4]*(*currState)[4] + (*currState)[5]*(*currState)[5] + (*currState)[6]*(*currState)[6]);
-    CFreal heating_alfwen = wave_pressure_approx*std::sqrt(8.0/(*currState)[0]*wave_pressure_approx);
+//    CFreal lambd = 4.4/std::sqrt((*currState)[4]*(*currState)[4] + (*currState)[5]*(*currState)[5] + (*currState)[6]*(*currState)[6]);
+//    CFreal heating_alfwen = wave_pressure_approx*std::sqrt(8.0/(*currState)[0]*wave_pressure_approx);
 
 
     // Calcualting the gradient of variable pressure 
 
+    CFreal lambda_perp = 0;
     const CFuint PID = 7;
     const CFuint gradPID = elementID*nbEqs + PID;
     _gradP[XX] = this->m_ux[gradPID];
@@ -411,7 +425,12 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
     CFreal n_x = normals[startID];
     CFreal n_y = normals[startID+1];
     CFreal n_z = normals[startID+2];
-
+    CFreal Qw = 0.0;
+    
+    CFreal dP_dx = 0.0;
+    CFreal dP_dy = 0.0;
+    CFreal dP_dz = 0.0;
+    CFreal wave_pressure_approx = 0.0;
     if (nbEqs == 11) {
       source[9]=0;
       source[10]=0;
@@ -455,8 +474,18 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       _gradVz[ZZ] = this->m_uz[gradVZID];
       //    std::cout << "d/dx bx " << _gradBx[XX] << " Bx " << Bx << " Bxref * grad " << _gradBx[XX]*2.2e-4 << endl;
       const CFreal dvaxdx = 1/std::sqrt(mu0*density)*(_gradBx[XX]*B0 - 0.5*Bx/density*_gradRho[XX]*rhoRef)/RSun;
+      const CFreal dvaxdy = 1/std::sqrt(mu0*density)*(_gradBx[YY]*B0 - 0.5*Bx/density*_gradRho[YY]*rhoRef)/RSun;
+      const CFreal dvaxdz = 1/std::sqrt(mu0*density)*(_gradBx[ZZ]*B0 - 0.5*Bx/density*_gradRho[ZZ]*rhoRef)/RSun;
+
+      const CFreal dvaydx = 1/std::sqrt(mu0*density)*(_gradBy[XX]*B0 - 0.5*By/density*_gradRho[XX]*rhoRef)/RSun;
       const CFreal dvaydy = 1/std::sqrt(mu0*density)*(_gradBy[YY]*B0 - 0.5*By/density*_gradRho[YY]*rhoRef)/RSun;
+      const CFreal dvaydz = 1/std::sqrt(mu0*density)*(_gradBy[ZZ]*B0 - 0.5*By/density*_gradRho[ZZ]*rhoRef)/RSun;
+
+      const CFreal dvazdx = 1/std::sqrt(mu0*density)*(_gradBz[XX]*B0 - 0.5*Bz/density*_gradRho[XX]*rhoRef)/RSun;
+      const CFreal dvazdy = 1/std::sqrt(mu0*density)*(_gradBz[YY]*B0 - 0.5*Bz/density*_gradRho[YY]*rhoRef)/RSun;
       const CFreal dvazdz = 1/std::sqrt(mu0*density)*(_gradBz[ZZ]*B0 - 0.5*Bz/density*_gradRho[ZZ]*rhoRef)/RSun;
+
+
       const CFreal dvxdx = _gradVx[XX]*vRef/RSun;
       const CFreal dvydy = _gradVy[YY]*vRef/RSun;
       const CFreal dvzdz = _gradVz[ZZ]*vRef/RSun;
@@ -466,15 +495,39 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       const CFreal vax = Bx/std::sqrt(mu0*density);
       const CFreal vay = By/std::sqrt(mu0*density);
       const CFreal vaz = Bz/std::sqrt(mu0*density);
+      const CFreal va_length = Bnorm/std::sqrt(mu0*density);
       const CFreal R1_p = 1./(4.*density) *((vxdim - vax)*_gradRho[XX] + (vydim - vay)*_gradRho[YY]+ (vzdim - vaz)*_gradRho[ZZ])*rhoRef/RSun;
       const CFreal R1_m = 1./(4.*density) *((vxdim + vax)*_gradRho[XX] + (vydim + vay)*_gradRho[YY]+ (vzdim + vaz)*_gradRho[ZZ])*rhoRef/RSun;
-      //  std::cout << "R1_p  " << R1_p << "  R1_m  " << R1_m << endl;
+//      const CFreal R2_p = 1./2.*((vxdim/vax-1)*dvaxdx+(vydim/vay-1)*dvaydy+(vzdim/vaz-1)*dvazdz);
+//      const CFreal R2_m = 1./2.*((vxdim/vax+1)*dvaxdx+(vydim/vay+1)*dvaydy+(vzdim/vaz+1)*dvazdz);
+      
+      const CFreal R2_1 = vax*dvaxdx+vay*dvaxdy+vaz*dvaxdz;
+      const CFreal R2_2 = vax*dvaydx+vay*dvaydy+vaz*dvaydz;
+      const CFreal R2_3 = vax*dvazdx+vay*dvazdy+vaz*dvazdz;
+      
+      const CFreal R2_p = 1./(2.*va_length*va_length)*(R2_1*(vxdim-vax) + R2_2*(vydim-vay) + R2_3*(vzdim-vaz));
+      const CFreal R2_m = 1./(2.*va_length*va_length)*(R2_1*(vxdim+vax) + R2_2*(vydim+vay) + R2_3*(vzdim+vaz));
       const CFreal second_term_plus = dvxdx + dvydy + dvzdz + dvaxdx + dvaydy + dvazdz;
       const CFreal second_term_minus = dvxdx + dvydy + dvzdz - dvaxdx - dvaydy - dvazdz;
-      //    CFreal source_plus = (*currState)[9] * (R1_p + second_term_plus);
-      //    CFreal source_minus = (*currState)[10] * (R1_m + second_term_minus);
-      const CFreal source_plus = (*currState)[9] * (second_term_plus);
-      const CFreal source_minus = (*currState)[10] * (second_term_minus);
+      lambda_perp = 0.0000005*RSun * std::sqrt(1e-5/Bnorm); // Should be 1e-4 
+      CFreal third_term_plus = std::abs((*currState)[10])*vRef/(2.0*lambda_perp);
+      CFreal third_term_minus = std::abs((*currState)[9])*vRef/(2.0*lambda_perp);
+         
+//      std::cout << "R1_p*zp " << R1_p*(*currState)[9]  << "  " << endl;
+//      std::cout << "thirs term " << third_term_plus* (*currState)[9] << "  " <<endl;
+      CFreal source_plus = (*currState)[9] *second_term_plus;
+      CFreal source_minus = (*currState)[10] *second_term_minus;
+      if (_R1==1 && _R2R3==0){
+      	source_plus = (*currState)[9] * (R1_p + second_term_plus);
+	source_minus = (*currState)[10] * (R1_m + second_term_minus);
+      } else if (_R1==1 && _R2R3 == 1){
+        source_plus = (*currState)[9] * (R1_p + second_term_plus -third_term_plus) +(*currState)[10]*R2_p;
+	source_minus = (*currState)[10] * (R1_m + second_term_minus-third_term_minus)+ (*currState)[9]*R2_m;
+      } 
+    //  CFreal source_plus = (*currState)[9] * (R1_p + second_term_plus -third_term_plus) +(*currState)[10]*R2_p;
+    //  CFreal source_minus = (*currState)[10] * (R1_m + second_term_minus-third_term_minus)+ (*currState)[9]*R2_m;
+      //const CFreal source_plus = (*currState)[9] * (second_term_plus);
+      //const CFreal source_minus = (*currState)[10] * (second_term_minus);
       source[9]  += source_plus*RSun/vRef*volumes[elementID]; 
       source[10] += source_minus*RSun/vRef*volumes[elementID];
       // CFLog(INFO, "AFTER source 9 " << source[9] << " source 10 before " << source[10] << "\n"); 
@@ -482,8 +535,47 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       //    source[10] += 1000.*volumes[elementID];
       //    source[9] = 0.0;
       //    source[10] = 0.0;
-    }
+    
     // VERSION #3   
+    CFreal epsP = (*currState)[9];
+    CFreal epsM = (*currState)[10];   
+    Qw =0.01*density *(std::abs(epsM)*epsP*epsP + std::abs(epsP)*epsM*epsM)*vRef*vRef*vRef/(4.0*lambda_perp);
+    const CFuint EpsPID = 9;
+    const CFuint EpsMID = 10;
+    const CFuint gradEpsPID = elementID*nbEqs + EpsPID;
+    const CFuint gradEpsMID = elementID*nbEqs + EpsMID;
+    _gradEpsP[XX] = this->m_ux[gradEpsPID];
+    _gradEpsP[YY] = this->m_uy[gradEpsPID];
+    _gradEpsP[ZZ] = this->m_uz[gradEpsPID];
+    _gradEpsM[XX] = this->m_ux[gradEpsMID];
+    _gradEpsM[YY] = this->m_uy[gradEpsMID];
+    _gradEpsM[ZZ] = this->m_uz[gradEpsMID];
+    dP_dx = _gradRho[XX]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[XX]-_gradEpsP[XX]);
+    dP_dy = _gradRho[YY]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[YY]-_gradEpsP[YY]);
+    dP_dz = _gradRho[ZZ]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[ZZ]-_gradEpsP[ZZ]);
+    wave_pressure_approx = density*(epsM-epsP)*(epsM-epsP)*vRef*vRef/8.0;
+    }
+   
+    if (_Q_w == 0){
+      Qw = 0;
+    } 
+
+  //  CFreal lambda_perp = 0.01*RSun * std::sqrt(5e-5/Bnorm); 
+ //   Qw =density *(std::abs(epsM)*epsP*epsP + std::abs(epsP)*epsM*epsM)*vRef*vRef*vRef/(4.0*lambda_perp); 
+//    const CFuint EpsPID = 9;
+//    const CFuint EpsMID = 10;
+//    const CFuint gradEpsPID = elementID*nbEqs + EpsPID;
+//    const CFuint gradEpsMID = elementID*nbEqs + EpsMID;
+//    _gradEpsP[XX] = this->m_ux[gradEpsPID];
+//    _gradEpsP[YY] = this->m_uy[gradEpsPID];
+ //   _gradEpsP[ZZ] = this->m_uz[gradEpsPID];
+//    _gradEpsM[XX] = this->m_ux[gradEpsMID];
+//    _gradEpsM[YY] = this->m_uy[gradEpsMID];
+//    _gradEpsM[ZZ] = this->m_uz[gradEpsMID];
+//    CFreal dP_dx = _gradRho[XX]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[XX]-_gradEpsP[XX]);
+//    CFreal dP_dy = _gradRho[YY]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[YY]-_gradEpsP[YY]);
+//    CFreal dP_dz = _gradRho[ZZ]*std::pow((epsM-epsP),2)/8.0 + (*currState)[0]/8.0*2.0*(epsM-epsP)*(_gradEpsM[ZZ]-_gradEpsP[ZZ]);
+//    CFreal  wave_pressure_approx = density*(epsM-epsP)*(epsM-epsP)*vRef*vRef/8.0; 
     
     // ---- DENSITY ---------------------------------------------------------
     source[0] = 0.0;
@@ -536,9 +628,9 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       } else if (Qh_lio_bool == 1) {
 	result_flux = H_CH;
       }
-      source[7] += (result_flux*nondimconst)*volumes[elementID];
+      source[7] += ((result_flux+Qw)*nondimconst)*volumes[elementID];
       
-      socket_heating.getDataHandle()[elementID]   = result_flux;
+      socket_heating.getDataHandle()[elementID]=result_flux+Qw;
     }
     
     if (_RadiativeLossTerm == 1) {

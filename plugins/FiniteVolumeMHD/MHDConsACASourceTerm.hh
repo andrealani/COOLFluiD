@@ -85,6 +85,8 @@ private:
   RealVector _gradVx;
   RealVector _gradVy;
   RealVector _gradVz;
+  RealVector _gradEpsP;
+  RealVector _gradEpsM;
   CFint _gravity;
   CFint _PevtsovHeating;
   CFreal _PevtsovHeatingFactor;
@@ -99,6 +101,9 @@ private:
   CFint _Qh3_activate;
   CFint _Qh4_activate;
   CFint _Qh_lio_activate;
+  CFint _R1;
+  CFint _R2R3;
+  CFint _Q_w;
   CFint _divQ;
   CFreal _divQConductivity;
   CFreal _divQalphaCollisionless;
