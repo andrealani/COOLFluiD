@@ -197,6 +197,8 @@ LIST ( APPEND NewtonMethodMHD_files
 NewtonMethodMHD.hh
 UpdateSolMHD.hh
 UpdateSolMHD.cxx
+StdUpdateSolPP.hh
+StdUpdateSolPP.cxx
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )
