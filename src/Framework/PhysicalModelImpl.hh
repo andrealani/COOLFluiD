@@ -113,6 +113,9 @@ public:
   /// Get the reference time for time scaling
   CFreal getRefTime() const  {    return _refTime;   }
 
+  /// Get the time factor
+  CFreal getTimeFactor() const  {    return _timeFactor;   }
+
   /// Tells if the equations are solved adimensionalized
   bool isAdimensional() const  {    return _isAdimensional;   }
 
@@ -151,7 +154,7 @@ private: // methods
   /// Set the reference value for time
   /// By default set to the same value as the reference length
   /// For convection equations --> should still be okay this way if only reference length is set.
-  virtual void setReferenceTime()  {  _refTime = getRefLength(); }
+  virtual void setReferenceTime()  { _refTime = getRefLength(); }
 
   /// Set the physical data,
   /// Default empty implementation
@@ -181,6 +184,9 @@ private: // data
   /// set of the reference values (to scale the state
   /// vector when needed) used for computation
   RealVector _refStateValues;
+
+  /// time factor (mostly for I/O)
+  CFreal _timeFactor;
 
   /// reference length for geometric scaling
   CFreal _refLength;

@@ -112,6 +112,8 @@ SuperInletProjectionGeneral.cxx
 SuperInletProjectionGeneral.hh
 SuperInletProjectionParallelRotation.cxx
 SuperInletProjectionParallelRotation.hh
+SuperInletProjectionConstrained.cxx
+SuperInletProjectionConstrained.hh
 SuperInletProjectionParallelRotationAlfven.cxx
 SuperInletProjectionParallelRotationAlfven.hh
 SuperOutletMHD3DProjection9.cxx
