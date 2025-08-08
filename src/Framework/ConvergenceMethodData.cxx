@@ -37,6 +37,7 @@ void ConvergenceMethodData::defineConfigOptions(Config::OptionList& options)
    options.addConfigOption< bool >("FreezeJacobian","Flag to tell to freeze the jacobian during the iterative process.");
    options.addConfigOption< bool >("OnlyPreprocessSolution","Flag to tell to only preprocess the solution once.");
    options.addConfigOption< CFint >("NbLSSToSolveAtOnce","Number of LSS to solve at once in this convergence method.");
+   options.addConfigOption< CFuint >("FreezeJacobianStride","Number of iterations to control jacobian freezing.");
 }
     
 //////////////////////////////////////////////////////////////////////////////
@@ -72,6 +73,9 @@ ConvergenceMethodData::ConvergenceMethodData(Common::SafePtr<Method> owner)
   
   m_nbLSSToSolveAtOnce = -1;
   setParameter("NbLSSToSolveAtOnce",&m_nbLSSToSolveAtOnce);
+
+  m_freezeJacobianStride = 0;
+  setParameter("FreezeJacobianStride",&m_freezeJacobianStride);
 }
 
 //////////////////////////////////////////////////////////////////////////////

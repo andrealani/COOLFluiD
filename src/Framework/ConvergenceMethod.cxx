@@ -22,6 +22,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/StopConditionController.hh"
+#include "Framework/PhysicalModel.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -447,11 +448,11 @@ void ConvergenceMethod::writeOnScreen()
     if (subSysStatus->getDT() > 0.) {
       out << " PhysTime:";
       out.width( m_precision );
-      out << subSysStatus->getCurrentTimeDim();
+      out << subSysStatus->getCurrentTimeDim()*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor();
       // Print Current Time
       out << " DT:";
       out.width( m_precision );
-      out << subSysStatus->getDTDim();
+      out << subSysStatus->getDTDim()*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor();
     }
 
     // Print CPU Time

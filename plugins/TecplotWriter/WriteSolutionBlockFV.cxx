@@ -244,7 +244,7 @@ void WriteSolutionBlockFV::writeToFileStream(std::ofstream& fout)
 
           const CFuint nbSubCellsInType = m_mapgeoent.computeNbSubEntities(geoinfo);
           const CFuint nbsubcells = nbCellsInType * nbSubCellsInType;
-          CFreal solutiontime = subSysStatus->getCurrentTimeDim() > 0 ? subSysStatus->getCurrentTimeDim() : subSysStatus->getNbIter();
+          CFreal solutiontime = subSysStatus->getCurrentTimeDim() > 0 ? subSysStatus->getCurrentTimeDim()*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor() : subSysStatus->getNbIter();
           
           
           // print zone header,
@@ -263,7 +263,7 @@ void WriteSolutionBlockFV::writeToFileStream(std::ofstream& fout)
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
                  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
                  << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
-                 << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\""
+                 << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim()*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor() << "\""
                  << flush;
           fout << ", VARLOCATION=( ";
                       if (dim!=1)
@@ -693,7 +693,7 @@ void WriteSolutionBlockFV::writeBoundarySurface(std::ofstream& fout)
 
   	  // AL: Tecplot doesn't read zones with 0 elements !!! (this was a problem in parallel)
   	  if (tr->getLocalNbGeoEnts() > 0) {
-        CFreal solutiontime = subSysStatus->getCurrentTimeDim() > 0 ? subSysStatus->getCurrentTimeDim() : subSysStatus->getNbIter();
+        CFreal solutiontime = subSysStatus->getCurrentTimeDim() > 0 ? subSysStatus->getCurrentTimeDim()*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor() : subSysStatus->getNbIter();
   	    // print zone header
   	    // one zone per TR
   	    fout << "ZONE N=" << nbAllNodes

@@ -8,6 +8,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/SimulationStatus.hh"
 #include "Framework/PathAppender.hh"
+#include "Framework/PhysicalModel.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -107,10 +108,11 @@ PathAppender::appendTime(const boost::filesystem::path& fpath) const
     if(SubSystemStatusStack::getActive()->doingSubIterations()
      && !SubSystemStatusStack::getActive()->isSubIterationLastStep() )
     {
-        time += SubSystemStatusStack::getActive()->getDTDim();
+      time += SubSystemStatusStack::getActive()->getDTDim();
     }
-
-    std::string time_string = Common::StringOps::to_str(time);
+    CFreal physicaltime = time*PhysicalModelStack::getActive()->getImplementor()->getTimeFactor();
+    // physicaltime=int(physicaltime*100.0)/100.0; // HW
+    std::string time_string = Common::StringOps::to_str(physicaltime);
     Common::StringOps::subst(".", "_",time_string);
     add << "-time_" << time_string ;
   }

@@ -100,6 +100,12 @@ public: // functions
   {
     return m_freezeJacobian;
   }
+
+  /// Get the number of iterations to control jacobian freezing
+  CFuint freezeJacobianStride() const
+  {
+    return m_freezeJacobianStride;
+  }
   
   /// Flag telling whether only preprocessing the solution once
   bool onlyPreprocessSolution() const
@@ -192,6 +198,9 @@ private: // data
     
   /// number of linear system solvers to solve at once
   CFint m_nbLSSToSolveAtOnce;
+
+  /// number of iterations to control jacobian freezing
+  CFuint m_freezeJacobianStride;
   
   Common::SafePtr<VarRegistry> ssys_var_regist;
   

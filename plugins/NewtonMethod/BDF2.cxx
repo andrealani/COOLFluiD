@@ -124,8 +124,10 @@ void BDF2::takeStepImpl()
     xi = 0.;
     theta = 1.0;
   }
-  
+
+  const CFuint kStride = m_data->freezeJacobianStride();
   std::auto_ptr<Framework::ConvergenceStatus> cvgst(new Framework::ConvergenceStatus);
+  
   // sweeps to solve the nonlinear system
   for(CFuint k = 0; !m_data->isAchieved(); ++k)
   {
@@ -145,7 +147,13 @@ void BDF2::takeStepImpl()
    
     CFLog(VERBOSE, "BDF2::takeStep(): m_data->freezeJacobian() " << m_data->freezeJacobian() << "\n");
     // this will make the solvers compute the jacobian only during the first iteration at each time step
-    (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+
+    if (kStride == 0) {
+      (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+    }
+    else {
+      (m_data->freezeJacobian() && (k > 1) && (k % kStride != 0)) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+    }
     
     // this is needed for cases like jacobian free or in case the jacobian needs to be frozen for k>=1
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(m_data->getDoComputeJacobFlag());
