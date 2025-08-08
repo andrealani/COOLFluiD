@@ -80,6 +80,8 @@ protected:
 
 protected:
   CFreal _strictCoeff;  
+
+  bool _psiMinEqual1; 
   
 private:
 
