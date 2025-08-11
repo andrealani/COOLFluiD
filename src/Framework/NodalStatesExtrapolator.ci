@@ -36,6 +36,9 @@ void NodalStatesExtrapolator<DATA>::defineConfigOptions(Config::OptionList& opti
   options.addConfigOption< vector<std::string> >
     ("FileNameTw", "Name of the files with the given boundary distribution");
 
+  options.addConfigOption< vector<std::string> >
+    ("FileNameTwADF", "Name of the characters used to automatically define the names of the given magnetograms");
+
   options.addConfigOption< vector<CFreal> >
     ("FileNameTime", "Time corresponding to each file with the given boundary distribution");
   
@@ -91,6 +94,9 @@ NodalStatesExtrapolator<DATA>::NodalStatesExtrapolator(const std::string& name) 
 
   m_fileNameTw = vector<std::string>();
   this->setParameter("FileNameTw",&m_fileNameTw);
+
+  m_fileNameTwADF = vector<std::string>();
+  this->setParameter("FileNameTwADF",&m_fileNameTwADF);
 
   m_fileNameTime = vector<CFreal>();
   this->setParameter("FileNameTime",&m_fileNameTime);
@@ -202,7 +208,9 @@ void NodalStatesExtrapolator<DATA>::setup()
 	  
           // number of nodes in the current face
           const CFuint nbFaceNodes = faceTrs->getNbNodesInGeo(faceIdx);
-	  cf_assert(nbFaceNodes >= 2 && dim >= DIM_2D || nbFaceNodes==1 && dim==DIM_1D);
+	  // Mark 2024.01.17 by HP
+	  // cf_assert(nbFaceNodes >= 2 && dim >= DIM_2D || nbFaceNodes==1 && dim==DIM_1D);
+	  cf_assert((nbFaceNodes >= 2 && dim >= DIM_2D) || (nbFaceNodes==1 && dim==DIM_1D));
           faceNodeIDs.resize(nbFaceNodes);
           // build a list of all the local nodeIDs in the current face
           for (CFuint jn = 0; jn < nbFaceNodes; ++jn) {
@@ -266,11 +274,144 @@ void NodalStatesExtrapolator<DATA>::setup()
     }
 
     allocateMappingData();
-    
+
+ //>> mark 2024.04.27   
     if (m_fileNameTw.size() == 1) {m_fileNameTime.resize(1, 0.0);}
     cf_assert(m_fileNameTw.size() == m_fileNameTime.size());
+	CFLog(INFO, "m_fileNameTw.size():setup="<<m_fileNameTw.size()<<"\n");
+	CFLog(INFO, "m_fileNameTime.size():setup="<<m_fileNameTime.size()<<"\n");
+	for(CFuint i=0; i<m_fileNameTw.size(); ++i){
+	    CFLog(INFO, "m_fileNameTw[i]:setup="<<m_fileNameTw[i]<<"i="<<i<<"\n");
+	    CFLog(INFO, "m_fileNameTime[i]:setup="<<m_fileNameTime[i]<<"i="<<i<<"\n");
+	}
 
-    if (m_fileNameTime.size() > 1) {
+ if(m_fileNameTwADF.size()>3){
+  //case-dependent_1
+  std::string FileName_prefix=m_fileNameTwADF[0];
+  std::string FileName_suffix=m_fileNameTwADF[1];
+
+  //case-dependent_2
+  // num_of_magnetograms+1 n(t_{-1} ... t_{n+1})+1
+  CFuint m_magfiles=std::stoi(m_fileNameTwADF[2]);
+  CFuint Cadence=std::stoi(m_fileNameTwADF[3]);
+
+  //case-dependent_3 
+  CFuint year=std::stoi(m_fileNameTwADF[4]);
+  CFuint days_Feb=28;
+  if(year%4==0){
+	  if(year%100==0){
+		 if(year%400==0){
+			days_Feb=29;
+	     }
+	  }
+      else{
+	     days_Feb=29;
+	  }
+  } 
+  CFuint day_M=30;
+  CFuint hour=0;
+  CFuint hours=0;
+  CFuint day=0;
+  CFuint days=0;
+  CFuint month=0;
+  CFuint months=0;
+  //case-dependent_4
+  //data_start: t_0
+  //CFuint data_start=40905; //10802; //32119; //32100; //62911; //
+  CFuint data_start=std::stoi(m_fileNameTwADF[5]);
+  CFuint zerosToAdd=0;
+  CFuint current_data=data_start;
+  std::string current_dataStr = std::to_string(current_data);
+  CFuint desiredLength = 6;
+  if(current_dataStr.size()<desiredLength){
+      zerosToAdd=desiredLength-current_dataStr.size();
+	  current_dataStr.insert(0,zerosToAdd,'0');
+  }
+  std::string current_Filename=FileName_prefix+current_dataStr+FileName_suffix;
+  m_fileNameTw.resize(m_magfiles, current_Filename);
+  m_fileNameTw[0]=current_Filename;
+  //case-dependent_5
+  //data_start-1: t_{-1}
+  //current_data=40904;  //10720; //32118; //32023; //62910; //
+  current_data=std::stoi(m_fileNameTwADF[6]);
+  current_dataStr = std::to_string(current_data);
+	if(current_dataStr.size()<desiredLength){
+       zerosToAdd=desiredLength-current_dataStr.size();
+	   current_dataStr.insert(0,zerosToAdd,'0');
+    }
+    current_Filename=FileName_prefix+current_dataStr+FileName_suffix;
+    m_fileNameTw[1]=current_Filename;
+    m_fileNameTw[2]=m_fileNameTw[0];
+	for (int i = 0; i < 3; ++i){
+	   CFLog(INFO, "m_fileNameTw[i]:setup="<<m_fileNameTw[i]<<" i="<<i<<"\n");
+	}
+  current_data=data_start;
+  for (int i = 3; i < m_magfiles; ++i){
+	hour=current_data%100+Cadence;
+	day=(current_data/100)%100;
+	month=current_data/10000;
+	hours=hour%24;
+	day+=hour/24;
+	if(month==1 || month==3 || month ==5 || month==7 || month==8 || month ==10 || month==12){
+	   day_M=31;
+	}
+	else if(month==2){
+	   day_M=days_Feb;
+	}
+	else{
+	   day_M=30;
+	}
+	days=day%day_M;
+	month+=day/day_M;
+	if(days==0){
+	   days=day_M;
+	   month-=1;
+	}
+	if(month>12){
+	   year+=month/12;
+	   days_Feb=28;
+	   if(year%4==0){
+	      if(year%100==0){
+		     if(year%400==0){
+			    days_Feb=29;
+			 }
+		  }
+		  else{
+		     days_Feb=29;
+		  }
+	   }
+	}
+	months=month%12;
+	if(months==0){
+	   months=12;
+	}
+	current_data=months*10000+days*100+hours;
+	current_dataStr = std::to_string(current_data);
+	if(current_dataStr.size()<desiredLength){
+       zerosToAdd=desiredLength-current_dataStr.size();
+	   current_dataStr.insert(0,zerosToAdd,'0');
+    }
+    current_Filename=FileName_prefix+current_dataStr+FileName_suffix;
+    m_fileNameTw[i]=current_Filename;
+	CFLog(INFO, "m_fileNameTw[i]:setup="<<m_fileNameTw[i]<<" i="<<i<<"\n");
+  }
+  CFLog(INFO, "m_fileNameTwADF.size():setup="<<m_fileNameTwADF.size()<<"\n");
+  
+  CFreal current_time=0.0;
+  m_fileNameTime.resize(m_magfiles, current_time);
+  m_fileNameTime[0]=current_time;
+  CFLog(INFO, "m_fileNameTime[0]:setup="<<m_fileNameTime[0]<<"\n");
+  for (int i = 1; i < m_magfiles; ++i){
+     current_time=(i-2)*2.4876*(double)Cadence;   
+	 //for cadence=6, choose "current_time=(i-2)*14.9254;"
+	 m_fileNameTime[i]=current_time;
+	 CFLog(INFO, "m_fileNameTime[i]:setup="<<m_fileNameTime[i]<<" i="<<i<<"\n");
+  }
+  CFLog(INFO, "m_fileNameTime.size():setup="<<m_fileNameTime.size()<<"\n");
+ }
+ //>> mark 2024.04.27
+
+    if (m_fileNameTw.size() > 1) {
       // read and store all the surface objects, one for each boundary file
       // these will be used later on for time interpolation
       m_allSurfaces.resize(m_fileNameTw.size());
@@ -278,14 +419,25 @@ void NodalStatesExtrapolator<DATA>::setup()
 	readSurfaceData(m_allSurfaces[is], m_fileNameTw[is]);
 	const CFuint nbSurf = m_allSurfaces[is].size();
 	cf_assert(nbSurf >= 1);
+	CFLog(INFO, "m_allSurfaces[is].size()="<<m_allSurfaces[is].size()<<", is="<<is<<", dim="<<dim<<"\n");
+	CFLog(INFO, "m_allSurfaces[is][0]->Tw[100]="<<m_allSurfaces[is][0]->Tw[100]<<", m_allSurfaces[is][0]->xyz(100,2)="<<m_allSurfaces[is][0]->xyz(100,2)<< 
+	   ", m_allSurfaces[is][0]->xyz(100,1)="<<m_allSurfaces[is][0]->xyz(100,1)<<", m_allSurfaces[is][0]->xyz(100,0)="<<m_allSurfaces[is][0]->xyz(100,0)<< "\n");
+	CFLog(INFO, "m_allSurfaces[is][0]->Tw[200]="<<m_allSurfaces[is][0]->Tw[200]<<", m_allSurfaces[is][0]->xyz(200,2)="<<m_allSurfaces[is][0]->xyz(200,2)<<
+	   ", m_allSurfaces[is][0]->xyz(200,1)="<<m_allSurfaces[is][0]->xyz(200,1)<<", m_allSurfaces[is][0]->xyz(200,0)="<<m_allSurfaces[is][0]->xyz(200,0)<< "\n");
       }
     }
     
     // store SurfaceData for time "0"
     readSurfaceData(m_surfaceAtTime, m_fileNameTw[0]);
+	//CFLog(INFO, "m_surfaceAtTime.size()="<<m_surfaceAtTime.size()<<"\n");
     
     // at first just extrapolate for the first boundary file
+	//SurfaceData* m_surfaceAtTime = new SurfaceData(); 
+	//m_surfaceAtTime.resize(1);
+	//m_surfaceAtTime = m_allSurfaces[0];
+	//m_surfaceAtTime=m_allSurfaces[2];
     extrapolateVarsFromFile(m_surfaceAtTime);
+	//extrapolateVarsFromFile(m_allSurfaces[0]);
   }
 }
 
@@ -489,18 +641,30 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime()
   using namespace COOLFluiD::Framework;
   using namespace COOLFluiD::MathTools;
   using namespace COOLFluiD::Common;
-  
-  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime() => START\n");
+  // mark 2023.12.21 by HP
+  const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
+  CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime() => START"<<", dim="<<dim<<"\n");
   
   const CFreal currTimeDim = SubSystemStatusStack::getActive()->getCurrentTimeDim();
   const CFreal maxTimeDim = SubSystemStatusStack::getActive()->getMaxTimeDim();
   const CFreal maxDT = SubSystemStatusStack::getActive()->getDT();
   // time corresponding to the first input file used for the interpolation
+  
+  //>> mark 2024.04.27
+  /*
+  CFLog(INFO, "m_fileNameTime.size():extrapolateVarsFromFileInTime="<<m_fileNameTime.size()<<"\n");
+  CFLog(INFO, "m_fileNameTw.size():extrapolateVarsFromFileInTime="<<m_fileNameTw.size()<<"\n");
+  	for(CFuint i=0; i<m_fileNameTw.size(); ++i){
+        CFLog(INFO, "m_fileNameTime[i]:extrapolateVarsFromFileInTime="<<m_fileNameTime[i]<<"i="<<i<<"\n");
+        CFLog(INFO, "m_fileNameTw[i]:extrapolateVarsFromFileInTime="<<m_fileNameTw[i]<<"i="<<i<<"\n");
+	}
+  */
+  //>> mark 2024.04.27
+
   const CFreal startTime = m_fileNameTime[0];
   // time corresponding to the last input file used for the interpolation
   const CFreal endTime   = m_fileNameTime.back();
   cf_assert(endTime >= maxTimeDim);
-  
   // here you use m_allSurfaces as a basis for interpolating at current time and storing
   // the interpolated file into m_surfaceAtTime
   //
@@ -513,9 +677,114 @@ void NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime()
   // };
   //
   // Note that xyz and Tw have been already allocated to the right size in the setup()
-  
+
+  //////////////////////////////////////////////////////////////////////////////
+  //Mark 2023/12/20  by HP
+  CFreal Time_ref2phy;
+  double Coefi1;
+  double Coefi2;
+  double derivative1;
+  double derivative2;
+  double h00;
+  double h10;
+  double h01;
+  double h11;
+  double time_norm;
+  CFreal Temp;
+  CFreal Temp1;
+  CFreal Temp2;
+  CFreal deri1=0.;
+  CFreal deri2=0.;
+  Time_ref2phy = 1447.2/3600.0;
+  CFLog(INFO, "currTimeDim="<<currTimeDim*Time_ref2phy<<", maxTimeDim="<<maxTimeDim*Time_ref2phy<<", maxDT="<<maxDT*Time_ref2phy<<
+	  ", startTime="<<startTime*Time_ref2phy<<", endTime="<<endTime*Time_ref2phy<<"\n");
+  for (CFuint i = 2; i < m_fileNameTime.size()-1; ++i) {
+    if((currTimeDim-m_fileNameTime[i])*(m_fileNameTime[i+1]-currTimeDim)>=0.){
+	  Temp=m_fileNameTime[i+1]-m_fileNameTime[i];
+	  Coefi1=(m_fileNameTime[i+1]-currTimeDim)/Temp;
+	  Coefi2=(currTimeDim-m_fileNameTime[i])/Temp;
+	  CFLog(INFO, "Coefi1="<<Coefi1<<", Coefi2="<<Coefi2<<", m_fileNameTime[i-1]="<<m_fileNameTime[i-1]*Time_ref2phy<<", m_fileNameTime[i]="<<m_fileNameTime[i]*Time_ref2phy<<
+	  ", m_fileNameTime[i+1]="<<m_fileNameTime[i+1]*Time_ref2phy<<", m_fileNameTime[i+2]="<<m_fileNameTime[i+2]*Time_ref2phy<<", i="<<i<<"\n");
+	  Temp1=m_fileNameTime[i]-m_fileNameTime[i-1];
+	  Temp2=m_fileNameTime[i+2]-m_fileNameTime[i+1];
+	  
+	  //This subroutine also works for linear interpolation
+	  //readSurfaceDataextrapolator(m_surfaceAtTime, m_fileNameTw[i],m_fileNameTw[i+1],Coefi1,Coefi2);
+
+	  //used for linear interpolation
+	  const SurfaceData& sf1 = *m_allSurfaces[i][0];
+	  const SurfaceData& sf2 = *m_allSurfaces[i+1][0];
+	  //used for cubic hermit interpolation
+	  const SurfaceData& sfm = *m_allSurfaces[i-1][0];
+	  const SurfaceData& sfp = *m_allSurfaces[i+2][0];
+	  time_norm=Coefi2;
+	  h00=2.0*pow(time_norm,3.0)-3.0*pow(time_norm,2.0)+1.0;
+	  h10=pow(time_norm,3.0)-2.0*pow(time_norm,2.0)+time_norm;
+	  h01=-2.0*pow(time_norm,3.0)+3.0*pow(time_norm,2.0);
+	  h11=pow(time_norm,3.0)-pow(time_norm,2.0);
+
+      const CFuint nbPoints = sf2.Tw.size();
+	  CFLog(INFO, "CFuint nbPoints="<<nbPoints<<"\n"); 
+///*
+      //CFLog(INFO, "test whether have been commented \n");
+	  SurfaceData* sf0 = new SurfaceData();
+      sf0->xyz.resize(nbPoints,dim);
+      sf0->Tw.resize(nbPoints);
+	  //sf0->xyz=sf1.xyz;
+	  sf0->xyz=sf1.xyz;
+	  for (CFuint ip = 0; ip < nbPoints; ++ip) {
+	    for (CFuint iDim = 0; iDim < dim; ++iDim) {
+		  sf0->xyz(ip,iDim)=sf1.xyz(ip,iDim);
+		}
+	  }
+
+	  for (CFuint ip = 0; ip < nbPoints; ++ip) {
+	    // Linear interpolation
+	    sf0->Tw[ip]=sf1.Tw[ip] * Coefi1 + sf2.Tw[ip]* Coefi2;
+		//m_surfaceAtTime[0]->Tw[ip] = sf1.Tw[ip] * Coefi1 + sf2.Tw[ip]* Coefi2;
+
+		//Cubic Hermit temporal interpolation
+		derivative1=0.5*((sf1.Tw[ip]-sfm.Tw[ip])/Temp1+(sf2.Tw[ip]-sf1.Tw[ip])/Temp);
+	    derivative2=0.5*((sfp.Tw[ip]-sf2.Tw[ip])/Temp2+(sf2.Tw[ip]-sf1.Tw[ip])/Temp);
+		m_surfaceAtTime[0]->Tw[ip] = sf1.Tw[ip]*h00+derivative1*Temp*h10+
+		sf2.Tw[ip]*h01+derivative2*Temp*h11;
+		deri1+=std::abs(derivative1);
+		deri2+=std::abs(derivative2);
+		//if(ip == 10 || ip==20 || ip == 30) {
+		//  CFLog(INFO, "sf0->Tw[ip]="<<sf0->Tw[ip]<<", m_surfaceAtTime[0]->Tw[ip]="<< m_surfaceAtTime[0]->Tw[ip]<<", derivative1="<<derivative1<<", derivative2="<<derivative2<<", ip="<<ip<<"\n");
+		//}
+      } //ip
+	  deri1/=nbPoints;
+	  deri2/=nbPoints;	  
+	  CFLog(INFO, "h01="<<h01<<", h10="<<h10<<", h01="<<h01<<", h11="<< h11<<"\n");
+	  CFLog(INFO, "deri1="<<deri1<<", deri2="<<deri2<< "\n");
+
+	 // CFLog(INFO, "sf0->xyz(10,2)="<<sf0->xyz(10,2)<<", sf0->xyz(20,2)="<<sf0->xyz(20,2)<<", sf0->xyz(30,2)="<<sf0->xyz(30,2)<<"\n");
+	 // CFLog(INFO, "sf1.xyz(10,2)="<<sf1.xyz(10,2)<<", sf1.xyz(20,2)="<<sf1.xyz(20,2)<<", sf1.xyz(30,2)="<<sf1.xyz(30,2)<<"\n");
+	  //CFLog(INFO, "sf0->xyz(10,1)="<<sf0->xyz(10,1)<<", sf0->xyz(20,1)="<<sf0->xyz(20,1)<<", sf0->xyz(30,1)="<<sf0->xyz(30,1)<<"\n");
+	  //CFLog(INFO, "sf1.xyz(10,1)="<<sf1.xyz(10,1)<<", sf1.xyz(20,1)="<<sf1.xyz(20,1)<<", sf1.xyz(30,1)="<<sf1.xyz(30,1)<<"\n");
+	 // CFLog(INFO, "sf0->xyz(10,0)="<<sf0->xyz(10,0)<<", sf0->xyz(20,0)="<<sf0->xyz(20,0)<<", sf0->xyz(30,0)="<<sf0->xyz(30,0)<<"\n");
+	 // CFLog(INFO, "sf1.xyz(10,0)="<<sf1.xyz(10,0)<<", sf1.xyz(20,0)="<<sf1.xyz(20,0)<<", sf1.xyz(30,0)="<<sf1.xyz(30,0)<<"\n");
+	  //CFLog(INFO, "m_surfaceAtTime[0]->xyz(10,2)="<<m_surfaceAtTime[0]->xyz(10,2)<<", m_surfaceAtTime[0]->xyz(20,2)="<< m_surfaceAtTime[0]->xyz(20,2)<<", m_surfaceAtTime[0]->xyz(30,2)="<< m_surfaceAtTime[0]->xyz(30,2)<< "\n");
+	  //CFLog(INFO, "m_surfaceAtTime[0]->xyz(10,1)="<<m_surfaceAtTime[0]->xyz(10,1)<<", m_surfaceAtTime[0]->xyz(20,1)="<< m_surfaceAtTime[0]->xyz(20,1)<<", m_surfaceAtTime[0]->xyz(30,1)="<< m_surfaceAtTime[0]->xyz(30,1)<< "\n");
+	  //CFLog(INFO, "m_surfaceAtTime[0]->xyz(10,0)="<<m_surfaceAtTime[0]->xyz(10,0)<<", m_surfaceAtTime[0]->xyz(20,0)="<< m_surfaceAtTime[0]->xyz(20,0)<<", m_surfaceAtTime[0]->xyz(30,0)="<< m_surfaceAtTime[0]->xyz(30,0)<< "\n");
+	  //CFLog(INFO, "sf1.xyz[100,2]-sf1.xyz[200,2]="<<sf1.xyz[100]-sf1.xyz[200]<<"\n");
+	  //CFLog(INFO, "sf0->Tw[10]="<<sf0->Tw[10]<<", sf0->Tw[20]="<<sf0->Tw[10]<<", sf0->Tw[30]="<<sf0->Tw[30]<< "\n");
+
+	  //CFLog(INFO, "sf1.Tw[10]="<<sf1.Tw[10]<<", sf1.Tw[20]="<<sf1.Tw[20]<<", sf1.Tw[30]="<<sf1.Tw[30]<< "\n");
+	  //CFLog(INFO, "sf2.Tw[10]="<<sf2.Tw[10]<<", sf2.Tw[20]="<<sf2.Tw[20]<<", sf2.Tw[30]="<<sf2.Tw[30]<< "\n");
+	  //CFLog(INFO, "m_surfaceAtTime[0]->Tw[10]="<<m_surfaceAtTime[0]->Tw[10]<<", m_surfaceAtTime[0]->Tw[20]="<< m_surfaceAtTime[0]->Tw[20]<<", m_surfaceAtTime[0]->Tw[30]="<< m_surfaceAtTime[0]->Tw[30]<< "\n");
+///*/
+	  //readSurfaceDataextrapolator(m_surfaceAtTime, m_fileNameTw[i],m_fileNameTw[i+1],Coefi1,Coefi2);
+	  //readSurfaceData(m_surfaceAtTime, m_fileNameTw[i]);
+	} //i
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  CFLog(INFO, "Coefi1+ Coefi2="<<Coefi1+ Coefi2<<"\n");
   extrapolateVarsFromFile(m_surfaceAtTime);
-  
+  //CFLog(INFO, "m_surfaceAtTime[0]->xyz(10,2)="<<m_surfaceAtTime[0]->xyz(10,2)<<", m_surfaceAtTime[0]->xyz(20,2)="<< m_surfaceAtTime[0]->xyz(20,2)<<", m_surfaceAtTime[0]->xyz(30,2)="<< m_surfaceAtTime[0]->xyz(30,2)<< "\n");  
+
   CFLog(INFO, "NodalStatesExtrapolator<DATA>::extrapolateVarsFromFileInTime() => END\n");
 }
 
@@ -692,7 +961,7 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData
     
     CFLogInfo("nbSurf = " << is << "/" << nbSurf << ", NameSurf = " <<
 	      nameSurf << ", nbPoints = " << nbPoints << "\n");
-    SurfaceData* sf = new SurfaceData();
+    SurfaceData* sf = new SurfaceData(); 
     sf->xyz.resize(nbPoints,dim);
     sf->Tw.resize(nbPoints);
     
@@ -713,7 +982,8 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData
       fin >> sf->Tw[ip];
     }
 	
-    surfaces[is] = (m_extractCoordZID < 0) ?  sf : extractLineData(sf);
+	//Wait for further checking
+    surfaces[is] = (m_extractCoordZID < 0) ?  sf : extractLineData(sf);  
   }
   
   CFLogInfo("NodalStatesExtrapolator::readSurfaceData() => END reading file " <<
@@ -721,6 +991,150 @@ void NodalStatesExtrapolator<DATA>::readSurfaceData
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename DATA>
+void NodalStatesExtrapolator<DATA>::readSurfaceDataextrapolator
+(std::vector<SurfaceData*>& surfaces, const std::string& fileName, const std::string& fileName2, double Coefi1, double Coefi2)
+{
+  using namespace std;
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::MathTools;
+  using namespace COOLFluiD::Common;
+  
+  const CFuint dim = (m_extractCoordZID < 0) ? PhysicalModelStack::getActive()->getDim() : 3;
+
+  boost::filesystem::path fname;
+  //read the first file
+  if (Common::StringOps::startsWith(fileName,"."))
+  {
+    fname = boost::filesystem::path(fileName);
+  }
+  else
+  {
+    fname = Environment::DirPaths::getInstance().getBaseDir() / boost::filesystem::path(fileName);
+  }
+  // check the file type
+  std::ifstream fin(fname.string().c_str());
+  if(!fin) throw Common::FilesystemException (FromHere(),"Could not open file: " + fname.string());
+
+  //read the second file
+    if (Common::StringOps::startsWith(fileName2,"."))
+  {
+    fname = boost::filesystem::path(fileName2);
+  }
+  else
+  {
+    fname = Environment::DirPaths::getInstance().getBaseDir() / boost::filesystem::path(fileName2);
+  }
+  std::ifstream fin2(fname.string().c_str());
+  if(!fin2) throw Common::FilesystemException (FromHere(),"Could not open file: " + fname.string());
+
+  // The format is as follows:
+  
+  // NumberOfSurfaces
+  // SURFACE_NAME1 NumberOfPoints
+  // x y z T
+  // ...
+  // SURFACE_NAME2 NumberOfPoints
+  // x y z T
+  // ...
+  
+  CFLogInfo("NodalStatesExtrapolator::readSurfaceDataextrapolator() => START reading 1st file " <<
+	    fileName << ", dim="<< dim << "\n");
+  
+  CFuint nbSurf = 0;
+  CFuint nbPoints = 0;
+  std::string nameSurf = "";
+
+  fin >> nbSurf;
+  surfaces.resize(nbSurf);
+  
+  // store all the surface data
+  SurfaceData* sf = new SurfaceData(); 
+  SurfaceData* sf2 = new SurfaceData(); 
+
+  for (CFuint is = 0; is < nbSurf; ++is) {
+    //std::string nameSurf = "";
+    fin >> nameSurf;
+    fin >> nbPoints;
+    
+    CFLogInfo("nbSurf1 = " << is << "/" << nbSurf << ", NameSurf = " <<
+	      nameSurf << ", nbPoints = " << nbPoints << ", dim="<< dim << "\n");
+   
+    sf->xyz.resize(nbPoints,dim);
+    sf->Tw.resize(nbPoints);
+    
+    for (CFuint ip = 0; ip < nbPoints; ++ip) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	      fin >> sf->xyz(ip,iDim);
+      }
+      
+      if (m_xvec.size() > 0) {
+	cf_assert(std::abs(m_angle) > 0.0);
+	
+	// rotate coordinates
+	const CFreal x1 =  sf->xyz(ip,m_xvec[0])*std::cos(m_angle) + sf->xyz(ip,m_xvec[1])*std::sin(m_angle);
+	const CFreal y1 = -sf->xyz(ip,m_xvec[0])*std::sin(m_angle) + sf->xyz(ip,m_xvec[1])*std::cos(m_angle);
+	sf->xyz(ip,m_xvec[0]) = x1;				   
+	sf->xyz(ip,m_xvec[1]) = y1;				   
+      }	
+      fin >> sf->Tw[ip];
+    }
+  }
+
+  /////start read 2nd file
+  CFLogInfo("NodalStatesExtrapolator::readSurfaceDataextrapolator() => START reading 2nd file " <<
+	    fileName2 << ", dim="<< dim << ", nbPoints="<< nbPoints <<"\n");
+  
+  fin2 >> nbSurf;
+
+  // store all the surface data
+  for (CFuint is = 0; is < nbSurf; ++is) {
+    //std::string nameSurf = "";
+    fin2 >> nameSurf;
+    //CFuint nbPoints = 0;
+    fin2 >> nbPoints;
+    
+    CFLogInfo("nbSurf2 = " << is << "/" << nbSurf << ", NameSurf = " <<
+	      nameSurf << ", nbPoints = " << nbPoints << "\n");
+    //SurfaceData* sf2 = new SurfaceData(); 
+    sf2->xyz.resize(nbPoints,dim);
+    sf2->Tw.resize(nbPoints);
+    
+    for (CFuint ip = 0; ip < nbPoints; ++ip) {
+      for (CFuint iDim = 0; iDim < dim; ++iDim) {
+	fin2 >> sf2->xyz(ip,iDim);
+      }
+      
+      if (m_xvec.size() > 0) {
+	cf_assert(std::abs(m_angle) > 0.0);
+	
+	// rotate coordinates
+	const CFreal x1 =  sf2->xyz(ip,m_xvec[0])*std::cos(m_angle) + sf2->xyz(ip,m_xvec[1])*std::sin(m_angle);
+	const CFreal y1 = -sf2->xyz(ip,m_xvec[0])*std::sin(m_angle) + sf2->xyz(ip,m_xvec[1])*std::cos(m_angle);
+	sf2->xyz(ip,m_xvec[0]) = x1;				   
+	sf2->xyz(ip,m_xvec[1]) = y1;				   
+      }	
+      fin2 >> sf2->Tw[ip];
+	  if(ip==10 || ip==20 || ip==30){
+	    CFLogInfo("sf->Tw[ip]=" << sf->Tw[ip]<< ", sf2->Tw[ip]=" << sf2->Tw[ip]<<", ip="<<ip<<"\n");
+		CFLogInfo("sf->xyz(ip,2)=" << sf->xyz(ip,2)<< ", sf2->xyz(ip,2)=" << sf2->xyz(ip,2)<<", ip="<<ip<<"\n");
+	  }
+	  sf2->Tw[ip]=sf->Tw[ip]* Coefi1+sf2->Tw[ip]* Coefi2;
+    }
+    surfaces[is] = (m_extractCoordZID < 0) ?  sf2 : extractLineData(sf2);
+  }
+  CFLogInfo("sf2->Tw[10]=" << sf2->Tw[10]<< ", sf2->Tw[20]=" << sf2->Tw[20]<<", sf2->Tw[30]=" << sf2->Tw[30]<<"\n");
+  CFLogInfo("surfaces[0]->Tw[10]=" << surfaces[0]->Tw[10]<< ", surfaces[0]->Tw[20]=" << surfaces[0]->Tw[20]<<", surfaces[0]->Tw[30]=" << surfaces[0]->Tw[30]<<"\n");
+  //CFLogInfo("surfaces[0]->xyz(10,2)=" << surfaces[0]->xyz(10,2)<< ", surfaces[0]->xyz(20,2)=" << surfaces[0]->xyz(20,2)<<", surfaces[0]->xyz(30,2)=" << surfaces[0]->xyz(30,2)<<"\n");
+  CFLogInfo("NodalStatesExtrapolator::readSurfaceDataextrapolator() => END reading 2nd file " <<
+	    fileName << "\n"); 
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 
 template <typename DATA>
 typename NodalStatesExtrapolator<DATA>::SurfaceData* 

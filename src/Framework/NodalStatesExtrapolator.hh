@@ -14,7 +14,7 @@
 #include "Framework/StateInterpolator.hh"
 #include "MathTools/RealVector.hh"
 #include "MathTools/RealMatrix.hh"
-#include "MathTools/MathConsts.hh"
+#include "MathTools/MathConsts.hh"  
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -220,7 +220,11 @@ protected: // helper function
    */
   void readSurfaceData(std::vector<SurfaceData*>& surfaces,
 		       const std::string& fileName);
-  
+  // Mark it also work for linear interpolation 		   
+  void readSurfaceDataextrapolator(std::vector<SurfaceData*>& surfaces,
+		       const std::string& fileName, const std::string& fileName2,
+			   double Coefi1, double Coefi2);		   
+
   /**
    * Read line data at z=0 from given surface
    */
@@ -292,6 +296,9 @@ protected:
   
   /// name of the file where the boundary distribution is provided
   std::vector<std::string> m_fileNameTw;
+
+  /// Name of the characters used to automatically define the names of the given magnetograms
+  std::vector<std::string> m_fileNameTwADF;
   
   /// time corresponding to the file where the boundary distribution is provided
   std::vector<CFreal> m_fileNameTime;
