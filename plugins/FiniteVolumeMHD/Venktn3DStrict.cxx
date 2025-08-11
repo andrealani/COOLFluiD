@@ -44,7 +44,7 @@ Venktn3DStrict::Venktn3DStrict(const std::string& name) :
   _strictCoeff = 1.0;
   setParameter("strictCoeff",&_strictCoeff);
 
-  _psiMinEqual1 = 0;
+  _psiMinEqual1 = false;
   setParameter("psiMinEqual1",&_psiMinEqual1);
 
 
@@ -188,7 +188,7 @@ void Venktn3DStrict::limit(const vector<vector<Node*> >& coord,
           if(iVar<4 || iVar==7)
 	    psimin = min(psi*weight, psimin);
           else
-	    (!_psiMinEqual1) ? psimin = min(psi, psimin) : 1.0; 
+	   psimin = (!_psiMinEqual1) ? min(psi, psimin) : 1.0;
 	}
       }
     

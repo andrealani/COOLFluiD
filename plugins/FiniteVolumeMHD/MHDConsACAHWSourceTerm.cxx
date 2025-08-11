@@ -47,8 +47,8 @@ MHDConsACAHWSourceTerm::MHDConsACAHWSourceTerm(const std::string& name) :
   socket_radiativeloss("RadiativeLossTerm"),
  // socket_zp("zplus"),
  // socket_zm("zminus"),
-  socket_wavepressure("wavepressure")
-
+  socket_wavepressure("wavepressure"),
+  socket_divBCellCenter("divBCellCenter")
 {
   addConfigOptionsTo(this);
   _gravity = 0; 
@@ -126,6 +126,8 @@ void MHDConsACAHWSourceTerm::setup()
   socket_heating.getDataHandle().resize(socket_volumes.getDataHandle().size());
   socket_radiativeloss.getDataHandle().resize(socket_volumes.getDataHandle().size());
   socket_wavepressure.getDataHandle().resize(socket_volumes.getDataHandle().size());
+  socket_divBCellCenter.getDataHandle().resize(socket_volumes.getDataHandle().size());
+  
   DataHandle<CFreal> normals = this->socket_normals.getDataHandle();
   _gradP.resize(PhysicalModelStack::getActive()->getDim(),0.);
   _gradBx.resize(PhysicalModelStack::getActive()->getDim(),0.);
@@ -727,7 +729,9 @@ MHDConsACAHWSourceTerm::providesSockets()
   result.push_back(&socket_heating);
   result.push_back(&socket_radiativeloss);
   result.push_back(&socket_wavepressure);
-//  result.push_back(&socket_zp);
+  result.push_back(&socket_divBCellCenter);
+  
+  //  result.push_back(&socket_zp);
 //  result.push_back(&socket_zm);
   return result;
 }

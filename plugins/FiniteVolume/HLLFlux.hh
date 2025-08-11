@@ -28,6 +28,10 @@ namespace COOLFluiD {
 class HLLFlux : public FVMCC_FluxSplitter {
 public:
 
+  /// Defines the Config Option's of this class
+  /// @param options a OptionList where to add the Option's
+  static void defineConfigOptions(Config::OptionList& options);
+  
   /**
    * Constructor
    */
@@ -71,6 +75,9 @@ protected:
   /// vector storing the left and right states of a face
   std::vector<Framework::State*> _statesLR;
 
+  /// use alpha coefficient
+  bool _useAlpha;
+  
 }; // end of class HLLFlux
 
 //////////////////////////////////////////////////////////////////////////////

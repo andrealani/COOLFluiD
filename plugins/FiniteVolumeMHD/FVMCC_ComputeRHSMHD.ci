@@ -296,15 +296,13 @@ void FVMCC_ComputeRHSMHD<BASE>::setup()
   
   _firstSourceTermComputerName = this->getMethodData().getSourceTermComputerNames()[0];
   cf_assert((_firstSourceTermComputerName == "MHDConsACAST") ||
+	    (_firstSourceTermComputerName == "MHDConsACAHWST") ||
 	    (_firstSourceTermComputerName == "MHD2DPowellST") ||
 	    (_firstSourceTermComputerName == "MHD3DPowellST"));
   
-  _isFirstMHDConsACAST = (_firstSourceTermComputerName == "MHDConsACAST");
+  _isFirstMHDConsACAST = (_firstSourceTermComputerName == "MHDConsACAST" || _firstSourceTermComputerName == "MHDConsACAHWST");
   
   if (!_isFirstMHDConsACAST) {
-    DataHandle<CFreal> divBCellCenter  = socket_divBCellCenter.getDataHandle();
-    divBCellCenter.resize(nbStates);
-    
     DataHandle<CFreal> avgBxFace  = socket_avgBxFace.getDataHandle();
     avgBxFace.resize(nbFaces);
     
@@ -465,7 +463,7 @@ FVMCC_ComputeRHSMHD<BASE>::providesSockets()
 	 BASE::providesSockets();
   result.push_back(&socket_divBNodal);
 
-  if (firstSourceTermComputerName != "MHDConsACAST") {
+  if (firstSourceTermComputerName != "MHDConsACAST" && firstSourceTermComputerName != "MHDConsACAHWST") {
     result.push_back(&socket_avgBxFace);
     result.push_back(&socket_avgByFace);
     result.push_back(&socket_avgBzFace);
@@ -484,7 +482,7 @@ std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > FVMCC_ComputeRHSMHD
 
   const std::string firstSourceTermComputerName = this->getMethodData().getSourceTermComputerNames()[0];
   vector<SafePtr<BaseDataSocketSink> > result = BASE::needsSockets();
-  if (firstSourceTermComputerName != "MHDConsACAST") {
+  if (firstSourceTermComputerName != "MHDConsACAST" && firstSourceTermComputerName != "MHDConsACAHWST") {
     result.push_back(&socket_divBCellCenter);
   }
   return result;

@@ -27,6 +27,13 @@ hllFluxSplitterProvider("HLL");
 
 //////////////////////////////////////////////////////////////////////////////
 
+void HLLFlux::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("UseAlpha", "Use diffusion reduction coefficient");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 HLLFlux::HLLFlux(const std::string& name) :
   FVMCC_FluxSplitter(name),
   _rightFlux(),
@@ -37,6 +44,9 @@ HLLFlux::HLLFlux(const std::string& name) :
   _solutionStates(CFNULL),
   _statesLR(2)
 {
+  addConfigOptionsTo(this);
+  _useAlpha = false;
+  setParameter("UseAlpha", &_useAlpha); 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -110,9 +120,17 @@ void HLLFlux::compute(RealVector& result)
   const State& leftState  = *(*_solutionStates)[0];
   const State& rightState = *(*_solutionStates)[1];
 
-  result = 0.5*(_leftFlux + _rightFlux -
-		(amax + amin)/(amax - amin) * (_rightFlux - _leftFlux) +
-		amax * amin/(amax - amin) * (rightState - leftState));
+  if (!_useAlpha) {
+    result = 0.5*(_leftFlux + _rightFlux -
+		  (amax + amin)/(amax - amin) * (_rightFlux - _leftFlux) +
+		  amax * amin/(amax - amin) * (rightState - leftState));
+  }
+  else {
+    const CFreal alpha=max(abs(amin),abs(amax))/(amax-amin);
+    result = 0.5*(_leftFlux + _rightFlux -
+		  (amax + amin)/(amax - amin) * (_rightFlux - _leftFlux) +
+		  alpha*2.0*amax * amin/(amax - amin) * (rightState - leftState));
+  }
   
   // compute update coefficient
   if (!getMethodData().isPerturb()) {

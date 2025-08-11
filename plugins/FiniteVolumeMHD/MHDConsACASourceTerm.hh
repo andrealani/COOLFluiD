@@ -75,8 +75,10 @@ private:
   Framework::DataSocketSource<CFreal> socket_heating;
   Framework::DataSocketSource<CFreal> socket_radiativeloss;    
   Framework::DataSocketSource<CFreal> socket_wavepressure;
-//  Framework::DataSocketSource<CFreal> socket_zp;
-//  Framework::DataSocketSource<CFreal> socket_zm;
+  Framework::DataSocketSource<CFreal> socket_divBCellCenter;
+  
+  //  Framework::DataSocketSource<CFreal> socket_zp;
+  //  Framework::DataSocketSource<CFreal> socket_zm;
   RealVector _gradP;
   RealVector _gradBx;
   RealVector _gradBy;
