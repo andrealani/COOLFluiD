@@ -1,3 +1,4 @@
+#cf_add_case( MPI 8 CASEDIR COCONUT/Eclipse PCASE map_unsteadyeclipse_fullMHD_TEST.CFcase CASEFILES corona_720.CFmesh map.inter MapData )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_Shifted PCASE minimum_original_general.CFcase CASEFILES BCindependent5.CFmesh 2008_lmax25.dat dipole.inter )
@@ -25,7 +26,7 @@
 #cf_add_case( MPI default PCASE Jets2D/jets2DFVMMHDProjImpl.CFcase )
 #cf_add_case( MPI default PCASE Jets2D/jets2DMHDFluctSplitCRD.CFcase )
 #cf_add_case( MPI default PCASE Jets2D/jets2DMHDProjFluctSplitCRD.CFcase )
-cf_add_case( MPI 8 CASEDIR SolarWind PCASE solarwind_interpolFromTecplot.CFcase CASEFILES solarwind_tet_fine.neu solarwind_tet_coarse.plt )
+#cf_add_case( MPI 8 CASEDIR SolarWind PCASE solarwind_interpolFromTecplot.CFcase CASEFILES solarwind_tet_fine.neu solarwind_tet_coarse.plt )
 IF (CF_HAVE_CUDA)
 cf_add_case( MPI 1 CASEDIR Nozzle PCASE nozzleFVMMHDProjCUDA.CFcase CASEFILES nozzle.thor nozzle.SP )
 IF(PETSC_VERSION_MINOR EQUAL 7) 

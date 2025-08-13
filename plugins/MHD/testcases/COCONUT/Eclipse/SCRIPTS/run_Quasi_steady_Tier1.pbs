@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#PBS -N group gpr_compute_2025_006
+#PBS -l nodes=3:ppn=90 -l mem=240gb
+#PBS -l walltime=5:00:00
+#PBS -A 2025_006
+##PBS -m abe
+##PBS -M haopeng.wang1@kuleuven.be
+#PBS -m n
+
+
+cd /dodrio/scratch/projects/2025_006/HaopengWang/COCONUT/
+##module swap cluster/dodrio/cpu_rome_512
+module load CMake/3.26.3-GCCcore-12.3.0
+module load PETSc/3.20.3-foss-2023a
+module load vsc-mympirun
+
+
+mympirun --universe 270 ./coolfluid-solver --scase /dodrio/scratch/projects/2025_006/HaopengWang/COCONUT/map_steady.CFcase
