@@ -1,0 +1,3 @@
+# Before running map_unsteadyeclipse_fullMHD_TEST.CFcase, you need to unzip CFmesh and map files by running the script corona_720.sh 
+# Before running run corona_720.sh, you need to make it executable by doing: 
+chmod a+x corona_720.sh

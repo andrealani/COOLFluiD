@@ -22,7 +22,7 @@ Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COC
 # Mesh reader
 # First reader 
 # Restart at initial time of time-evolving simulation
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./corona_720.CFmesh 
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./Mesh/corona_720.CFmesh 
 #./results-map-res/30Rs_lv5/steady/fullMHD/2024/filter25104/corona_720.CFmesh 
 # Xusuan-Restart during time-dependent simulation: Correspondingly, the following code should be revised.
 # L222	CFreal restarttime = 0.0;
@@ -33,7 +33,7 @@ Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis
 
 # Second reader
 # Restart at initial time of time-evolving simulation
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./corona_720.CFmesh   
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./Mesh/corona_720.CFmesh
 #xusuan-Restart during time-dependent simulation
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./results-map-res/30Rs_lv6/Timeevolving/fullMHD/2024/filter25104/LayoutandCFmesh/corona-time_1086.CFmesh 
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2

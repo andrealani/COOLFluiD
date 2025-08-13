@@ -1,3 +1,4 @@
+cf_add_case( MPI 8 CASEDIR COCONUT/Eclipse PCASE map_unsteadyeclipse_fullMHD_TEST.CFcase CASEFILES Mesh/corona_720.CFmesh map.inter MapData )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Eclipse PCASE map_unsteadyeclipse_fullMHD_TEST.CFcase CASEFILES corona_720.CFmesh map.inter MapData )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
