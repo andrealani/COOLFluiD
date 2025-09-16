@@ -15,6 +15,9 @@
 
 #include "CGNSWriter/CGWriterData.hh"
 
+#include <unordered_set>
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -106,14 +109,17 @@ protected:
   std::vector< RealVector > calculateNewNodePositionsForElement(std::vector< RealVector >  outputPntsMappedCoords, CFuint nbrNodes, std::vector<COOLFluiD::Framework::Node*>*& cellNodes, std::vector< RealVector > geoShapeFuncs, CFuint NbrNodesQ1);
 
   /// Artificially upgrade the mesh data to higher geomtrical order
-  void upgradeGeoOrder(Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes, Common::SafePtr<Common::ConnectivityTable<CFuint> > cellNodesConn, CFuint NewGeoOrder, std::vector< RealVector >& upgradedNodes,  std::vector<std::vector<cgsize_t>>& upgradedConnectivity);
+  void upgradeGeoOrder(std::vector<Framework::Node*> nodes, std::vector<std::vector<CFuint>> cellNodesConn, CFuint NewGeoOrder, std::vector< RealVector >& upgradedNodes,  std::vector<std::vector<cgsize_t>>& upgradedConnectivity);
 
   /// Clean Data by removing potential unused nodes afte Geo Upgrade
   void cleanData(std::vector<RealVector>& nodes, std::vector<std::vector<cgsize_t>>& connectivity) ;
 
   /// Checking for duplicate nodes
   bool nodesAreClose(const RealVector& a, const RealVector& b, int dim);
-   
+
+  /// Clean Nodes and Connectivity after re;oving ghost elements
+  void cleanGhostData(std::vector<Framework::Node*>& nodes, std::vector<std::vector<CFuint>>& connectivity);
+
 private:
 
   /// File format to write in

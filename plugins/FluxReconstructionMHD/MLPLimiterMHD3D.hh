@@ -1,13 +1,12 @@
-#ifndef COOLFluiD_FluxReconstructionMethod_PositivityPreservationMHD3D_hh
-#define COOLFluiD_FluxReconstructionMethod_PositivityPreservationMHD3D_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_MLPLimiterMHD3D_hh
+#define COOLFluiD_FluxReconstructionMethod_MLPLimiterMHD3D_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "Framework/DataSocketSink.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
-
-#include "FluxReconstructionMethod/BasePhysicality.hh"
+#include "FluxReconstructionMethod/MLPLimiter.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -24,25 +23,24 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represent a command that checks and enforces the physicality of 
- * an Euler/NS 3D state, particularly the positivity of the 
- * pressure/density/temperature
+ * This class represent a command that applies an elementwise MLP limiter to the solution,
+ * taking into account the requirement of pressure positivty for 3D MHD
  *
  * @author Ray Vandenhoeck
- *
+ * @author Rayan Dhib
  */
-class PositivityPreservationMHD3D : public BasePhysicality {
+class MLPLimiterMHD3D : public MLPLimiter {
 public:
 
   /**
    * Constructor.
    */
-  explicit PositivityPreservationMHD3D(const std::string& name);
+  explicit MLPLimiterMHD3D(const std::string& name);
 
   /**
    * Destructor.
    */
-  virtual ~PositivityPreservationMHD3D();
+  virtual ~MLPLimiterMHD3D();
 
   /**
    * Defines the Config Option's of this class
@@ -65,23 +63,33 @@ public:
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-  
-  /// Returns the DataSocket's that this command needs as sinks
-  /// @return a vector of SafePtr with the DataSockets
-  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
-    needsSockets();
 
 protected: // functions
 
   /**
    * apply pressure possitivity check
    */
-  virtual void enforcePhysicality();
+  virtual void applyChecks(CFreal phi);
   
   /**
    * Check if the states are physical
    */
   virtual bool checkPhysicality();
+  
+  /**
+   * Compute the physical value that should be used to limit the solution in order to make it physical
+   */
+  virtual CFreal computeLimitingValue(RealVector state);
+  
+  /**
+   * Limit the average cell state to make it physical
+   */
+  virtual void limitAvgState();
+  
+  /**
+   * check for special physics-dependent conditions if limiting is necessary (for MHD: check whether we are in a supersonic region)
+   */
+  virtual bool checkSpecialLimConditions();
 
 protected: // data
 
@@ -91,31 +99,22 @@ protected: // data
   /// minimum allowable value for pressure
   CFreal m_minPressure;
   
-  /// boolean telling wether to also check the internal solution for physicality
-  bool m_checkInternal;
+  /// Mach number threshold for limiter activation
+  CFreal m_machThreshold;
   
-  /// boolean to tell whether the complete state is limited or a single variable
-  bool m_limCompleteState;
+  /// Enable verbose limiter diagnostics
+  bool m_verboseLimiter;
   
   /// physical model (in conservative variables)
-  Common::SafePtr<Physics::MHD::MHD3DProjectionVarSet> m_varSet;
+  Common::SafePtr<Physics::MHD::MHD3DProjectionVarSet> m_MHDVarSet;
 
   /// heat capacity ratio minus one
   CFreal m_gammaMinusOne;
   
   /// variable for physical data of sol
   RealVector m_solPhysData;
-  
-  /// cell averaged state
-  RealVector m_cellAvgState;
-  
-  /// coefficients for the computation of the cell averaged solution
-  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
-  
-  /// storage of the past states
-  Framework::DataSocketSink< Framework::State*> socket_pastStates;
 
-}; // class PositivityPreservationMHD3D
+}; // class MLPLimiterMHD3D
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -125,4 +124,4 @@ protected: // data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_PositivityPreservationMHD3D_hh
+#endif // COOLFluiD_FluxReconstructionMethod_MLPLimiterMHD3D_hh

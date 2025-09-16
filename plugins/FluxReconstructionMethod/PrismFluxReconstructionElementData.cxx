@@ -2226,6 +2226,70 @@ CFreal PrismFluxReconstructionElementData::factorial(CFreal n)
 {
   return (n==1. || n==0.) ? 1. : factorial(n-1.)*n;
 }
+
+//////////////////////////////////////////////////////////////////////
+
+void PrismFluxReconstructionElementData::createFluxPntsFaceConn()
+{
+  CFAUTOTRACE;
+
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+  const CFuint nbrFlxPnts2D = (m_polyOrder+1)*(m_polyOrder+2)/2; //on triag face
+
+  // resize m_faceFlxPntConn
+  m_flxPntFaceConn.resize(3*nbrFlxPnts1D*nbrFlxPnts1D+2*nbrFlxPnts2D);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+
+  // zeroth face (triag face zta=-1)
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D-iKsi; ++iEta)
+    {
+      m_flxPntFaceConn[(m_polyOrder +1)*iEta - (iEta)*(iEta-1)/2 + iKsi] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // first face (triag face zta=1)
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx)
+  {
+    m_flxPntFaceConn[nbrFlxPnts2D + iFlx] = faceIdx; 
+  }
+  ++faceIdx;
+
+  // second face (eta=0)
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+  {
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    {
+      m_flxPntFaceConn[2*nbrFlxPnts2D + nbrFlxPnts1D*iKsi + iEta] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // third face (ksi+eta=1)
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+  {
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_flxPntFaceConn[2*nbrFlxPnts2D + nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + iEta] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // fourth face (ksi=0)
+  for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+  {
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+    {
+      m_flxPntFaceConn[2*nbrFlxPnts2D + 2*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + (nbrFlxPnts1D-1-iEta)] = faceIdx;
+    }
+  }
+}
+
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

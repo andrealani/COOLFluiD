@@ -37,6 +37,8 @@
 #include "Environment/FileHandlerOutput.hh"
 #include "Framework/DataHandleOutput.hh"
 
+#include <unordered_set>
+
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
@@ -135,23 +137,82 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   // Ensure all processes have received the baseIndex before proceeding
   //MPI_Barrier(comm);
 
-  /*----------------------------! Get nodes and connectivity -----------------------------------*/
+/*----------------------------! Get and clean nodes and connectivity -----------------------------------*/
 
-  // get the total number of nodes
-  Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes = MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
-  const CFuint totNbNodes = nodes.size();
+  // 1) Retrieve raw nodes & connectivity
+  Framework::DataHandle<Framework::Node*, Framework::GLOBAL> nodes =
+      MeshDataStack::getActive()->getNodeDataSocketSink().getDataHandle();
 
-  // table for the element-node connectivity
-  Common::SafePtr<Common::ConnectivityTable<CFuint> > cellNodesConn = MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
-  const CFuint totNbCells = cellNodesConn->nbRows();
+  Common::SafePtr<Common::ConnectivityTable<CFuint>> cellNodesConn =
+      MeshDataStack::getActive()->getConnectivity("cellNodes_InnerCells");
 
-  CFuint globalNbCells;
-  CFuint globalNbNodes;
+  // 2) Build a local connectivity subset that skips ghost elements
+  SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
+  StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
+  geoData.trs = trs;
 
-  // Use MPI_Allreduce to sum up the local numbers across all ranks
-  MPI_Allreduce(&totNbNodes, &globalNbNodes, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&totNbCells, &globalNbCells, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+  // Data structures to store the "owned" connectivity
+  std::vector<std::vector<CFuint>> localRawConn;
 
+  CFuint startCellAccum = 0;
+
+  // Build localRawConn in 0-based node indexing
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType) {
+      // get the local # of cells for this type
+      SafePtr<vector<ElementTypeData>> elemType =
+          MeshDataStack::getActive()->getElementTypeData();
+      const CFuint nbLocalCells = (*elemType)[iElemType].getNbElems();
+      const CFuint startCellIdx = (*elemType)[iElemType].getStartIdx();
+
+      for (CFuint iCellLocal = 0; iCellLocal < nbLocalCells; ++iCellLocal) {
+          geoData.idx = startCellIdx + iCellLocal;
+          GeometricEntity* cell = m_stdTrsGeoBuilder.buildGE();
+
+          vector<State*>* cellStates = cell->getStates();
+          bool isOwned = (!cellStates->empty() && (*cellStates)[0]->isParUpdatable());
+
+          m_stdTrsGeoBuilder.releaseGE();
+
+          if (!isOwned)
+              continue; // skip ghost
+
+          // gather connectivity from cellNodesConn
+          const CFuint rowIdx = startCellAccum + iCellLocal;
+          const CFuint nbNodesInCell = cellNodesConn->nbCols(rowIdx);
+
+          std::vector<CFuint> thisCellConn;
+          thisCellConn.reserve(nbNodesInCell);
+
+          for (CFuint j = 0; j < nbNodesInCell; ++j) {
+              // 0-based node index from the original connectivity
+              CFuint nodeID = (*cellNodesConn)(rowIdx, j);
+              thisCellConn.push_back(nodeID);
+          }
+          localRawConn.push_back(std::move(thisCellConn));
+      }
+      startCellAccum += nbLocalCells;
+  }
+
+  // 3) Create cleaned node data and connectivity
+  std::vector<Framework::Node*> cleanedNodes;
+  cleanedNodes.reserve(nodes.size()); // Reserve memory for efficiency
+
+  for (CFuint i = 0; i < nodes.size(); ++i) {
+      cleanedNodes.push_back(nodes[i]);
+  }
+
+  //initialise cleaned nodes to nodes
+  std::vector<std::vector<CFuint>> cleanedConnectivity = localRawConn;
+  // Build cleaned versions 
+  cleanGhostData(cleanedNodes, cleanedConnectivity);
+
+  // 5) Recompute local & global counts with the updated data
+  const CFuint totNbNodes = cleanedNodes.size();
+  const CFuint totNbCells = cleanedConnectivity.size();
+
+  CFuint globalNbNodes = 0, globalNbCells = 0;
+  MPI_Allreduce(&totNbNodes, &globalNbNodes, 1, MPI_UNSIGNED, MPI_SUM, comm);
+  MPI_Allreduce(&totNbCells, &globalNbCells, 1, MPI_UNSIGNED, MPI_SUM, comm);
 
   /*----------------------------! Mesh Geomtric Upgrade -----------------------------------*/
 
@@ -161,7 +222,7 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   std::vector<std::vector<cgsize_t>> upgradedConnectivity(totNbCells); //totNbCells remains the same
   std::vector< RealVector > upgradedNodes;
 
-  upgradeGeoOrder(nodes, cellNodesConn, NewGeoOrder, upgradedNodes, upgradedConnectivity);
+  upgradeGeoOrder(cleanedNodes, cleanedConnectivity, NewGeoOrder, upgradedNodes, upgradedConnectivity);
   if (NewGeoOrder >= geoOrder) //if we upgrade mesh
   {
     cleanData(upgradedNodes, upgradedConnectivity);
@@ -173,7 +234,13 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   CFuint NewglobalNbNodes;
 
   // Use MPI_Allreduce to sum up the local numbers across all ranks
-  MPI_Allreduce(&NewtotNbNodes, &NewglobalNbNodes, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&NewtotNbNodes, &NewglobalNbNodes, 1, MPI_UNSIGNED, MPI_SUM, comm);
+
+  // Check for potential overflow at very high core counts
+  if (NewglobalNbNodes > static_cast<CFuint>(std::numeric_limits<cgsize_t>::max())) {
+    std::cerr << "Rank " << rank << " ERROR: Total node count exceeds CGNS limits. Consider using fewer cores or mesh partitioning." << std::endl;
+    MPI_Abort(comm, 1);
+  }
 
   /*----------------------------! Define CGNS Zone -----------------------------------*/
   // Create Zone
@@ -188,10 +255,10 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
 
   /*! Define Mesh Data: Nodes*/
 
-  int localnodeCount = NewtotNbNodes;  // Number of elements this rank will write
-  int startnode;
+  CFuint localnodeCount = NewtotNbNodes;  // Number of nodes this rank will write
+  CFuint startnode;
 
-  MPI_Exscan(&localnodeCount, &startnode, 1, MPI_INT, MPI_SUM, comm);
+  MPI_Exscan(&localnodeCount, &startnode, 1, MPI_UNSIGNED, MPI_SUM, comm);
   if (rank == 0) {
       startnode = 1;  // First rank starts at index 1
   } else {
@@ -209,7 +276,7 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     // get the number of elements
-    const CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+    const CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
 
     // get element shape
     const CFGeoShape::Type shape = (*elemType)[iElemType].getGeoShape();    
@@ -217,18 +284,18 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
     // Use getCGNSCellShape to determine the elementType for CGNS
     ElementType_t elementType = getCGNSCellShape(shape, NewGeoOrder);
 
-    int localElemCount = nbrElems;  // Number of elements this rank will write
-    int startElem;
+    CFuint localElemCount = nbrElems;  // Number of elements this rank will write
+    CFuint startElem;
 
-    MPI_Exscan(&localElemCount, &startElem, 1, MPI_INT, MPI_SUM, comm);
+    MPI_Exscan(&localElemCount, &startElem, 1, MPI_UNSIGNED, MPI_SUM, comm);
     if (rank == 0) {
         startElem = 1;  // First rank starts at index 1
     } else {
         startElem += 1;  // Adjust for 1-based indexing
     }  
 
-    int start_e = startElem; // Starting index of elements (1-based for CGNS)
-    int end_e = startElem+localElemCount-1; // Ending index, assuming consecutive numbering
+    CFuint start_e = startElem; // Starting index of elements (1-based for CGNS)
+    CFuint end_e = startElem+localElemCount-1; // Ending index, assuming consecutive numbering
 
 
     // create data node for elements
@@ -285,8 +352,8 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
 
   // prepares to loop over cells by getting the GeometricEntityPool
   // get inner cells TRS
-  SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
-  StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
+  //SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
+  //StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
   geoData.trs = trs;
 
   // loop over elements Types 
@@ -308,7 +375,7 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
     const CFuint nbrNodes = (*elemType)[iElemType].getNbNodes();
 
     // get the number of elements
-    const CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+    const CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
 
     // get start index of this element type in global element list
     CFuint cellIdx = (*elemType)[iElemType].getStartIdx();
@@ -427,14 +494,17 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
     cgsize_t start_s = start_n;
     cgsize_t end_s = end_n;
 
+    // Add barrier to prevent I/O race conditions at very high core counts
+    //MPI_Barrier(comm);
+
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
     {
       if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, varNames[iEq].c_str(), &fieldIndex) != CG_OK) 
       {
-        std::cerr << "Error writing solution node for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution node for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
       }      
       if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[iEq].data()) != CG_OK) {
-        std::cerr << "Error writing solution data for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution data for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
       }
     }
 
@@ -443,11 +513,11 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
     {
       if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, extraVarNames[iExtra].c_str(), &fieldIndex) != CG_OK) 
       {
-        std::cerr << "Error writing solution node for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution node for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
       }
 
       if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + iExtra].data()) != CG_OK) {
-        std::cerr << "Error writing solution data for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution data for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
       }
     }
 
@@ -456,25 +526,24 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
     {
       if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, dh_varnames[iDh].c_str(), &fieldIndex) != CG_OK) 
       {
-        std::cerr << "Error writing solution node for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution node for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
       }      
       if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + extraVarNames.size() + iDh].data()) != CG_OK) {
-        std::cerr << "Error writing solution data for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+        std::cerr << "Rank " << rank << " Error writing solution data for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
       }
     }
 
   }
 
-  
-
-  // Ensure all processes have opened the file before proceeding
-  //MPI_Barrier(comm);
+  // Final barrier to ensure all I/O operations are complete before closing
+  MPI_Barrier(comm);
 
   // Close the CGNS file
-
   if (cgp_close(fileIndex) != CG_OK) 
   {
-    std::cerr << "Error closing CGNS file: " << cg_get_error() << std::endl;
+    int rank;
+    MPI_Comm_rank(comm, &rank);
+    std::cerr << "Rank " << rank << " Error closing CGNS file: " << cg_get_error() << std::endl;
     MPI_Abort(comm, 1);
   }
   
@@ -663,6 +732,58 @@ void ParCGNSHighOrderWriter::cleanData(std::vector<RealVector>& nodes, std::vect
 }
 
 //////////////////////////////////////////////////////////////////////////////
+void ParCGNSHighOrderWriter::cleanGhostData(
+    std::vector<Framework::Node*>& nodes,
+    std::vector<std::vector<CFuint>>& connectivity)
+{
+    Common::CFMap<CFuint, CFuint> oldToNewIndexMap;
+    std::vector<bool> isNodeUsed(nodes.size(), false);
+
+    // Identify used nodes
+    for (const auto& cell : connectivity) {
+        for (CFuint nodeId : cell) {
+            if (nodeId < nodes.size()) {
+                isNodeUsed[nodeId] = true;
+            } else {
+                CFLog(INFO, "Encountered nodeId " << nodeId << " out of range in connectivity. Please check your data.\n");
+            }
+        }
+    }
+
+    // Create a mapping for node indices
+    CFuint newIndex = 0;
+    for (CFuint i = 0; i < static_cast<CFuint>(isNodeUsed.size()); ++i) {
+        if (isNodeUsed[i]) {
+            oldToNewIndexMap.insert(i, newIndex++);
+        }
+    }
+
+    oldToNewIndexMap.sortKeys(); // Sort the keys for consistent lookups
+
+    // Update connectivity with new indices
+    for (auto& cell : connectivity) {
+        for (CFuint& nodeId : cell) {
+            bool isFound;
+            CFuint newId = oldToNewIndexMap.find(nodeId, isFound);
+            if (isFound) {
+                nodeId = newId;
+            } else {
+                CFLog(INFO, "Key not found in CFMap for nodeId " << nodeId << ". This nodeId may not be used in connectivity.\n");
+            }
+        }
+    }
+
+    // Remove unused nodes from the node list
+    std::vector<Framework::Node*> cleanedNodes;
+    for (CFuint i = 0; i < static_cast<CFuint>(nodes.size()); ++i) {
+        if (isNodeUsed[i]) {
+            cleanedNodes.push_back(nodes[i]);
+        }
+    }
+    nodes.swap(cleanedNodes); // Update the original nodes vector
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 void ParCGNSHighOrderWriter::setup()
 {
@@ -702,13 +823,13 @@ bool ParCGNSHighOrderWriter::nodesAreClose(const RealVector& a, const RealVector
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ParCGNSHighOrderWriter::upgradeGeoOrder(Framework::DataHandle < Framework::Node*, Framework::GLOBAL > nodes, Common::SafePtr<Common::ConnectivityTable<CFuint> > cellNodesConn, CFuint NewGeoOrder, std::vector< RealVector >& upgradedNodes,  std::vector<std::vector<cgsize_t>>& upgradedConnectivity) 
+void ParCGNSHighOrderWriter::upgradeGeoOrder(std::vector<Framework::Node*> nodes, std::vector<std::vector<CFuint>> cellNodesConn, CFuint NewGeoOrder, std::vector< RealVector >& upgradedNodes,  std::vector<std::vector<cgsize_t>>& upgradedConnectivity) 
 {
   CFAUTOTRACE;
 
   // Initial setup: Retrieving existing mesh data
   const CFuint totNbNodes = nodes.size();
-  const CFuint totNbCells = cellNodesConn->nbRows();
+  const CFuint totNbCells = cellNodesConn.size();//cellNodesConn->nbRows();
 
   // get inner cells TRS
   SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
@@ -749,7 +870,7 @@ void ParCGNSHighOrderWriter::upgradeGeoOrder(Framework::DataHandle < Framework::
     ElementType_t elementType = getCGNSCellShape(shape, geoOrder);
 
     // get the number of elements
-    const CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+    const CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
 
     // number of nodes in element type
     const CFuint nbrNodes = (*elemType)[iElemType].getNbNodes();
@@ -767,7 +888,7 @@ void ParCGNSHighOrderWriter::upgradeGeoOrder(Framework::DataHandle < Framework::
         upgradedConnectivity[iElem].resize(NbrNodesQ1);
         for (size_t j = 0; j < NbrNodesQ1; ++j) {
             // The original connectivity is directly usable, adjusted for 1-based indexing
-            upgradedConnectivity[iElem][j] = (*cellNodesConn)(iElem,newIndices[j]) + 1;
+            upgradedConnectivity[iElem][j] = (cellNodesConn)[iElem][newIndices[j]] + 1;//(*cellNodesConn)(iElem,newIndices[j]) + 1;
         }
       }
     }
@@ -778,7 +899,7 @@ void ParCGNSHighOrderWriter::upgradeGeoOrder(Framework::DataHandle < Framework::
         upgradedConnectivity[iElem].resize(nbrNodes);
         for (size_t j = 0; j < nbrNodes; ++j) {
             // The original connectivity is directly usable, adjusted for 1-based indexing
-            upgradedConnectivity[iElem][j] = (*cellNodesConn)(iElem,newIndices[j]) + 1;
+            upgradedConnectivity[iElem][j] = (cellNodesConn)[iElem][newIndices[j]] + 1;//(*cellNodesConn)(iElem,newIndices[j]) + 1;
         }
       }
     }
@@ -792,7 +913,7 @@ void ParCGNSHighOrderWriter::upgradeGeoOrder(Framework::DataHandle < Framework::
     {
       CFGeoShape::Type shape = (*elemType)[iElemType].getGeoShape();
       // get the number of elements
-      CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+      CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
       // number of nodes in element type
       const CFuint nbrNodes = (*elemType)[iElemType].getNbNodes();
       // get start index of this element type in global element list

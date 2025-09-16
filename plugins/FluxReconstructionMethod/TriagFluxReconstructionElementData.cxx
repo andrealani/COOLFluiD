@@ -1689,18 +1689,19 @@ void TriagFluxReconstructionElementData::createFaceFluxPntsConn() //Modif here
  CFAUTOTRACE;
 
   // number of flux points in 2D per Face
-  const CFuint nbrFlxPnts2D = m_polyOrder+1;//flxPntsLocalCoord2D[0].size();
+  const CFuint nbrFlxPnts1D = m_polyOrder+1;
 
   // resize m_faceFlxPntConn
   m_faceFlxPntConn.resize(3);
   CFuint iFlx1 = 0; 
   // variable holding the face index
-for(CFuint faceIdx= 0; faceIdx<3; ++faceIdx){
-  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx, ++iFlx1)
+  for(CFuint faceIdx= 0; faceIdx<3; ++faceIdx)
   {
-    m_faceFlxPntConn[faceIdx].push_back(iFlx1); 
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx, ++iFlx1)
+    {
+      m_faceFlxPntConn[faceIdx].push_back(iFlx1); 
+    }
   }
-}
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -2328,6 +2329,28 @@ void TriagFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
 {
   CFAUTOTRACE;
   // Not needed in 2D
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void TriagFluxReconstructionElementData::createFluxPntsFaceConn()
+{
+  CFAUTOTRACE;
+
+  // number of flux points in 2D per Face
+  const CFuint nbrFlxPnts1D = m_polyOrder+1;
+
+  // resize m_faceFlxPntConn
+  m_flxPntFaceConn.resize(3 * nbrFlxPnts1D);
+  CFuint iFlx1 = 0; 
+  // variable holding the face index
+  for(CFuint faceIdx= 0; faceIdx<3; ++faceIdx)
+  {
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts1D; ++iFlx, ++iFlx1)
+    {
+      m_flxPntFaceConn[iFlx1] = faceIdx; 
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////

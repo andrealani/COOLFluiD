@@ -232,6 +232,9 @@ private: // data
   /// RHS (and optionally the Jacobian)
   std::string m_spaceRHSJacobStr;
   
+  /// Boolean flag for using blending approach
+  bool m_useBlending;
+  
   /// The string for configuration of the m_timeRHSJacob command
   std::string m_timeRHSJacobStr;
   

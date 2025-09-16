@@ -28,6 +28,7 @@ namespace COOLFluiD {
  * @author Ray Vandenhoeck
  * @author Alexander Papen
  * @author Firas Ben Ameur
+ * @author Rayan Dhib
  */
 class TriagFluxReconstructionElementData : public FluxReconstructionElementData {
 public:
@@ -196,6 +197,11 @@ protected: // functions
   void createFluxPntFluxDim();
 
   void createVandermondeMatrix() ;
+
+  /**
+   * create the connectivity of flux points connectivty to faces
+   */
+  void createFluxPntsFaceConn();
 
 private:
 
