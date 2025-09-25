@@ -1474,6 +1474,82 @@ void HexaFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
 
 //////////////////////////////////////////////////////////////////////
 
+void HexaFluxReconstructionElementData::createFluxPntsFaceConn()
+{
+  CFAUTOTRACE;
+
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // resize m_flxPntFaceConn
+  m_flxPntFaceConn.resize(6*nbrFlxPnts1D*nbrFlxPnts1D);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+
+  // zeroth face
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+  {
+    for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+    {
+      m_flxPntFaceConn[nbrFlxPnts1D*iKsi + iEta] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // first face
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+  {
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+    {
+      m_flxPntFaceConn[nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iKsi + iEta] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // second face
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+  {
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_flxPntFaceConn[4*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + iKsi] = faceIdx;
+    }
+  }
+  ++faceIdx;
+
+  // third face
+  for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+  {
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_flxPntFaceConn[3*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iEta + iZta] = faceIdx; 
+    }
+  }
+  ++faceIdx;
+  
+  // fourth face
+  for (CFuint iKsi = 0; iKsi < nbrFlxPnts1D; ++iKsi)
+  {
+    const CFuint idxKsi = nbrFlxPnts1D-iKsi-1;
+    for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+    {
+      m_flxPntFaceConn[5*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iZta + idxKsi] = faceIdx; 
+    }
+  }
+  ++faceIdx;
+  
+  // fifth face
+  for (CFuint iZta = 0; iZta < nbrFlxPnts1D; ++iZta)
+  {
+    for (CFuint iEta = 0; iEta < nbrFlxPnts1D; ++iEta)
+    {
+      m_flxPntFaceConn[2*nbrFlxPnts1D*nbrFlxPnts1D + nbrFlxPnts1D*iEta + iZta] = faceIdx; 
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+
   } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD

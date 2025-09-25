@@ -48,6 +48,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::vector<std::string> >("BcNamesDiff","Names of the diffusive boundary condition commands.");
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
+  options.addConfigOption< bool >("UseBlending","Use blending approach for convective terms.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
   options.addConfigOption< std::string >("PreProcessCom","Command to preprocess the solution.");
   options.addConfigOption< std::string >("PhysicalityCom","Command to enforce physical soundness of the solution.");
@@ -95,6 +96,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_spaceRHSJacobStr = "RHS";
   setParameter("SpaceRHSJacobCom", &m_spaceRHSJacobStr);
+  
+  m_useBlending = false;
+  setParameter("UseBlending", &m_useBlending);
   
   m_timeRHSJacobStr = "Null";
   setParameter("TimeRHSJacobCom", &m_timeRHSJacobStr);
@@ -205,7 +209,7 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_prepare,m_prepareStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
-    args, m_convSolve,m_convSolveStr,m_data );
+    args, m_convSolve,m_useBlending ? m_convSolveStr + "Blending" : m_convSolveStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_diffSolve,m_diffSolveStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
@@ -333,24 +337,27 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
     {
       CFLog(INFO,"FluxReconstruction: Creating convective boundary correction command for boundary condition: "
                   << m_bcNameStr[iBc] << "\n");
-      CFLog(INFO,"ConvBndCorrections" << m_spaceRHSJacobStr << "\n");
+      
+      std::string convBndCorrectionStr = "ConvBndCorrections" + (m_useBlending ? m_spaceRHSJacobStr + "Blending" : m_spaceRHSJacobStr);
+      CFLog(INFO, convBndCorrectionStr << "\n");
 
       try
       {
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsComs[iBc], "ConvBndCorrections"+m_spaceRHSJacobStr,m_bcNameStr[iBc], m_data);
+          (args, m_bcsComs[iBc], convBndCorrectionStr,m_bcNameStr[iBc], m_data);
       }
       catch (Common::NoSuchValueException& e)
       {
         CFLog(INFO, e.what() << "\n");
-        CFLog(INFO, "Choosing ConvBndCorrectionsRHS instead ...\n");
+        std::string fallbackStr = std::string("ConvBndCorrectionsRHS") + (m_useBlending ? "Blending" : "");
+        CFLog(INFO, "Choosing " << fallbackStr << " instead ...\n");
 
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsComs[iBc], "ConvBndCorrectionsRHS",m_bcNameStr[iBc], m_data);
+          (args, m_bcsComs[iBc], fallbackStr,m_bcNameStr[iBc], m_data);
       }
 
       cf_assert(m_bcsComs[iBc].isNotNull());

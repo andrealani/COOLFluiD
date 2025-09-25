@@ -1071,6 +1071,51 @@ void QuadFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
 
 //////////////////////////////////////////////////////////////////////
 
+void QuadFluxReconstructionElementData::createFluxPntsFaceConn()
+{
+  CFAUTOTRACE;
+
+  // number of flux points in 1D
+  const CFuint nbrFlxPnts1D = m_flxPntsLocalCoord1D.size();
+
+  // resize m_faceFlxPntConn
+  m_flxPntFaceConn.resize(4*nbrFlxPnts1D);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+
+  // zeroth face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_flxPntFaceConn[2+iSol*4]= faceIdx;
+  }
+  ++faceIdx;
+
+
+  // first face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_flxPntFaceConn[1+iSol*4]= faceIdx;
+  }
+  ++faceIdx;
+
+  // second face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_flxPntFaceConn[4*nbrFlxPnts1D-1-4*iSol]= faceIdx;
+  }
+  ++faceIdx;
+
+  // third face
+  for (CFuint iSol = 0; iSol < nbrFlxPnts1D; ++iSol)
+  {
+    m_flxPntFaceConn[4*nbrFlxPnts1D-4-4*iSol]= faceIdx;
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
   } // namespace FluxReconstructionMethod
 
 } // namespace COOLFluiD

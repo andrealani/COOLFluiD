@@ -20,12 +20,24 @@ BCSuperOutletProj3DMHD.hh
 BCSuperOutletProj3DMHD.cxx
 BCSuperInletProjMHD.hh
 BCSuperInletProjMHD.cxx
+BCPerfectlyConductingWallProj2DMHD.hh
+BCPerfectlyConductingWallProj2DMHD.cxx
+BCPerfectlyConductingWallProj3DMHD.hh
+BCPerfectlyConductingWallProj3DMHD.cxx
 MHDConsACASourceTerm.hh
 MHDConsACASourceTerm.cxx
+ManufacturedMHDSourceTerm.hh
+ManufacturedMHDSourceTerm.cxx
 LLAVJacobFluxReconstructionMHD.hh
 LLAVJacobFluxReconstructionMHD.cxx
-PositivityPreservationMHD3D.hh
-PositivityPreservationMHD3D.cxx
+PositivityPreservationMHD.hh
+PositivityPreservationMHD.cxx
+MLPLimiterMHD2D.hh
+MLPLimiterMHD2D.cxx
+MLPLimiterMHD3D.hh
+MLPLimiterMHD3D.cxx
+ComputeErrorMHD.hh
+ComputeErrorMHD.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )

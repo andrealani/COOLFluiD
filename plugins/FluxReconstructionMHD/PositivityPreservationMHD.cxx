@@ -5,11 +5,12 @@
 #include "MathTools/MathFunctions.hh"
 
 #include "MHD/MHD3DProjectionVarSet.hh"
+#include "MHD/MHD2DProjectionVarSet.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 #include "FluxReconstructionMHD/FluxReconstructionMHD.hh"
-#include "FluxReconstructionMHD/PositivityPreservationMHD3D.hh"
+#include "FluxReconstructionMHD/PositivityPreservationMHD.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -28,12 +29,12 @@ namespace COOLFluiD {
     
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<PositivityPreservationMHD3D, FluxReconstructionSolverData, FluxReconstructionMHDModule>
-    PositivityPreservationMHD3DFRProvider("PositivityPreservationMHD3D");
+MethodCommandProvider<PositivityPreservationMHD, FluxReconstructionSolverData, FluxReconstructionMHDModule>
+    PositivityPreservationMHDFRProvider("PhysicalityMHD");
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PositivityPreservationMHD3D::defineConfigOptions(Config::OptionList& options)
+void PositivityPreservationMHD::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal >("MinDensity","Minimum allowable value for density (only used for Cons).");
   options.addConfigOption< CFreal >("MinPressure","Minimum allowable value for pressure.");
@@ -43,16 +44,17 @@ void PositivityPreservationMHD3D::defineConfigOptions(Config::OptionList& option
 
 //////////////////////////////////////////////////////////////////////////////
 
-PositivityPreservationMHD3D::PositivityPreservationMHD3D(const std::string& name) :
+PositivityPreservationMHD::PositivityPreservationMHD(const std::string& name) :
   BasePhysicality(name),
   m_minDensity(),
   m_minPressure(),
   m_varSet(CFNULL),
+  m_varSet2D(CFNULL),
   m_gammaMinusOne(),
   m_solPhysData(),
   m_cellAvgState(),
-  m_cellAvgSolCoefs(),
-  socket_pastStates("pastStates")
+  m_cellAvgSolCoefs()//,
+  //socket_pastStates("pastStates")
 {
   addConfigOptionsTo(this);
 
@@ -71,13 +73,13 @@ PositivityPreservationMHD3D::PositivityPreservationMHD3D(const std::string& name
 
 //////////////////////////////////////////////////////////////////////////////
 
-PositivityPreservationMHD3D::~PositivityPreservationMHD3D()
+PositivityPreservationMHD::~PositivityPreservationMHD()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PositivityPreservationMHD3D::configure ( Config::ConfigArgs& args )
+void PositivityPreservationMHD::configure ( Config::ConfigArgs& args )
 {
   BasePhysicality::configure(args);
 }
@@ -85,16 +87,16 @@ void PositivityPreservationMHD3D::configure ( Config::ConfigArgs& args )
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSink > >
-PositivityPreservationMHD3D::needsSockets()
+PositivityPreservationMHD::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = BasePhysicality::needsSockets();
-  result.push_back(&socket_pastStates);
+  //result.push_back(&socket_pastStates);
   return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool PositivityPreservationMHD3D::checkPhysicality()
+bool PositivityPreservationMHD::checkPhysicality()
 {
   bool physical = true;
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
@@ -128,12 +130,12 @@ bool PositivityPreservationMHD3D::checkPhysicality()
 }
 //////////////////////////////////////////////////////////////////////////////
 
-void PositivityPreservationMHD3D::enforcePhysicality()
+void PositivityPreservationMHD::enforcePhysicality()
 {
   bool needsLim = false;
   const CFuint nbDims = PhysicalModelStack::getActive()->getDim();
   DataHandle< CFreal > output = socket_outputPP.getDataHandle();
-  DataHandle<State*> pastStates = socket_pastStates.getDataHandle();
+  //DataHandle<State*> pastStates = socket_pastStates.getDataHandle();
   
   // compute average state
   m_cellAvgState = 0.;
@@ -178,7 +180,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
       {
 	(*((*m_cellStates)[iSol]))[iEq] += m_cellAvgState[iEq];
         
-        (*pastStates[stateID])[iEq] = (*((*m_cellStates)[iSol]))[iEq];
+        //(*pastStates[stateID])[iEq] = (*((*m_cellStates)[iSol]))[iEq];
       }
     }
     
@@ -210,7 +212,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
       //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
       (*((*m_cellStates)[iSol]))[7] = (1.0-coeff)*m_cellAvgState[7] + coeff*((*((*m_cellStates)[iSol]))[7]);
       
-      (*pastStates[stateID])[7] = (*((*m_cellStates)[iSol]))[7];
+      //(*pastStates[stateID])[7] = (*((*m_cellStates)[iSol]))[7];
     }
   }
       
@@ -232,7 +234,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
       //CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
       (*((*m_cellStates)[iSol]))[0] = (1.0-coeff)*m_cellAvgState[0] + coeff*((*((*m_cellStates)[iSol]))[0]);
       
-      (*pastStates[stateID])[0] = (*((*m_cellStates)[iSol]))[0];
+      //(*pastStates[stateID])[0] = (*((*m_cellStates)[iSol]))[0];
     }
   }
   
@@ -259,7 +261,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
 	//CFLog(INFO, "p " << iSol << " : "<< (*((*m_cellStates)[iSol]))[7] << "\n");
         (*((*m_cellStates)[iSol]))[7] = (1.0-coeff)*m_cellAvgState[7] + coeff*((*((*m_cellStates)[iSol]))[7]);
         
-        (*pastStates[stateID])[7] = (*((*m_cellStates)[iSol]))[7];
+        //(*pastStates[stateID])[7] = (*((*m_cellStates)[iSol]))[7];
       }
     }
       
@@ -281,7 +283,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
 	//CFLog(INFO, "rho " << iSol << " : "<< (*((*m_cellStates)[iSol]))[0] << "\n");
         (*((*m_cellStates)[iSol]))[0] = (1.0-coeff)*m_cellAvgState[0] + coeff*((*((*m_cellStates)[iSol]))[0]);
         
-        (*pastStates[stateID])[0] = (*((*m_cellStates)[iSol]))[0];
+        //(*pastStates[stateID])[0] = (*((*m_cellStates)[iSol]))[0];
       }
     }
   }
@@ -295,7 +297,7 @@ void PositivityPreservationMHD3D::enforcePhysicality()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PositivityPreservationMHD3D::setup()
+void PositivityPreservationMHD::setup()
 {
   CFAUTOTRACE;
 
@@ -307,11 +309,20 @@ void PositivityPreservationMHD3D::setup()
 
   m_cellAvgSolCoefs = frLocalData[0]->getCellAvgSolCoefs();
   
-  // get 3D varset
-  m_varSet = getMethodData().getUpdateVar().d_castTo<MHD3DProjectionVarSet>();
-  if (m_varSet.isNull())
+  if(m_dim==2)
   {
-    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MHD3DProjectionVarSet in PositivityPreservationMHD3DFluxReconstruction!");
+    // get 2D varset
+    m_varSet2D = getMethodData().getUpdateVar().d_castTo< MHD2DProjectionVarSet >();
+  }
+  else
+  {
+    // get 3D varset
+    m_varSet = getMethodData().getUpdateVar().d_castTo< MHD3DProjectionVarSet >();
+  }
+
+  if ((m_varSet.isNull()) && (m_varSet2D.isNull()))
+  {
+    throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not MHDProjectionVarSet in PositivityPreservationMHD!\n");
   }
   
   // get gamma-1
@@ -322,7 +333,7 @@ void PositivityPreservationMHD3D::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PositivityPreservationMHD3D::unsetup()
+void PositivityPreservationMHD::unsetup()
 {
   CFAUTOTRACE;
 

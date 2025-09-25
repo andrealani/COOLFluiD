@@ -232,6 +232,14 @@ public:
   }
 
   /**
+   * @return m_flxPntFaceConn
+   */
+  Common::SafePtr< std::vector< CFuint > > getFlxPntFaceConn()
+  {
+    return &m_flxPntFaceConn;
+  }  
+
+  /**
    * @return m_faceFlxPntConnPerOrient
    */
   Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > getFaceFlxPntConnPerOrient()
@@ -674,6 +682,11 @@ protected: // functions
   virtual void createFaceFluxPntsConnPerOrient() = 0;
 
   /**
+   * Creates the connectivity between faces and flux points
+   */
+  virtual void createFluxPntsFaceConn() = 0;  
+  
+  /**
    * create vector with face flux points cell mapped coordinates (coordinate system local to cell)
    * @pre createFaceFluxPntsConn, createFaceFluxPntsConnPerOrient()
    */
@@ -870,6 +883,9 @@ protected: // protected data
 
   /// local cell face - flux point connectivity
   std::vector< std::vector< CFuint > > m_faceFlxPntConn;
+
+  /// local cell flux point - face connectivity
+  std::vector< CFuint > m_flxPntFaceConn;
 
   /// local cell face - flux point connectivity per face connection orientation
   std::vector< std::vector< std::vector< CFuint > > > m_faceFlxPntConnPerOrient;

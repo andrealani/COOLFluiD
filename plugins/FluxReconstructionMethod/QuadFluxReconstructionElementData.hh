@@ -179,10 +179,15 @@ protected: // functions
    */
   virtual void createVandermondeMatrix();
 
-   /**
+  /**
    * create the sol/flx and sol/sol dependencies
    */
   void createFlxSolDependencies();
+
+  /**
+   * create the connectivity of flux points to faces
+   */
+  void createFluxPntsFaceConn();
   
   private: //data
     

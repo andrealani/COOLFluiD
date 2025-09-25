@@ -3293,6 +3293,52 @@ void TetraFluxReconstructionElementData::createFaceIntegrationCoefsPerType()
   m_faceIntegrationCoefsPerType[1].resize(0);
 
 }
+
+//////////////////////////////////////////////////////////////////////
+
+void TetraFluxReconstructionElementData::createFluxPntsFaceConn()
+{
+  CFAUTOTRACE;
+
+  // number of flux points in 2D
+  const CFuint nbrFlxPnts2D = (m_polyOrder+1)*(m_polyOrder+2)/2; //on triag face
+
+  // resize m_flxPntFaceConn
+  m_flxPntFaceConn.resize(4*(m_polyOrder+1)*(m_polyOrder+2)/2);
+
+  // variable holding the face index
+  CFuint faceIdx = 0;
+  CFuint iFlxg = 0; 
+  
+  // zeroth face (zta=0)
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx, ++iFlxg)
+  {
+    m_flxPntFaceConn[iFlxg] = faceIdx; 
+  }
+  ++faceIdx;
+  
+  // first face (eta=0)
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx, ++iFlxg)
+  {
+    m_flxPntFaceConn[iFlxg] = faceIdx;
+  }
+  ++faceIdx;
+
+  // second face (oblique)
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx, ++iFlxg)
+  {
+    m_flxPntFaceConn[iFlxg] = faceIdx; 
+  }
+  ++faceIdx;
+
+  // third face (ksi=0)
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts2D; ++iFlx, ++iFlxg)
+  {
+    m_flxPntFaceConn[iFlxg] = faceIdx; 
+  }
+    
+}
+
 //////////////////////////////////////////////////////////////////////
 
   } // namespace FluxReconstructionMethod

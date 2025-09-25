@@ -179,6 +179,11 @@ protected: // functions
    */
   void createFlxSolDependencies();
 
+  /**
+   * create the connectivity of flux points to faces
+   */
+  void createFluxPntsFaceConn();
+
 }; // end of class HexaFluxReconstructionElementData
 
 //////////////////////////////////////////////////////////////////////////////

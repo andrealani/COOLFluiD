@@ -157,6 +157,11 @@ protected: // functions
   void executeSlopeLimiter(const CFuint elemIdx, const bool useMin);
   
   /**
+   * Update the limiting output socket for current cell
+   */
+  void updateLimitingOutput(CFreal limitingType);
+  
+  /**
    * check for special physics-dependent conditions if limiting is necessary
    */
   virtual bool checkSpecialLimConditions() {return true;};
@@ -168,6 +173,10 @@ protected: // data
 
   /// socket for maximum nodal state's
   Framework::DataSocketSource< RealVector > socket_nodeNghbCellMaxAvgStates;
+  
+  /// socket for output of the MLP limiting information
+  /// Values: 0.0 = no limiting, 1.0 = order reduction, 2.0 = slope limiting
+  Framework::DataSocketSource< CFreal > socket_outputLimiting;
   
   /// socket for limiter values
   std::vector< RealVector > m_limiterValues;
@@ -291,6 +300,9 @@ protected: // data
   
   /// limited states of the previous iteration
   std::vector< RealVector > m_prevStates;
+
+  /// showrate of limiter info
+  CFuint m_showrate;
 
 }; // class MLPLimiter
 

@@ -24,9 +24,9 @@ namespace COOLFluiD {
 /**
  * This class represents a Tetra flux reconstruction element
  * 
+ * @author Rayan Dhib
  * @author Ray Vandenhoeck
  * @author Alexander Papen
- * @author Rayan Dhib
  *
  */
 class TetraFluxReconstructionElementData : public FluxReconstructionElementData {
@@ -179,6 +179,11 @@ protected: // functions
    * create the sol/flx and sol/sol dependencies
    */
   void createFlxSolDependencies();
+
+  /**
+   * create the connectivity of flux points to faces
+   */
+  void createFluxPntsFaceConn();
 
   
   std::vector<CFreal> getPercentage(CFPolyOrder::Type solOrder);

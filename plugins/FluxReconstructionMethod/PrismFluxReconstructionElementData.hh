@@ -178,6 +178,11 @@ protected: // functions
    */
   void createFlxSolDependencies();
 
+  /**
+   * create the connectivity of flux points to faces
+   */
+  void createFluxPntsFaceConn();
+
   
   std::vector<CFreal> getPercentage(CFPolyOrder::Type solOrder);
 

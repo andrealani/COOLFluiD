@@ -35,6 +35,8 @@ void MLPLimiter::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal,Config::DynamicOption<> >("FreezeLimiterRes","Residual after which to freeze the residual.");
   
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeLimiterIter","Iteration after which to freeze the residual.");
+
+  options.addConfigOption< CFuint >("ShowRate","Showrate of the limiter information.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -43,6 +45,7 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_nodeNghbCellMinAvgStates("nodeNghbCellMinAvgStates"),
   socket_nodeNghbCellMaxAvgStates("nodeNghbCellMaxAvgStates"),
+  socket_outputLimiting("outputLimiting"),
   m_limiterValues(),
   m_cellBuilder(CFNULL),
   m_cell(),
@@ -95,6 +98,9 @@ MLPLimiter::MLPLimiter(const std::string& name) :
   
   m_freezeLimiterIter = MathTools::MathConsts::CFuintMax();
   setParameter( "FreezeLimiterIter", &m_freezeLimiterIter);
+
+  m_showrate= 1;
+  setParameter( "ShowRate", &m_showrate );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -128,6 +134,10 @@ void MLPLimiter::execute()
 
   // RESET THE MINIMUM AND MAXIMUM CELL AVERAGED SOLUTIONS (STORED IN THE NODES!!!)
   resetNodeNghbrCellAvgStates();
+  
+  // get datahandle for limiting output and initialize to 0.0 (no limiting)
+  DataHandle< CFreal > outputLimiting = socket_outputLimiting.getDataHandle();
+  outputLimiting = 0.0;
 
   const CFreal residual = SubSystemStatusStack::getActive()->getResidual();
   
@@ -140,6 +150,8 @@ void MLPLimiter::execute()
   RealVector duL2Norm(m_nbrEqs);
   duL2Norm = 0.0;
   
+  const std::string nsp = this->getMethodData().getNamespace();
+
   const CFuint nbrElemTypes = elemType->size();
   
   if (recomputeLimiter)
@@ -378,11 +390,20 @@ void MLPLimiter::execute()
 	         (*((*m_cellStates)[iSol]))[iEq] = m_states2[iSol][iEq];
 	       }
              }
+             
+             ++limitCounter;
+             ++orderLimit;
+             
+             // Update limiting output socket - order reduction limiting (1.0)
+             updateLimitingOutput(1.0);
 	   }
 	   else
 	   {
 	     executeSlopeLimiter(elemIdx, useMin);
 	     ++limitCounter;
+	     
+	     // Update limiting output socket - slope limiting (2.0)
+	     updateLimitingOutput(2.0);
 	     
 // 	     // only for purposes of printing the shock detector!!
 // 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -412,6 +433,9 @@ void MLPLimiter::execute()
 	       ++limitCounter;
 	       ++orderLimit;
 	       applyChecks(1.0);
+	       
+	       // Update limiting output socket - order reduction limiting (1.0)
+	       updateLimitingOutput(1.0);
 // 	       // only for purposes of printing the shock detector!!
 // 	       for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 // 	       {
@@ -424,6 +448,9 @@ void MLPLimiter::execute()
 	   {
 	     executeSlopeLimiter(elemIdx,useMin);
 	     ++limitCounter;
+	     
+	     // Update limiting output socket - slope limiting (2.0)
+	     updateLimitingOutput(2.0);
 	     break;
 	   }
 	 }
@@ -448,6 +475,9 @@ void MLPLimiter::execute()
 	   {
 	     ++limitCounter;
 	     ++orderLimit;
+	     
+	     // Update limiting output socket - order reduction limiting (1.0)
+	     updateLimitingOutput(1.0);
 // 	     // only for purposes of printing the shock detector!!
 // 	     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
 // 	     {
@@ -460,6 +490,9 @@ void MLPLimiter::execute()
 	 {
 	   executeSlopeLimiter(elemIdx,useMin);
 	   ++limitCounter;
+	   
+	   // Update limiting output socket - slope limiting (2.0)
+	   updateLimitingOutput(2.0);
 	   break;
 	 }
        }
@@ -495,9 +528,12 @@ void MLPLimiter::execute()
   
   duL2Norm = 0.5*log10(duL2Norm);
   
-  CFLog(INFO,"Limits done: " << limitCounter << " of which " << orderLimit << " partial limits\n");
-  CFLog(INFO,"L2 norm of the state difference: " << duL2Norm << "\n");
-  
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
+  {
+    CFLog(INFO,"Limits done: " << limitCounter << " of which " << orderLimit << " partial limits\n");
+    CFLog(INFO,"L2 norm of the state difference: " << duL2Norm << "\n");
+  }
+
   }
   else
   {      
@@ -573,6 +609,9 @@ void MLPLimiter::applyPrevLimiter()
   StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
   geoData.trs = cells;
   
+  CFuint limitCounter = 0;
+  CFuint orderLimit = 0;
+  
   // LOOP OVER ELEMENT TYPES, TO SET THE MINIMUM AND MAXIMUM CELL AVERAGED STATES IN THE NODES
   const CFuint nbrElemTypes = elemType->size();
   for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
@@ -618,7 +657,13 @@ void MLPLimiter::applyPrevLimiter()
 	    }
           }
           
+          ++limitCounter;
+          ++orderLimit;
+          
           applyChecks(1.0);
+          
+          // Update limiting output socket - order reduction limiting (1.0)
+          updateLimitingOutput(1.0);
         }
         else
         {
@@ -647,12 +692,26 @@ void MLPLimiter::applyPrevLimiter()
 	  }
 	  
 	  applyChecks(phiMin);
+	  
+	  ++limitCounter;
+	  
+	  // Update limiting output socket - slope limiting (2.0)
+	  updateLimitingOutput(2.0);
         }
       }
 
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
+  }
+  
+  // Print limiting statistics for frozen limiter mode
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  const std::string nsp = this->getMethodData().getNamespace();
+  
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
+  {
+    CFLog(INFO,"Limits done (frozen): " << limitCounter << " of which " << orderLimit << " partial limits\n");
   }
 }
 
@@ -1060,6 +1119,20 @@ void MLPLimiter::executeSlopeLimiter(const CFuint elemIdx, const bool useMin)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void MLPLimiter::updateLimitingOutput(CFreal limitingType)
+{
+  DataHandle< CFreal > outputLimiting = socket_outputLimiting.getDataHandle();
+  
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+    // Use maximum value if multiple types of limiting occur
+    outputLimiting[stateID] = max(outputLimiting[stateID], limitingType);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void MLPLimiter::setup()
 {
   CFAUTOTRACE;
@@ -1146,6 +1219,14 @@ void MLPLimiter::setup()
     nodeNghbCellMinAvgStates[iNode].resize(m_nbrEqs);
     nodeNghbCellMaxAvgStates[iNode].resize(m_nbrEqs+1);
   }
+  
+  // get the number of cells in the mesh to compute total number of solution points
+  const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  
+  // resize socket for limiting output (one value per solution point)
+  DataHandle< CFreal > outputLimiting = socket_outputLimiting.getDataHandle();
+  const CFuint nbStates = nbrCells * m_nbrSolPnts;
+  outputLimiting.resize(nbStates);
 
   m_lengthScaleExp = 2.0/static_cast<CFreal>(m_dim);
   
@@ -1183,11 +1264,43 @@ void MLPLimiter::setup()
   
   m_applyLimiter.resize(m_nbrNodesElem);
   
+  // Create transformation matrices for order reduction
+  // These matrices project the solution from higher order to lower order polynomial spaces
+  // For order reduction from P to P-k, we keep only the first (P-k+1) basis functions
   for (CFuint iOrder = 0; iOrder < m_order; ++iOrder)
   {
     RealMatrix temp(nbrSolPnts,nbrSolPnts);
     temp = 0.0;
-    for (CFuint idx = 0; idx < (iOrder+1)*(iOrder+1); ++idx)
+    
+    // Get the number of solution points for the reduced order (iOrder+1)
+    // - Triangular: (P+1)*(P+2)/2
+    // - Quadrilateral: (P+1)^2  
+    // - Tetrahedral: (P+1)*(P+2)*(P+3)/6
+    // - Prism: (P+1)*(P+1)*(P+2)/2
+    // - Hexahedral: (P+1)^3
+    CFuint nbrSolPntsReduced;
+    if (m_dim == DIM_2D && frLocalData[0]->getShape() == CFGeoShape::TRIAG) {
+      // For triangular elements: (P+1)*(P+2)/2
+      nbrSolPntsReduced = (iOrder+1)*(iOrder+2)/2;
+    } else if (m_dim == DIM_2D && frLocalData[0]->getShape() == CFGeoShape::QUAD) {
+      // For quadrilateral elements: (P+1)^2
+      nbrSolPntsReduced = (iOrder+1)*(iOrder+1);
+    } else if (m_dim == DIM_3D && frLocalData[0]->getShape() == CFGeoShape::TETRA) {
+      // For tetrahedral elements: (P+1)*(P+2)*(P+3)/6
+      nbrSolPntsReduced = (iOrder+1)*(iOrder+2)*(iOrder+3)/6;
+    } else if (m_dim == DIM_3D && frLocalData[0]->getShape() == CFGeoShape::PRISM) {
+      // For prism elements: (P+1)*(P+1)*(P+2)/2
+      nbrSolPntsReduced = (iOrder+1)*(iOrder+1)*(iOrder+2)/2;
+    } else if (m_dim == DIM_3D && frLocalData[0]->getShape() == CFGeoShape::HEXA) {
+      // For hexahedral elements: (P+1)^3
+      nbrSolPntsReduced = (iOrder+1)*(iOrder+1)*(iOrder+1);
+    } else {
+      throw Common::NotImplementedException(FromHere(), "MLPLimiter::setup() - unsupported element type for order reduction");
+    }
+    
+    // Create identity matrix for the first nbrSolPntsReduced modes (keeps lower-order modes)
+    // Higher-order modes are set to zero, effectively reducing the polynomial order
+    for (CFuint idx = 0; idx < nbrSolPntsReduced; ++idx)
     {
       temp(idx,idx) = 1.0;
     }
@@ -1218,6 +1331,7 @@ MLPLimiter::providesSockets()
 
   result.push_back(&socket_nodeNghbCellMinAvgStates);
   result.push_back(&socket_nodeNghbCellMaxAvgStates);
+  result.push_back(&socket_outputLimiting);
 
   return result;
 }

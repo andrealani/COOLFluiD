@@ -41,6 +41,7 @@ FluxReconstructionElementData::FluxReconstructionElementData() :
   m_allFlxPntIdxs(),
   m_intFlxPntIdxs(),
   m_faceFlxPntConn(),
+  m_flxPntFaceConn(),
   m_faceFlxPntConnPerOrient(),
   m_faceFlxPntCellMappedCoords(),
   m_faceFlxPntCellMappedCoordsPerOrient(),
@@ -139,6 +140,7 @@ void FluxReconstructionElementData::resetFluxReconstructionElementData()
   createFaceNodeConnectivityPerOrient();
   createFaceFluxPntsConn();
   createFaceFluxPntsConnPerOrient();
+  createFluxPntsFaceConn();
   createCellNodeCoords();
   createFaceNodeCoords();
   createFaceNodeCoordsPerOrient();

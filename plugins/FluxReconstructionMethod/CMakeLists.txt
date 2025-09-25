@@ -35,6 +35,10 @@ ConvRHSFluxReconstruction.cxx
 ConvRHSFluxReconstruction.hh
 ConvRHSJacobFluxReconstruction.cxx
 ConvRHSJacobFluxReconstruction.hh
+ConvRHSFluxReconstructionBlending.cxx
+ConvRHSFluxReconstructionBlending.hh
+ConvRHSJacobFluxReconstructionBlending.cxx
+ConvRHSJacobFluxReconstructionBlending.hh
 ConvLLAVJacobFluxReconstruction.cxx
 ConvLLAVJacobFluxReconstruction.hh
 DiffRHSFluxReconstruction.cxx
@@ -109,6 +113,10 @@ DiffBndCorrectionsRHSJacobFluxReconstruction.cxx
 DiffBndCorrectionsRHSJacobFluxReconstruction.hh
 ConvBndCorrectionsRHSJacobFluxReconstruction.cxx
 ConvBndCorrectionsRHSJacobFluxReconstruction.hh
+ConvBndCorrectionsRHSFluxReconstructionBlending.cxx
+ConvBndCorrectionsRHSFluxReconstructionBlending.hh
+ConvBndCorrectionsRHSJacobFluxReconstructionBlending.cxx
+ConvBndCorrectionsRHSJacobFluxReconstructionBlending.hh
 ConvDiffLLAVJacobFluxReconstruction.cxx
 ConvDiffLLAVJacobFluxReconstruction.hh
 ConvDiffCLLAVJacobFluxReconstruction.cxx
@@ -469,10 +477,14 @@ SimpleEdgeGraphFRQ2.cxx
 SimpleEdgeGraphFRQ2.hh
 ComputeFieldFromPotential.hh
 ComputeFieldFromPotential.cxx
+TransferField.hh
+TransferField.cxx
 InitStateAddVar.hh
 InitStateAddVar.cxx
 MeshFittingAlgorithmFRQ2Quads.cxx
 MeshFittingAlgorithmFRQ2Quads.hh
+BaseOrderBlending.cxx
+BaseOrderBlending.hh
 )
 
 IF (NOT CF_HAVE_CUDA)
