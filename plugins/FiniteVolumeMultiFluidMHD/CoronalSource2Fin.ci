@@ -412,7 +412,7 @@ void CoronalSource2Fin<UPDATEVAR>::computeSource
   const CFuint rhonID = 9;
   const CFuint vxiID = 10;
   const CFuint vyiID = 11;
-  const CFuint vziID = 13;
+  const CFuint vziID = 12;
   const CFuint vxnID = 13;
   const CFuint vynID = 14;
   const CFuint vznID = 15;
