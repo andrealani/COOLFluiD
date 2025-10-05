@@ -238,7 +238,7 @@ void MHDConsACAESourceTerm::computeSource(Framework::GeometricEntity *const elem
   CFreal Bz =(*currState)[6]*2.2e-4; 
   CFreal Bnorm = std::sqrt(std::pow(Bx,2) + std::pow(By,2) + std::pow(Bz,2));
   CFreal Br = x/r*Bx + y/r*By + z/r*Bz;
-  CFreal Btheta = (x*z)/(rxy*r)*Bz + (y*z)/(r*rxy)*By - rxy/r*Bz;
+  CFreal Btheta = (x*z)/(rxy*r)*Bx + (y*z)/(r*rxy)*By - rxy/r*Bz;
   CFreal Bphi = -y/rxy*Bx + x/rxy*By;
   CFreal Vx = (*currState)[1];
   CFreal Vy =(*currState)[2];
