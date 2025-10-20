@@ -63,3 +63,9 @@ python generate_spherical_shell_Q2.py -r 21.5 -R 235 -l 3 -n 20 -k 1.2 -f both
 - **Geometric**: Exponential growth with ratio `k` (k>1 for boundary layers)
 - **Manual**: Custom layer heights
 
+## Reference
+
+For more information about the mesh generation procedure, please refer to the Mesh Generation section of:
+
+**Dhib, R., Ben Ameur, F., Sharma, V., Lani, A., & Poedts, S. (2025).** *Toward High-order Solar Corona Simulations: A High-order Hyperbolized Poisson Approach for Magnetic Field Initialization.* The Astrophysical Journal, 980(2), 163. [DOI: 10.3847/1538-4357/adace5](https://doi.org/10.3847/1538-4357/adace5)
+
