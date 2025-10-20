@@ -21,7 +21,7 @@ namespace COOLFluiD {
  *
  * @author Rayan Dhib
  * 
- * Based on ComputeFieldFromPotential
+ * Based on ComputeFieldFromPotential class
  * @author Ray Vandenhoeck
  *
  */

@@ -22,7 +22,7 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a perfectly conducting wall boundary condition
+ * This class represents a mirror/perfectly conducting wall boundary condition
  * for the 3D MHD equations.
  *
  * @author Rayan Dhib
