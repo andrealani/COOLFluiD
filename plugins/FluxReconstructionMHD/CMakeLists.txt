@@ -24,10 +24,16 @@ BCPerfectlyConductingWallProj2DMHD.hh
 BCPerfectlyConductingWallProj2DMHD.cxx
 BCPerfectlyConductingWallProj3DMHD.hh
 BCPerfectlyConductingWallProj3DMHD.cxx
+BCInletHelioUnsteadyMHD.hh
+BCInletHelioUnsteadyMHD.cxx
 MHDConsACASourceTerm.hh
 MHDConsACASourceTerm.cxx
+MHDPrimACASourceTerm.hh
+MHDPrimACASourceTerm.cxx
 ManufacturedMHDSourceTerm.hh
 ManufacturedMHDSourceTerm.cxx
+LLAVFluxReconstructionMHD.hh
+LLAVFluxReconstructionMHD.cxx
 LLAVJacobFluxReconstructionMHD.hh
 LLAVJacobFluxReconstructionMHD.cxx
 PositivityPreservationMHD.hh

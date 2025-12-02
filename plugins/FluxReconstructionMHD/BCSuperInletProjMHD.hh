@@ -117,6 +117,9 @@ protected: // data
   
   /// number of flux pnts on a face
   CFuint m_nbrFaceFlxPnts;
+
+  /// Max number of flux pnts on a face
+  CFuint m_nbrFaceFlxPntsMax;
   
   /// current face
   Framework::GeometricEntity* m_currFace;

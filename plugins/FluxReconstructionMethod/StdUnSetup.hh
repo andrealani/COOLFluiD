@@ -60,7 +60,9 @@ protected: // protected data
   /// socket for unit normals in face flux points
   /// socket for size of projection vector in face flux points
   Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
-    
+  
+  Framework::DataSocketSink< std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPntsP0;
+
   /// socket for gradients
   Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
   

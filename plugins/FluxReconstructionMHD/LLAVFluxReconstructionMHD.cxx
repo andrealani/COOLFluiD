@@ -12,11 +12,14 @@
 
 #include "MathTools/MathFunctions.hh"
 
-#include "FluxReconstructionMHD/LLAVJacobFluxReconstructionMHD.hh"
+#include "FluxReconstructionMHD/LLAVFluxReconstructionMHD.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 #include "MHD/MHD3DProjectionVarSet.hh"
+#include "MHD/MHD2DProjectionVarSet.hh"
+
+#include "MHD/MHDProjectionDiffVarSet.hh"
 
 #include "FluxReconstructionMHD/FluxReconstructionMHD.hh"
 
@@ -36,36 +39,81 @@ namespace COOLFluiD {
     
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider< LLAVJacobFluxReconstructionMHD,
+MethodCommandProvider< LLAVFluxReconstructionMHD,
 		       FluxReconstructionSolverData,
 		       FluxReconstructionModule >
-LLAVJacobFluxReconstructionMHDFluxReconstructionProvider("LLAVJacobMHD");
+LLAVFluxReconstructionMHDFluxReconstructionProvider("LLAVMHD");
 
 //////////////////////////////////////////////////////////////////////////////
   
-LLAVJacobFluxReconstructionMHD::LLAVJacobFluxReconstructionMHD(const std::string& name) :
-  LLAVJacobFluxReconstruction(name),
+LLAVFluxReconstructionMHD::LLAVFluxReconstructionMHD(const std::string& name) :
+  LLAVFluxReconstruction(name),
+  m_gradsBackUp(),
   m_varSet(CFNULL),
   m_pData(),
   m_pData2(),
+  m_tempGradTermL(),
+  m_tempGradTermR(),
+  m_diffusiveVarSet(CFNULL),
+  m_tempStatesL(),
+  m_tempStatesR(),
   m_dampCoeff()
   {
   }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::configure ( Config::ConfigArgs& args )
+void LLAVFluxReconstructionMHD::configure ( Config::ConfigArgs& args )
 {
-  LLAVJacobFluxReconstruction::configure(args);
+  LLAVFluxReconstruction::configure(args);
 }  
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::setFaceData(CFuint faceID)
+void LLAVFluxReconstructionMHD::setFaceData(CFuint faceID)
 {
-  LLAVJacobFluxReconstruction::setFaceData(faceID);
-  
-  if (getMethodData().getUpdateVarStr() != "Puvt" && getMethodData().hasDiffTerm())
+  LLAVFluxReconstruction::setFaceData(faceID);
+
+//   m_diffVarSet = getMethodData().getDiffusiveVar();
+// 
+//   SafePtr< MHDVarSet > MHDVarSet = m_diffVarSet.d_castTo< MHDVarSet >();
+// 
+//   for (CFuint iSide = 0; iSide < 2; ++iSide)
+//   {
+//     vector< vector< RealVector* > > grads;
+//     vector< RealVector* > tempStates;
+//     vector< vector< RealVector > > temp;
+//     temp.resize(m_nbrSolPnts);
+//     grads.resize(m_nbrSolPnts);
+// 
+//     // make a back up of the grads
+//     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//     {
+//       tempStates.push_back((*(m_states[iSide]))[iState]->getData());
+// 
+//       temp[iState] = *(m_cellGrads[iSide][iState]);
+//       
+//       grads[iState].resize(m_nbrEqs);
+// 
+//       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//       {
+//         cf_assert(temp[iState].size() == m_nbrEqs);
+//         grads[iState][iVar] = & (temp[iState][iVar]);
+//       }
+//     }
+// 
+//     MHDVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[iSide],m_nbrSolPnts);
+// 
+//     // make store the correct gradients
+//     for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//     {    
+//       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//       { 
+//         (*m_cellGrads[iSide][iState])[iVar] = *(m_gradsBackUp[iSide][iState][iVar]);
+//       }
+//     }
+//   }
+  if (getMethodData().hasDiffTerm() && getMethodData().getUpdateVarStr() != "Puvt")
   {
     // get the gradients datahandle
     DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
@@ -83,19 +131,76 @@ void LLAVJacobFluxReconstructionMHD::setFaceData(CFuint faceID)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::computeInterfaceFlxCorrection()
+void LLAVFluxReconstructionMHD::setCellData()
+{
+  LLAVFluxReconstruction::setCellData();
+  
+//   m_diffVarSet = getMethodData().getDiffusiveVar();
+//   
+//   SafePtr< MHDVarSet > MHDVarSet = m_diffVarSet.d_castTo< MHDVarSet >();
+//   
+//   vector< vector< RealVector* > > grads;
+//   vector< RealVector* > tempStates;
+//   vector< vector< RealVector > > temp;
+//   temp.resize(m_nbrSolPnts);
+//   grads.resize(m_nbrSolPnts);
+//   
+//   // make a back up of the grads
+//   for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//   {
+//     tempStates.push_back((*m_cellStates)[iState]->getData());
+//     
+//     temp[iState] = *(m_cellGrads[0][iState]);
+//       
+//     grads[iState].resize(m_nbrEqs);
+//     
+//     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//     {
+//       cf_assert(temp[iState].size() == m_nbrEqs);
+//       grads[iState][iVar] = & (temp[iState][iVar]);
+//     }
+//   }
+//   
+//   MHDVarSet->setStateGradients(tempStates,grads,m_gradsBackUp[0],m_nbrSolPnts);
+//     
+//   // make store the correct gradients
+//   for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+//   {    
+//     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+//     { 
+//       (*m_cellGrads[0][iState])[iVar] = *(m_gradsBackUp[0][iState][iVar]);
+//     }
+//   }
+  
+  if (getMethodData().hasDiffTerm() && getMethodData().getUpdateVarStr() != "Puvt")
+  {
+    // get the gradients datahandle
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    // get the grads in the current cell
+    for (CFuint iState = 0; iState < m_nbrSolPnts; ++iState)
+    {
+      const CFuint stateID = (*(m_cellStates))[iState]->getLocalID();
+      m_cellGrads[0][iState] = &gradientsAV[stateID];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void LLAVFluxReconstructionMHD::computeInterfaceFlxCorrection()
 {   
   // Loop over the flux points to calculate FI
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   { 
     const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
-    
+      
     // compute the average sol and grad to use the BR2 scheme
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
       *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
     }
-    
+
     // damping factor
     const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
 
@@ -125,32 +230,36 @@ void LLAVJacobFluxReconstructionMHD::computeInterfaceFlxCorrection()
 
 //////////////////////////////////////////////////////////////////////////////
 
-CFreal LLAVJacobFluxReconstructionMHD::computePeclet()
+CFreal LLAVFluxReconstructionMHD::computeViscCoef(RealVector* state)
 {
-//  const CFreal machInf = m_eulerVarSet->getModel()->getMachInf();
-//  const CFreal velInf = m_eulerVarSet->getModel()->getVelInf();
-//  const CFreal pressInf = m_eulerVarSet->getModel()->getPressInf();
-//  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
-//  
-////   cf_assert(machInf > 1.0);
-////   cf_assert(velInf > 0.0);
-////   cf_assert(pressInf > 0.0);
-//  
-//  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
-//  
-//  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
-//  
-//  //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
-  CFreal result = m_peclet;
+  CFreal result = 1.0;
+  
+//   if (getMethodData().getUpdateVarStr() == "Cons")
+//   {
+//     result = 1./(*state)[0];
+//   }
+//   else if (getMethodData().getUpdateVarStr() == "Puvt")
+//   {
+//     const CFreal R = m_varSet->getModel()->getR();
+//     result = (*state)[m_nbrEqs-1]/(*state)[0]*R;
+//   }
+//   else if (getMethodData().getUpdateVarStr() == "RhoivTv")
+//   {
+//     for (CFuint iSpecies = 0; iSpecies < m_nbrSpecies; ++iSpecies)
+//     {
+//       result += (*state)[iSpecies];
+//     }
+//     result = 1.0/result;
+//   }
   
   return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::computeSmoothness()
+void LLAVFluxReconstructionMHD::computeSmoothness()
 { 
-  /*CFreal sNum = 0.0;
+  CFreal sNum = 0.0;
   
   CFreal sDenom = 0.0;
   
@@ -190,79 +299,8 @@ void LLAVJacobFluxReconstructionMHD::computeSmoothness()
   else
   {
     m_s = log10(sNum/sDenom);
-  }*/
-
-  std::vector<CFreal> modalCoeffs(m_nbrSolPnts, 0.0); // modal coefficients for a single variable
-  CFreal max_indicator = 0.0; // will store the max(E_var) across all variables
-  CFuint m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order-1)*(m_order)/2) : 1 ;
-  CFuint m_nbrSolPntsMinOne = (m_order)*(m_order)*(m_order+1)/2;
-  //for (CFuint iEq = 0; iEq < 1; ++iEq) // loop over variables (equations)
-  //{
-    // Step 1: Load nodal values for this variable
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal u = (*((*m_cellStates)[iSol]))[1];
-      CFreal v = (*((*m_cellStates)[iSol]))[2];
-      CFreal w = (*((*m_cellStates)[iSol]))[3];
-      m_tempSolPntVec[iSol] = sqrt(u*u+v*v+w*w);
-      /*CFreal rho = (*((*m_cellStates)[iSol]))[0];
-      CFreal rhoU = (*((*m_cellStates)[iSol]))[1];
-      CFreal rhoV = (*((*m_cellStates)[iSol]))[2];
-      //CFreal rhoW = (*((*m_cellStates)[iSol]))[3];
-      CFreal rhoE = (*((*m_cellStates)[iSol]))[3];
-      CFreal p = 0.4*(rhoE-0.5*(rhoU*rhoU+rhoV*rhoV)/rho); //(*((*m_cellStates)[iSol]))[7]; //
-      m_tempSolPntVec[iSol] = rho*p;*/
-    }
-
-    // Step 2: Transform to modal space: modalCoeffs = V^{-1} * nodalValues
-    m_tempSolPntVec2 = m_vdmInv * m_tempSolPntVec;
-
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      modalCoeffs[iSol] = m_tempSolPntVec2[iSol];
-    }
-
-    // Step 3: Compute modal energy and high-mode content
-    CFreal energy_total = 0.0;
-    CFreal energy_pMin1 = 0.0;
-    CFreal mN2 = 0.0;
-    CFreal mNminOne2 = 0.0;
-
-    for (CFuint j = 0; j < m_nbrSolPnts; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      energy_total += mj2;
-      if (j > m_nbrSolPntsMinOne - 1) mN2 += mj2;
-    }
-
-    for (CFuint j = m_nbrSolPntsMinTwo - 1; j < m_nbrSolPntsMinOne; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      mNminOne2 += mj2;
-    }
-
-    for (CFuint j = 0; j < m_nbrSolPntsMinOne; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      energy_pMin1 += mj2;
-    }
-
-    CFreal E1 = mN2 / std::max(energy_total, MathTools::MathConsts::CFrealEps());
-    CFreal E2 = mNminOne2 / std::max(energy_pMin1, MathTools::MathConsts::CFrealEps());
-    CFreal E_var = std::max(E1, E2); // Energy indicator for this variable
-    E1 =  mN2 / mNminOne2;
-    if (true) {E_var = E1 ;}
-
-    max_indicator = std::max(max_indicator, E_var); // take max across variables
-  //}
-
-  m_s = max_indicator; // final smoothness value for this cell
-
-  if (m_s>0)
-  {
-    m_s = log10(m_s);
   }
-
+  
   // get datahandle
   DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
   
@@ -279,7 +317,31 @@ void LLAVJacobFluxReconstructionMHD::computeSmoothness()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::computeSmoothness(const CFuint side)
+CFreal LLAVFluxReconstructionMHD::computePeclet()
+{
+//  const CFreal machInf = m_varSet->getModel()->getMachInf();
+//  const CFreal velInf = m_varSet->getModel()->getVelInf();
+//  const CFreal pressInf = m_varSet->getModel()->getPressInf();
+//  const CFreal gamma = m_varSet->getModel()->getGamma();
+  
+//   cf_assert(machInf > 1.0);
+//   cf_assert(velInf > 0.0);
+//   cf_assert(pressInf > 0.0);
+  
+//  const CFreal rhoInf = gamma*pressInf*machInf*machInf/(velInf*velInf);
+  
+//  const CFreal factor = 90.0*4./3.*(m_order+1.)/(m_order+2.);
+  
+  //CFreal result = factor/(m_peclet*(machInf-1.0)*rhoInf);
+  
+  CFreal result = m_peclet;
+  
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*void LLAVFluxReconstructionMHD::computeSmoothness(const CFuint side)
 { 
   CFreal sNum = 0.0;
   
@@ -288,7 +350,7 @@ void LLAVJacobFluxReconstructionMHD::computeSmoothness(const CFuint side)
   // get datahandle
   DataHandle< CFreal > monPhysVar = socket_monPhysVar.getDataHandle();
   
-  /*for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     CFreal stateP = 0.0;
     CFreal diffStatesPPMinOne = 0.0;
@@ -321,101 +383,25 @@ void LLAVJacobFluxReconstructionMHD::computeSmoothness(const CFuint side)
   else
   {
     m_s = log10(sNum/sDenom);
-  }*/
-
-  std::vector<CFreal> modalCoeffs(m_nbrSolPnts, 0.0); // modal coefficients for a single variable
-  CFreal max_indicator = 0.0; // will store the max(E_var) across all variables
-  CFuint m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order-1)*(m_order)/2) : 1 ;
-  CFuint m_nbrSolPntsMinOne = (m_order)*(m_order)*(m_order+1)/2;
-  //for (CFuint iEq = 0; iEq < 1; ++iEq) // loop over variables (equations)
-  //{
-    // Step 1: Load nodal values for this variable
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      CFreal u = (*((*m_states[side])[iSol]))[1];
-      CFreal v = (*((*m_states[side])[iSol]))[2];
-      CFreal w = (*((*m_states[side])[iSol]))[3];
-      m_tempSolPntVec[iSol] = sqrt(u*u+v*v+w*w);
-      /*CFreal rho = (*((*m_cellStates)[iSol]))[0];
-      CFreal rhoU = (*((*m_cellStates)[iSol]))[1];
-      CFreal rhoV = (*((*m_cellStates)[iSol]))[2];
-      //CFreal rhoW = (*((*m_cellStates)[iSol]))[3];
-      CFreal rhoE = (*((*m_cellStates)[iSol]))[3];
-      CFreal p = 0.4*(rhoE-0.5*(rhoU*rhoU+rhoV*rhoV)/rho); //(*((*m_cellStates)[iSol]))[7]; //
-      m_tempSolPntVec[iSol] = rho*p;*/
-    }
-
-    // Step 2: Transform to modal space: modalCoeffs = V^{-1} * nodalValues
-    m_tempSolPntVec2 = m_vdmInv * m_tempSolPntVec;
-
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-    {
-      modalCoeffs[iSol] = m_tempSolPntVec2[iSol];
-    }
-
-    // Step 3: Compute modal energy and high-mode content
-    CFreal energy_total = 0.0;
-    CFreal energy_pMin1 = 0.0;
-    CFreal mN2 = 0.0;
-    CFreal mNminOne2 = 0.0;
-
-    for (CFuint j = 0; j < m_nbrSolPnts; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      energy_total += mj2;
-      if (j > m_nbrSolPntsMinOne - 1) mN2 += mj2;
-    }
-
-    for (CFuint j = m_nbrSolPntsMinTwo - 1; j < m_nbrSolPntsMinOne; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      mNminOne2 += mj2;
-    }
-
-    for (CFuint j = 0; j < m_nbrSolPntsMinOne; ++j)
-    {
-      CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-      energy_pMin1 += mj2;
-    }
-
-    CFreal E1 = mN2 / std::max(energy_total, MathTools::MathConsts::CFrealEps());
-    CFreal E2 = mNminOne2 / std::max(energy_pMin1, MathTools::MathConsts::CFrealEps());
-    CFreal E_var = std::max(E1, E2); // Energy indicator for this variable
-    E1 =  mN2 / mNminOne2;
-    if (true) {E_var = E1 ;}
-
-    max_indicator = std::max(max_indicator, E_var); // take max across variables
-  //}
-
-  m_s = max_indicator; // final smoothness value for this cell
-
-  if (m_s>0)
-  {
-    m_s = log10(m_s);
   }
-}
+}*/
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::setup()
+void LLAVFluxReconstructionMHD::setup()
 {
   CFAUTOTRACE;
   
   // setup parent class
-  LLAVJacobFluxReconstruction::setup();
+  LLAVFluxReconstruction::setup();
   
-  // get the update varset
-  m_updateVarSet = getMethodData().getUpdateVar();
+  const bool RhoivtTv = getMethodData().getUpdateVarStr() == "RhoivtTv";
   
   // get damping coeff
   m_dampCoeff = getMethodData().getDiffDampCoefficient();
-
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
-
-  m_vdmInv = *(frLocalData[0]->getVandermondeMatrixInv());
   
   // get 3D varset
-  m_varSet = getMethodData().getUpdateVar().d_castTo< MHD3DProjectionVarSet >();
+  m_varSet = getMethodData().getUpdateVar().d_castTo< MHD2DProjectionVarSet >();
 
   if (m_varSet.isNull())
   {
@@ -425,17 +411,54 @@ void LLAVJacobFluxReconstructionMHD::setup()
   // resize the physical data for internal and ghost solution points
   m_varSet->getModel()->resizePhysicalData(m_pData);
   m_varSet->getModel()->resizePhysicalData(m_pData2);
+  
+  // if needed, get the MS 
+  
+  m_gradsBackUp.resize(2);
+  m_gradsBackUp[LEFT].resize(m_nbrSolPnts);
+  m_gradsBackUp[RIGHT].resize(m_nbrSolPnts);
 
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  { 
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      m_gradsBackUp[LEFT][iSol].push_back(new RealVector(m_dim));
+      m_gradsBackUp[RIGHT][iSol].push_back(new RealVector(m_dim));
+    }
+  }
+  
+  // get the diffusive varset
+  m_diffusiveVarSet = (getMethodData().getDiffusiveVar()).d_castTo< MHDProjectionDiffVarSet >();
+  
+  m_tempGradTermL.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  m_tempGradTermR.resize(m_nbrEqs,m_nbrFaceFlxPnts);
+  
+  m_tempStatesL.resize(m_nbrFaceFlxPnts);
+  m_tempStatesR.resize(m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void LLAVJacobFluxReconstructionMHD::unsetup()
+void LLAVFluxReconstructionMHD::unsetup()
 {
   CFAUTOTRACE;
   
+  for (CFuint iSol= 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+    {
+      deletePtr(m_gradsBackUp[LEFT][iSol][iGrad]);  
+      deletePtr(m_gradsBackUp[RIGHT][iSol][iGrad]);
+    }
+    m_gradsBackUp[LEFT][iSol].clear();
+    m_gradsBackUp[RIGHT][iSol].clear();
+  }
+  m_gradsBackUp[LEFT].clear();
+  m_gradsBackUp[RIGHT].clear();
+  m_gradsBackUp.clear();
+  
   // unsetup parent class
-  LLAVJacobFluxReconstruction::unsetup();
+  LLAVFluxReconstruction::unsetup();
 }
 
 

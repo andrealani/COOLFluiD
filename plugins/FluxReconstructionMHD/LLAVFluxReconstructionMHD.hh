@@ -1,11 +1,11 @@
-// Copyright (C) 2022 KU Leuven CmPA, Belgium
+// Copyright (C) 2016 KU Leuven, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifndef COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionMHD_hh
-#define COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionMHD_hh
+#ifndef COOLFluiD_FluxReconstructionMethod_LLAVFluxReconstructionMHD_hh
+#define COOLFluiD_FluxReconstructionMethod_LLAVFluxReconstructionMHD_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -13,13 +13,18 @@
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 
-#include "FluxReconstructionMethod/LLAVJacobFluxReconstruction.hh"
+#include "FluxReconstructionMethod/LLAVFluxReconstruction.hh"
+
+#include "MHD/MHDProjectionDiffVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
   
   namespace Physics {
+    namespace MHD {
+      class MHD2DProjectionVarSet;
+    }
     namespace MHD {
       class MHD3DProjectionVarSet;
     }
@@ -31,19 +36,19 @@ namespace COOLFluiD {
 
 /**
  * Command to add Localized Laplacian Artificial Viscosity near discontinuities 
- * for implicit schemes for MHD
+ * for MHD
  * 
- * @author Ray Vandenhoeck
+ * @author Rayan
  */
-class LLAVJacobFluxReconstructionMHD : public LLAVJacobFluxReconstruction {
+class LLAVFluxReconstructionMHD : public LLAVFluxReconstruction {
 
 public: // functions
 
   /// Constructor
-  explicit LLAVJacobFluxReconstructionMHD(const std::string& name);
+  explicit LLAVFluxReconstructionMHD(const std::string& name);
 
   /// Destructor
-  virtual ~LLAVJacobFluxReconstructionMHD() {}
+  virtual ~LLAVFluxReconstructionMHD() {}
   
   /**
    * Configures the command.
@@ -62,11 +67,16 @@ public: // functions
   virtual void unsetup();
   
 protected: //functions
-
+  
   /**
    * Set the data for the current face necessary to calculate FI
    */
   virtual void setFaceData(CFuint faceID);
+  
+  /**
+   * Set the data for the current cell necessary to calculate the residual update
+   */
+  virtual void setCellData();
   
   /**
    * Compute the Peclet number based on the user input
@@ -74,23 +84,40 @@ protected: //functions
   virtual CFreal computePeclet();
   
   /**
-   * Compute the smoothness indicator
+   * command to compute the coefficient to be multiplied with epsilon for the wavespeedupdates
    */
-  virtual void computeSmoothness();
+  virtual CFreal computeViscCoef(RealVector* state);
   
   /**
    * Compute the smoothness indicator
    */
-  virtual void computeSmoothness(const CFuint side);
+  virtual void computeSmoothness();
   
   /// compute the interface flux
   virtual void computeInterfaceFlxCorrection();
 
-
 protected: //data
   
+  /// backup of the gradients in the neighbouring cell
+  std::vector< std::vector< std::vector< RealVector* > > > m_gradsBackUp;
+  
   /// physical model
-  Common::SafePtr< Physics::MHD::MHD3DProjectionVarSet > m_varSet;
+  Common::SafePtr<Physics::MHD::MHD2DProjectionVarSet> m_varSet;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
+  RealMatrix m_tempGradTermL;
+  
+  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
+  RealMatrix m_tempGradTermR;
+  
+  /// diffusive variable set
+  Common::SafePtr< Physics::MHD::MHDProjectionDiffVarSet > m_diffusiveVarSet;
+  
+  /// element states of the left neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesL;
+  
+  /// element states of the right neighbor in the correct format
+  std::vector< RealVector* > m_tempStatesR;
   
   /// damping coefficient
   CFreal m_dampCoeff;
@@ -102,9 +129,6 @@ protected: //data
   /// Physical data temporary vector
   RealVector m_pData2;
   
-    /// Inverse of the Vandermonde
-    RealMatrix m_vdmInv;
-  
 }; // class Solve
 
 //////////////////////////////////////////////////////////////////////////////
@@ -114,5 +138,5 @@ protected: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_LLAVJacobFluxReconstructionMHD_hh
+#endif // COOLFluiD_FluxReconstructionMethod_LLAVFluxReconstructionMHD_hh
 

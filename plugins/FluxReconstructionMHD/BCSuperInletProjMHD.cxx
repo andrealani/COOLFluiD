@@ -85,7 +85,7 @@ BCSuperInletProjMHD::~BCSuperInletProjMHD()
     }
   }
   
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPntsMax; ++iFlx)
   {
     deletePtr(m_cellStatesFlxPnt[iFlx]);
   }
@@ -145,7 +145,7 @@ void BCSuperInletProjMHD::preProcess()
       
       const CFuint nbTrsFaces = m_thisTRS->getLocalNbGeoEnts();
           
-      RealVector* initialState = new RealVector(nbTrsFaces*m_nbrFaceFlxPnts*initialSSize);
+      RealVector* initialState = new RealVector(nbTrsFaces*m_nbrFaceFlxPntsMax*initialSSize);
       cf_assert(initialState != CFNULL);
 
       // get the geodata of the cell builders and set the TRS
@@ -166,6 +166,9 @@ void BCSuperInletProjMHD::preProcess()
           // start and stop index of the faces with this orientation
           const CFuint startFaceIdx = bndFacesStartIdxs[iTR][m_orient  ];
           const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][m_orient+1];
+
+          // Reset the value of m_nbrFaceFlxPnts in case it is not the same for all faces (Prism)
+          m_nbrFaceFlxPnts=(*m_faceFlxPntConn)[m_orient].size();
 
           // loop over faces with this orientation
           for (CFuint faceID = startFaceIdx; faceID < stopFaceIdx; ++faceID)
@@ -197,7 +200,7 @@ void BCSuperInletProjMHD::preProcess()
               // reset the states in flx pnts
               *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
               
-              const CFuint startID = localFaceID*m_nbrFaceFlxPnts*nbVars + iFlxPnt*nbVars;
+              const CFuint startID = localFaceID*m_nbrFaceFlxPntsMax*nbVars + iFlxPnt*nbVars;
 
               // index of current flx pnt
               const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
@@ -250,9 +253,10 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
                                                   const std::vector< RealVector >& coords)
 {
   // number of states
-  const CFuint nbrStates = ghostStates.size();
-  cf_assert(nbrStates == intStates.size());
-  cf_assert(nbrStates == normals.size());
+  //const CFuint nbrStates = ghostStates.size();
+  //cf_assert(nbrStates == intStates.size());
+  //cf_assert(nbrStates == normals.size());
+  CFuint nbrStates = coords.size();
 
   //bool is3D = (normals[0]).size()==3;
 
@@ -290,7 +294,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
       SafePtr<RealVector> initialValues = m_initialSolutionMap.find(name);
 
       const CFuint nbVars = m_initialSolutionIDs.size();//is3D ? 3 : 2;//
-      const CFuint startID = faceLocalID*nbVars*m_nbrFaceFlxPnts + iState*nbVars;
+      const CFuint startID = faceLocalID*nbVars*m_nbrFaceFlxPntsMax + iState*nbVars;
 
       for (CFuint i = 0; i < nbVars; ++i) 
       {
@@ -306,16 +310,18 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
         //CFLog(DEBUG_MIN, "SuperInletProjectionParallel5::setGhostState() => [" << varID << "] => " << (*initialValues)[idx] << " | " << (*innerState)[varID] << "\n");
       }
     }
-    
+    const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
+
     const RealVector& normal = normals[iState];
       
     const CFreal xI_dimless = coords[iState][XX];
     const CFreal yI_dimless = coords[iState][YY];
-    const CFreal zI_dimless = coords[iState][ZZ];
+    const CFreal zI_dimless = (dim==DIM_3D) ? coords[iState][ZZ] : 0.0;
     const CFreal rI_dimless = (coords[iState]).norm2();
+    const CFreal thetaBoundary_dimless = std::atan2(std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless),zI_dimless);
 
     // to be checked if imposed minimum is needed (suspected problems at poles otherwise)
-    const CFreal rhoI_dimless = std::max(std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless),1.0e-4);
+    const CFreal rhoI_dimless = std::max(std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless),MathTools::MathConsts::CFrealEps());
     
     // density
     ghostState[0] = 2.0*m_rhoBC - intState[0];
@@ -330,7 +336,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     // Br bnd from PFSS solution
     CFreal BrBoundary_dimless = xI_dimless/rI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
 
-    if (m_enforceDipoleB) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
+    if (true) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
     
     const CFreal BxI_dimless = intState[4];
     const CFreal ByI_dimless = intState[5];
@@ -359,6 +365,8 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
       BphiI_dimless = -yI_dimless/rhoI_dimless*B_PFSS_dimless[0] + xI_dimless/rhoI_dimless*B_PFSS_dimless[1];
     }
     
+/*BthetaI_dimless = 0.666/3.0*rhoI_dimless;
+BphiI_dimless = 0.0;*/
 
     // B bnd, Btheta and Bphi bnd are set equal to inner values
     const CFreal BxBoundary_dimless = xI_dimless/rI_dimless*BrBoundary_dimless - yI_dimless/rhoI_dimless*BphiI_dimless + xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*BthetaI_dimless;
@@ -374,6 +382,8 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     //ghostState[2] = 0.0;//-intState[2];
     //ghostState[3] = 0.0;//-intState[3]; 
     
+    //CFreal VrBoundary_dimless = xI_dimless/rI_dimless*intState[1] + yI_dimless/rI_dimless*intState[2] + zI_dimless/rI_dimless*intState[3];
+
     const CFreal BxB = BxBoundary_dimless;
     const CFreal ByB = ByBoundary_dimless;
     const CFreal BzB = BzBoundary_dimless; 
@@ -401,10 +411,14 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     CFreal VthetaBB = xI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VxBB + yI_dimless*zI_dimless/(rhoI_dimless*rI_dimless)*VyBB - rhoI_dimless/rI_dimless*VzBB;
     CFreal VphiBB = -yI_dimless/rhoI_dimless*VxBB + xI_dimless/rhoI_dimless*VyBB;
 
+    /*VrBB = VBmag;
+    VthetaBB = VrBB * BthetaI_dimless/BrBoundary_dimless;
+    VphiBB = VrBB * BphiI_dimless/BrBoundary_dimless;*/
+
     //Add the rotation motion
     if (m_rotation)
     {
-      VphiBB += rI_dimless*std::sin(BthetaI_dimless)*3.86e-3;
+      VphiBB += rI_dimless*std::sin(thetaBoundary_dimless)*3.86e-3;
     } 
 
     //Recompute Cartesian components
@@ -426,9 +440,10 @@ void BCSuperInletProjMHD::computeGhostGradients(const std::vector< std::vector< 
                                                      const std::vector< RealVector >& coords)
 {
   // number of state gradients
-  const CFuint nbrStateGrads = intGrads.size();
-  cf_assert(nbrStateGrads == ghostGrads.size());
-  cf_assert(nbrStateGrads == normals.size());
+  //const CFuint nbrStateGrads = intGrads.size();
+  //cf_assert(nbrStateGrads == ghostGrads.size());
+  //cf_assert(nbrStateGrads == normals.size());
+  CFuint nbrStateGrads = m_nbrFaceFlxPnts;
 
   // number of gradient variables
   cf_assert(nbrStateGrads > 0);
@@ -464,18 +479,31 @@ void BCSuperInletProjMHD::setup()
 
   m_nbrFaceFlxPnts = frLocalData[0]->getFaceFlxPntsFaceLocalCoords()->size();
 
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+
+  if (elemShape == CFGeoShape::PRISM)  // (Max number of face flx pnts)
+  {
+    m_nbrFaceFlxPntsMax= (order+1)*(order+1);
+  }
+  else
+  {
+    m_nbrFaceFlxPntsMax= m_nbrFaceFlxPnts;
+  }
+
+
   // get the face - flx pnt connectivity per orient
   m_faceFlxPntConn = frLocalData[0]->getFaceFlxPntConn();
 
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
 
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPntsMax; ++iFlx)
   {
     m_cellStatesFlxPnt.push_back(new State());
   }
 
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPntsMax; ++iFlx)
   {
     m_cellStatesFlxPnt[iFlx]->setLocalID(iFlx);
   }

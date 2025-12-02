@@ -31,6 +31,7 @@ Framework::MethodCommandProvider< StdUnSetup,FluxReconstructionSolverData,FluxRe
 StdUnSetup::StdUnSetup(const std::string& name) :
   FluxReconstructionSolverCom(name),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
+  socket_faceJacobVecSizeFaceFlxPntsP0("faceJacobVecSizeFaceFlxPntsP0"),
   socket_gradients("gradients"),
   socket_gradientsAV("gradientsAV"),
   socket_posPrev("posPrev")
@@ -54,6 +55,7 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
   std::vector< Common::SafePtr< BaseDataSocketSink > > result;
 
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
+  result.push_back(&socket_faceJacobVecSizeFaceFlxPntsP0);
   result.push_back(&socket_gradients);
   result.push_back(&socket_gradientsAV);
   result.push_back(&socket_posPrev);
@@ -81,7 +83,8 @@ void StdUnSetup::execute()
   // Force deallocate socket_faceJacobVecSizeFaceFlxPnts
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
   faceJacobVecSizeFaceFlxPnts.resize(0);
-
+  DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPntsP0 = socket_faceJacobVecSizeFaceFlxPntsP0.getDataHandle();
+  faceJacobVecSizeFaceFlxPntsP0.resize(0);
   // VARIABLES IN FLUXRECONSTRUCTIONSOLVERDATA
 
   // clear frLocalData

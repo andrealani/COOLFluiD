@@ -911,12 +911,9 @@ void LLAVJacobFluxReconstruction::computeWaveSpeedUpdates(vector< CFreal >& wave
     //for (CFuint iFlx = 0; iFlx < m_cellFlx[iSide].size(); ++iFlx)
     for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
     {
-      CFreal coef;
-      if (m_nbrFaceFlxPnts==3) coef=1./6.;
-      if (m_nbrFaceFlxPnts==4) coef=1.;
       const CFreal jacobXJacobXIntCoef = m_faceJacobVecAbsSizeFlxPnts[iFlx]*
                                  m_faceJacobVecAbsSizeFlxPnts[iFlx]*
-                                   coef*
+                                   (*m_faceIntegrationCoefs)[iFlx]*
                                    m_cflConvDiffRatio;
       //const CFreal rho = (*(m_cellStatesFlxPnt[iSide][iFlx]))[0];
       const CFreal rho = 1.0;
