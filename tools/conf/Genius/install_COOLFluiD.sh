@@ -52,12 +52,17 @@ module load PETSc/3.15.1-foss-2021a
 elif [ "$1" == "DEBUG_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=optim
+# full code
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
+# only COCONUT
+#export CONF_FILE="COCONUT_Genius_nocuda.conf"
 module load PETSc/3.15.1-foss-2021a
 elif [ "$1" == "OPTIM_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=release
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
+# only COCONUT
+#export CONF_FILE="COCONUT_Genius_nocuda.conf"
 module load PETSc/3.15.1-foss-2021a
 fi
 
