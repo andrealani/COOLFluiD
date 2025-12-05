@@ -570,7 +570,8 @@ def generate_spherical_shell_mesh(inner_radius: float,
     
     # Generate output filename if not provided
     if output_filename is None:
-        output_filename = f"{num_layers}x{4**(refinement_level+1)*20}-r{inner_radius}"
+        output_filename = f"{num_layers}x{20 * 4**refinement_level}-r{inner_radius}"
+
     
     print("=" * 70)
     print("SPHERICAL SHELL MESH GENERATOR")
