@@ -81,9 +81,6 @@ protected:
   /// Opens the CGNS file for writing
   void openFile(const std::string& fileName, MPI_Comm comm, MPI_Info info);
 
-  /// Closes the CGNS file
-  void closeFile(MPI_Comm comm);
-
   /// Write CGNS Base
   void writeCGNSBase(const CFuint cellDim, const CFuint physDim, std::string BaseName, int& fileIndex, int& baseIndex, MPI_Comm comm);
 
@@ -95,6 +92,9 @@ protected:
 
   /// Write CGNS solution node
   void writeCGNSSolutionNode(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol);
+
+  /// Write CGNS cell-centered solution node (for P0)
+  void writeCGNSSolutionNodeCellCenter(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol);
 
   /// returns the local subcell node connectivity in a cell of given shape and order (in CGNS conventions)
   static std::vector<CFuint> getCGNSCellNodeConn(ElementType_t elementType);
@@ -119,6 +119,20 @@ protected:
 
   /// Clean Nodes and Connectivity after re;oving ghost elements
   void cleanGhostData(std::vector<Framework::Node*>& nodes, std::vector<std::vector<CFuint>>& connectivity);
+
+  /// Write P0 cell-centered solution data
+  void writeP0CellCenteredSolution(MPI_Comm comm, int rank, int fileIndex, int baseIndex, 
+                                    int index_zone, int index_sol, CFuint totNbCells, 
+                                    CFuint globalNbCells, CFuint nbEqs,
+                                    const std::vector<std::string>& varNames,
+                                    const std::vector<std::string>& extraVarNames,
+                                    const std::vector<std::string>& dh_varnames,
+                                    Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet,
+                                    Common::SafePtr<Framework::DataHandleOutput> datahandle_output,
+                                    Common::SafePtr<Framework::TopologicalRegionSet> trs,
+                                    Framework::StdTrsGeoBuilder::GeoData& geoData,
+                                    Common::SafePtr<std::vector<Framework::ElementTypeData>> elemType,
+                                    CFuint nbrElemTypes);
 
 private:
 
