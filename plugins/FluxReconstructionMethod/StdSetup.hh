@@ -120,6 +120,8 @@ protected: // data
   
   /// socket for size of face normal jacobian in face flux points
   Framework::DataSocketSource< std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
+
+  Framework::DataSocketSource< std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPntsP0;
   
   /// socket for normals
   Framework::DataSocketSource< CFreal > socket_normals;

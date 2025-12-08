@@ -16,6 +16,12 @@
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 
+#include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TriagFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/TetraFluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/PrismFluxReconstructionElementData.hh"
+
 #include "Common/ConnectivityTable.hh"
 #include "Common/NotImplementedException.hh"
 
@@ -48,6 +54,7 @@ StdSetup::StdSetup(const std::string& name) :
   socket_gradientsAV("gradientsAV"),
   socket_posPrev("posPrev"),
   socket_faceJacobVecSizeFaceFlxPnts("faceJacobVecSizeFaceFlxPnts"),
+  socket_faceJacobVecSizeFaceFlxPntsP0("faceJacobVecSizeFaceFlxPntsP0"),
   socket_normals("normals")
 {
 }
@@ -86,6 +93,7 @@ std::vector< Common::SafePtr< BaseDataSocketSource > >
   result.push_back(&socket_isUpdated);
   result.push_back(&socket_normals);
   result.push_back(&socket_faceJacobVecSizeFaceFlxPnts);
+  result.push_back(&socket_faceJacobVecSizeFaceFlxPntsP0);
   return result;
 }
 
@@ -324,15 +332,62 @@ void StdSetup::computeFaceJacobianVectorSizes()
   // get the face flux point projection vector size data handle
   DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPnts = socket_faceJacobVecSizeFaceFlxPnts.getDataHandle();
 
+  DataHandle< vector< CFreal > > faceJacobVecSizeFaceFlxPntsP0 = socket_faceJacobVecSizeFaceFlxPntsP0.getDataHandle();
+
   // resize the datahandle for the face Jacobian vector sizes
   faceJacobVecSizeFaceFlxPnts.resize(totNbrFaces);
+
+  faceJacobVecSizeFaceFlxPntsP0.resize(totNbrFaces);
 
   // face flux points data
   std::vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   SafePtr< std::vector< RealVector > >                 faceFlxPntsFaceLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   SafePtr< std::vector< std::vector< RealVector > > >              faceFlxPntsLocalCoordsPerType = frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
  
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+
+  // get the local FR data
+  FluxReconstructionElementData* frLocalDataP0;
+  const CFPolyOrder::Type polyOrder = CFPolyOrder::ORDER0;
+  switch(elemShape)
+  {
+    case CFGeoShape::LINE:
+    {
+      throw Common::NotImplementedException (FromHere(),"FR has not been implemented for 1D");
+    } break;
+    case CFGeoShape::TRIAG:
+    {
+      frLocalDataP0 = new TriagFluxReconstructionElementData(polyOrder);
+    } break;
+    case CFGeoShape::QUAD:
+    {
+      frLocalDataP0 = new QuadFluxReconstructionElementData(polyOrder);
+    } break;
+    case CFGeoShape::TETRA:
+    {
+      frLocalDataP0 = new TetraFluxReconstructionElementData(polyOrder);      
+    } break;
+    case CFGeoShape::HEXA:
+    {
+      frLocalDataP0 = new HexaFluxReconstructionElementData(polyOrder);
+    } break;
+    case CFGeoShape::PRISM:
+    {
+      frLocalDataP0 = new PrismFluxReconstructionElementData(polyOrder);      
+    } break;      
+    default:
+    {
+      throw Common::NotImplementedException (FromHere(),"FR method not implemented for elements of type "
+                                    + StringOps::to_str(elemShape) + ".");
+    }
+  }
+
+  SafePtr< std::vector< RealVector > >                 faceFlxPntsFaceLocalCoordsP0 = frLocalDataP0->getFaceFlxPntsFaceLocalCoords();
+  SafePtr< std::vector< std::vector< RealVector > > >              faceFlxPntsLocalCoordsPerTypeP0 = frLocalDataP0->getFaceFlxPntsLocalCoordsPerType();
+
   CFuint nbrFaceFlxPnts = faceFlxPntsFaceLocalCoords->size();
+
+  CFuint nbrFaceFlxPntsP0 = faceFlxPntsFaceLocalCoordsP0->size();
 
   // get Inner Cells TRS
   SafePtr<TopologicalRegionSet> cellTRS = MeshDataStack::getActive()->getTrs("InnerCells");
@@ -342,7 +397,6 @@ void StdSetup::computeFaceJacobianVectorSizes()
   FaceToCellGEBuilder::GeoData& geoData = geoBuilder->getDataGE();
   geoData.cellsTRS = cellTRS;
 
-  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
 
   // set face jacobian vector sizes in face flux points
   for (CFuint iTRS = 0; iTRS < nbTRSs; ++iTRS)
@@ -369,6 +423,8 @@ void StdSetup::computeFaceJacobianVectorSizes()
         // get the face Jacobian vectors        
           vector< RealVector > faceJacobVecs ;
 
+          vector< RealVector > faceJacobVecsP0 ;
+
         if (elemShape == CFGeoShape::PRISM) // should be only true for prisms
         {
           // get face geo
@@ -377,19 +433,25 @@ void StdSetup::computeFaceJacobianVectorSizes()
           if (geo == CFGeoShape::TRIAG) // triag face
           {
             nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[0]).size();
+            nbrFaceFlxPntsP0=((*faceFlxPntsLocalCoordsPerTypeP0)[0]).size();
           }
           else  // quad face
           {
             nbrFaceFlxPnts=((*faceFlxPntsLocalCoordsPerType)[1]).size();
+            nbrFaceFlxPntsP0=((*faceFlxPntsLocalCoordsPerTypeP0)[1]).size();
           } 
           
           if (geo == CFGeoShape::TRIAG) 
           {
             faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerType)[0]);
+
+            faceJacobVecsP0 = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerTypeP0)[0]);
           }
           else
           {
             faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerType)[1]);
+
+            faceJacobVecsP0 = face.computeFaceJacobDetVectorAtMappedCoords((*faceFlxPntsLocalCoordsPerTypeP0)[1]);
           } 
         }
         else
@@ -397,12 +459,18 @@ void StdSetup::computeFaceJacobianVectorSizes()
           // get the face Jacobian vectors
           faceJacobVecs = face.computeFaceJacobDetVectorAtMappedCoords(*faceFlxPntsFaceLocalCoords);
           
+          faceJacobVecsP0 = face.computeFaceJacobDetVectorAtMappedCoords(*faceFlxPntsFaceLocalCoordsP0);
         }
 
         // loop over face flux points
-        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)   ///@todo here problem for P>0 (prism)
+        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)   
         {
           faceJacobVecSizeFaceFlxPnts[faceID].push_back(faceJacobVecs[iFlx].norm2());
+        }
+
+        for (CFuint iFlx = 0; iFlx < nbrFaceFlxPntsP0; ++iFlx)   
+        {
+          faceJacobVecSizeFaceFlxPntsP0[faceID].push_back(faceJacobVecsP0[iFlx].norm2());
         }
 
         // release the GeometricEntity
