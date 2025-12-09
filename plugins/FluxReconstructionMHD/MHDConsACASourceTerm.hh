@@ -130,4 +130,4 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_NavierStokesMHDConsACASourceTerm_hh
+#endif // COOLFluiD_FluxReconstructionMethod_MHDConsACASourceTerm_hh

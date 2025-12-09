@@ -90,6 +90,17 @@ private: //data
   bool  m_rotation;
   bool   m_addUpdateCoeff;
   CFuint m_order;
+  
+  /// normalization type: "Corona" or "Heliosphere"
+  std::string m_normalizationType;
+  
+  /// reference values for normalization
+  CFreal m_rho0;
+  CFreal m_B0;
+  CFreal m_V0;
+  CFreal m_p0;
+  CFreal m_l0;
+  CFreal m_g0;
 
 }; // end of class MHDPrimACASourceTerm
 
@@ -101,4 +112,4 @@ private: //data
 
 //////////////////////////////////////////////////////////////////////////////
 
-#endif // COOLFluiD_FluxReconstructionMethod_NavierStokesMHDPrimACASourceTerm_hh
+#endif // COOLFluiD_FluxReconstructionMethod_MHDPrimACASourceTerm_hh

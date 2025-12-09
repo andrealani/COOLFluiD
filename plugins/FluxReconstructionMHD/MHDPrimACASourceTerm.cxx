@@ -36,6 +36,7 @@ void MHDPrimACASourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("Gravity","Switch on gravity.");
   options.addConfigOption< bool >("Rotation","Switch on rotation.");
+  options.addConfigOption< std::string >("NormalizationType","Normalization type: 'Corona' or 'Heliosphere' (default: Corona)");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,7 +45,14 @@ MHDPrimACASourceTerm::MHDPrimACASourceTerm(const std::string& name) :
   StdSourceTerm(name),
   socket_updateCoeff("updateCoeff"),
   socket_gravity("gravity"),
-  m_order()
+  m_order(),
+  m_normalizationType("Corona"),
+  m_rho0(0.0),
+  m_B0(0.0),
+  m_V0(0.0),
+  m_p0(0.0),
+  m_l0(0.0),
+  m_g0(0.0)
 { 
   addConfigOptionsTo(this);
   
@@ -54,6 +62,8 @@ MHDPrimACASourceTerm::MHDPrimACASourceTerm(const std::string& name) :
   m_rotation = true;
   setParameter("Rotation",&m_rotation);
 
+  m_normalizationType = "Corona";
+  setParameter("NormalizationType",&m_normalizationType);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +94,34 @@ void MHDPrimACASourceTerm::setup()
   const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
   
   m_order = static_cast<CFuint>(order);
-
+  
+  // Set reference values based on normalization type
+  if (m_normalizationType == "Heliosphere") {
+    CFLog(INFO, "MHDPrimACASourceTerm: Using Heliosphere normalization\n");
+    m_rho0 = 8.36310962e-21;  // kg/m^3
+    m_B0   = 5.00000000e-9;   // T
+    m_V0   = 4.87731918e4;    // m/s
+    m_p0   = 1.98943679e-11;  // Pa
+    m_l0   = 6.9551e8;        // m (1 RSun as length scale)
+  } else {
+    // Default: Corona normalization
+    CFLog(INFO, "MHDPrimACASourceTerm: Using Corona normalization\n");
+    m_rho0 = 1.67e-13;        // kg/m^3
+    m_B0   = 2.2e-4;          // T
+    m_V0   = m_B0/std::sqrt(1.2566e-6 * m_rho0);  // Alfven speed
+    m_p0   = m_rho0 * m_V0 * m_V0;  // dynamic pressure
+    m_l0   = 6.9e8;           // m
+  }
+  
+  // Compute derived reference value for gravity
+  m_g0 = m_V0 * m_V0 / m_l0;
+  
+  CFLog(VERBOSE, "  rho0 = " << m_rho0 << " kg/m^3\n");
+  CFLog(VERBOSE, "  B0   = " << m_B0 << " T\n");
+  CFLog(VERBOSE, "  V0   = " << m_V0 << " m/s\n");
+  CFLog(VERBOSE, "  p0   = " << m_p0 << " Pa\n");
+  CFLog(VERBOSE, "  l0   = " << m_l0 << " m\n");
+  CFLog(VERBOSE, "  g0   = " << m_g0 << " m/s^2\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,36 +162,10 @@ void MHDPrimACASourceTerm::addSourceTerm(RealVector& resUpdates)
    
   const CFreal RSun = 6.9551e8; // m
   const CFreal GMsun = 1.327474512e20; // SI value
-  const CFreal gsun = 274.00; // at the surface m per sec2
-
-  const CFreal lRef = 6.9e8;
-  
-  // Boltzmann constant
-  const CFreal k = 1.3806503e-23;
-
-  // mass of proton
-  const CFreal mp = 1.67262158e-27;
-
-  // mass of electron
-  const CFreal me = 9.10938188e-31;
-
-  //const CFreal rhoRef = nRef*(mp+me);
-  const CFreal rhoRef = 1.67e-13;
-  
-  const CFreal mu_cor = 1.27; // Molecular weight in the corona
-  const CFreal mH = 1.6733e-27; // kg
-  
-  const CFreal l0 = 6.9e8;
-  const CFreal B0 = 2.2e-4;
-  const CFreal mu0 = 1.2566e-6;
-  const CFreal rho0 = 1.67e-13;
-  const CFreal V0 = B0/std::sqrt(mu0*rho0);
-  const CFreal g0 = pow(V0,2)/l0;
 
   // --- Precompute constants once (outside iSol loop) ---
-  const CFreal Omega_phys = 2.97e-6; //2.866e-6; //2.0*MathTools::MathConsts::CFrealPi()/(25.0*24.0*3600.0);    // sidereal rotation [rad/s]
-  const CFreal v_ref      = 4.8e5;                         // m/s
-  const CFreal Omega_nd   = Omega_phys * RSun / v_ref;    // ~4.15e-3 (nondim)
+  const CFreal Omega_phys = 2.97e-6; // sidereal rotation [rad/s]
+  const CFreal Omega_nd   = Omega_phys * m_l0 / m_V0;  // nondimensional rotation rate
   
   for (CFuint iSol = 0; iSol < nbrStates; ++iSol)
   {      
@@ -192,19 +203,19 @@ void MHDPrimACASourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal x_dimless = ((*m_cellStates)[iSol]->getCoordinates())[XX];
     const CFreal y_dimless = ((*m_cellStates)[iSol]->getCoordinates())[YY];
     const CFreal z_dimless = (dim==DIM_3D) ? ((*m_cellStates)[iSol]->getCoordinates())[ZZ] : 0.0;
-    const CFreal x = x_dimless*RSun;
-    const CFreal y = y_dimless*RSun;
-    const CFreal z = z_dimless*RSun;
+    const CFreal x = x_dimless*m_l0;
+    const CFreal y = y_dimless*m_l0;
+    const CFreal z = z_dimless*m_l0;
       
     const CFreal r2_dimless = x_dimless*x_dimless + y_dimless*y_dimless + z_dimless*z_dimless;
     const CFreal r_dimless = std::sqrt(r2_dimless);
 
     const CFreal r2 = x*x + y*y + z*z;
     const CFreal r = std::sqrt(r2);
-    const CFreal density = (*((*m_cellStates)[iSol]))[0]*rhoRef;
+    const CFreal density = (*((*m_cellStates)[iSol]))[0]*m_rho0;
     const CFreal density_dimless = (*((*m_cellStates)[iSol]))[0];
 
-    const CFreal g = -(GMsun/r2)/g0;
+    const CFreal g = -(GMsun/r2)/m_g0;
     const CFreal gx = g*x_dimless/r_dimless;
     const CFreal gy = g*y_dimless/r_dimless;
     const CFreal gz = g*z_dimless/r_dimless;  
@@ -303,20 +314,12 @@ void  MHDPrimACASourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFuint dim = PhysicalModelStack::getActive()->getDim(); 
   
-  const CFreal RSun = 6.9551e8; // m
-  const CFreal l0 = 6.9e8;
-  const CFreal B0 = 2.2e-4;
-  const CFreal mu0 = 1.2566e-6;
-  const CFreal rho0 = 1.67e-13;
-  const CFreal V0 = B0/std::sqrt(mu0*rho0);
-  const CFreal g0 = pow(V0,2)/l0;
-  
   const CFreal x_dimless = ((*m_cellStates)[iState]->getCoordinates())[XX];
   const CFreal y_dimless = ((*m_cellStates)[iState]->getCoordinates())[YY];
   const CFreal z_dimless = (dim==DIM_3D) ? ((*m_cellStates)[iState]->getCoordinates())[ZZ] : 0.0;
-  const CFreal x = x_dimless*RSun;
-  const CFreal y = y_dimless*RSun;
-  const CFreal z = z_dimless*RSun;
+  const CFreal x = x_dimless*m_l0;
+  const CFreal y = y_dimless*m_l0;
+  const CFreal z = z_dimless*m_l0;
   
   const CFreal r2_dimless = x_dimless*x_dimless + y_dimless*y_dimless + z_dimless*z_dimless;
   const CFreal r_dimless = std::sqrt(r2_dimless);
@@ -325,7 +328,7 @@ void  MHDPrimACASourceTerm::getSToStateJacobian(const CFuint iState)
   
   const CFreal GMsun = 1.327474512e20; // SI value
   
-  const CFreal g = -(GMsun/r2)/g0;
+  const CFreal g = -(GMsun/r2)/m_g0;
   
   const CFreal gx = g*x_dimless/r_dimless;
   const CFreal gy = g*y_dimless/r_dimless;
@@ -337,9 +340,8 @@ void  MHDPrimACASourceTerm::getSToStateJacobian(const CFuint iState)
   const CFreal Vz = (*((*m_cellStates)[iState]))[3];
   
   // Rotation constants (same as in addSourceTerm)
-  const CFreal Omega_phys = 2.866e-6; // sidereal rotation [rad/s]
-  const CFreal v_ref      = 4.8e5;     // m/s
-  const CFreal Omega_nd   = Omega_phys * RSun / v_ref; // nondimensional
+  const CFreal Omega_phys = 2.97e-6; // sidereal rotation [rad/s]
+  const CFreal Omega_nd   = Omega_phys * m_l0 / m_V0; // nondimensional
   
   /////// Gravity
   if (m_gravity)
