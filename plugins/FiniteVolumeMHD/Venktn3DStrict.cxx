@@ -32,6 +32,8 @@ void Venktn3DStrict::defineConfigOptions(Config::OptionList& options)
     ("strictCoeff","Fix for smooth flow region.");
   options.addConfigOption< bool >
     ("psiMinEqual1","impose psimin = 1 for certain variables (Haopeng Wang).");
+  options.addConfigOption< vector<CFuint> >
+	  ("NoLimiterID", "Used to cancel limiter.");
 }
 //////////////////////////////////////////////////////////////////////////////
 
@@ -47,7 +49,8 @@ Venktn3DStrict::Venktn3DStrict(const std::string& name) :
   _psiMinEqual1 = false;
   setParameter("psiMinEqual1",&_psiMinEqual1);
 
-
+  _NoLimiterID = vector<CFuint>();
+  setParameter("NoLimiterID", &_NoLimiterID);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -233,6 +236,13 @@ void Venktn3DStrict::limit(const vector<vector<Node*> >& coord,
       CFout << "wrong limiterValue = " << limiterValue[iVar] << "\n";
     }
   }
+  //>> Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
+  if (_NoLimiterID.size() > 0){
+	  for (CFuint iVar = 0; iVar < _NoLimiterID.size(); ++iVar){
+		  limiterValue[_NoLimiterID[iVar]] = 1.0;
+	  }
+  }
+  //<< Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -191,7 +191,7 @@ void MHD3DProjectionPrimE::computeFlux (const RealVector& data,
   _fluxArray[4] = (v*Bx - By*u)*ny + (w*Bx - Bz*u)*nz + phi*nx;
   _fluxArray[5] = (u*By - Bx*v)*nx + (w*By - Bz*v)*nz + phi*ny;
   _fluxArray[6] = (u*Bz - Bx*w)*nx + (v*Bz - By*w)*ny + phi*nz;
-  _fluxArray[7] = Vn*(E + P);
+  _fluxArray[7] = Vn*(E + p);
   _fluxArray[8] = refSpeedSq*Bn;
 }
 

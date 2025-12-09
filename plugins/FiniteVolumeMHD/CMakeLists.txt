@@ -19,6 +19,8 @@ MHD3DProjectionPolytropicCoriolisSourceTerm.hh
 MHD3DProjectionHeatingSourceTerm.hh
 MHD3DProjectionInitStatePFSS.hh
 MHD3DProjectionPolytropicInitStatePFSS.hh
+HLLDecEFlux.cxx
+HLLDecEFlux.hh
 HLLEFluxMHD.cxx
 HLLETanakaFlux.ci
 HLLETanakaFlux.hh

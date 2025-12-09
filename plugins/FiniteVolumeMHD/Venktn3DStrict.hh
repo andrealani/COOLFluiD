@@ -82,6 +82,9 @@ protected:
   CFreal _strictCoeff;  
 
   bool _psiMinEqual1; 
+
+  /// corresponding to variables which don't implement limiter
+  std::vector<CFuint> _NoLimiterID;
   
 private:
 

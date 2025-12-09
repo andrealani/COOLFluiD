@@ -270,9 +270,11 @@ Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
 #Simulator.SubSystem.FlowIterator.StdUpdateSol.Relaxation= 1.
 # Time-evolving
 #Simulator.SubSystem.FlowIterator.UpdateSol =  UpdateSolMHD 
+#Simulator.SubSystem.FlowIterator.UpdateSolMHD.pressureCorrectionValue = 0.0000001
+#Simulator.SubSystem.FlowIterator.UpdateSolMHD.rhoCorrectionValue = 0.0000001
 Simulator.SubSystem.FlowIterator.UpdateSol =  StdUpdateSolPP
-Simulator.SubSystem.FlowIterator.UpdateSolMHD.pressureCorrectionValue = 0.0000001 #00000
-Simulator.SubSystem.FlowIterator.UpdateSolMHD.rhoCorrectionValue = 0.0000001 #00000
+Simulator.SubSystem.FlowIterator.StdUpdateSolPP.pressureBoundaryValue = 0.25801090625 
+Simulator.SubSystem.FlowIterator.StdUpdateSolPP.densityBoundaryValue = 2.0
 
 Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 7
 # quasi-steady

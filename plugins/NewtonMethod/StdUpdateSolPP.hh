@@ -79,6 +79,11 @@ protected:
   /// Check that each update creates variables with physical meaning
   bool m_validate;
 
+  /// boundary pressure value
+  CFreal _pBC;
+  /// boundary plasma density value
+  CFreal _rhoBC;
+
 }; // class StdUpdateSolPP
 
 //////////////////////////////////////////////////////////////////////////////

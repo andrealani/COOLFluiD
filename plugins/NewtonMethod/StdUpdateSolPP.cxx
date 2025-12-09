@@ -53,6 +53,8 @@ void StdUpdateSolPP::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption<vector<CFreal>,Config::DynamicOption<> >("Relaxation","Relaxation factor");
   options.addConfigOption< bool >("Validate","Check that each update creates variables with physical meaning");
+  options.addConfigOption< CFreal >("pressureBoundaryValue", "the boundary-pressure value for the pressure.");
+  options.addConfigOption< CFreal >("densityBoundaryValue", "the boundary-density value for the pressure.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -71,6 +73,12 @@ StdUpdateSolPP::StdUpdateSolPP(const std::string& name) :
 
   m_validate = false;
   setParameter("Validate",&m_validate);
+
+  _pBC = MathTools::MathConsts::CFrealEps();
+  setParameter("pressureBoundaryValue", &_pBC);
+
+  _rhoBC = MathTools::MathConsts::CFrealEps();
+  setParameter("densityBoundaryValue", &_rhoBC);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -138,8 +146,8 @@ void StdUpdateSolPP::execute()
   CFreal pref = 0.03851;
   CFreal vref = 4.80e5;
   CFreal smooth_factor = 0.0;
-  CFreal _rhoBC=2.0;
-  CFreal _pBC = 0.25801090625;
+  //CFreal _rhoBC=2.0;
+  //CFreal _pBC = 0.25801090625;
   CFreal Bmagmax=1.0;
   //<< mark 2024.10.02
   const CFreal RSun = 6.9551e8; // m

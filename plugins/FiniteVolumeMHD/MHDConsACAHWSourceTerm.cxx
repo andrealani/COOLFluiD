@@ -74,6 +74,8 @@ MHDConsACAHWSourceTerm::MHDConsACAHWSourceTerm(const std::string& name) :
   setParameter("wavepressure", &_wave_pressure);  
   _RadiativeLossTerm = 0;
   setParameter("RadiativeLossTerm",&_RadiativeLossTerm);
+  _deCompE = 0;
+  setParameter("deCompEorNot", &_deCompE);
 //  setParameter("zplus",&_zplus);
 //  setParameter("zminus",&_zminus); 
   //_projectionIDs = vector<CFuint>();
@@ -104,6 +106,7 @@ void MHDConsACAHWSourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("divQalphaCollisionless","alpha value of heat conductivity in collisionless regime.");
   options.addConfigOption< CFreal >("Resistivity","eta value.");
   options.addConfigOption< CFint >("RadiativeLossTerm","Switch on optically thin approximation for radiation losses.");
+  options.addConfigOption< CFint >("deCompEorNot", "Calculate source term caused by decomposed energy equation.");
   options.addConfigOption< CFint >("wavepressure", "save approximated wavepressure term.");
 //  options.addConfigOption< CFint >("zplus", "z plus term from WKB");
 //  options.addConfigOption< CFint >("zminus", "z minus term from WKB");
@@ -707,6 +710,41 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
 	
         socket_radiativeloss.getDataHandle()[elementID] = Q_rad;
       }
+
+	  //>> energy Source terms caused by decomposed energy equation
+	  //CFuint deCompE = 1;
+	  CFreal Q_deCompE = 0.0;
+	  //if (deCompE == 1 && r_dimless>1.05){
+	  //_deCompE = 1;
+	  if (_deCompE == 1){
+		  const CFuint BXID = 4;
+		  const CFuint BYID = 5;
+		  const CFuint BZID = 6;
+		  const CFuint gradBXID = elementID*nbEqs + BXID;
+		  const CFuint gradBYID = elementID*nbEqs + BYID;
+		  const CFuint gradBZID = elementID*nbEqs + BZID;
+		  _gradBx[XX] = this->m_ux[gradBXID];
+		  _gradBx[YY] = this->m_uy[gradBXID];
+		  _gradBx[ZZ] = this->m_uz[gradBXID];
+		  _gradBy[XX] = this->m_ux[gradBYID];
+		  _gradBy[YY] = this->m_uy[gradBYID];
+		  _gradBy[ZZ] = this->m_uz[gradBYID];
+		  _gradBz[XX] = this->m_ux[gradBZID];
+		  _gradBz[YY] = this->m_uy[gradBZID];
+		  _gradBz[ZZ] = this->m_uz[gradBZID];
+		  std::vector<CFreal> BdotLamdaB(3, 0.0);
+		  std::vector<CFreal> VdotLamdaB(3, 0.0);
+		  VdotLamdaB[0] = Vx*_gradBx[XX] + Vy*_gradBx[YY] + Vz*_gradBx[ZZ];
+		  VdotLamdaB[1] = Vx*_gradBy[XX] + Vy*_gradBy[YY] + Vz*_gradBy[ZZ];
+		  VdotLamdaB[2] = Vx*_gradBz[XX] + Vy*_gradBz[YY] + Vz*_gradBz[ZZ];
+		  BdotLamdaB[0] = (Bx*_gradBx[XX] + By*_gradBx[YY] + Bz*_gradBx[ZZ]) / B0;
+		  BdotLamdaB[1] = (Bx*_gradBy[XX] + By*_gradBy[YY] + Bz*_gradBy[ZZ]) / B0;
+		  BdotLamdaB[2] = (Bx*_gradBz[XX] + By*_gradBz[YY] + Bz*_gradBz[ZZ]) / B0;
+		  Q_deCompE = Vx*BdotLamdaB[0] + Vy*BdotLamdaB[1] + Vz*BdotLamdaB[2] -
+			  (Bx*VdotLamdaB[0] + By*VdotLamdaB[1] + Bz*VdotLamdaB[2]) / B0;
+		  source[7] += Q_deCompE*volumes[elementID];
+	  }
+	  //<< energy Source terms caused by decomposed energy equation
 
       source[8] = 0.0;
       // Eps modification 
