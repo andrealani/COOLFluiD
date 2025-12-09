@@ -25,7 +25,7 @@
 #include "Framework/MapGeoEnt.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/MethodCommandProvider.hh"
-// #include "Framework/SubSystemStatus.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/StdTrsGeoBuilder.hh"
@@ -134,8 +134,44 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   // Create the CGNS base
   writeCGNSBase(cellDim, physDim, BaseName, fileIndex, baseIndex, comm);
   
-  // Ensure all processes have received the baseIndex before proceeding
-  //MPI_Barrier(comm);
+  // Write time and iteration metadata
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  const CFuint currentIter = subSysStatus->getNbIter();
+  const CFreal currentTimeDim = subSysStatus->getCurrentTimeDim();
+  const CFreal dt = subSysStatus->getDTDim();
+  
+  // Determine if this is a steady or unsteady case (dt <= 0 indicates steady)
+  const bool isSteady = (dt <= 0.0);
+  
+  // Write simulation type (all ranks call this for consistency with parallel CGNS)
+  CGNS_ENUMT(SimulationType_t) simType = isSteady ? CGNS_ENUMV(NonTimeAccurate) : CGNS_ENUMV(TimeAccurate);
+  if (cg_simulation_type_write(fileIndex, baseIndex, simType) != CG_OK) {
+    if (rank == 0) CFLog(VERBOSE, "CGNS Writer: Failed to write simulation type: " << cg_get_error() << "\n");
+  }
+  
+  // Write BaseIterativeData (all ranks call this for consistency with parallel CGNS)
+  int biter_result = cg_biter_write(fileIndex, baseIndex, "TimeIterValues", 1);
+  if (biter_result == CG_OK) {
+    cgsize_t nsteps = 1;
+    int goto_result = cg_goto(fileIndex, baseIndex, "BaseIterativeData_t", 1, "end");
+    if (goto_result == CG_OK) {
+      // Write iteration number
+      std::vector<int> iterValues{static_cast<int>(currentIter)};
+      if (cg_array_write("IterationValues", Integer, 1, &nsteps, iterValues.data()) != CG_OK) {
+        if (rank == 0) CFLog(VERBOSE, "CGNS Writer: Failed to write IterationValues: " << cg_get_error() << "\n");
+      }
+      
+      // Write time values: iteration for steady, physical time for unsteady
+      std::vector<double> timeValues{isSteady ? static_cast<double>(currentIter) : static_cast<double>(currentTimeDim)};
+      if (cg_array_write("TimeValues", RealDouble, 1, &nsteps, timeValues.data()) != CG_OK) {
+        if (rank == 0) CFLog(VERBOSE, "CGNS Writer: Failed to write TimeValues: " << cg_get_error() << "\n");
+      }
+    } else {
+      if (rank == 0) CFLog(VERBOSE, "CGNS Writer: Failed to navigate to BaseIterativeData: " << cg_get_error() << "\n");
+    }
+  } else {
+    if (rank == 0) CFLog(VERBOSE, "CGNS Writer: Failed to create BaseIterativeData: " << cg_get_error() << "\n");
+  }
 
 /*----------------------------! Get and clean nodes and connectivity -----------------------------------*/
 
@@ -343,197 +379,213 @@ void ParCGNSHighOrderWriter::writeToFile(const std::string& fileName)
   datahandle_output->getDataHandles();
   std::vector< std::string > dh_varnames = datahandle_output->getVarNames();
 
-  // Write a solution node
-  const std::string& solutionName = "VertexSolution";
-  writeCGNSSolutionNode(solutionName, fileIndex, baseIndex, index_zone, index_sol);
+  // Branch based on solution order: P0 uses CellCenter, P1+ uses Vertex
+  const bool isP0 = (solOrder == 0);
 
-  //Create Field data for this process 
-
-
-  // prepares to loop over cells by getting the GeometricEntityPool
-  // get inner cells TRS
-  //SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
-  //StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
-  geoData.trs = trs;
-
-  // loop over elements Types 
-  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
+  if (isP0) 
   {
-    // get element shape
-    const CFGeoShape::Type shape = (*elemType)[iElemType].getGeoShape();    
+    // P0: Write cell-centered solution
+    writeCGNSSolutionNodeCellCenter("CellCenterSolution", fileIndex, baseIndex, index_zone, index_sol);
+    
+    // For P0, write cell-centered data directly (one value per cell)
+    writeP0CellCenteredSolution(comm, rank, fileIndex, baseIndex, index_zone, index_sol,
+                                 totNbCells, globalNbCells, nbEqs, varNames, extraVarNames,
+                                 dh_varnames, updateVarSet, datahandle_output, trs, 
+                                 geoData, elemType, nbrElemTypes);
+  } 
+  else 
+  {
+    // P1+: Write vertex solution 
+    writeCGNSSolutionNode("VertexSolution", fileIndex, baseIndex, index_zone, index_sol);
 
-    // Use getCGNSCellShape to determine the elementType for CGNS
-    ElementType_t elementType = getCGNSCellShape(shape, NewGeoOrder);
+    //Create Field data for this process 
 
-    // mapped coordinates of the solution points
-    const vector< RealVector > outputPntsMappedCoords = getOutputPntsMappedCoords(elementType);
 
-    // number of states in element type
-    const CFuint nbrStates = (*elemType)[iElemType].getNbStates();
+    // prepares to loop over cells by getting the GeometricEntityPool
+    // get inner cells TRS
+    //SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
+    //StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
+    geoData.trs = trs;
 
-    // number of nodes in element type (original mesh)
-    const CFuint nbrNodes = (*elemType)[iElemType].getNbNodes();
-
-    // get the number of elements
-    const CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
-
-    // get start index of this element type in global element list
-    CFuint cellIdx = (*elemType)[iElemType].getStartIdx();
-
-    // evaluate the basis functions in the output points
-    geoData.idx = cellIdx;
-    GeometricEntity *const cell = m_stdTrsGeoBuilder.buildGE();
-    vector< RealVector > solShapeFuncs;
-    // get the nodes
-    vector<Node*>* cellNodes = cell->getNodes();
-    cf_assert(cellNodes->size() == nbrNodes);
-
-    CFuint nbrOutPnts = nbrNodesPerElem;
-    for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
+    // loop over elements Types 
+    for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
     {
-      RealVector solShapeFunc =
-          cell->computeShapeFunctionAtMappedCoord   (outputPntsMappedCoords[iPnt]);
-      solShapeFuncs.push_back(solShapeFunc);
-    }
+      // get element shape
+      const CFGeoShape::Type shape = (*elemType)[iElemType].getGeoShape();    
 
-    //release the GeometricEntity
-    m_stdTrsGeoBuilder.releaseGE();
+      // Use getCGNSCellShape to determine the elementType for CGNS
+      ElementType_t elementType = getCGNSCellShape(shape, NewGeoOrder);
 
-    // variable for solutions in output nodes
-    vector< State > outputPntState;
-    for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
-    {
-      RealVector aux2(nbEqs);
-      State state(aux2,false);
-      outputPntState.push_back(state);
-    }
+      // mapped coordinates of the solution points
+      const vector< RealVector > outputPntsMappedCoords = getOutputPntsMappedCoords(elementType);
 
-    // some helper states
-    RealVector dimState(nbEqs);
-    RealVector extraValues; // size will be set in the VarSet
+      // number of states in element type
+      const CFuint nbrStates = (*elemType)[iElemType].getNbStates();
 
-    // Preparing arrays for each variable across all elements
-    std::vector<std::vector<double>> variableDataArrays(nbEqs+ extraVarNames.size()+ dh_varnames.size(), std::vector<double>(NewglobalNbNodes));
+      // number of nodes in element type (original mesh)
+      const CFuint nbrNodes = (*elemType)[iElemType].getNbNodes();
 
-    // Loop over elements
-    for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++cellIdx)
-    {
-      // build the GeometricEntity
+      // get the number of elements
+      const CFuint nbrElems = totNbCells;//(*elemType)[iElemType].getNbElems();
+
+      // get start index of this element type in global element list
+      CFuint cellIdx = (*elemType)[iElemType].getStartIdx();
+
+      // evaluate the basis functions in the output points
       geoData.idx = cellIdx;
       GeometricEntity *const cell = m_stdTrsGeoBuilder.buildGE();
-
+      vector< RealVector > solShapeFuncs;
       // get the nodes
       vector<Node*>* cellNodes = cell->getNodes();
       cf_assert(cellNodes->size() == nbrNodes);
 
-      // get the states
-      vector<State*>* cellStates = cell->getStates();
-      cf_assert(cellStates->size() == nbrStates);
-
-
-      // evaluate states at the output points
+      CFuint nbrOutPnts = nbrNodesPerElem;
       for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
       {
-        outputPntState[iPnt]  = 0.0;
-        for (CFuint iState = 0; iState < nbrStates; ++iState)
-        {  
-          outputPntState[iPnt] += solShapeFuncs[iPnt][iState]*(*(*cellStates)[iState]);
-        }
-      }
-
-      // Step 2: Populate variableDataArrays with solution data
-      for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
-      {
-        CFuint GlobalID= upgradedConnectivity[iElem][iPnt] - 1 ;
-
-        // get state in this point
-        const RealVector& nodalState = outputPntState[iPnt];
-
-        // Dimensionalize solution and compute extra values if necessary
-        if (getMethodData().shouldPrintExtraValues()) {
-            updateVarSet->setDimensionalValuesPlusExtraValues(nodalState, dimState, extraValues);
-        } else {
-            updateVarSet->setDimensionalValues(nodalState, dimState);
-        }
-
-        // Assigning state values to the corresponding position in the array
-        for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
-            variableDataArrays[iEq][GlobalID] = dimState[iEq];
-        }
-
-        // Extra variables
-        for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
-            variableDataArrays[nbEqs + iExtra][GlobalID] = extraValues[iExtra];
-        }
-            
-        // datahandles with state based data
-        for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar)
-        {
-          DataHandleOutput::DataHandleInfo var_info = datahandle_output->getStateData(iVar);
-          CFuint var_var = var_info.first;
-          CFuint var_nbvars = var_info.second;
-          DataHandle<CFreal> var = var_info.third;
-          
-          vector<CFreal> outputPntStateSockets;
-          outputPntStateSockets.resize(nbrOutPnts);
-
-          outputPntStateSockets[iPnt]  = 0.0;
-          for (CFuint iState = 0; iState < nbrStates; ++iState)
-          {
-            outputPntStateSockets[iPnt] += solShapeFuncs[iPnt][iState]*var(((*cellStates)[iState])->getLocalID(), var_var, var_nbvars);
-          }
-          variableDataArrays[nbEqs + extraVarNames.size() + iVar][GlobalID] = outputPntStateSockets[iPnt];
-        }
+        RealVector solShapeFunc =
+            cell->computeShapeFunctionAtMappedCoord   (outputPntsMappedCoords[iPnt]);
+        solShapeFuncs.push_back(solShapeFunc);
       }
 
       //release the GeometricEntity
       m_stdTrsGeoBuilder.releaseGE();
-    }
 
-    /* write the solution field data in parallel */
-    cgsize_t start_s = start_n;
-    cgsize_t end_s = end_n;
-
-    // Add barrier to prevent I/O race conditions at very high core counts
-    //MPI_Barrier(comm);
-
-    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
-    {
-      if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, varNames[iEq].c_str(), &fieldIndex) != CG_OK) 
+      // variable for solutions in output nodes
+      vector< State > outputPntState;
+      for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
       {
-        std::cerr << "Rank " << rank << " Error writing solution node for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
-      }      
-      if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[iEq].data()) != CG_OK) {
-        std::cerr << "Rank " << rank << " Error writing solution data for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
+        RealVector aux2(nbEqs);
+        State state(aux2,false);
+        outputPntState.push_back(state);
       }
-    }
 
-    // Extra variables
-    for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) 
-    {
-      if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, extraVarNames[iExtra].c_str(), &fieldIndex) != CG_OK) 
+      // some helper states
+      RealVector dimState(nbEqs);
+      RealVector extraValues; // size will be set in the VarSet
+
+      // Preparing arrays for each variable across all elements
+      std::vector<std::vector<double>> variableDataArrays(nbEqs+ extraVarNames.size()+ dh_varnames.size(), std::vector<double>(NewglobalNbNodes));
+
+      // Loop over elements
+      for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++cellIdx)
       {
-        std::cerr << "Rank " << rank << " Error writing solution node for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+        // build the GeometricEntity
+        geoData.idx = cellIdx;
+        GeometricEntity *const cell = m_stdTrsGeoBuilder.buildGE();
+
+        // get the nodes
+        vector<Node*>* cellNodes = cell->getNodes();
+        cf_assert(cellNodes->size() == nbrNodes);
+
+        // get the states
+        vector<State*>* cellStates = cell->getStates();
+        cf_assert(cellStates->size() == nbrStates);
+
+
+        // evaluate states at the output points
+        for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
+        {
+          outputPntState[iPnt]  = 0.0;
+          for (CFuint iState = 0; iState < nbrStates; ++iState)
+          {  
+            outputPntState[iPnt] += solShapeFuncs[iPnt][iState]*(*(*cellStates)[iState]);
+          }
+        }
+
+        // Step 2: Populate variableDataArrays with solution data
+        for (CFuint iPnt = 0; iPnt < nbrOutPnts; ++iPnt)
+        {
+          CFuint GlobalID= upgradedConnectivity[iElem][iPnt] - 1 ;
+
+          // get state in this point
+          const RealVector& nodalState = outputPntState[iPnt];
+
+          // Dimensionalize solution and compute extra values if necessary
+          if (getMethodData().shouldPrintExtraValues()) {
+              updateVarSet->setDimensionalValuesPlusExtraValues(nodalState, dimState, extraValues);
+          } else {
+              updateVarSet->setDimensionalValues(nodalState, dimState);
+          }
+
+          // Assigning state values to the corresponding position in the array
+          for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+              variableDataArrays[iEq][GlobalID] = dimState[iEq];
+          }
+
+          // Extra variables
+          for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
+              variableDataArrays[nbEqs + iExtra][GlobalID] = extraValues[iExtra];
+          }
+              
+          // datahandles with state based data
+          for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar)
+          {
+            DataHandleOutput::DataHandleInfo var_info = datahandle_output->getStateData(iVar);
+            CFuint var_var = var_info.first;
+            CFuint var_nbvars = var_info.second;
+            DataHandle<CFreal> var = var_info.third;
+            
+            vector<CFreal> outputPntStateSockets;
+            outputPntStateSockets.resize(nbrOutPnts);
+
+            outputPntStateSockets[iPnt]  = 0.0;
+            for (CFuint iState = 0; iState < nbrStates; ++iState)
+            {
+              outputPntStateSockets[iPnt] += solShapeFuncs[iPnt][iState]*var(((*cellStates)[iState])->getLocalID(), var_var, var_nbvars);
+            }
+            variableDataArrays[nbEqs + extraVarNames.size() + iVar][GlobalID] = outputPntStateSockets[iPnt];
+          }
+        }
+
+        //release the GeometricEntity
+        m_stdTrsGeoBuilder.releaseGE();
       }
 
-      if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + iExtra].data()) != CG_OK) {
-        std::cerr << "Rank " << rank << " Error writing solution data for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
-      }
-    }
+      /* write the solution field data in parallel */
+      cgsize_t start_s = start_n;
+      cgsize_t end_s = end_n;
 
-    // Datahandles variables
-    for (CFuint iDh = 0; iDh < dh_varnames.size(); ++iDh) 
-    {
-      if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, dh_varnames[iDh].c_str(), &fieldIndex) != CG_OK) 
+      // Add barrier to prevent I/O race conditions at very high core counts
+      //MPI_Barrier(comm);
+
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) 
       {
-        std::cerr << "Rank " << rank << " Error writing solution node for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
-      }      
-      if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + extraVarNames.size() + iDh].data()) != CG_OK) {
-        std::cerr << "Rank " << rank << " Error writing solution data for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+        if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, varNames[iEq].c_str(), &fieldIndex) != CG_OK) 
+        {
+          std::cerr << "Rank " << rank << " Error writing solution node for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
+        }      
+        if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[iEq].data()) != CG_OK) {
+          std::cerr << "Rank " << rank << " Error writing solution data for " << varNames[iEq] << ": " << cg_get_error() << std::endl;
+        }
       }
-    }
 
-  }
+      // Extra variables
+      for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) 
+      {
+        if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, extraVarNames[iExtra].c_str(), &fieldIndex) != CG_OK) 
+        {
+          std::cerr << "Rank " << rank << " Error writing solution node for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+        }
+
+        if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + iExtra].data()) != CG_OK) {
+          std::cerr << "Rank " << rank << " Error writing solution data for " << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+        }
+      }
+
+      // Datahandles variables
+      for (CFuint iDh = 0; iDh < dh_varnames.size(); ++iDh) 
+      {
+        if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, RealDouble, dh_varnames[iDh].c_str(), &fieldIndex) != CG_OK) 
+        {
+          std::cerr << "Rank " << rank << " Error writing solution node for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+        }      
+        if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, fieldIndex, &start_s, &end_s, variableDataArrays[nbEqs + extraVarNames.size() + iDh].data()) != CG_OK) {
+          std::cerr << "Rank " << rank << " Error writing solution data for " << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+        }
+      }
+
+    } // end P1+ vertex solution loop
+  } // end if-else P0 vs P1+
 
   // Final barrier to ensure all I/O operations are complete before closing
   MPI_Barrier(comm);
@@ -562,22 +614,6 @@ void ParCGNSHighOrderWriter::openFile(const std::string& fileName, MPI_Comm comm
     return;
   }
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ParCGNSHighOrderWriter::closeFile(MPI_Comm comm) 
-{
-  CFAUTOTRACE;
-
-  // Synchronize all processes before closing the file
-  //MPI_Barrier(comm);
-
-  if (cgp_close(fileIndex) != CG_OK) {
-      std::cerr << "Error closing CGNS file: " << cg_get_error() << std::endl;
-      // Handle error, possibly abort
-  }
-}
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -664,6 +700,20 @@ void ParCGNSHighOrderWriter::writeCGNSSolutionNode(const std::string& solutionNa
     std::cerr << "Error writing solution node: " << cg_get_error() << std::endl;
     cg_close(fileIndex); // Attempt to close the file on error
     return; 
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ParCGNSHighOrderWriter::writeCGNSSolutionNodeCellCenter(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol) 
+{
+  CFAUTOTRACE;
+  
+  // Create cell-centered solution node (all ranks call this in parallel CGNS)
+  if ((cg_sol_write(fileIndex, baseIndex, index_zone, solutionName.c_str(), CellCenter, &index_sol))!= CG_OK) 
+  {
+    std::cerr << "Error writing cell-centered solution node: " << cg_get_error() << std::endl;
+    MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }
 
@@ -2154,6 +2204,156 @@ std::vector< RealVector > ParCGNSHighOrderWriter::getOutputPntsMappedCoords(Elem
 
   return outputPntsMappedCoords;
 }
+//////////////////////////////////////////////////////////////////////////////
+
+void ParCGNSHighOrderWriter::writeP0CellCenteredSolution(
+    MPI_Comm comm, int rank, int fileIndex, int baseIndex, 
+    int index_zone, int index_sol, CFuint totNbCells, 
+    CFuint globalNbCells, CFuint nbEqs,
+    const std::vector<std::string>& varNames,
+    const std::vector<std::string>& extraVarNames,
+    const std::vector<std::string>& dh_varnames,
+    Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet,
+    Common::SafePtr<Framework::DataHandleOutput> datahandle_output,
+    Common::SafePtr<Framework::TopologicalRegionSet> trs,
+    Framework::StdTrsGeoBuilder::GeoData& geoData,
+    Common::SafePtr<std::vector<Framework::ElementTypeData>> elemType,
+    CFuint nbrElemTypes)
+{
+  CFAUTOTRACE;
+  
+  // For P0, each cell has exactly one state at its center
+  // No shape function evaluation needed - directly use cell state
+  
+  // Compute MPI ranges for cell-centered data
+  CFuint localCellCount = totNbCells;
+  CFuint startCell;
+  
+  MPI_Exscan(&localCellCount, &startCell, 1, MPI_UNSIGNED, MPI_SUM, comm);
+  if (rank == 0) {
+    startCell = 1;  // CGNS uses 1-based indexing
+  } else {
+    startCell += 1;
+  }
+  
+  cgsize_t start_c = startCell;
+  cgsize_t end_c = startCell + localCellCount - 1;
+  
+  // Allocate arrays for cell-centered data
+  std::vector<std::vector<double>> cellDataArrays(
+    nbEqs + extraVarNames.size() + dh_varnames.size(), 
+    std::vector<double>(localCellCount)
+  );
+  
+  // Helper states
+  RealVector dimState(nbEqs);
+  RealVector extraValues; // size will be set by VarSet if needed
+  if (getMethodData().shouldPrintExtraValues() && !extraVarNames.empty()) {
+    extraValues.resize(extraVarNames.size());
+  }
+  
+  // Loop over element types
+  CFuint cellIdx = 0;
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType) {
+    const CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+    
+    // Loop over cells in this element type
+    for (CFuint iElem = 0; iElem < nbrElems; ++iElem) {
+      geoData.idx = startIdx + iElem;
+      GeometricEntity *const cell = m_stdTrsGeoBuilder.buildGE();
+      
+      // Get cell states - for P0, there's exactly 1 state per cell
+      vector<State*>* cellStates = cell->getStates();
+      
+      // Skip ghost cells
+      bool isOwned = (!cellStates->empty() && (*cellStates)[0]->isParUpdatable());
+      if (!isOwned) {
+        m_stdTrsGeoBuilder.releaseGE();
+        continue;
+      }
+      
+      cf_assert(cellStates->size() == 1); // P0 has 1 state per cell
+      const RealVector& cellState = *(*cellStates)[0];
+      
+      // Dimensionalize the state
+      if (getMethodData().shouldPrintExtraValues()) {
+        updateVarSet->setDimensionalValuesPlusExtraValues(cellState, dimState, extraValues);
+      } else {
+        updateVarSet->setDimensionalValues(cellState, dimState);
+      }
+      
+      // Store solution variables
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+        cellDataArrays[iEq][cellIdx] = dimState[iEq];
+      }
+      
+      // Store extra variables
+      for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
+        cellDataArrays[nbEqs + iExtra][cellIdx] = extraValues[iExtra];
+      }
+      
+      // Store datahandle variables
+      for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar) {
+        DataHandleOutput::DataHandleInfo var_info = datahandle_output->getStateData(iVar);
+        CFuint var_var = var_info.first;
+        CFuint var_nbvars = var_info.second;
+        DataHandle<CFreal> var = var_info.third;
+        
+        cellDataArrays[nbEqs + extraVarNames.size() + iVar][cellIdx] = 
+          var((*cellStates)[0]->getLocalID(), var_var, var_nbvars);
+      }
+      
+      cellIdx++;
+      m_stdTrsGeoBuilder.releaseGE();
+    }
+  }
+  
+  // Write cell-centered field data in parallel
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                        RealDouble, varNames[iEq].c_str(), &fieldIndex) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 field node for " 
+                << varNames[iEq] << ": " << cg_get_error() << std::endl;
+    }
+    if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, 
+                             fieldIndex, &start_c, &end_c, cellDataArrays[iEq].data()) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 field data for " 
+                << varNames[iEq] << ": " << cg_get_error() << std::endl;
+    }
+  }
+  
+  // Write extra variables
+  for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
+    if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                        RealDouble, extraVarNames[iExtra].c_str(), &fieldIndex) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 extra field node for " 
+                << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+    }
+    if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, 
+                             fieldIndex, &start_c, &end_c, 
+                             cellDataArrays[nbEqs + iExtra].data()) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 extra field data for " 
+                << extraVarNames[iExtra] << ": " << cg_get_error() << std::endl;
+    }
+  }
+  
+  // Write datahandle variables
+  for (CFuint iDh = 0; iDh < dh_varnames.size(); ++iDh) {
+    if (cgp_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                        RealDouble, dh_varnames[iDh].c_str(), &fieldIndex) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 datahandle field node for " 
+                << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+    }
+    if (cgp_field_write_data(fileIndex, baseIndex, index_zone, index_sol, 
+                             fieldIndex, &start_c, &end_c, 
+                             cellDataArrays[nbEqs + extraVarNames.size() + iDh].data()) != CG_OK) {
+      std::cerr << "Rank " << rank << " Error writing P0 datahandle field data for " 
+                << dh_varnames[iDh] << ": " << cg_get_error() << std::endl;
+    }
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace CGNS

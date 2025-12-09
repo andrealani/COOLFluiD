@@ -23,7 +23,7 @@
 #include "Framework/MapGeoEnt.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/MethodCommandProvider.hh"
-// #include "Framework/SubSystemStatus.hh"
+#include "Framework/SubSystemStatus.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Framework/PhysicalModel.hh"
 #include "Framework/StdTrsGeoBuilder.hh"
@@ -122,6 +122,45 @@ void CGNSHighOrderWriter::writeToFile(const std::string& fileName)
 
   writeCGNSBase(cellDim, physDim, BaseName, fileIndex, baseIndex);
   
+  // Write time and iteration metadata
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  const CFuint currentIter = subSysStatus->getNbIter();
+  const CFreal currentTimeDim = subSysStatus->getCurrentTimeDim();
+  const CFreal dt = subSysStatus->getDTDim();
+  
+  // Determine if this is a steady or unsteady case (dt <= 0 indicates steady)
+  const bool isSteady = (dt <= 0.0);
+  
+  // Write simulation type
+  CGNS_ENUMT(SimulationType_t) simType = isSteady ? CGNS_ENUMV(NonTimeAccurate) : CGNS_ENUMV(TimeAccurate);
+  if (cg_simulation_type_write(fileIndex, baseIndex, simType) != CG_OK) {
+    CFLog(VERBOSE, "CGNS Writer: Failed to write simulation type: " << cg_get_error() << "\n");
+  }
+  
+  // Write BaseIterativeData
+  int biter_result = cg_biter_write(fileIndex, baseIndex, "TimeIterValues", 1);
+  if (biter_result == CG_OK) {
+    cgsize_t nsteps = 1;
+    int goto_result = cg_goto(fileIndex, baseIndex, "BaseIterativeData_t", 1, "end");
+    if (goto_result == CG_OK) {
+      // Write iteration number
+      std::vector<int> iterValues{static_cast<int>(currentIter)};
+      if (cg_array_write("IterationValues", Integer, 1, &nsteps, iterValues.data()) != CG_OK) {
+        CFLog(VERBOSE, "CGNS Writer: Failed to write IterationValues: " << cg_get_error() << "\n");
+      }
+      
+      // Write time values: iteration for steady, physical time for unsteady
+      std::vector<double> timeValues{isSteady ? static_cast<double>(currentIter) : static_cast<double>(currentTimeDim)};
+      if (cg_array_write("TimeValues", RealDouble, 1, &nsteps, timeValues.data()) != CG_OK) {
+        CFLog(VERBOSE, "CGNS Writer: Failed to write TimeValues: " << cg_get_error() << "\n");
+      }
+    } else {
+      CFLog(VERBOSE, "CGNS Writer: Failed to navigate to BaseIterativeData: " << cg_get_error() << "\n");
+    }
+  } else {
+    CFLog(VERBOSE, "CGNS Writer: Failed to create BaseIterativeData: " << cg_get_error() << "\n");
+  }
+
 
   /*----------------------------! Get nodes and connectivity -----------------------------------*/
 
@@ -186,10 +225,6 @@ void CGNSHighOrderWriter::writeToFile(const std::string& fileName)
 
 /*----------------------------! Define Solution Data -----------------------------------*/
 
-  // Write a solution node
-  const std::string& solutionName = "VertexSolution";
-  writeCGNSSolutionNode(solutionName, fileIndex, baseIndex, index_zone, index_sol);
-
   // get convective variable set
   SafePtr<ConvectiveVarSet> updateVarSet = getMethodData().getUpdateVarSet();
 
@@ -206,9 +241,31 @@ void CGNSHighOrderWriter::writeToFile(const std::string& fileName)
   datahandle_output->getDataHandles();
   std::vector< std::string > dh_varnames = datahandle_output->getVarNames();
 
-  // prepares to loop over cells by getting the GeometricEntityPool
+  // Branch based on solution order: P0 uses CellCenter, P1+ uses Vertex
+  const bool isP0 = (solOrder == 0);
+
   // get inner cells TRS
   SafePtr<TopologicalRegionSet> trs = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  if (isP0) 
+  {
+    // P0: Write cell-centered solution
+    writeCGNSSolutionNodeCellCenter("CellCenterSolution", fileIndex, baseIndex, index_zone, index_sol);
+    
+    // For P0, write cell-centered data directly (one value per cell)
+    StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
+    geoData.trs = trs;
+    writeP0CellCenteredSolution(fileIndex, baseIndex, index_zone, index_sol,
+                                 totNbCells, nbEqs, varNames, extraVarNames,
+                                 dh_varnames, updateVarSet, datahandle_output, trs,
+                                 geoData, elemType, nbrElemTypes);
+  } 
+  else 
+  {
+    // P1+: Write vertex solution
+    writeCGNSSolutionNode("VertexSolution", fileIndex, baseIndex, index_zone, index_sol);
+
+  // prepares to loop over cells by getting the GeometricEntityPool
   StdTrsGeoBuilder::GeoData& geoData = m_stdTrsGeoBuilder.getDataGE();
   geoData.trs = trs;
 
@@ -374,7 +431,9 @@ void CGNSHighOrderWriter::writeToFile(const std::string& fileName)
       }
     }
 
-  }
+  } // end loop over element types
+
+  } // end if-else P0 vs P1+
 
 
   // Close file
@@ -497,6 +556,21 @@ void CGNSHighOrderWriter::writeCGNSSolutionNode(const std::string& solutionName,
   if (cg_sol_write(fileIndex, baseIndex, index_zone, solutionName.c_str(), Vertex, &index_sol) != CG_OK) 
   {
     std::cerr << "Error writing solution node: " << cg_get_error() << std::endl;
+    cg_close(fileIndex); // Attempt to close the file on error
+    return; 
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CGNSHighOrderWriter::writeCGNSSolutionNodeCellCenter(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol) 
+{
+  CFAUTOTRACE;
+
+  // Write cell-centered solution node for P0 data
+  if (cg_sol_write(fileIndex, baseIndex, index_zone, solutionName.c_str(), CellCenter, &index_sol) != CG_OK) 
+  {
+    std::cerr << "Error writing cell-centered solution node: " << cg_get_error() << std::endl;
     cg_close(fileIndex); // Attempt to close the file on error
     return; 
   }
@@ -1995,6 +2069,125 @@ std::vector< RealVector > CGNSHighOrderWriter::getOutputPntsMappedCoords(Element
 
   return outputPntsMappedCoords;
 }
+//////////////////////////////////////////////////////////////////////////////
+
+void CGNSHighOrderWriter::writeP0CellCenteredSolution(
+    int fileIndex, int baseIndex, int index_zone, int index_sol,
+    CFuint totNbCells, CFuint nbEqs,
+    const std::vector<std::string>& varNames,
+    const std::vector<std::string>& extraVarNames,
+    const std::vector<std::string>& dh_varnames,
+    Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet,
+    Common::SafePtr<Framework::DataHandleOutput> datahandle_output,
+    Common::SafePtr<Framework::TopologicalRegionSet> trs,
+    Framework::StdTrsGeoBuilder::GeoData& geoData,
+    Common::SafePtr<std::vector<Framework::ElementTypeData>> elemType,
+    CFuint nbrElemTypes)
+{
+  CFAUTOTRACE;
+  
+  // For P0, each cell has exactly one state at its center
+  // No shape function evaluation needed - directly use cell state
+  
+  // Allocate arrays for cell-centered data
+  std::vector<std::vector<double>> cellDataArrays(
+    nbEqs + extraVarNames.size() + dh_varnames.size(), 
+    std::vector<double>(totNbCells)
+  );
+  
+  // Helper states
+  RealVector dimState(nbEqs);
+  RealVector extraValues;
+  if (getMethodData().shouldPrintExtraValues() && !extraVarNames.empty()) {
+    extraValues.resize(extraVarNames.size());
+  }
+  
+  // Loop over element types
+  CFuint cellIdx = 0;
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType) {
+    const CFuint nbrElems = (*elemType)[iElemType].getNbElems();
+    const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
+    
+    // Loop over cells in this element type
+    for (CFuint iElem = 0; iElem < nbrElems; ++iElem, ++cellIdx) {
+      geoData.idx = startIdx + iElem;
+      GeometricEntity *const cell = m_stdTrsGeoBuilder.buildGE();
+      
+      // Get cell states - for P0, there's exactly 1 state per cell
+      vector<State*>* cellStates = cell->getStates();
+      cf_assert(cellStates->size() == 1); // P0 has 1 state per cell
+      
+      const RealVector& cellState = *(*cellStates)[0];
+      
+      // Dimensionalize the state
+      if (getMethodData().shouldPrintExtraValues()) {
+        updateVarSet->setDimensionalValuesPlusExtraValues(cellState, dimState, extraValues);
+      } else {
+        updateVarSet->setDimensionalValues(cellState, dimState);
+      }
+      
+      // Store solution variables
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+        cellDataArrays[iEq][cellIdx] = dimState[iEq];
+      }
+      
+      // Store extra variables
+      for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
+        cellDataArrays[nbEqs + iExtra][cellIdx] = extraValues[iExtra];
+      }
+      
+      // Store datahandle variables
+      for (CFuint iVar = 0; iVar < dh_varnames.size(); ++iVar) {
+        DataHandleOutput::DataHandleInfo var_info = datahandle_output->getStateData(iVar);
+        CFuint var_var = var_info.first;
+        CFuint var_nbvars = var_info.second;
+        DataHandle<CFreal> var = var_info.third;
+        
+        cellDataArrays[nbEqs + extraVarNames.size() + iVar][cellIdx] = 
+          var((*cellStates)[0]->getLocalID(), var_var, var_nbvars);
+      }
+      
+      m_stdTrsGeoBuilder.releaseGE();
+    }
+  }
+  
+  // Write cell-centered field data
+  int fieldIndex;
+  for (CFuint iEq = 0; iEq < nbEqs; ++iEq) {
+    if (cg_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                       RealDouble, varNames[iEq].c_str(), 
+                       cellDataArrays[iEq].data(), &fieldIndex) != CG_OK) {
+      std::cerr << "Error writing P0 field for " << varNames[iEq] 
+                << ": " << cg_get_error() << std::endl;
+    }
+  }
+  
+  // Write extra variables (skip if none)
+  if (!extraVarNames.empty()) {
+    for (CFuint iExtra = 0; iExtra < extraVarNames.size(); ++iExtra) {
+      if (cg_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                         RealDouble, extraVarNames[iExtra].c_str(), 
+                         cellDataArrays[nbEqs + iExtra].data(), &fieldIndex) != CG_OK) {
+        std::cerr << "Error writing P0 extra field for " << extraVarNames[iExtra] 
+                  << ": " << cg_get_error() << std::endl;
+      }
+    }
+  }
+  
+  // Write datahandle variables (skip if none)
+  if (!dh_varnames.empty()) {
+    for (CFuint iDh = 0; iDh < dh_varnames.size(); ++iDh) {
+      if (cg_field_write(fileIndex, baseIndex, index_zone, index_sol, 
+                         RealDouble, dh_varnames[iDh].c_str(), 
+                         cellDataArrays[nbEqs + extraVarNames.size() + iDh].data(), 
+                         &fieldIndex) != CG_OK) {
+        std::cerr << "Error writing P0 datahandle field for " << dh_varnames[iDh] 
+                  << ": " << cg_get_error() << std::endl;
+      }
+    }
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
   } // namespace CGNS

@@ -96,6 +96,9 @@ protected:
   /// Write CGNS solution node
   void writeCGNSSolutionNode(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol);
 
+  /// Write CGNS cell-centered solution node (for P0)
+  void writeCGNSSolutionNodeCellCenter(const std::string& solutionName, int& fileIndex, int& baseIndex, int& index_zone, int& index_sol);
+
   /// returns the local subcell node connectivity in a cell of given shape and order (in CGNS conventions)
   static std::vector<CFuint> getCGNSCellNodeConn(ElementType_t elementType);
 
@@ -116,6 +119,19 @@ protected:
 
   /// Checking for duplicate nodes
   bool nodesAreClose(const RealVector& a, const RealVector& b, int dim);
+
+  /// Write P0 cell-centered solution data
+  void writeP0CellCenteredSolution(int fileIndex, int baseIndex, int index_zone, 
+                                    int index_sol, CFuint totNbCells, CFuint nbEqs,
+                                    const std::vector<std::string>& varNames,
+                                    const std::vector<std::string>& extraVarNames,
+                                    const std::vector<std::string>& dh_varnames,
+                                    Common::SafePtr<Framework::ConvectiveVarSet> updateVarSet,
+                                    Common::SafePtr<Framework::DataHandleOutput> datahandle_output,
+                                    Common::SafePtr<Framework::TopologicalRegionSet> trs,
+                                    Framework::StdTrsGeoBuilder::GeoData& geoData,
+                                    Common::SafePtr<std::vector<Framework::ElementTypeData>> elemType,
+                                    CFuint nbrElemTypes);
   
 private:
 
