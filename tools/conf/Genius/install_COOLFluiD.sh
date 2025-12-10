@@ -21,10 +21,10 @@ if [ -z "$2" ] ; then
     exit 1
 fi
 
-module load CMake/3.20.1-GCCcore-10.3.0
-module load Boost/1.76.0-GCC-10.3.0
-module load ParMETIS/4.0.3-gompi-2021a
-module load PETSc/3.15.1-foss-2021a
+module load CMake/3.26.3-GCCcore-12.3.0
+module load Boost/1.82.0-GCC-12.3.0
+module load ParMETIS/4.0.3-gompi-2023a
+module load PETSc/3.20.3-foss-2023a
 
 export TOP_DIR="${VSC_DATA}"
 export COOLFLUID_TOP_DIR="${TOP_DIR}/COOLFluiD_Genius_Mine/"
@@ -43,12 +43,12 @@ if [ "$1" == "DEBUG_CUDA" ] ; then
 # with debugging
 export BUILD_MODE=geniuscuda
 export CONF_FILE="COOLFluid_Genius_debug.conf"
-module load PETSc/3.15.1-foss-2021a
+module load PETSc/3.20.3-foss-2023a
 elif [ "$1" == "OPTIM_CUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=geniuscudafast
 export CONF_FILE="COOLFluid_Genius_optim.conf"
-module load PETSc/3.15.1-foss-2021a
+module load PETSc/3.20.3-foss-2023a
 elif [ "$1" == "DEBUG_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=optim
@@ -56,14 +56,14 @@ export BUILD_MODE=optim
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
 # only COCONUT
 #export CONF_FILE="COCONUT_Genius_nocuda.conf"
-module load PETSc/3.15.1-foss-2021a
+module load PETSc/3.20.3-foss-2023a
 elif [ "$1" == "OPTIM_NOCUDA" ] ; then
 # w/o debugging (production mode)
 export BUILD_MODE=release
 export CONF_FILE="COOLFluid_Genius_nocuda.conf"
 # only COCONUT
 #export CONF_FILE="COCONUT_Genius_nocuda.conf"
-module load PETSc/3.15.1-foss-2021a
+module load PETSc/3.20.3-foss-2023a
 fi
 
 export COOLFLUID_BASEBUILD_DIR="${COOLFLUID_TOP_DIR}/OPENMPI"

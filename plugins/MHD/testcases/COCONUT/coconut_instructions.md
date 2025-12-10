@@ -9,17 +9,7 @@ https://github.com/andrealani/COOLFluiD/wiki/HOWTO-install-on-Genius-(for-KU-Leu
 2. After step 4 (before starting the installation process) change the modules to the latest ones
 - Genius
 
-Replace the existing modules with these ones:
-```
-module load CMake/3.26.3-GCCcore-12.3.0
-module load Boost/1.82.0-GCC-12.3.0
-module load ParMETIS/4.0.3-gompi-2023a
-module load PETSc/3.20.3-foss-2023a
-```
-Do not forget to change the PETSc also in each if statement after indicating CONF_FILE. The old PETSc module has to be replaced with
-```
-module load PETSc/3.20.3-foss-2023a
-```
+Nothing to do here. 
 
 - Hortense
 
