@@ -75,11 +75,17 @@ protected:
   /// vector storing the left and right states of a face
   std::vector<Framework::State*> _statesLR;
 
+  /// coefficient for extra diffusion
+  CFreal _kappaLax_E;
+
   /// use alpha coefficient
   bool _useAlpha;
 
   /// Add extra diffusion to HLL solver
   bool _addLax;
+
+  /// 2D require to modify definition of plasma beta for extra diffusion
+  bool _2Dornot;
   
 }; // end of class HLLDecEFlux
 

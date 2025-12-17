@@ -37,6 +37,8 @@ void Venktn2D::defineConfigOptions(Config::OptionList& options)
     ("length","Characteristic solution length in the smooth flow region.");
   options.addConfigOption< bool >
     ("isMFMHD","Fix for smooth flow region.");
+  options.addConfigOption< vector<CFuint> >
+	  ("2DNoLimiterID", "Used to cancel limiter.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -62,6 +64,9 @@ Venktn2D::Venktn2D(const std::string& name) :
 
   _isMFMHD = false;
   setParameter("isMFMHD",&_isMFMHD);
+
+  _2DNoLimiterID = vector<CFuint>();
+  setParameter("2DNoLimiterID", &_2DNoLimiterID);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -245,6 +250,13 @@ void Venktn2D::limit(const vector<vector<Node*> >& coord,
       CFout << "wrong limiterValue = " << limiterValue[iVar] << "\n";
     }
   }
+  //>> Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
+  if (_2DNoLimiterID.size() > 0){
+	  for (CFuint iVar = 0; iVar < _2DNoLimiterID.size(); ++iVar){
+		  limiterValue[_2DNoLimiterID[iVar]] = 1.0;
+	  }
+  }
+  //<< Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
 }
 
 //////////////////////////////////////////////////////////////////////////////

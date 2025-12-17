@@ -31,6 +31,8 @@ void HLLDecEFlux::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("UseAlpha", "Use diffusion reduction coefficient");
   options.addConfigOption< bool >("AddLax", "Add extra diffusion term to HLL solver");
+  options.addConfigOption< CFreal >("Extra_kappaLax_E", "Amount of extra diffusion term added to HLL solver in Energy component");
+  options.addConfigOption< bool >("2Dornot", "2D require to modify definition of plasma beta for extra diffusion");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -50,6 +52,10 @@ HLLDecEFlux::HLLDecEFlux(const std::string& name) :
   setParameter("UseAlpha", &_useAlpha); 
   _addLax = false;
   setParameter("AddLax", &_addLax);
+  _kappaLax_E = 0.125;
+  setParameter("Extra_kappaLax_E", &_kappaLax_E);
+  _2Dornot = false;
+  setParameter("2Dornot", &_2Dornot);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -167,7 +173,18 @@ void HLLDecEFlux::compute(RealVector& result)
 	  CFreal Q_BetafactorL = std::tanh(fac / plasmaBetaL / 100.0);
 	  CFreal Q_BetafactorR = std::tanh(fac / plasmaBetaR / 100.0);
 	  CFreal Q_Betafactor = max(Q_BetafactorL, Q_BetafactorR);
-	  result[7] -= 0.125*Q_Betafactor*max(amax, std::abs(amin)) * (rightState[7] - leftState[7]);
+	  //>> Added BY Hp on 2025.10.14--------------
+	  if (_2Dornot){
+		  plasmaBetaL = p_tempL / max(Bsq2L / 2.0, 1.e-16);
+		  plasmaBetaR = p_tempR / max(Bsq2R / 2.0, 1.e-16);
+		  fac = 1.0;
+		  Q_BetafactorL = std::tanh(fac / plasmaBetaL / 100.0);
+		  Q_BetafactorR = std::tanh(fac / plasmaBetaR / 100.0);
+		  Q_Betafactor = max(Q_BetafactorL, Q_BetafactorR);
+		  Q_Betafactor = 1.0;
+	  }
+	  //<< ---------------------------------------
+	  result[7] -= _kappaLax_E*Q_Betafactor*max(amax, std::abs(amin)) * (rightState[7] - leftState[7]);
   }
   //<< mark 2025.08 by HP
   

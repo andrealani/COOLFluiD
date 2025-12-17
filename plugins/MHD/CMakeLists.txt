@@ -12,6 +12,8 @@ MHD2DConsToPrim.cxx
 MHD2DConsToPrim.hh
 MHD2DConsToPrimInRef.cxx
 MHD2DConsToPrimInRef.hh
+MHD2DConsToPrimEInRef.cxx
+MHD2DConsToPrimEInRef.hh
 MHD2DLinearCons.cxx
 MHD2DLinearCons.hh
 MHD2DLinearPrim.cxx
@@ -26,6 +28,8 @@ MHD2DProjectionCons.cxx
 MHD2DProjectionCons.hh
 MHD2DProjectionConsToPrim.cxx
 MHD2DProjectionConsToPrim.hh
+MHD2DProjectionConsToPrimE.cxx
+MHD2DProjectionConsToPrimE.hh
 MHD2DProjectionConsToPrimInRef.cxx
 MHD2DProjectionConsToPrimInRef.hh
 MHD2DProjectionLinearCons.cxx
@@ -34,8 +38,12 @@ MHD2DProjectionLinearPrim.cxx
 MHD2DProjectionLinearPrim.hh
 MHD2DProjectionPrim.cxx
 MHD2DProjectionPrim.hh
+MHD2DProjectionPrimE.cxx
+MHD2DProjectionPrimE.hh
 MHD2DProjectionPrimToCons.cxx
 MHD2DProjectionPrimToCons.hh
+MHD2DProjectionPrimEToCons.cxx
+MHD2DProjectionPrimEToCons.hh
 MHD2DProjectionPrimToConsInRef.cxx
 MHD2DProjectionPrimToConsInRef.hh
 MHD2DProjectionVarSet.cxx
@@ -48,6 +56,8 @@ MHD3DConsToPrim.cxx
 MHD3DConsToPrim.hh
 MHD3DConsToPrimInRef.cxx
 MHD3DConsToPrimInRef.hh
+MHD3DConsToPrimEInRef.cxx
+MHD3DConsToPrimEInRef.hh
 MHD3DLinearCons.cxx
 MHD3DLinearCons.hh
 MHD3DLinearPrim.cxx

@@ -215,6 +215,9 @@ protected:
   /// user defined coefficient for the epsilon
   CFreal _coeffEps;
 
+  /// corresponding to variables which don't implement limiter
+  std::vector<CFuint> _2DNoLimiterID;
+
   /// user defined characteristic solution length in the smooth flow region
   CFreal _length;
  

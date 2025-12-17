@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "MHD2DProjectionVarSet.hh"
+#include "MHD/MHD2DProjectionVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -35,7 +35,7 @@ public: //function
   /**
    * Default constructor
    */
-  ~MHD2DProjectionPrim();
+  virtual ~MHD2DProjectionPrim();
 
   /**
    * Set up the private data and give the maximum size of states physical
@@ -46,7 +46,7 @@ public: //function
   /**
    * Get extra variable names
    */
-  std::vector<std::string> getExtraVarNames() const;
+  virtual std::vector<std::string> getExtraVarNames() const;
 
   /**
    * Gets the block separator for this variable set
@@ -61,7 +61,7 @@ public: //function
   /**
    * Split the jacobian
    */
-  void splitJacobian(RealMatrix& jacobPlus,
+  virtual void splitJacobian(RealMatrix& jacobPlus,
 		  RealMatrix& jacobMin,
 		  RealVector& eValues,
 		  const RealVector& normal);
@@ -70,7 +70,7 @@ public: //function
    * Set the matrix of the right and eigenvectors
    * and the matrix of the eigenvalues
    */
-  void computeEigenValuesVectors(RealMatrix& rightEv,
+  virtual void computeEigenValuesVectors(RealMatrix& rightEv,
 			    RealMatrix& leftEv,
 			    RealVector& eValues,
 			    const RealVector& normal);
@@ -79,13 +79,13 @@ public: //function
    * Set the PhysicalData corresponding to the given State
    * @see EulerPhysicalModel
    */
-  void computePhysicalData(const Framework::State& state,
+  virtual void computePhysicalData(const Framework::State& state,
 			   RealVector& data);
 
   /**
    * Set the total magnetic field and energy values
    */
-  void setDimensionalValuesPlusExtraValues(const Framework::State& state,
+  virtual void setDimensionalValuesPlusExtraValues(const Framework::State& state,
                                            RealVector& result,
                                            RealVector& extra);
   
@@ -93,7 +93,7 @@ public: //function
    * Set a State starting from the given PhysicalData
    * @see EulerPhysicalModel
    */
-  void computeStateFromPhysicalData(const RealVector& data,
+  virtual void computeStateFromPhysicalData(const RealVector& data,
 			       Framework::State& state);
   
 private: // helper function
