@@ -82,6 +82,8 @@ MHDConsACASourceTerm::MHDConsACASourceTerm(const std::string& name) :
   setParameter("wavepressure", &_wave_pressure);  
   _RadiativeLossTerm = 0;
   setParameter("RadiativeLossTerm",&_RadiativeLossTerm);
+  _rotation = 0;
+  setParameter("Rotation",&_rotation);
 //  setParameter("zplus",&_zplus);
 //  setParameter("zminus",&_zminus); 
   //_projectionIDs = vector<CFuint>();
@@ -119,6 +121,7 @@ void MHDConsACASourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("Resistivity","eta value.");
   options.addConfigOption< CFint >("RadiativeLossTerm","Switch on optically thin approximation for radiation losses.");
   options.addConfigOption< CFint >("wavepressure", "save approximated wavepressure term.");
+  options.addConfigOption< CFint >("Rotation","Switch on rotation (Coriolis and centrifugal forces).");
 //  options.addConfigOption< CFint >("zplus", "z plus term from WKB");
 //  options.addConfigOption< CFint >("zminus", "z minus term from WKB");
   
@@ -604,6 +607,30 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       source[3] -= dP_dz*volumes[elementID]; 
       socket_wavepressure.getDataHandle()[elementID] = wave_pressure_approx;
     }
+
+    // Rotation source terms (Coriolis and centrifugal forces)
+    if (_rotation == 1) {
+      // Sidereal rotation rate [rad/s]
+      const CFreal Omega_phys = 2.97e-6;
+      // Non-dimensional rotation rate
+      const CFreal Omega_nd = Omega_phys * RSun / vRef;
+      
+      // Coriolis acceleration: a_cor = -2 * Omega x v
+      // With Omega along z-axis: Omega x v = (Omega_z * Vy, -Omega_z * Vx, 0)
+      const CFreal cor_x = -2.0 * Omega_nd * Vy;
+      const CFreal cor_y =  2.0 * Omega_nd * Vx;
+      const CFreal cor_z =  0.0;
+      
+      // Centrifugal acceleration: a_cent = -Omega^2 * (x, y, 0)
+      const CFreal cent_x = -Omega_nd * Omega_nd * x_dimless;
+      const CFreal cent_y = -Omega_nd * Omega_nd * y_dimless;
+      const CFreal cent_z =  0.0;
+      
+      // Add to momentum equations (note: source = rho * a for conservative form)
+      source[1] -= (*currState)[0] * (cor_x + cent_x) * volumes[elementID];
+      source[2] -= (*currState)[0] * (cor_y + cent_y) * volumes[elementID];
+      source[3] -= (*currState)[0] * (cor_z + cent_z) * volumes[elementID];
+    }
       
     source[4] = 0.0;
     source[5] = 0.0;
@@ -616,6 +643,21 @@ void MHDConsACASourceTerm::computeSource(Framework::GeometricEntity *const eleme
       CFreal Vdotg = Vx*gx + Vy*gy + Vz*gz; // dimensionless
         source[7] += (*currState)[0]*Vdotg*volumes[elementID];
 	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg; //*volumes[elementID];
+    }
+
+    // Rotation contribution to energy equation
+    if (_rotation == 1) {
+      const CFreal Omega_phys = 2.97e-6;
+      const CFreal Omega_nd = Omega_phys * RSun / vRef;
+      
+      // Centrifugal acceleration
+      const CFreal cent_x = -Omega_nd * Omega_nd * x_dimless;
+      const CFreal cent_y = -Omega_nd * Omega_nd * y_dimless;
+      const CFreal cent_z =  0.0;
+      
+      // Energy source: v dot a_cent (centrifugal work)
+      const CFreal Vdotrot = Vx * cent_x + Vy * cent_y + Vz * cent_z;
+      source[7] -= (*currState)[0] * Vdotrot * volumes[elementID];
     }
     
     if (_Manchester == 1) {

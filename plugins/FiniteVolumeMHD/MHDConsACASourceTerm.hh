@@ -114,6 +114,7 @@ private:
   CFreal _Resistivity;
   CFint _RadiativeLossTerm;
   CFint _wave_pressure;
+  CFint _rotation;
 //  CFint _zplus;
 //  CFint _zminus;
 }; // end of class MHDConsACASourceTerm
