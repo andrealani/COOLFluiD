@@ -1,0 +1,203 @@
+# COOLFluiD Startfile
+
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -2.16307
+
+###############################################################################
+# User defined parameters
+###############################################################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/MHDRotor/
+Simulator.Paths.ResultsDir = ./results-map-res-MHDRotor_FullE 
+#Time-dependent
+#Simulator.SubSystem.InteractiveParamReader.FileName = ./map.inter
+#Simulator.SubSystem.InteractiveParamReader.readRate = 10
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = PeriodicY PeriodicX 
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+#Simulator.SubSystem.CFmeshFileReader.convertFrom = Gmsh2CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./Mesh_2x2_200x200_unstr.CFmesh 
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 2.
+
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.Discontinuous = true
+Simulator.SubSystem.CFmeshFileReader.Gambit2CFmesh.SolutionOrder = P0
+Simulator.SubSystem.CFmeshFileReader.convertFrom = Gambit2CFmesh
+
+#Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+###############################################################################
+# Physical Model
+
+Simulator.SubSystem.Default.PhysicalModelType = MHD2DProjection
+Simulator.SubSystem.MHD2DProjection.ConvTerm.gamma = 1.666666667
+
+Simulator.SubSystem.MHD2DProjection.ConvTerm.refSpeed = 1.5
+#Simulator.SubSystem.MHD2DProjection.ConvTerm.dissipCoeff = 1.5
+#Simulator.SubSystem.MHD2DProjection.ConvTerm.correctionType = Mixed
+
+
+###############################################################################
+# Time Marching
+Simulator.SubSystem.SubSystemStatus.TimeStep = 0.005 # 0.000025 (original Dt from HW) 
+
+# Stop Condition
+#Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
+#Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 200
+#Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -4
+
+Simulator.SubSystem.StopCondition   = MaxTime
+Simulator.SubSystem.MaxTime.maxTime = 0.295
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = NumJacob
+#Simulator.SubSystem.CellCenterFVM.NumJacob.FreezeDiffCoeff = true
+
+# second order Time stepping
+#Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhs
+Simulator.SubSystem.CellCenterFVM.ComputeTimeRHS = BDF2TimeRhsLimited
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.TimeLimiter = MinMod
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+Simulator.SubSystem.CellCenterFVM.BDF2TimeRhsLimited.zeroDiagValue = 0 0 0 0 0 0 0 0 1
+
+### second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystem.CellCenterFVM.SetupNames = Setup1
+Simulator.SubSystem.CellCenterFVM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystem.CellCenterFVM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystem.CellCenterFVM.UnSetupNames = UnSetup1
+
+#Simulator.SubSystem.CellCenterFVM.Data.PolyRec = Constant
+
+## second order: uncomment this
+Simulator.SubSystem.CellCenterFVM.Data.PolyRec = LinearLS2D
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.limitRes = -4.0
+#Simulator.SubSystem.CellCenterFVM.Data.LinearLS2D.gradientFactor = 1.
+Simulator.SubSystem.CellCenterFVM.Data.Limiter = Venktn2D
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.coeffEps = 1
+#corresponding to variables which don't implement limiter
+Simulator.SubSystem.CellCenterFVM.Data.Venktn2D.2DNoLimiterID = 1 2 3 4 5 6
+
+Simulator.SubSystem.CellCenterFVM.Data.HLLDecE.UseAlpha = true # false #
+# Decomposed energy equation require "HLLDecE.AddLax=true"
+Simulator.SubSystem.CellCenterFVM.Data.HLLDecE.AddLax = true # false #
+# Amount of extra diffusion term added to HLL solver in Energy component
+Simulator.SubSystem.CellCenterFVM.Data.HLLDecE.Extra_kappaLax_E = 0.0 # 0.125 # 0.25 #
+Simulator.SubSystem.CellCenterFVM.Data.HLLDecE.2Dornot =  true
+Simulator.SubSystem.CellCenterFVM.Data.FluxSplitter = HLLDecE
+
+Simulator.SubSystem.CellCenterFVM.Data.UpdateVar = Prim
+Simulator.SubSystem.CellCenterFVM.Data.SolutionVar = Cons
+Simulator.SubSystem.CellCenterFVM.Data.DiffusiveVar = Roe
+
+#Simulator.SubSystem.CellCenterFVM.Data.DiffusiveFlux = NavierStokesMHD
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libCFmeshFileReader libCFmeshFileWriter libTecplotWriter libMHD libFiniteVolume libNewtonMethod libNewtonMethodMHD libFiniteVolumeMHD libGmsh2CFmesh libGambit2CFmesh libForwardEuler libPetscI 
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh 
+
+Simulator.SubSystem.CFmesh.FileName     = Rotor-sol_FullE_Lax0d0.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 1000 
+Simulator.SubSystem.CFmesh.AppendTime   = false 
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName    = Rotor-MHD_FullE_Lax0d0.plt
+Simulator.SubSystem.Tecplot.Data.outputVar = Prim
+Simulator.SubSystem.Tecplot.SaveRate    = 500 
+Simulator.SubSystem.Tecplot.AppendTime = false
+Simulator.SubSystem.Tecplot.AppendIter = true
+
+# Extra Values from Data Processing
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = divB Current   
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = divB Current  
+#Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1  
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+
+###############################################################################
+
+###############################################################################
+# Linear System
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 100 #1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 20 #150
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+
+###############################################################################
+
+# Explicit
+#Simulator.SubSystem.ConvergenceMethod = FwdEuler
+# CFL definition
+#Simulator.SubSystem.FwdEuler.Data.CFL.Value = 0.1
+#Simulator.SubSystem.FwddEuler.Data.CFL.ComputeCFL =  Interactive
+#Simulator.SubSystem.FwdEuler.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FwdEuler.Data.CFL.Function.Def = \
+#100.0
+
+
+# Implicit Second Order
+Simulator.SubSystem.ConvergenceMethod = BDF2
+Simulator.SubSystem.BDF2.ShowRate = 1
+
+Simulator.SubSystem.BDF2.Data.MaxSteps = 100 
+Simulator.SubSystem.BDF2.Data.L2.MonitoredVarID = 7
+Simulator.SubSystem.BDF2.Data.Norm = -2. #-4
+
+#Simulator.SubSystem.BDF2.Data.PrintHistory = true
+###############################################################################
+
+###############################################################################
+
+
+# Boundary Conditions
+# Boundary Conditions
+Simulator.SubSystem.CellCenterFVM.BcComds = PeriodicX2DMPIFVMCC PeriodicY2DMPIFVMCC
+Simulator.SubSystem.CellCenterFVM.BcNames = Jet1 Jet2   
+
+# PeriodicY 
+Simulator.SubSystem.CellCenterFVM.Jet1.applyTRS = PeriodicY
+#Simulator.SubSystem.CellCenterFVM.Jet1.TranslationVector = 0. 1.
+Simulator.SubSystem.CellCenterFVM.Jet1.Threshold = 1e-4
+Simulator.SubSystem.CellCenterFVM.Jet1.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 
+
+# PeriodicX 
+Simulator.SubSystem.CellCenterFVM.Jet2.applyTRS = PeriodicX
+#Simulator.SubSystem.CellCenterFVM.Jet2.TranslationVector = 1. 0.
+Simulator.SubSystem.CellCenterFVM.Jet2.Threshold = 1e-4
+Simulator.SubSystem.CellCenterFVM.Jet2.ZeroGradientFlags = 0 0 0 0 0 0 0 0 0 
+
+
+###############################################################################
+# Initial Conditions
+
+Simulator.SubSystem.CellCenterFVM.InitComds = InitStateAddVar  
+Simulator.SubSystem.CellCenterFVM.InitNames = InField 
+Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+Simulator.SubSystem.CellCenterFVM.InField.InitVars = x y
+Simulator.SubSystem.CellCenterFVM.InField.Vars = x y r  
+Simulator.SubSystem.CellCenterFVM.InField.InitDef = sqrt((x-0.5)^2+(y-0.5)^2)
+Simulator.SubSystem.CellCenterFVM.InField.Def = if(r<0.1,10.0,if(r>0.115,1.0,1.0+9.0*((0.115-r)/(0.015)))) \
+                if(r<0.1,-(y-0.5)/0.1,if(r>0.115,0.,(-(y-0.5)/r)*((0.115-r)/(0.015)))) \
+                if(r<0.1,(x-0.5)/0.1,if(r>0.115,0.,((x-0.5)/r)*((0.115-r)/(0.015)))) \
+                0.0 \
+                0.705237 \
+                0.0 \
+                0.0 \
+                0.5 \
+                0.0
+# rho u v w Bx By Bz p phi
+
+###############################################################################
+

@@ -45,6 +45,7 @@ MirrorMHD3DProjection.hh
 MirrorMHD3D.hh
 MirrorMHD3DTanaka.hh
 MirrorMHD3DTanakaPFix.hh
+MHD2DConsACAHWSourceTerm.hh
 MHDConsACAHWSourceTerm.hh
 MHDConsACASourceTerm.hh
 MHD2DPowellSourceTerm.hh
@@ -87,6 +88,7 @@ MirrorMHD3DProjection.cxx
 MirrorMHD3D.cxx
 MirrorMHD3DTanaka.cxx
 MirrorMHD3DTanakaPFix.cxx
+MHD2DConsACAHWSourceTerm.cxx
 MHDConsACAHWSourceTerm.cxx
 MHDConsACASourceTerm.cxx
 MHDRoeFlux.cxx
