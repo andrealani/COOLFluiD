@@ -8,6 +8,8 @@
 #cf_add_case( MPI 8 CASEDIR COCONUT/Map PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT/MHDRotor PCASE MHDRotor_DecE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/MHDRotor PCASE MHDRotor_FullE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
+#cf_add_case( MPI 8 CASEDIR COCONUT/OrszagTang PCASE OZ_DecE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
+#cf_add_case( MPI 8 CASEDIR COCONUT/OrszagTang PCASE OZ_FullE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/Quadrupole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh quadrupole_axisym.dat map.inter )
 #cf_add_case( MPI default PCASE CoronalExpansion/coronalExpansionFVMMHDProjImpl.CFcase )
 #cf_add_case( MPI default PCASE CoronalExpansion/coronalExpansionFVMMHDProjImplPRIM.CFcase )
