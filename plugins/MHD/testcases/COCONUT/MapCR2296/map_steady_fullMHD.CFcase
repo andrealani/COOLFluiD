@@ -450,7 +450,7 @@ Simulator.SubSystem.Flow.Jet1.Def = \
         3*y*z \
         2*z^2-(x^2+y^2) \
         (2.0*1.67e-13*kB*1.5e6/(1.27*1.67e-27))/(2.2e-4^2./mu0) \
-        0.	
+        0.
 
 Simulator.SubSystem.Flow.Jet1.InitialSolutionIDs = 4 5 6
 Simulator.SubSystem.Flow.Jet1.inletCoronalBC = 1

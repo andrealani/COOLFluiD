@@ -8,6 +8,7 @@
 #cf_add_case( MPI 8 CASEDIR COCONUT/Map PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
 #cf_add_case( MPI 8 CASEDIR COCONUT/MapCR2296 PCASE map_steady.CFcase CASEFILES BCindependent5.CFmesh MapData ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/MapCR2296 PCASE map_steady_fullMHD.CFcase CASEFILES MapData ) 
+#cf_add_case( MPI 8 CASEDIR COCONUT/MapCR2296 PCASE map_unsteadyeclipse_fullMHD.CFcase CASEFILES MapData ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/MHDRotor PCASE MHDRotor_DecE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/MHDRotor PCASE MHDRotor_FullE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 #cf_add_case( MPI 8 CASEDIR COCONUT/OrszagTang PCASE OZ_DecE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
