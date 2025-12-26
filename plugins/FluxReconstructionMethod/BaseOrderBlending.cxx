@@ -1,3 +1,9 @@
+// Copyright (C) 2016 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 
@@ -53,53 +59,95 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
 {
   addConfigOptionsTo(this);
   
-  m_showrate = 1;
-  setParameter( "ShowRate", &m_showrate );
-
-  m_freezeFilterIter = 1000000;
-  setParameter( "freezeFilterIter", &m_freezeFilterIter );
-
-  m_kappa = 1.0;
-  setParameter( "Kappa", &m_kappa);
-
-  m_s0 = 0.0;
+  //==========================================================================
+  // MAIN PARAMETERS (Log-Scale Method - RECOMMENDED)
+  //==========================================================================
+  
+  // Use log-scale method (recommended) or legacy sigmoid
+  m_useLogScale = true;
+  setParameter( "UseLogScale", &m_useLogScale );
+  
+  // Reference smoothness: s0 = -S0 * log10(N+1)
+  // Higher S0 = more dissipation. Typical values: 3.0 - 5.0
+  m_s0 = 4.0;
   setParameter( "S0", &m_s0);
-
-  m_monitoredVar = 0;
-  setParameter( "MonitoredVar", &m_monitoredVar);
-
-  m_nbSweeps = 1;
-  setParameter( "NbSweeps", &m_nbSweeps );
-
-  m_thresholdA = 0.5;
-  setParameter( "ThresholdA", &m_thresholdA );
-
-  m_thresholdC = 1.8;
-  setParameter( "ThresholdC", &m_thresholdC );
-
-  m_sigmoidS = 9.21024;
-  setParameter( "SigmoidS", &m_sigmoidS );
-
-  m_alphaMin = 0.01;
-  setParameter( "AlphaMin", &m_alphaMin );
-
-  m_alphaMax = 1.0;
-  setParameter( "AlphaMax", &m_alphaMax );
-
-  m_neighborWeight = 0.7;
-  setParameter( "NeighborWeight", &m_neighborWeight );
-
-  m_sweepWeight = 0.5;
-  setParameter( "SweepWeight", &m_sweepWeight );
-
-  m_sweepDamping = 0.7;
-  setParameter( "SweepDamping", &m_sweepDamping );
-
-  m_smoothnessMethod = "Modal";
-  setParameter( "SmoothnessMethod", &m_smoothnessMethod );
-
+  
+  // Transition half-width in log-space
+  // Blending ramps over [s0 - Kappa, s0 + Kappa]
+  // Typical values: 1.0 - 2.0
+  m_kappa = 1.5;
+  setParameter( "Kappa", &m_kappa);
+  
+  // Monitored expression for smoothness detection
+  // Options: 'rho', 'p', 'rho*p', 'p/rho', 'rho/p', 'velocity_magnitude'
   m_modalMonitoredExpression = "rho*p";
   setParameter( "ModalMonitoredExpression", &m_modalMonitoredExpression );
+  
+  //==========================================================================
+  // BLENDING LIMITS
+  //==========================================================================
+  
+  // Minimum alpha (below this, alpha = 0)
+  m_alphaMin = 0.01;
+  setParameter( "AlphaMin", &m_alphaMin );
+  
+  // Maximum alpha cap
+  m_alphaMax = 1.0;
+  setParameter( "AlphaMax", &m_alphaMax );
+  
+  //==========================================================================
+  // NEIGHBOR AVERAGING & SWEEPS
+  //==========================================================================
+  
+  // Weight for neighbor influence (0 = disabled)
+  m_neighborWeight = 0.5;
+  setParameter( "NeighborWeight", &m_neighborWeight );
+  
+  // Number of smoothing sweeps (0 = disabled)
+  m_nbSweeps = 0;
+  setParameter( "NbSweeps", &m_nbSweeps );
+  
+  // Sweep parameters
+  m_sweepWeight = 0.5;
+  setParameter( "SweepWeight", &m_sweepWeight );
+  
+  m_sweepDamping = 0.7;
+  setParameter( "SweepDamping", &m_sweepDamping );
+  
+  //==========================================================================
+  // GENERAL SETTINGS
+  //==========================================================================
+  
+  // Iteration to freeze blending coefficient (very large = never freeze)
+  m_freezeFilterIter = 1000000;
+  setParameter( "freezeFilterIter", &m_freezeFilterIter );
+  
+  // Show rate for console output
+  m_showrate = 1;
+  setParameter( "ShowRate", &m_showrate );
+  
+  // Smoothness computation method (Modal recommended)
+  m_smoothnessMethod = "Modal";
+  setParameter( "SmoothnessMethod", &m_smoothnessMethod );
+  
+  // Monitored variable index (unused when ModalMonitoredExpression is set)
+  m_monitoredVar = 0;
+  setParameter( "MonitoredVar", &m_monitoredVar);
+  
+  //==========================================================================
+  // DEPRECATED PARAMETERS (Legacy Sigmoid - UseLogScale = false)
+  //==========================================================================
+  
+  // Threshold: T = a * 10^(-c * (N+1)^0.25)
+  m_thresholdA = 0.5;
+  setParameter( "ThresholdA", &m_thresholdA );
+  
+  m_thresholdC = 1.8;
+  setParameter( "ThresholdC", &m_thresholdC );
+  
+  // Sigmoid steepness: alpha = 1/(1 + exp(-s/T * (S - T)))
+  m_sigmoidS = 9.21024;
+  setParameter( "SigmoidS", &m_sigmoidS );
 
 }
 
@@ -132,24 +180,59 @@ BaseOrderBlending::providesSockets()
 
 void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFuint >("ShowRate","Show rate of the filtering information.");
-  options.addConfigOption< CFuint,Config::DynamicOption<> >("freezeFilterIter","Iteration at which the filter strength will be frozen.");
-  options.addConfigOption< CFreal,Config::DynamicOption<> >("Kappa","Kappa factor of artificial viscosity.");
-  options.addConfigOption< CFreal,Config::DynamicOption<> >("S0","Reference smoothness factor, will be multiplied by -log(P).");
-  options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredVar","Index of the monitored var for positivity preservation.");
+  //==========================================================================
+  // MAIN PARAMETERS (Log-Scale Method - RECOMMENDED)
+  //==========================================================================
+  options.addConfigOption< bool >("UseLogScale",
+    "Use log-scale smoothness indicator (true, RECOMMENDED) or legacy sigmoid (false). Default: true.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("S0",
+    "Reference smoothness: s0 = -S0 * log10(N+1). Higher = more dissipation. Typical: 3.0-5.0. Default: 4.0.");
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("Kappa",
+    "Transition half-width in log-space. Blending ramps over [s0-Kappa, s0+Kappa]. Typical: 1.0-2.0. Default: 1.5.");
+  options.addConfigOption< std::string >("ModalMonitoredExpression",
+    "Expression for smoothness detection: 'rho', 'p', 'rho*p' (default), 'p/rho', 'rho/p', 'velocity_magnitude'.");
   
-  // Order blending specific parameters
-  options.addConfigOption< CFuint >("NbSweeps","Number of smoothing sweeps for blending coefficients.");
-  options.addConfigOption< CFreal >("ThresholdA","Parameter 'a' in threshold function T = a * 10^(-c * (N+1)^0.25).");
-  options.addConfigOption< CFreal >("ThresholdC","Parameter 'c' in threshold function T = a * 10^(-c * (N+1)^0.25).");
-  options.addConfigOption< CFreal >("SigmoidS","Parameter 's' in sigmoid function alpha = 1/(1 + exp(-s/T * (S - T))).");
-  options.addConfigOption< CFreal >("AlphaMin","Minimum blending coefficient (below this value, alpha = 0).");
-  options.addConfigOption< CFreal >("AlphaMax","Maximum blending coefficient (above 1-AlphaMin, alpha = 1).");
-  options.addConfigOption< CFreal >("NeighborWeight","Weight factor for neighbor influence in blending computation.");
-  options.addConfigOption< CFreal >("SweepWeight","Weight factor for neighbor influence during sweeps.");
-  options.addConfigOption< CFreal >("SweepDamping","Damping factor applied after each sweep iteration.");
-  options.addConfigOption< std::string >("SmoothnessMethod","Method for computing smoothness: 'Modal' or 'Projection'.");
-  options.addConfigOption< std::string >("ModalMonitoredExpression","Expression for monitored variable in modal method: 'rho', 'p', 'rho*p', 'p/rho', 'rho/p', or 'velocity_magnitude'.");
+  //==========================================================================
+  // BLENDING LIMITS
+  //==========================================================================
+  options.addConfigOption< CFreal >("AlphaMin",
+    "Minimum blending coefficient. Below this, alpha = 0. Default: 0.01.");
+  options.addConfigOption< CFreal >("AlphaMax",
+    "Maximum blending coefficient cap. Default: 1.0.");
+  
+  //==========================================================================
+  // NEIGHBOR AVERAGING & SWEEPS
+  //==========================================================================
+  options.addConfigOption< CFreal >("NeighborWeight",
+    "Weight for neighbor influence (0 = disabled). Default: 0.5.");
+  options.addConfigOption< CFuint >("NbSweeps",
+    "Number of smoothing sweeps (0 = disabled). Default: 0.");
+  options.addConfigOption< CFreal >("SweepWeight",
+    "Weight factor for neighbor influence during sweeps. Default: 0.5.");
+  options.addConfigOption< CFreal >("SweepDamping",
+    "Damping factor applied after each sweep. Default: 0.7.");
+  
+  //==========================================================================
+  // GENERAL SETTINGS
+  //==========================================================================
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("freezeFilterIter",
+    "Iteration to freeze blending coefficient. Very large = never. Default: 1000000.");
+  options.addConfigOption< CFuint >("ShowRate",
+    "Show rate for console output. Default: 1.");
+  options.addConfigOption< std::string >("SmoothnessMethod",
+    "Method for smoothness: 'Modal' (recommended) or 'Projection'. Default: Modal.");
+  options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredVar",
+    "Index of monitored variable (unused when ModalMonitoredExpression is set). Default: 0.");
+  
+  //==========================================================================
+  // DEPRECATED PARAMETERS (Legacy Sigmoid - only used if UseLogScale = false)
+  //==========================================================================
+  options.addConfigOption< CFreal >("ThresholdA",
+    "[DEPRECATED] Parameter 'a' in threshold T = a * 10^(-c * (N+1)^0.25). Default: 0.5.");
+  options.addConfigOption< CFreal >("ThresholdC",
+    "[DEPRECATED] Parameter 'c' in threshold T = a * 10^(-c * (N+1)^0.25). Default: 1.8.");
+  options.addConfigOption< CFreal >("SigmoidS",
+    "[DEPRECATED] Sigmoid steepness in alpha = 1/(1 + exp(-s/T * (S - T))). Default: 9.21024.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -180,8 +263,8 @@ void BaseOrderBlending::execute()
   m_nbLimits = 0;
   m_totalNbLimits = 0;
   
-  // Compute threshold using configurable parameters
-  CFreal T = computeThreshold(m_order, m_thresholdA, m_thresholdC);
+  // [NOTE] Threshold is now computed inside computeBlendingCoefficient() 
+  // based on m_useLogScale flag
 
   // loop over element types, for the moment there should only be one
   if (iter<m_freezeFilterIter)
@@ -215,7 +298,7 @@ void BaseOrderBlending::execute()
         {
           computeSmoothness();
 
-          alpha_neighbor_i = computeBlendingCoefficient(m_s, T);
+          alpha_neighbor_i = computeBlendingCoefficient(m_s);
           alpha_neighbor_i = applyAlphaLimits(alpha_neighbor_i);
           alpha_neighbor = std::max(alpha_neighbor, alpha_neighbor_i);
         }
@@ -239,7 +322,7 @@ void BaseOrderBlending::execute()
         computeSmoothness();
 
         // Compute Filter Strength
-        CFreal alpha = computeBlendingCoefficient(m_s, T);
+        CFreal alpha = computeBlendingCoefficient(m_s);
         alpha = applyAlphaLimits(alpha);
 
         m_filterStrength = std::max(alpha, m_neighborWeight * alpha_neighbor);
@@ -250,7 +333,6 @@ void BaseOrderBlending::execute()
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
         {
           output[((*m_cellStates)[iSolPnt])->getLocalID()] = m_filterStrength;
-          prevf[((*m_cellStates)[iSolPnt])->getLocalID()] = m_filterStrength;
         }
       }
 
@@ -284,8 +366,12 @@ void BaseOrderBlending::execute()
           // Get the states in this neighbor cell
           m_cellStates = m_cell->getStates();
 
-          alpha_neighbor_i = output[((*m_cellStates)[0])->getLocalID()];
-          alpha_neighbor = std::max(alpha_neighbor, alpha_neighbor_i);
+          // Only read alpha from updatable neighbors (avoid ghost cells in parallel)
+          if ((*m_cellStates)[0]->isParUpdatable())
+          {
+            alpha_neighbor_i = output[((*m_cellStates)[0])->getLocalID()];
+            alpha_neighbor = std::max(alpha_neighbor, alpha_neighbor_i);
+          }
 
           // Release the GeometricEntity of the neighbor
           m_cellBuilder->releaseGE();
@@ -319,6 +405,28 @@ void BaseOrderBlending::execute()
         //release the GeometricEntity
         m_cellBuilder->releaseGE();
       }
+    }
+  }
+
+  // After sweeps complete, store final alpha values to prevf for proper freezing
+  for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+  {
+    const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+    const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
+    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+    {
+      geoData.idx = elemIdx;
+      m_cell = m_cellBuilder->buildGE();
+      m_cellStates = m_cell->getStates();
+      if ((*m_cellStates)[0]->isParUpdatable())
+      {
+        CFreal finalAlpha = output[((*m_cellStates)[0])->getLocalID()];
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
+        {
+          prevf[((*m_cellStates)[iSolPnt])->getLocalID()] = finalAlpha;
+        }
+      }
+      m_cellBuilder->releaseGE();
     }
   }
 }
@@ -382,9 +490,54 @@ void BaseOrderBlending::execute()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::computeBlendingCoefficient(CFreal smoothness, CFreal threshold)
+CFreal BaseOrderBlending::computeBlendingCoefficient(CFreal smoothness)
 {
-  return 1.0 / (1.0 + std::exp(-m_sigmoidS / threshold * (smoothness - threshold)));
+  if (m_useLogScale)
+  {
+    // Log-scale approach with sinusoidal ramp (Persson-Peraire style)
+    // Smoothness s is already in log10 scale from computeSmoothnessModal()
+    // Reference threshold: s0 = -S0 * log10(N+1)
+    const CFreal s0 = computeReferenceThreshold();
+    
+    if (smoothness < s0 - m_kappa)
+    {
+      // Smooth region: no blending needed
+      return 0.0;
+    }
+    else if (smoothness > s0 + m_kappa)
+    {
+      // Rough region: full blending
+      return 1.0;
+    }
+    else
+    {
+      // Transition region: smooth sinusoidal ramp
+      // alpha = 0.5 * (1 + sin(π*(s-s0)/(2*κ)))
+      return 0.5 * (1.0 + std::sin(MathTools::MathConsts::CFrealPi() * (smoothness - s0) / (2.0 * m_kappa)));
+    }
+  }
+  else
+  {
+    // [DEPRECATED] Legacy sigmoid approach
+    const CFreal threshold = computeThreshold_Legacy(m_order, m_thresholdA, m_thresholdC);
+    return 1.0 / (1.0 + std::exp(-m_sigmoidS / threshold * (smoothness - threshold)));
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal BaseOrderBlending::computeReferenceThreshold() const
+{
+  // Reference threshold for log-scale method: s0 = -S0 * log10(N+1)
+  // Higher S0 means more dissipation (stricter smoothness requirement)
+  return -m_s0 * std::log10(static_cast<CFreal>(m_order + 1));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+CFreal BaseOrderBlending::computeThreshold_Legacy(CFuint N, CFreal a, CFreal c)
+{
+  // [DEPRECATED] Legacy threshold function for sigmoid blending
+  // T = a * 10^(-c * (N+1)^0.25)
+  return a * std::pow(10.0, -c * std::pow(N + 1, 0.25));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -402,11 +555,6 @@ CFreal BaseOrderBlending::applyAlphaLimits(CFreal alpha)
   return std::min(alpha, m_alphaMax);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::computeThreshold(CFuint N, CFreal a, CFreal c)
-{
-  return a * std::pow(10.0, -c * std::pow(N + 1, 0.25));
-}
 //////////////////////////////////////////////////////////////////////////////
 void BaseOrderBlending::computeSmoothness()
 {
@@ -525,43 +673,73 @@ void BaseOrderBlending::computeSmoothnessModal()
     modalCoeffs[iSol] = m_tempSolPntVec2[iSol];
   }
 
-  // Step 3: Compute modal energy and high-mode content
-  CFreal energy_total = 0.0;
-  CFreal energy_pMin1 = 0.0;
-  CFreal mN2 = 0.0;
-  CFreal mNminOne2 = 0.0;
+  // Step 3: Compute modal energy ratios
+  // E1 = energy in P modes (highest) / total energy
+  // E2 = energy in P-1 modes / energy in modes 0 to P-1 (to catch odd-even decoupling)
+  // 
+  // For P<=2, E2 is problematic because P-1 modes represent physical linear gradients
+  // So we only use E2 for P>=3
+  
+  const CFreal eps = MathTools::MathConsts::CFrealEps();
+  
+  CFreal energy_total = 0.0;   // Total energy (all modes)
+  CFreal energy_P = 0.0;       // Energy in P modes (highest order)
+  CFreal energy_Pm1 = 0.0;     // Energy in P-1 modes (second highest)
+  CFreal energy_low = 0.0;     // Energy in modes 0 to P-2 (low modes)
 
   for (CFuint j = 0; j < m_nbrSolPnts; ++j)
   {
-    CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
+    const CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
     energy_total += mj2;
-    if (j > m_nbrSolPntsMinOne - 1) mN2 += mj2;
+    
+    if (j >= m_nbrSolPntsMinOne)
+    {
+      // P modes (highest)
+      energy_P += mj2;
+    }
+    else if (j >= m_nbrSolPntsMinTwo)
+    {
+      // P-1 modes
+      energy_Pm1 += mj2;
+    }
+    else
+    {
+      // Modes 0 to P-2 (low modes)
+      energy_low += mj2;
+    }
   }
 
-  for (CFuint j = m_nbrSolPntsMinTwo ; j < m_nbrSolPntsMinOne; ++j)
-  {
-    CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-    mNminOne2 += mj2;
-  }
-
-  for (CFuint j = 0; j < m_nbrSolPntsMinOne; ++j)
-  {
-    CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-    energy_pMin1 += mj2;
-  }
-
-  CFreal E1 = mN2 / std::max(energy_total, MathTools::MathConsts::CFrealEps());
-  CFreal E2 = mNminOne2 / std::max(energy_pMin1, MathTools::MathConsts::CFrealEps());
+  // E1: Highest mode energy ratio (always computed)
+  const CFreal E1 = energy_P / std::max(energy_total, eps);
   
-  if (m_order==2) {E2 = 0.5*E2;}
- 
-  CFreal E_var = std::max(E1, E2);
+  // Compute final energy ratio based on polynomial order
+  CFreal E_var;
+  if (m_order >= 3)
+  {
+    // For P>=3: Use both E1 and E2 to catch odd-even decoupling
+    // E2 = energy in P-1 modes / energy in modes 0 to P-1
+    const CFreal E2 = energy_Pm1 / std::max(energy_low + energy_Pm1, eps);
+    E_var = std::max(E1, E2);
+  }
+  else
+  {
+    // For P<=2: Only use E1 (E2 would flag physical linear gradients)
+    E_var = E1;
+  }
 
-  if (m_order==1) {E_var = E1;}
-
-  max_indicator = std::max(max_indicator, E_var);
-
-  m_s = max_indicator;
+  // Apply log transform if using log-scale method
+  if (m_useLogScale)
+  {
+    // Log-scale smoothness indicator: s = log10(E_var)
+    // Smooth regions: E_var ~ 10^-10 to 10^-6 => s ~ -10 to -6
+    // Rough regions:  E_var ~ 10^-2 to 10^0  => s ~ -2 to 0
+    m_s = std::log10(std::max(E_var, eps));
+  }
+  else
+  {
+    // [DEPRECATED] Legacy linear smoothness indicator
+    m_s = E_var;
+  }
 
   // Store the smoothness value to all solution points of this element
   DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();

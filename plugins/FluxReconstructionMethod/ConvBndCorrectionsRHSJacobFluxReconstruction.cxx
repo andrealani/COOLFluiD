@@ -1,3 +1,9 @@
+// Copyright (C) 2016 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #include "Framework/BlockAccumulator.hh"
 #include "Framework/LSSMatrix.hh"
 #include "Framework/MethodCommandProvider.hh"
@@ -275,6 +281,15 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
       // multiply residual update derivatives with residual factor
       m_derivResUpdates *= resFactor;
       
+      // reset flags for tracking updated solution points
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        m_solPntUpdated[iSol] = false;
+      }
+      
+      // loop over all influenced flux points to add Jacobian contributions
+      // (for quads/hexes: different flx pnts have different sol pnt dependencies)
+      // (for triangles: all flx pnts have same dependencies, flags prevent double-counting)
       for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
       {   
         const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
@@ -283,7 +298,13 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-          acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+          
+          // only add if not already updated (prevents double-counting for triangles)
+          if (!m_solPntUpdated[solIdx])
+          {
+            acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+            m_solPntUpdated[solIdx] = true;
+          }
         }  
       } 
 
@@ -355,17 +376,32 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computePertInterfaceFlxCorrec
 void ConvBndCorrectionsRHSJacobFluxReconstruction::computePertCorrection(vector< RealVector >& corrections)
 { 
   cf_assert(corrections.size() == m_nbrSolPnts);  
-  // reset corrections
-  //for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
-  //{ 
-  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[0]];
-  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+  
+  // reset flags for tracking which solution points have been reset
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-    corrections[solIdx] = 0.0;
-  }  
-  //}
+    m_solPntUpdated[iSol] = false;
+  }
+  
+  // reset corrections for all affected solution points (loop over all influenced flux points)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  { 
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+    {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+      
+      // only reset if not already reset (prevents redundant operations for triangles)
+      if (!m_solPntUpdated[solIdx])
+      {
+        corrections[solIdx] = 0.0;
+        m_solPntUpdated[solIdx] = true;
+      }
+    }  
+  }
+  
+  // compute corrections from all influenced flux points
   for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   { 
     const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
@@ -413,15 +449,32 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::restoreFromBackups()
 {
   for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
   { 
-  (*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]))[m_pertVar] = m_cellStatesFlxPntBackup[ m_influencedFlxPnts[iFlxPnt] ][m_pertVar];
-  m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ] = m_flxPntRiemannFluxBackup[ m_influencedFlxPnts[iFlxPnt] ];
+    (*(m_cellStatesFlxPnt[ m_influencedFlxPnts[iFlxPnt] ]))[m_pertVar] = m_cellStatesFlxPntBackup[ m_influencedFlxPnts[iFlxPnt] ][m_pertVar];
+    m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ] = m_flxPntRiemannFluxBackup[ m_influencedFlxPnts[iFlxPnt] ];
   }
 
-  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnt];
-  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-  for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+  // reset flags for tracking which solution points have been restored
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    m_pertCorrections[iSol] = m_corrections[iSol];
+    m_solPntUpdated[iSol] = false;
+  }
+  
+  // loop over all influenced flux points to restore solution point data
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+    {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSol];
+      
+      // only restore if not already restored (prevents redundant operations for triangles)
+      if (!m_solPntUpdated[solIdx])
+      {
+        m_pertCorrections[solIdx] = m_corrections[solIdx];
+        m_solPntUpdated[solIdx] = true;
+      }
+    }
   }
 }
 
@@ -472,6 +525,9 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::setup()
   {
     m_pertCorrections[iSol].resize(m_nbrEqs);
   }
+  
+  // resize flags for tracking updated solution points (to avoid double-counting)
+  m_solPntUpdated.resize(m_nbrSolPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

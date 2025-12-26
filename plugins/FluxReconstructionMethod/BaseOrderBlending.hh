@@ -1,3 +1,9 @@
+// Copyright (C) 2016 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #ifndef COOLFluiD_FluxReconstructionMethod_BaseFluxFiltering_hh
 #define COOLFluiD_FluxReconstructionMethod_BaseFluxFiltering_hh
 
@@ -94,14 +100,23 @@ protected: // functions
   void computeProjStates(std::vector< RealVector >& projStates);
 
   /**
-  * Compute threshold for blending coefficient
+  * [DEPRECATED] Compute threshold for blending coefficient (sigmoid method)
+  * T = a * 10^(-c * (N+1)^0.25)
   */
-  CFreal computeThreshold(CFuint N, CFreal a, CFreal c);
+  CFreal computeThreshold_Legacy(CFuint N, CFreal a, CFreal c);
 
   /**
-  * Compute blending coefficient using sigmoid function
+  * Compute reference threshold for log-scale method
+  * s0 = -S0 * log10(N+1)
   */
-  CFreal computeBlendingCoefficient(CFreal smoothness, CFreal threshold);
+  CFreal computeReferenceThreshold() const;
+
+  /**
+  * Compute blending coefficient from smoothness indicator
+  * If m_useLogScale=true: sinusoidal ramp in [s0-kappa, s0+kappa]
+  * If m_useLogScale=false: [DEPRECATED] sigmoid function
+  */
+  CFreal computeBlendingCoefficient(CFreal smoothness);
 
   /**
   * Apply alpha limits to blending coefficient
@@ -254,6 +269,9 @@ protected: // data
 
   /// Damping factor for sweep iterations
   CFreal m_sweepDamping;
+
+  /// Use log-scale smoothness indicator (true, recommended) or legacy sigmoid (false)
+  bool m_useLogScale;
 
   /// Method for computing smoothness ("Modal" or "Projection")
   std::string m_smoothnessMethod;
