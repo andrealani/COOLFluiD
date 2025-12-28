@@ -181,6 +181,9 @@ protected: // data
   std::vector< RealVector > m_extrapolatedFluxesBackupP0;
   std::vector< std::vector< RealVector> > m_contFlxBackupP0;
 
+  /// backup of P0 states for Jacobian computation
+  std::vector< std::vector< RealVector > > m_statesP0Backup;
+
   //std::vector< Framework::State* >* m_cellStatesP0;
   std::vector< Framework::State* >* m_PertcellStatesP0;
 
@@ -189,6 +192,8 @@ protected: // data
   /// pointer to the numerical Jacobian computer
   Common::SafePtr<Framework::NumericalJacobian> m_numJacob_P0;
 
+  /// boolean telling whether a sol pnt has been updated during Jacobian computation
+  std::vector< bool > m_solPntUpdated;
 
 }; // class ConvRHSJacobFluxReconstructionBlending
 

@@ -150,6 +150,9 @@ protected: // data
 
   /// backup of interface fluxes at the flux points of a face
   std::vector< RealVector> m_flxPntRiemannFluxBackup;
+  
+  /// flags to track which solution points have been updated (to avoid double-counting)
+  std::vector< bool > m_solPntUpdated;
 
 }; // end of class ConvBndCorrectionsRHSJacobFluxReconstruction
 

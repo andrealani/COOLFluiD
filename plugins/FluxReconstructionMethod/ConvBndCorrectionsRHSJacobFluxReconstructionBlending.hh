@@ -161,6 +161,12 @@ protected: // data
 
   Common::SafePtr<Framework::NumericalJacobian> m_numJacob_P0;
 
+  /// backup of P0 states for Jacobian computation
+  std::vector< RealVector > m_P0StateBackup;
+
+  /// boolean telling whether a sol pnt has been updated during Jacobian computation
+  std::vector< bool > m_solPntUpdated;
+
 }; // end of class ConvBndCorrectionsRHSJacobFluxReconstructionBlending
 
 //////////////////////////////////////////////////////////////////////////////

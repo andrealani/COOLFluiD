@@ -358,8 +358,6 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
 	computePertCorrection(LEFT, m_pertResUpdates[LEFT]);
 	computePertCorrection(RIGHT, m_pertResUpdates[RIGHT]);
 
-//for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
-         // {
         // add contributions to the Jacobian
         for (CFuint iSide2 = 0; iSide2 < 2; ++iSide2)
         {
@@ -372,12 +370,30 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
           // multiply residual update derivatives with residual factor
           m_derivResUpdates *= resFactor;
           
-          const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide2][ m_influencedFlxPnts[0] ];
-        m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-          for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+          // reset flags for tracking updated solution points
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
           {
-            const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-            acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+            m_solPntUpdated[iSol] = false;
+          }
+          
+          // loop over all influenced flux points to add Jacobian contributions
+          // (for quads/hexes: different flx pnts have different sol pnt dependencies)
+          // (for triangles: all flx pnts have same dependencies, flags prevent double-counting)
+          for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+          {
+            const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide2][ m_influencedFlxPnts[iFlxPnt] ];
+            m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+            for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+            {
+              const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+              
+              // only add if not already updated (prevents double-counting for triangles)
+              if (!m_solPntUpdated[solIdx])
+              {
+                acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+                m_solPntUpdated[solIdx] = true;
+              }
+            }
           }  
         }
         
@@ -500,8 +516,6 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
 	// compute the perturbed corrections
 	computePertCorrection(side, m_pertResUpdates[side]);
   
-  //for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
-       // {
         // add contributions to the Jacobian
         // compute the finite difference derivative of the face term
         m_numJacob->computeDerivative(m_pertResUpdates[side],m_resUpdates[side],m_derivResUpdates);
@@ -509,12 +523,30 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
         // multiply residual update derivatives with residual factor
         m_derivResUpdates *= resFactor;
 
-        const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][ m_influencedFlxPnts[0] ];
-        m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+        // reset flags for tracking updated solution points
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-          acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+          m_solPntUpdated[iSol] = false;
+        }
+        
+        // loop over all influenced flux points to add Jacobian contributions
+        // (for quads/hexes: different flx pnts have different sol pnt dependencies)
+        // (for triangles: all flx pnts have same dependencies, flags prevent double-counting)
+        for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+        {
+          const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][ m_influencedFlxPnts[iFlxPnt] ];
+          m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+          for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+          {
+            const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+            
+            // only add if not already updated (prevents double-counting for triangles)
+            if (!m_solPntUpdated[solIdx])
+            {
+              acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+              m_solPntUpdated[solIdx] = true;
+            }
+          }
         }  
         
         // restore physical variable in state
@@ -635,18 +667,40 @@ void ConvRHSJacobFluxReconstruction::restoreFromBackups()
     m_cellFlx[LEFT][ m_influencedFlxPnts[iFlxPnt] ] = m_flxPntRiemannFluxBackup[LEFT][ m_influencedFlxPnts[iFlxPnt] ];
     m_cellFlx[RIGHT][ m_influencedFlxPnts[iFlxPnt] ] = m_flxPntRiemannFluxBackup[RIGHT][ m_influencedFlxPnts[iFlxPnt] ];
   }
-  const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][ m_influencedFlxPnts[0] ];
-  const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][ m_influencedFlxPnts[0] ];
   
-  m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+  // reset flags for tracking which solution points have been restored
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    const CFuint solIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
-    const CFuint solIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
-    m_pertDivContFlx[LEFT][solIdxL] = m_divContFlxL[solIdxL];
-    m_pertDivContFlx[RIGHT][solIdxR] = m_divContFlxR[solIdxR];
+    m_solPntUpdated[iSol] = false;
   }
   
+  // loop over all influenced flux points to restore solution point data
+  // (for quads/hexes: different flx pnts have different sol pnt dependencies)
+  // (for triangles: all flx pnts have same dependencies, flags prevent double-restoring)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][ m_influencedFlxPnts[iFlxPnt] ];
+    const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][ m_influencedFlxPnts[iFlxPnt] ];
+    
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+    {
+      const CFuint solIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
+      const CFuint solIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
+      
+      // only restore if not already restored (prevents redundant operations for triangles)
+      if (!m_solPntUpdated[solIdxL])
+      {
+        m_pertDivContFlx[LEFT][solIdxL] = m_divContFlxL[solIdxL];
+        m_solPntUpdated[solIdxL] = true;
+      }
+      if (!m_solPntUpdated[solIdxR])
+      {
+        m_pertDivContFlx[RIGHT][solIdxR] = m_divContFlxR[solIdxR];
+        m_solPntUpdated[solIdxR] = true;
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -914,6 +968,9 @@ void ConvRHSJacobFluxReconstruction::setup()
       m_contFlxBackup[iSolPnt][iDim].resize(m_nbrEqs);
     }
   }
+  
+  // resize flags for tracking updated solution points (to avoid double-counting)
+  m_solPntUpdated.resize(m_nbrSolPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

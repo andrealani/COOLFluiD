@@ -171,6 +171,9 @@ protected: // data
   
   /// Continuous flux at the solution points backup
   std::vector< std::vector< RealVector> > m_contFlxBackup;
+  
+  /// flags to track which solution points have been updated (to avoid double-counting)
+  std::vector< bool > m_solPntUpdated;
 
 }; // class ConvRHSJacobFluxReconstruction
 

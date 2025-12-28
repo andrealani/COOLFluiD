@@ -1,3 +1,9 @@
+// Copyright (C) 2016 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #include "Framework/BlockAccumulator.hh"
 #include "Framework/LSSMatrix.hh"
 #include "Framework/MethodCommandProvider.hh"
@@ -267,8 +273,6 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
   {
     // dereference state
     State& pertState = *(*m_cellStates)[m_pertSol];
-
-    State& pertStateP0 = *(*m_cellStatesP0)[0];
     
     // Loop over flux points to determine which flx pnts are influenced by the pert
     m_influencedFlxPnts.resize(0);
@@ -291,17 +295,20 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
     // loop over the variables in the state
     for (m_pertVar = 0; m_pertVar < m_nbrEqs; ++m_pertVar)
     {
-
-      m_numJacob->perturb(m_pertVar,pertStateP0[m_pertVar]);
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        m_P0State[0][iVar] = (*((*(m_cellStatesP0))[0]))[iVar];
-      }
-      m_numJacob->restore(pertStateP0[m_pertVar]);
-
-      
-      // perturb physical variable in state
+      // perturb physical variable in HO state
       m_numJacob->perturb(m_pertVar,pertState[m_pertVar]);
+      
+      // Recompute P0 state from perturbed HO states (P0 = cell average depends on ALL sol pnts)
+      for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
+      { 
+        m_P0State[i][m_pertVar] = 0.0;
+        for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
+        { 
+          m_P0State[i][m_pertVar] += m_vdm(i,0) * m_vdmInv(0,j) * (*(*m_cellStates)[j])[m_pertVar];
+        }
+      }
+      // Update P0 state pointer
+      (*(*m_cellStatesP0)[0])[m_pertVar] = m_P0State[0][m_pertVar];
       
       // compute the perturbed states and ghost states in the flx pnts
       extrapolatePerturbedState();
@@ -326,6 +333,12 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
       // multiply residual update derivatives with residual factor
       m_derivResUpdates *= resFactor;
       
+      // reset updated flags
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        m_solPntUpdated[iSol] = false;
+      }
+      
       for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
       {   
         const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
@@ -334,7 +347,12 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-          acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+          
+          if (!m_solPntUpdated[solIdx])
+          {
+            m_solPntUpdated[solIdx] = true;
+            acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
+          }
         }  
       } 
 
@@ -436,16 +454,30 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computePertCorrection
 { 
   cf_assert(corrections.size() == m_nbrSolPnts); 
 
+  // Get alpha (frozen from socket)
   DataHandle< CFreal > output = socket_alpha.getDataHandle();
-  CFreal alpha = output[((*m_cellStates)[0])->getLocalID()];
+  const CFreal alpha = output[((*m_cellStates)[0])->getLocalID()];
 
-  // reset corrections (following original structure)
-  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[0]];
-  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+  // reset updated flags
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-    corrections[solIdx] = 0.0;
+    m_solPntUpdated[iSol] = false;
+  }
+
+  // reset corrections for all influenced solution points (following original structure)
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[iFlxPnt]];
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
+    {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
+      if (!m_solPntUpdated[solIdx])
+      {
+        m_solPntUpdated[solIdx] = true;
+        corrections[solIdx] = 0.0;
+      }
+    }
   }  
   
   // STEP 1: Add high-order contributions (loop over flux points)
@@ -510,6 +542,8 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::storeBackups()
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     m_pertCorrections[iSol] = m_corrections[iSol];
+    // Backup P0 states
+    m_P0StateBackup[iSol] = m_P0State[iSol];
   }
 }
 
@@ -529,11 +563,33 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::restoreFromBackups()
   m_flxPntRiemannFluxP0[ iFlxPnt ] = m_flxPntRiemannFluxBackupP0[ iFlxPnt ];
   }
   
-  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnt];
-  m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-  for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+  // Restore P0 states
+  for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
+  { 
+    m_P0State[i][m_pertVar] = m_P0StateBackup[i][m_pertVar];
+  }
+  (*(*m_cellStatesP0)[0])[m_pertVar] = m_P0StateBackup[0][m_pertVar];
+  
+  // reset updated flags
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    m_pertCorrections[iSol] = m_corrections[iSol];
+    m_solPntUpdated[iSol] = false;
+  }
+  
+  // loop over all influenced flux points
+  for (CFuint iInfluencedFlx = 0; iInfluencedFlx < m_NbInfluencedFlxPnts; ++iInfluencedFlx)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[iInfluencedFlx]];
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
+    {
+      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSol];
+      if (!m_solPntUpdated[solIdx])
+      {
+        m_solPntUpdated[solIdx] = true;
+        m_pertCorrections[solIdx] = m_corrections[solIdx];
+      }
+    }
   }
 }
 
@@ -600,6 +656,16 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::setup()
 
   // later, to push:
   m_cellStatesP0->push_back(new State()); 
+  
+  // resize m_solPntUpdated
+  m_solPntUpdated.resize(m_nbrSolPnts);
+  
+  // Initialize P0 state backup
+  m_P0StateBackup.resize(m_nbrSolPnts);
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_P0StateBackup[iSol].resize(m_nbrEqs);
+  }
   
 }
 
