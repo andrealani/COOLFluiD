@@ -841,6 +841,33 @@ RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape,
         cf_assert(modeIndex == totalModes);
         break;
       }
+      case CFGeoShape::TETRA:
+      {
+        // For tetrahedra: modes are ordered by total order, following TetraFluxReconstructionElementData
+        // Total modes = (P+1)(P+2)(P+3)/6
+        CFuint totalModes = ((m_order + 1)*(m_order + 2)*(m_order + 3))/6;
+        maxModalOrder.resize(totalModes);
+
+        CFuint modeIndex = 0;
+        // Loop over the total order of polynomial terms (sum of iOrderKsi + iOrderEta + iOrderZta)
+        for (CFuint totalOrder = 0; totalOrder <= m_order; ++totalOrder)
+        {
+          // Loop over the distributions of the total order among ksi, eta, zta
+          // Following the same ordering as in TetraFluxReconstructionElementData::createVandermondeMatrix
+          for (CFuint iOrderZta = 0; iOrderZta <= totalOrder; ++iOrderZta)
+          {
+            for (CFuint iOrderEta = 0; iOrderEta + iOrderZta <= totalOrder; ++iOrderEta)
+            {
+              CFuint iOrderKsi = totalOrder - iOrderEta - iOrderZta;
+              // The maximum modal order is the total order (sum of all indices)
+              maxModalOrder[modeIndex] = totalOrder;
+              modeIndex += 1;
+            }
+          }
+        }
+        cf_assert(modeIndex == totalModes);
+        break;
+      }
       case CFGeoShape::PRISM:
       {
         CFuint totalModes = ((m_order + 1)*(m_order + 1)*(m_order + 2))/2.;
