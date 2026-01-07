@@ -3,7 +3,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -15.639
+### Residual = -15.381
 
 ###############################################################################
 # User defined parameters
@@ -42,11 +42,11 @@ Simulator.SubSystem.Flow.InField.Def = \
 1. 2. 3. 0.108*((1/r)^5) 0.
 
 # Stop Condition
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -1.5
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -1.5
 #Simulator.SubSystem.StopConditionSubSystemStatus = FlowSubSystemStatus
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 200
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 50
 
 # CFL definition
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive

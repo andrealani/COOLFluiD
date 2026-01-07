@@ -22,7 +22,7 @@ Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COC
 # First reader 
 #Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./30Rs_lvl6.CFmesh 
 # Restart at initial time of time-evolving simulation
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
 
 #Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 # ??
@@ -30,7 +30,7 @@ Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis
 # Second reader
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./30Rs_lvl6.CFmesh
 # Restart at initial time of time-evolving simulation
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
 
 #Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1. 
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2

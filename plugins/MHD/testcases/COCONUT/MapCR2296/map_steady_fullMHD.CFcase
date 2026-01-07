@@ -10,7 +10,7 @@
 ###############################################################################
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/MapCR2296/
-Simulator.Paths.ResultsDir = ./results-map-res-steady-fullMHD-zqs2296-lmax25
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/COCONUT/MapCR2296/results-map-res-steady-fullMHD-zqs2296-lmax25/
                                                                                  
 # Boundary condition files, another definition for flow field is around Line 415
 Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
@@ -30,7 +30,7 @@ Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/C
 # First reader 
 #Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./Mesh/30Rs_lvl6.CFmesh 
 # Restart
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./results-map-res-steady-polytropic-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = results-map-res-steady-polytropic-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
 
 #Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 # ??
@@ -38,7 +38,7 @@ Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis
 # Second reader
 #Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./Mesh/30Rs_lvl6.CFmesh 
 # Restart
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./results-map-res-steady-polytropic-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = results-map-res-steady-polytropic-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
 
 #Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1. 
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2

@@ -2,7 +2,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -15.5284
+### Residual = -15.2834
 
 ###############################################################################
 # User defined parameters
@@ -46,8 +46,10 @@ Simulator.SubSystem.Flow.Data.Venktn3DStrict.isMFMHD = true
 Simulator.SubSystem.Flow.Data.Venktn3DStrict.strictCoeff = 1.0
 
 # Stop Condition
-Simulator.SubSystem.StopCondition       = Norm
-Simulator.SubSystem.Norm.valueNorm      = -2.0 #-7.0
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -2.0 #-7.0
 
 # CFL definition
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive

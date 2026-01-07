@@ -10,7 +10,8 @@
 ###############################################################################
 # SubSystem Parameters
 Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/MapCR2296/
-Simulator.Paths.ResultsDir = ./results-map-res-steady-polytropic-zqs2296-lmax25
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/COCONUT/MapCR2296/results-map-res-steady-polytropic-zqs2296-lmax25/
+#Simulator.Paths.ResultsDir = ./results-map-res-steady-polytropic-zqs2296-lmax25
                                                                                  
 # Boundary condition files, another definition for flow field is around Line 415
 Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
@@ -53,8 +54,6 @@ Simulator.SubSystem.Flow.Jet1.rotation = 1
 
 
 # Stop Condition
-#Simulator.SubSystem.StopCondition          = MaxNumberSteps
-#Simulator.SubSystem.MaxNumberSteps.nbSteps = 2
 # Quasi-steady state
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -4.0 # -8 #-2.0

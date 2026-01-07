@@ -218,6 +218,20 @@ ADD_SUBDIRECTORY ( doc )
 
 ##############################################################################
 
+### Initialize testcases (e.g. unzip large files)
+
+execute_process(
+    COMMAND bash ${CMAKE_SOURCE_DIR}/tools/scripts/init_testcases.sh
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    RESULT_VARIABLE RESULT
+)
+
+if(NOT RESULT EQUAL 0)
+    message(FATAL_ERROR "tools/scripts/init_testcases.sh failed")
+endif()
+
+##############################################################################
+
 IF (CF_ENABLE_STATIC)
   SET(CF_HAVE_ALLSTATIC 1 CACHE BOOL "All libraries compiled with static linking")
 ELSE()
@@ -427,6 +441,7 @@ IF ( CF_ENABLE_TESTCASES )
   SET (CF_ENABLE_UNIT_CASES ON)    
   SET (CF_ENABLE_PERFORMANCE_TESTS ON)     
   SET (CF_ENABLE_PERFORMANCE_CASES ON)
+#  SET(ENV{DART_TESTING_TIMEOUT} 2500)
 ENDIF()
 
 ##############################################################################
