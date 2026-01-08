@@ -2,7 +2,7 @@ cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST.CFcase CASEFILES BCinde
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_Shifted PCASE minimum_original_general.CFcase CASEFILES BCindependent5.CFmesh 2008_lmax25.dat dipole.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_Shifted PCASE minimum_2Rs.CFcase CASEFILES 2Rslvl6.CFmesh 2008_lmax25.dat dipole.inter )
-##cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_WTD PCASE map_TEST_WTD.CFcase CASEFILES 30Rs.CFmesh dipole.dat map.inter )
+cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_WTD PCASE map_TEST_WTD.CFcase CASEFILES 30Rs.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Eclipse PCASE map_unsteadyeclipse_fullMHD_TEST.CFcase CASEFILES Mesh/corona_720.CFmesh map.inter MapData )
 cf_add_case( MPI 8 CASEDIR COCONUT/Map PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Map PCASE map_TEST_DecE_fullMHD.CFcase CASEFILES BCindependent5.CFmesh map_hmi_lmax15_cr2219.dat map.inter )
