@@ -48,7 +48,7 @@ void PetscVector::create(MPI_Comm comm,
 #ifdef CF_HAVE_VIENNACL
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECVIENNACL) );
 #else
-#if PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 
+#if PETSC_VERSION_MINOR >= 9
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUDA) ); 
 #else
     CF_CHKERRCONTINUE( VecSetType(m_vec, VECCUSP) ); 
@@ -80,8 +80,7 @@ void PetscVector::initialize(MPI_Comm comm,
   // check if random initialization is chosen
   PetscBool flg;
   
-  // AL: this needs to be checked for PETSC 3.6.3
-#if PETSC_VERSION_MINOR==6 || PETSC_VERSION_MINOR==7 || PETSC_VERSION_MINOR==9 || PETSC_VERSION_MINOR==11 || PETSC_VERSION_MINOR==12 || PETSC_VERSION_MINOR==15 || PETSC_VERSION_MINOR==18 || PETSC_VERSION_MINOR==20
+#if PETSC_VERSION_MINOR >= 6
   flg = PETSC_FALSE;
 #else
   CF_CHKERRCONTINUE( PetscOptionsHasName(PETSC_NULL,"-random_exact_sol",&flg) );
