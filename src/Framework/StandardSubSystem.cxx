@@ -788,6 +788,7 @@ void StandardSubSystem::unsetup()
   CFreal totalResidual = 0.;
   for(CFuint i=0; i<subSysStatusVec.size(); ++i) {
     totalResidual += subSysStatusVec[i]->getResidual();
+    CFLog(VERBOSE, "Residual [" << i << "] = " << subSysStatusVec[i]->getResidual() << "\n");
   }
   
   CFLog(INFO, "Total Number Iter: " << subSysStatus->getNbIter()
