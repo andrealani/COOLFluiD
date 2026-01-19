@@ -18,6 +18,8 @@ namespace COOLFluiD {
 
 void MHDProjectionDiffTerm::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< CFreal, Config::DynamicOption<> >
+    ("thermalConductionFactor","Factor to activate thermal conduction.");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -26,8 +28,11 @@ MHDProjectionDiffTerm::MHDProjectionDiffTerm(const std::string& name) :
   BaseTerm(name)
 {
   addConfigOptionsTo(this);
-}
 
+  _tConductionFactor = 1.0;
+  setParameter("thermalConductionFactor",&_tConductionFactor);
+}
+      
 //////////////////////////////////////////////////////////////////////////////
 
 MHDProjectionDiffTerm::~MHDProjectionDiffTerm()

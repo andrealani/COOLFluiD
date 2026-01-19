@@ -100,7 +100,7 @@ void MHDConsACASourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("PevtsovHeatingFactor","Scale PevtsovHeating term.");
   options.addConfigOption< CFint >("Manchester","Switch on Manchester heating term.");
   options.addConfigOption< CFreal >("ManchesterHeatingAmplitude","Scale Manchester volumetric heating amplitude.");
-  options.addConfigOption< CFreal >("Qh4H_const", "Heating coefficient for the Qh4 heating function");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("Qh4H_const", "Heating coefficient for the Qh4 heating function");
   options.addConfigOption< CFreal >("Qlio_AR", "Heating coefficient for the Qhlio heating function");
   options.addConfigOption< CFreal >("P0_W","amplitude for wave pressure");
   options.addConfigOption< CFint >("alfven_pressure", "flag for switching on alfven pressure");

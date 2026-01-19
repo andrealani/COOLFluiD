@@ -75,7 +75,15 @@ public:
     return "MHDProjectionDiffTerm";
   }
 
+  /**
+   * Get the thermal conduction factor
+   */
+  CFreal getThermalConductionFactor() const {return _tConductionFactor;}
+  
 private:
+
+  /// thermal conduction factor
+  CFreal _tConductionFactor;
 
 }; // end of class MHDProjectionDiffTerm
 

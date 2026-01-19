@@ -29,6 +29,7 @@ Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis
 
 # Physical parameters
 Simulator.SubSystem.MHD3DProjectionDiff.ConvTerm.gamma = 1.67
+Simulator.SubSystem.MHD3DProjectionDiff.DiffTerm.thermalConductionFactor = 1.
 Simulator.SubSystem.Flow.Jet1.rotation = 1
 
 # Boundary conditions
