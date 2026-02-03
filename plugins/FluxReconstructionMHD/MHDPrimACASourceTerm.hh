@@ -6,6 +6,7 @@
 #include "Framework/VectorialFunction.hh"
 #include "Common/SafePtr.hh"
 #include "FluxReconstructionMethod/StdSourceTerm.hh"
+#include "MathTools/RealVector.hh"
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -76,7 +77,7 @@ public:
   
   virtual void getSToGradJacobian(const CFuint iState){};
   
-  virtual bool isGradDependent(){return false;};
+  virtual bool isGradDependent(){return m_deCompE;};
   
 private: //data
   
@@ -85,6 +86,9 @@ private: //data
     
   /// socket for gravity values
   Framework::DataSocketSource<CFreal> socket_gravity;
+  
+  /// socket for gradients
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
     
   bool  m_gravity;
   bool  m_rotation;
@@ -101,6 +105,12 @@ private: //data
   CFreal m_p0;
   CFreal m_l0;
   CFreal m_g0;
+  
+  /// flag for decomposed energy equation source term
+  bool m_deCompE;
+  
+  /// mu0 constant
+  CFreal m_mu0;
 
 }; // end of class MHDPrimACASourceTerm
 

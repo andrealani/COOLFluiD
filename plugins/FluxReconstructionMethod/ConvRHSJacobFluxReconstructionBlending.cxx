@@ -1315,15 +1315,33 @@ void ConvRHSJacobFluxReconstructionBlending::unsetup()
 {
   CFAUTOTRACE;
   
+  // Clean up m_states_P0 (allocated in setup)
+  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  {
+    if (m_states_P0[iSide] != CFNULL)
+    {
+      for (CFuint i = 0; i < m_states_P0[iSide]->size(); ++i)
+      {
+        deletePtr((*m_states_P0[iSide])[i]);
+      }
+      delete m_states_P0[iSide];
+      m_states_P0[iSide] = CFNULL;
+    }
+  }
+  
+  // Clean up m_PertcellStatesP0
+  if (m_PertcellStatesP0 != CFNULL)
+  {
+    for (CFuint i = 0; i < m_PertcellStatesP0->size(); ++i)
+    {
+      deletePtr((*m_PertcellStatesP0)[i]);
+    }
+    delete m_PertcellStatesP0;
+    m_PertcellStatesP0 = CFNULL;
+  }
+  
   // unsetup parent class
   ConvRHSFluxReconstructionBlending::unsetup();
-
-  deletePtr( (*m_PertcellStatesP0)[0] );
-
-  m_PertcellStatesP0->clear();
-
-  delete m_PertcellStatesP0;
-  m_PertcellStatesP0 = nullptr;
 }
 
 

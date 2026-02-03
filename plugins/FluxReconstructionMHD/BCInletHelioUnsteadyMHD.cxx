@@ -212,31 +212,6 @@ BCInletHelioUnsteadyMHD::BCInletHelioUnsteadyMHD(const std::string& name) :
 BCInletHelioUnsteadyMHD::~BCInletHelioUnsteadyMHD()
 {
   CFAUTOTRACE;
-  
-  if (m_initialSolutionMap.size() > 0) 
-  {
-    for (CFuint i = 0; i < m_initialSolutionMap.size(); ++i) 
-    {
-      deletePtr(m_initialSolutionMap[i]);
-    }
-  }
-  
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPntsMax; ++iFlx)
-  {
-    deletePtr(m_cellStatesFlxPnt[iFlx]);
-  }
-  m_cellStatesFlxPnt.clear();
-  
-  // Cleanup time interpolation data
-  for (CFuint it = 0; it < m_allSurfaces.size(); ++it) {
-    for (CFuint is = 0; is < m_allSurfaces[it].size(); ++is) {
-      deletePtr(m_allSurfaces[it][is]);
-    }
-  }
-  
-  for (CFuint is = 0; is < m_surfaceAtTime.size(); ++is) {
-    deletePtr(m_surfaceAtTime[is]);
-  }
 }
 
 
@@ -1691,6 +1666,38 @@ BCInletHelioUnsteadyMHD::extractLineData(SurfaceData* surface)
 void BCInletHelioUnsteadyMHD::unsetup()
 {
   CFAUTOTRACE;
+
+  // Cleanup m_initialSolutionMap
+  if (m_initialSolutionMap.size() > 0) 
+  {
+    for (CFuint i = 0; i < m_initialSolutionMap.size(); ++i) 
+    {
+      deletePtr(m_initialSolutionMap[i]);
+    }
+    m_initialSolutionMap.clear();
+  }
+  
+  // Cleanup m_cellStatesFlxPnt
+  for (CFuint iFlx = 0; iFlx < m_cellStatesFlxPnt.size(); ++iFlx)
+  {
+    deletePtr(m_cellStatesFlxPnt[iFlx]);
+  }
+  m_cellStatesFlxPnt.clear();
+  
+  // Cleanup time interpolation data - m_allSurfaces
+  for (CFuint it = 0; it < m_allSurfaces.size(); ++it) {
+    for (CFuint is = 0; is < m_allSurfaces[it].size(); ++is) {
+      deletePtr(m_allSurfaces[it][is]);
+    }
+    m_allSurfaces[it].clear();
+  }
+  m_allSurfaces.clear();
+  
+  // Cleanup m_surfaceAtTime
+  for (CFuint is = 0; is < m_surfaceAtTime.size(); ++is) {
+    deletePtr(m_surfaceAtTime[is]);
+  }
+  m_surfaceAtTime.clear();
 
   // unsetup of the parent class
   BCStateComputer::unsetup();

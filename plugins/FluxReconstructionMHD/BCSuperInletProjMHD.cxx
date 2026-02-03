@@ -336,7 +336,7 @@ void BCSuperInletProjMHD::computeGhostStates(const vector< State* >& intStates,
     // Br bnd from PFSS solution
     CFreal BrBoundary_dimless = xI_dimless/rI_dimless*B_PFSS_dimless[0] + yI_dimless/rI_dimless*B_PFSS_dimless[1] + zI_dimless/rI_dimless*B_PFSS_dimless[2];
 
-    if (true) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
+    if (m_enforceDipoleB) BrBoundary_dimless = 2.0/3.0*0.666*zI_dimless;
     
     const CFreal BxI_dimless = intState[4];
     const CFreal ByI_dimless = intState[5];

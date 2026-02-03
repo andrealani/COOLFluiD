@@ -675,6 +675,17 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::unsetup()
 {
   CFAUTOTRACE;
 
+  // Clean up m_cellStatesP0 (allocated in setup)
+  if (m_cellStatesP0 != CFNULL)
+  {
+    for (CFuint i = 0; i < m_cellStatesP0->size(); ++i)
+    {
+      deletePtr((*m_cellStatesP0)[i]);
+    }
+    delete m_cellStatesP0;
+    m_cellStatesP0 = CFNULL;
+  }
+
   // unsetup parent class
   ConvBndCorrectionsRHSFluxReconstructionBlending::unsetup();
 }

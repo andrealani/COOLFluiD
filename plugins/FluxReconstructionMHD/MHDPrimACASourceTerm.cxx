@@ -36,6 +36,7 @@ void MHDPrimACASourceTerm::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< bool >("Gravity","Switch on gravity.");
   options.addConfigOption< bool >("Rotation","Switch on rotation.");
+  options.addConfigOption< bool >("DecomposedEnergy","Switch on decomposed energy equation source term.");
   options.addConfigOption< std::string >("NormalizationType","Normalization type: 'Corona' or 'Heliosphere' (default: Corona)");
 }
 
@@ -45,6 +46,7 @@ MHDPrimACASourceTerm::MHDPrimACASourceTerm(const std::string& name) :
   StdSourceTerm(name),
   socket_updateCoeff("updateCoeff"),
   socket_gravity("gravity"),
+  socket_gradients("gradients"),
   m_order(),
   m_normalizationType("Corona"),
   m_rho0(0.0),
@@ -52,7 +54,9 @@ MHDPrimACASourceTerm::MHDPrimACASourceTerm(const std::string& name) :
   m_V0(0.0),
   m_p0(0.0),
   m_l0(0.0),
-  m_g0(0.0)
+  m_g0(0.0),
+  m_deCompE(false),
+  m_mu0(1.2566e-6)
 { 
   addConfigOptionsTo(this);
   
@@ -61,6 +65,9 @@ MHDPrimACASourceTerm::MHDPrimACASourceTerm(const std::string& name) :
 
   m_rotation = true;
   setParameter("Rotation",&m_rotation);
+
+  m_deCompE = false;
+  setParameter("DecomposedEnergy",&m_deCompE);
 
   m_normalizationType = "Corona";
   setParameter("NormalizationType",&m_normalizationType);
@@ -148,6 +155,7 @@ MHDPrimACASourceTerm::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = StdSourceTerm::needsSockets();
   result.push_back(&socket_updateCoeff);
+  result.push_back(&socket_gradients);
   return result;
 }
 
@@ -279,6 +287,50 @@ void MHDPrimACASourceTerm::addSourceTerm(RealVector& resUpdates)
                           + Vy*(cent_y)
                           + Vz*(cent_z);
       resUpdates[m_nbrEqs*iSol + 7] -= density_dimless * Vdotrot;    
+    }
+
+    // Decomposed energy equation source term
+    // This term arises from decomposing the MHD energy equation and accounts for
+    // cross-terms between velocity and magnetic field gradients:
+    // Q_deCompE = V·(B·∇B)/B0 - B·(V·∇B)/B0
+    if (m_deCompE)
+    {
+      // Get gradients from socket
+      DataHandle< std::vector< RealVector > > gradients = socket_gradients.getDataHandle();
+      
+      // Get magnetic field components (dimensionless)
+      const CFreal Bx_dimless = (*((*m_cellStates)[iSol]))[4];
+      const CFreal By_dimless = (*((*m_cellStates)[iSol]))[5];
+      const CFreal Bz_dimless = (*((*m_cellStates)[iSol]))[6];
+      
+      // Get gradients of Bx, By, Bz (indices 4, 5, 6 in primitive variables)
+      // gradients[stateID][varID] is a RealVector of size dim containing (dvar/dx, dvar/dy, dvar/dz)
+      const RealVector& gradBx = gradients[stateID][4];
+      const RealVector& gradBy = gradients[stateID][5];
+      const RealVector& gradBz = gradients[stateID][6];
+      
+      // Compute B·∇B for each component of B
+      // (B·∇)Bx = Bx*dBx/dx + By*dBx/dy + Bz*dBx/dz
+      const CFreal BdotGradBx = Bx_dimless*gradBx[XX] + By_dimless*gradBx[YY] + ((dim==DIM_3D) ? Bz_dimless*gradBx[ZZ] : 0.0);
+      const CFreal BdotGradBy = Bx_dimless*gradBy[XX] + By_dimless*gradBy[YY] + ((dim==DIM_3D) ? Bz_dimless*gradBy[ZZ] : 0.0);
+      const CFreal BdotGradBz = Bx_dimless*gradBz[XX] + By_dimless*gradBz[YY] + ((dim==DIM_3D) ? Bz_dimless*gradBz[ZZ] : 0.0);
+      
+      // Compute V·∇B for each component of B
+      // (V·∇)Bx = Vx*dBx/dx + Vy*dBx/dy + Vz*dBx/dz
+      const CFreal VdotGradBx = Vx*gradBx[XX] + Vy*gradBx[YY] + ((dim==DIM_3D) ? Vz*gradBx[ZZ] : 0.0);
+      const CFreal VdotGradBy = Vx*gradBy[XX] + Vy*gradBy[YY] + ((dim==DIM_3D) ? Vz*gradBy[ZZ] : 0.0);
+      const CFreal VdotGradBz = Vx*gradBz[XX] + Vy*gradBz[YY] + ((dim==DIM_3D) ? Vz*gradBz[ZZ] : 0.0);
+      
+      // Q_deCompE = V·(B·∇B) - B·(V·∇B)
+      // First term: V · [(B·∇)B]
+      const CFreal term1 = Vx*BdotGradBx + Vy*BdotGradBy + Vz*BdotGradBz;
+      // Second term: B · [(V·∇)B]
+      const CFreal term2 = Bx_dimless*VdotGradBx + By_dimless*VdotGradBy + Bz_dimless*VdotGradBz;
+      
+      // The source term (dimensionless form)
+      const CFreal Q_deCompE = term1 - term2;
+      
+      resUpdates[m_nbrEqs*iSol + 7] += Q_deCompE;
     }
 
     // phi
