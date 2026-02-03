@@ -791,10 +791,9 @@ void BCInletHelioUnsteadyMHD::setup()
              thisFlxPnt.setOrient(m_orient);
              
              bndFlxPnts.push_back(thisFlxPnt);
-             
-             /* release geometry */
-             _faceBuilder->releaseGE();
           } // End of the flux points loop
+          
+          _faceBuilder->releaseGE();
           localFaceID++;
           
        } // End of the faces loop
