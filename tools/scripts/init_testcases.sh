@@ -23,4 +23,7 @@ if compgen -G "*.xz" > /dev/null; then
    unxz map_gong_lmax25*
 fi
 cd -
+if [ -e plugins/RadiativeTransfer/testcases/SolarCorona/corona_fullMHD.CFmesh.xz ]; then
+   unxz plugins/RadiativeTransfer/testcases/SolarCorona/corona_fullMHD.CFmesh.xz 
+fi
 echo "######## init_testcases done! ########"
