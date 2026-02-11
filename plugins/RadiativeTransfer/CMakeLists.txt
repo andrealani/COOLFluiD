@@ -98,6 +98,8 @@ Solvers/MonteCarlo/RandomNumberGenerator.hh
 Solvers/MonteCarlo/RandomNumberGenerator.cxx
 Solvers/FiniteVolumeDOM/RadiativeTransferFVDOM.cxx
 Solvers/FiniteVolumeDOM/RadiativeTransferFVDOM.hh
+Solvers/FiniteVolumeSolar/RadiativeTransferFVSolar.cxx
+Solvers/FiniteVolumeSolar/RadiativeTransferFVSolar.hh
 PostProcess/PostProcessAverage.cxx
 PostProcess/PostProcessAverage.hh
 PostProcess/PostProcess.cxx

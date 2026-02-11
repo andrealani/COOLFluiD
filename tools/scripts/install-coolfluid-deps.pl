@@ -124,7 +124,9 @@ my %packages = (  #  version   default install priority      function
 #    "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "openmpi"    => [ "1.10.0",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "openmpi"    => [ "3.0.0",  'off',  'off', $priority++,  \&install_openmpi ],
-     "openmpi"    => [ "4.0.3",  'off',  'off', $priority++,  \&install_openmpi ],
+#     "openmpi"    => [ "4.0.3",  'off',  'off', $priority++,  \&install_openmpi ],
+#    "openmpi"    => [ "4.1.8",  'off',  'off', $priority++,  \&install_openmpi ],
+     "openmpi"    => [ "4.1.6",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "mpich"      => [ "3.1b1",'off',  'off', $priority++,  \&install_mpich ],    	
     "mpich"      => [ "3.1.3",'off',  'off', $priority++,  \&install_mpich ], 
     "mpich2"     => [ "1.4.1p1",  'off',  'off', $priority++,  \&install_mpich2 ],
@@ -963,7 +965,8 @@ sub install_openmpi() {
     rmtree "$opt_tmp_dir/$lib-$version";
     untar_src($lib,$version);
     safe_chdir("$opt_tmp_dir/$lib-$version/");
-    run_command_or_die("./configure --enable-shared --enable-static --with-threads=posix --disable-mpi-f90  --prefix=$opt_mpi_dir");
+    # run_command_or_die("./configure --enable-shared --enable-static --with-threads=posix --disable-mpi-f90  --prefix=$opt_mpi_dir");
+    run_command_or_die("./configure --enable-shared --enable-static --with-threads=posix --disable-mpi-f90 --disable-mpi-fortran --enable-mpi-cxx --enable-mpi-thread-multiple --with-hwloc --prefix=$opt_mpi_dir");
     run_command_or_die("make");
     run_command_or_die("make install");
   }
@@ -1382,13 +1385,16 @@ sub install_petsc ()
      #$wblaslib  = "--with-blas-lib=$opt_blaslapack_dir/libblas.a --with-lapack-lib=$opt_blaslapack_dir/liblapack.a"
      # $wblaslib = "--download-f2blaslapack=1";
      #$fcflag = "1";
-     $wblaslib = "--download-f2cblaslapack=1";
+     #$wblaslib = "--download-f2cblaslapack=1";
+     # AL: changed for openmpi and petsc 3.24.3
+     $wblaslib = "--download-f2cblaslapack=1 --with-fc=0";
+ 
      # removed duplicated symbols that could create linking problems for static building 
      run_command_or_die("ar d $opt_petsc_dir/lib/libf2clapack.a xerbla_array.o");
      run_command_or_die("ar d $opt_petsc_dir/lib/libf2clapack.a xerbla.o");	
     }   
     else {
-     $wblaslib = "--download-f2cblaslapack=1";
+     $wblaslib = "--download-f2cblaslapack=1 --with-fc=0";
     }
     
   if ($version eq "3.2-p6") {

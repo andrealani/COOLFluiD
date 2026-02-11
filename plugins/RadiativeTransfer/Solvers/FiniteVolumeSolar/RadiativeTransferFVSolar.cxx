@@ -19,7 +19,6 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
-#include "Framework/PhysicalChemicalLibrary.hh"
 #include "Framework/SocketBundleSetter.hh"
 
 #include "FiniteVolume/CellCenterFVM.hh"
@@ -389,7 +388,11 @@ void RadiativeTransferFVSolar::storeIntegralPathIDs()
       }
     }
     
-    cf_assert(nbCellsIDsPerWallTrsFaceID.sum() == nbCells);
+    if (nbCellsIDsPerWallTrsFaceID.sum() != nbCells) {
+      CFLog(INFO, "nbCellsIDsPerWallTrsFaceID.sum() [" << nbCellsIDsPerWallTrsFaceID.sum() <<  "] != nbCells [" << nbCells << "]\n");
+      cf_assert(nbCellsIDsPerWallTrsFaceID.sum() == nbCells);
+    }
+    
     m_tableWallFaceID2CellIDs.resize(nbCellsIDsPerWallTrsFaceID);
     cf_assert(m_tableWallFaceID2CellIDs.getSumCols() == nbCells);
     
@@ -566,6 +569,28 @@ CFuint RadiativeTransferFVSolar::getOppositeIFace(CFuint iFace, CFuint dim,
       break;
     case 5:
       return 3;
+      break;
+    }
+  }
+  else if (dim == DIM_3D && nbCellNodes == 6) {
+    switch(iFace) {
+    case 0:
+      return 1;
+      break;
+    case 1:
+      return 0;
+      break;
+    case 2:
+      CFLog(INFO, "Prism face 2 doesn't have a single opposite\n");
+      cf_assert(nbCellNodes == 6);
+      break;
+    case 3:
+      CFLog(INFO, "Prism face 3 doesn't have a single opposite\n");
+      cf_assert(nbCellNodes == 6);
+      break;
+    case 4:
+      CFLog(INFO, "Prism face 4 doesn't have a single opposite\n");
+      cf_assert(nbCellNodes == 6);
       break;
     }
   }

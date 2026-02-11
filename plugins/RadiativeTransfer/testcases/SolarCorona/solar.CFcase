@@ -1,0 +1,133 @@
+################################################################################
+# 
+# This COOLFluiD CFcase file tests: 
+# 
+# Finite Volume DOM algorithm, PhysicalModelDummy, EmptyIterator, mesh with hexahedra,
+# only radiation transport (no flow) is computed 
+#
+################################################################################
+
+# COOLFluiD Startfile
+# Comments begin with "#"
+
+### Residual = 0
+
+###############################################################################
+# Assertion For Debugging
+
+# this will always fail when mesh converters (Gambit, Gmesh, etc.) are activated, 
+# so must be commented out when all other errors are gone 
+#CFEnv.ErrorOnUnusedConfig = true
+
+#CFEnv.ExceptionLogLevel    = 1000
+#CFEnv.DoAssertions         = true
+#CFEnv.AssertionDumps       = true
+#CFEnv.AssertionThrows      = true
+#CFEnv.AssertThrows         = true
+#CFEnv.AssertDumps          = true
+##CFEnv.ExceptionAborts      = true
+CFEnv.ExceptionDumps     = false
+CFEnv.ExceptionOutputs   = false
+#CFEnv.RegistSignalHandlers = false
+##CFEnv.TraceToStdOut = true
+##CFEnv.TraceActive = true
+
+###############################################################################
+# SubSystem Modules
+Simulator.Modules.Libs = libTecplotWriter libPhysicalModelDummy libFiniteVolume libEmptyConvergenceMethod libRadiativeTransfer libGambit2CFmesh libCFmeshFileReader libCFmeshFileWriter
+
+# Simulation Parameters
+Simulator.Paths.WorkingDir = plugins/RadiativeTransfer/testcases/SolarCorona
+Simulator.Paths.ResultsDir = ./RESULTS_SolarCorona
+
+###############################################################################
+# Physical Model
+
+Simulator.SubSystem.Default.PhysicalModelType = PhysicalModelDummy
+Simulator.SubSystem.PhysicalModelDummy.Dimensions = 3
+Simulator.SubSystem.PhysicalModelDummy.Equations = rho u v w Bx By Bz p phi
+
+###############################################################################
+# Output
+
+Simulator.SubSystem.OutputFormat        = Tecplot CFmesh
+Simulator.SubSystem.CFmesh.FileName     = solar_corona.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate     = 10
+Simulator.SubSystem.CFmesh.AppendIter   = false
+
+Simulator.SubSystem.Tecplot.FileName    = solar_corona.plt
+Simulator.SubSystem.Tecplot.SaveRate    = 1
+#Simulator.SubSystem.Tecplot.Data.printExtraValues = true
+Simulator.SubSystem.Tecplot.Data.SurfaceTRS = Inlet
+Simulator.SubSystem.Tecplot.AppendIter = false
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCSocketNames = divq qx qy qz
+# TempProfile 
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCVariableNames = divq qx qy qz
+# TempProfile
+Simulator.SubSystem.Tecplot.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
+Simulator.SubSystem.Tecplot.WriteSol = ParWriteSolutionBlock
+# WriteSolutionBlockFV
+
+###############################################################################
+# Time Marching
+
+#Stop Condition
+Simulator.SubSystem.StopCondition          = MaxNumberSteps
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 0
+
+#Simulator.SubSystem.StopCondition       = Norm
+#Simulator.SubSystem.Norm.valueNorm      = -10.0
+
+Simulator.SubSystem.ConvergenceMethod = EmptyIterator
+
+###############################################################################
+# Mesh Reader
+Simulator.SubSystem.Default.listTRS = Inlet Outlet 
+
+Simulator.SubSystem.MeshCreator = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = ./corona_fullMHD.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.ScalingFactor = 1
+
+###############################################################################
+
+# Space Method
+Simulator.SubSystem.SpaceMethod = CellCenterFVM
+Simulator.SubSystem.CellCenterFVM.Restart = true
+Simulator.SubSystem.CellCenterFVM.ComputeRHS = Null
+
+###############################################################################
+
+# Initial Conditions
+#Simulator.SubSystem.CellCenterFVM.InitComds = InitStateAddVar
+#Simulator.SubSystem.CellCenterFVM.InitNames = InField
+#Simulator.SubSystem.CellCenterFVM.InField.applyTRS = InnerFaces
+## initial variables
+#Simulator.SubSystem.CellCenterFVM.InField.InitVars = x y z
+## full set of variables
+#Simulator.SubSystem.CellCenterFVM.InField.Vars = x y z r det a 
+## x y z do not need definition, but r does
+#Simulator.SubSystem.CellCenterFVM.InField.InitDef = \
+#					sqrt(y^2+z^2) \
+#					0.015^2 \
+#					-9500 					
+
+#Simulator.SubSystem.CellCenterFVM.InField.Def = \
+#					1013250. \
+#					100. \
+#					0. \
+#					0. \
+#					r^2+r
+#a/det*r^2+10000.
+#a/det*r^2+b/det*r+10000.
+
+###############################################################################
+# Data Processing
+
+Simulator.SubSystem.DataPostProcessing = DataProcessing
+Simulator.SubSystem.DataProcessing.Comds = RadiativeTransferFVSolar
+Simulator.SubSystem.DataProcessing.Names = Radiation
+Simulator.SubSystem.DataProcessing.Radiation.wallTrsNames = Inlet
+#Simulator.SubSystem.DataProcessing.Radiation.Tmin = 1300
+#Simulator.SubSystem.DataProcessing.Radiation.Tmax = 13000 
+Simulator.SubSystem.DataProcessing.ProcessRate = 1
+Simulator.SubSystem.DataProcessing.RunAtSetup = true
