@@ -48,7 +48,7 @@ LMaestro::LMaestro(const std::string& name) : Maestro(name)
   m_init_files = std::vector<std::string>();
   setParameter("InitialFiles",&m_init_files);
  
-#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79 || defined CF_HAVE_BOOST_1_82 
+#if defined CF_HAVE_BOOST_1_76 || defined CF_HAVE_BOOST_1_79 || defined CF_HAVE_BOOST_1_82 || defined CF_HAVE_BOOST_1_85 
    create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &LMaestro::control, this, std::placeholders::_1 ) );
 #else
    create_signal ( "control" , "Take full control of the simulation" )->connect( boost::bind ( &LMaestro::control, this, _1 ) );
