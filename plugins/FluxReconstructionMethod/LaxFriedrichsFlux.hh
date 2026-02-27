@@ -32,6 +32,12 @@ namespace COOLFluiD {
 class LaxFriedrichsFlux : public RiemannFlux {
 
 public:  // methods
+
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
+
+  /// Configures this Method.
+  virtual void configure ( Config::ConfigArgs& args );
     
   #ifdef CF_HAVE_CUDA
   /// nested class defining local options
@@ -39,7 +45,7 @@ public:  // methods
   class DeviceConfigOptions {
   public:
     /// constructor
-    HOST_DEVICE DeviceConfigOptions() {}
+    HOST_DEVICE DeviceConfigOptions() : epsilon(0.5) {}
     
     /// destructor
     HOST_DEVICE ~DeviceConfigOptions() {}
@@ -47,7 +53,11 @@ public:  // methods
     /// initialize with another object of the same kind
     HOST_DEVICE void init(DeviceConfigOptions<P> *const in) 
     {
+      epsilon = in->epsilon;
     }
+    
+    /// diffusion reduction coefficient for Rusanov flux
+    CFreal epsilon;
   };
   
   /// nested class defining a functor
@@ -84,11 +94,13 @@ public:  // methods
   /// copy the local configuration options to the device
   void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco) 
   {
+    dco->epsilon = m_epsilon;
   }  
   
   /// copy the local configuration options to the device
   void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco) 
   {
+    dco->epsilon = m_epsilon;
   }   
 #endif
 
@@ -126,6 +138,14 @@ private: // data
   /// array storing the sum of the right and left flux
   RealVector  m_sumFlux;
 
+  /// pre-allocated left solution state (avoids heap allocation per flux call)
+  RealVector  m_lSolState;
+
+  /// pre-allocated right solution state (avoids heap allocation per flux call)
+  RealVector  m_rSolState;
+
+  /// diffusion reduction coefficient (epsilon) for tuning the dissipative part of the Rusanov flux
+  CFreal m_epsilon;
 
 }; // class LaxFriedrichsFlux
 
@@ -187,7 +207,8 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS, ORDER>::operator()(FluxData<VS,ORDER>
     { 
       for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
       {
-        flux[iEq] = 0.5*((m_tmp[iEq]+m_tmp2[iEq]) - absA*(stateR[iEq] - stateL[iEq]))*nJacob;
+        // Rusanov flux: F = 0.5*(FL+FR) - epsilon*|A|*(UR-UL)
+        flux[iEq] = (0.5*(m_tmp[iEq]+m_tmp2[iEq]) - m_dco->epsilon*absA*(stateR[iEq] - stateL[iEq]))*nJacob;
 //if (cellID == 768) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f, jacob %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1],nJacob);
       }
     }
@@ -195,7 +216,8 @@ void LaxFriedrichsFlux::DeviceFunc<DT, VS, ORDER>::operator()(FluxData<VS,ORDER>
     {
       for (CFuint iEq = 0; iEq < VS::NBEQS; ++iEq)
       {
-        flux[iEq] = 0.5*((m_tmp[iEq]+m_tmp2[iEq]) - absA*(stateL[iEq] - stateR[iEq]))*nJacob;
+        // Rusanov flux: F = 0.5*(FL+FR) - epsilon*|A|*(UL-UR)
+        flux[iEq] = (0.5*(m_tmp[iEq]+m_tmp2[iEq]) - m_dco->epsilon*absA*(stateL[iEq] - stateR[iEq]))*nJacob;
 //if (cellID == 768) printf("flux %f, var %d, lState %f, rState %f, lflux %f, rflux %f, lEV %f, rEV %f, normalX %f, normalY %f, jacob %f\n",flux[iEq],iEq,stateL[iEq],stateR[iEq],m_tmp[iEq],m_tmp2[iEq],lMaxAbsEVal,rMaxAbsEVal,m_tempFlxUnitNormal[0],m_tempFlxUnitNormal[1],nJacob);
       }
     }

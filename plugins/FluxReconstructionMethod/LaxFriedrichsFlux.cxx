@@ -27,11 +27,21 @@ Framework::MethodStrategyProvider<
 
 //////////////////////////////////////////////////////////////////////////////
 
+void LaxFriedrichsFlux::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFreal,Config::DynamicOption<> >("Epsilon","Diffusion reduction coefficient for tuning the dissipative part of the Rusanov flux (default = 0.5)");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 LaxFriedrichsFlux::LaxFriedrichsFlux(const std::string& name) :
   RiemannFlux(name),
-  m_sumFlux()
+  m_sumFlux(),
+  m_epsilon(0.5)
 {
   CFAUTOTRACE;
+  addConfigOptionsTo(this);
+  setParameter("Epsilon",&m_epsilon);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -39,6 +49,13 @@ LaxFriedrichsFlux::LaxFriedrichsFlux(const std::string& name) :
 LaxFriedrichsFlux::~LaxFriedrichsFlux()
 {
   CFAUTOTRACE;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void LaxFriedrichsFlux::configure ( Config::ConfigArgs& args )
+{
+  RiemannFlux::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -70,17 +87,18 @@ RealVector& LaxFriedrichsFlux::computeFlux(Framework::State& lState,
   const CFreal absA = 0.5*(lMaxAbsEVal+rMaxAbsEVal);
   
   // transform from update states (which are stored) to solution states (in which the equations are written)
-  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]); 
-  
-  const RealVector lSolState = *(m_solStates)[LEFT ];
-  
+  // Note: transform() returns a pointer to a shared internal buffer that is overwritten on the next call,
+  // so we must copy the left result into pre-allocated storage before computing the right transform.
+  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]);
+  m_lSolState = *(m_solStates)[LEFT ];
+
   m_solStates[RIGHT] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[RIGHT]);
-  
-  const RealVector rSolState = *(m_solStates)[RIGHT];
-  
-  // compute the Riemann flux
-  // Flux = 1/2*(Fmin + Fplus) - 1/2*|A|*(Uplus - Umin)
-  m_rFlux = 0.5*(m_sumFlux -  absA*(rSolState - lSolState));
+  m_rSolState = *(m_solStates)[RIGHT];
+
+  // compute the Riemann flux (Rusanov flux)
+  // Flux = 1/2*(Fmin + Fplus) - epsilon*|A|*(Uplus - Umin)
+  // where epsilon is the diffusion reduction coefficient
+  m_rFlux = 0.5*m_sumFlux - m_epsilon*absA*(m_rSolState - m_lSolState);
 
   return m_rFlux;
 }
@@ -105,7 +123,9 @@ void LaxFriedrichsFlux::setup()
 
   // resize variables
   m_sumFlux.resize(m_nbrEqs);
-  
+  m_lSolState.resize(m_nbrEqs);
+  m_rSolState.resize(m_nbrEqs);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

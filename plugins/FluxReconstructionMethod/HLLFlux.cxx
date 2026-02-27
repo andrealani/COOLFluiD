@@ -92,17 +92,17 @@ RealVector& HLLFlux::computeFlux(Framework::State& lState,
   const CFreal amin  = min((CFreal)0.0,min(aR,aL));
   
   // transform from update states (which are stored) to solution states (in which the equations are written)
-  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]); 
+  // Note: transform() returns a pointer to a shared internal buffer that is overwritten on the next call,
+  // so we must copy the left result into pre-allocated storage before computing the right transform.
+  m_solStates[LEFT ] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[LEFT ]);
+  m_lSolState = *(m_solStates)[LEFT ];
 
-  const RealVector lSolState = *(m_solStates)[LEFT ];
-  
   m_solStates[RIGHT] = getMethodData().getUpdateToSolutionVecTrans()->transform(m_updateStates[RIGHT]);
-
-  const RealVector rSolState = *(m_solStates)[RIGHT];
+  m_rSolState = *(m_solStates)[RIGHT];
 
   m_rFlux = 0.5*(m_leftFlux + m_rightFlux -
 		(amax + amin)/(amax - amin) * (m_rightFlux - m_leftFlux) +
-		amax * amin/(amax - amin) * (rSolState - lSolState));
+		amax * amin/(amax - amin) * (m_rSolState - m_lSolState));
 
   return m_rFlux;
 }
@@ -129,6 +129,8 @@ void HLLFlux::setup()
   m_leftFlux.resize(m_nbrEqs);
   m_rightEv.resize(m_nbrEqs);
   m_leftEv.resize(m_nbrEqs);
+  m_lSolState.resize(m_nbrEqs);
+  m_rSolState.resize(m_nbrEqs);
 }
 
 //////////////////////////////////////////////////////////////////////////////

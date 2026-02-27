@@ -56,7 +56,7 @@ public:  // methods
   virtual void unsetup();
 
 private: // data
-  
+
   /// array storing the sum of the right flux
   RealVector   m_rightFlux;
 
@@ -71,6 +71,12 @@ private: // data
 
   /// temporary unit normal
   RealVector    m_tempUnitNormal;
+
+  /// pre-allocated left solution state (avoids heap allocation per flux call)
+  RealVector    m_lSolState;
+
+  /// pre-allocated right solution state (avoids heap allocation per flux call)
+  RealVector    m_rSolState;
 
 
 }; // class HLLFlux
