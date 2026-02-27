@@ -210,7 +210,11 @@ void CFmeshReader::convert(Common::SelfRegistPtr<MeshFormatConverter> converter)
   {
     path backfile(DirPaths::getInstance().getWorkingDir());
     backfile /= m_data->getFileName();
+#ifdef CF_HAVE_BOOST_1_85
+    backfile.replace_extension("-convertedback" + converter->getOriginExtension());
+#else
     backfile = boost::filesystem::change_extension(backfile, "-convertedback" + converter->getOriginExtension());
+#endif  
     converter->convertBack(backfile);
   }
 }

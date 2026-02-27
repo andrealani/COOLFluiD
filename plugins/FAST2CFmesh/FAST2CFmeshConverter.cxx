@@ -75,8 +75,11 @@ void FAST2CFmeshConverter::readFAST(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
-
+#endif
   Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle =
     Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   ifstream& fin = fhandle->open(meshFile);

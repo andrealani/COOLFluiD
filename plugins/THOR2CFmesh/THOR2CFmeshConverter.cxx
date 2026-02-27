@@ -106,7 +106,11 @@ void THOR2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   ifstream& fin = fhandle->open(meshFile);
@@ -292,7 +296,11 @@ void THOR2CFmeshConverter::readTHOR(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   ifstream& fin = fhandle->open(meshFile);
@@ -418,8 +426,11 @@ void THOR2CFmeshConverter::readSP(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path fileSP = boost::filesystem::path(filepath).replace_extension(".SP");
+#else
   path fileSP = change_extension(filepath,".SP");
-
+#endif
   Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   ifstream& fin = fhandle->open(fileSP);
 
@@ -501,7 +512,11 @@ void THOR2CFmeshConverter::writeSP(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path outFile = boost::filesystem::path(filepath).replace_extension(".SP");
+#else
   path outFile = change_extension(filepath, ".SP");
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(outFile);
@@ -524,7 +539,11 @@ void THOR2CFmeshConverter::writeTHOR(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path outFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path outFile = change_extension(filepath, getOriginExtension());
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(outFile);

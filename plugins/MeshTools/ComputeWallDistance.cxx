@@ -165,7 +165,11 @@ void ComputeWallDistance::printToFile()
   path file = Environment::DirPaths::getInstance().getResultsDir() / path(_nameOutputFile);
 //   path file = Environment::DirPaths::getInstance().getWorkingDir() / path(_nameOutputFile);
   file = Framework::PathAppender::getInstance().appendParallel( file );
-  change_extension(file,".dat");
+#ifdef CF_HAVE_BOOST_1_85
+   file.replace_extension(".dat");
+#else
+   change_extension(file,".dat");
+#endif
 
   SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(file);

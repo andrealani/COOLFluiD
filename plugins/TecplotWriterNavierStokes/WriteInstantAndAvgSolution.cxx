@@ -199,12 +199,20 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
 
   // open file for averaged solution
   path fpath = Environment::DirPaths::getInstance().getResultsDir() / m_avgSolFileName;
-  fpath = boost::filesystem::change_extension(fpath, std::string(".plt"));
+#ifdef CF_HAVE_BOOST_1_85
+    fpath.replace_extension(".plt");
+#else
+    fpath = boost::filesystem::change_extension(fpath, std::string(".plt"));
+#endif
   ostringstream add;
   if (PE::GetPE().IsParallel()) {
     add << "-P" << PE::GetPE().GetRank(getMethodData().getNamespace());
   }
+#ifdef CF_HAVE_BOOST_1_85
+  fpath = fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
+#else
   fpath = fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
+#endif
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandleAvg =
       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& foutAvg = fhandleAvg->open(fpath);
@@ -330,7 +338,11 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
                << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
                << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                << ", AUXDATA TRS=\"" << trs->getName() << "\""
+#ifdef CF_HAVE_BOOST_1_85
+               << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
+#else
                << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+#endif
                << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
                << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
                << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\""
@@ -344,7 +356,11 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
                   << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
                   << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                   << ", AUXDATA TRS=\"" << trs->getName() << "\""
+#ifdef CF_HAVE_BOOST_1_85
+                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
+#else
                   << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+#endif
                   << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
                   << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
                   << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\""
@@ -510,7 +526,11 @@ void WriteInstantAndAvgSolution::setup()
   m_updateToPrimVar->setup(1);
 
   // remove the extension and assign to filename
+#ifdef CF_HAVE_BOOST_1_85
+  m_avgSolFileName = boost::filesystem::path(m_avgSolFileNameStr).stem().string();
+#else
   m_avgSolFileName = boost::filesystem::basename(boost::filesystem::path(m_avgSolFileNameStr));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

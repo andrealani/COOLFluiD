@@ -315,8 +315,11 @@ void Gambit2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
-
+#endif
   Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
 	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();
 
@@ -945,7 +948,11 @@ void Gambit2CFmeshConverter::readGambitFile(const boost::filesystem::path& filep
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerInput>* fhandle = 
 	Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().createPtr();

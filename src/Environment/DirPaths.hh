@@ -11,7 +11,11 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/exception.hpp>
+#ifdef CF_HAVE_BOOST_1_85
+#include <boost/filesystem.hpp>
+#else
 #include <boost/filesystem/convenience.hpp>
+#endif 
 
 #include "Common/NonCopyable.hh"
 #include "Common/FilesystemException.hh"

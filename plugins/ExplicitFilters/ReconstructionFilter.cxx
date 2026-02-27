@@ -283,7 +283,11 @@ void ReconstructionFilter::getFilterGridRatioVSweightingFactor()
 {
   boost::filesystem::path file;
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle;
+#ifdef CF_HAVE_BOOST_1_85
+  std::string base = boost::filesystem::path("FGRvsWeight").stem().string();
+#else
   std::string base = boost::filesystem::basename("FGRvsWeight");
+#endif
   std::string centreCellIDstr = Common::StringOps::to_str(getStencilID());
   
   CFLog(DEBUG_MED, "Writing file FGRvsWeight-" << getStencilID() << ".dat \n");

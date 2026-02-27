@@ -152,7 +152,11 @@ void CFmeshWriter::computeFullOutputName()
   
   path fpath = Environment::DirPaths::getInstance().getResultsDir() / m_filename;
   fpath = PathAppender::getInstance().appendAllInfo(fpath, m_appendIter, m_appendTime, false);
-  m_fullOutputName = boost::filesystem::change_extension(fpath, getFormatExtension());
+#ifdef CF_HAVE_BOOST_1_85
+  m_fullOutputName = boost::filesystem::path(fpath).replace_extension(getFormatExtension());
+#else
+    m_fullOutputName = boost::filesystem::change_extension(fpath, getFormatExtension());
+#endif  
   
   SimulationStatus::getInstance().setLastOutputFile
     (m_fullOutputName,getNamespace(),SubSystemStatusStack::getActive()->getSubSystemName());

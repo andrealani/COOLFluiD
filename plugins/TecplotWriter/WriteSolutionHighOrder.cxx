@@ -291,7 +291,11 @@ void WriteSolutionHighOrder::writeToFileStream(std::ofstream& fout)
 //          if (getMethodData().getAppendAuxData())
 //            fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank() << "\""
 //                 << ", AUXDATA TRS=\"" << trs->getName() << "\""
+//#ifdef CF_HAVE_BOOST_1_85
+//                 << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
+//#else
 //                 << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+//#endif
 //                 << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
 //                 << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
 //                 << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\""

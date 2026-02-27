@@ -423,9 +423,15 @@ boost::filesystem::path LorentzForceSourceTerm::constructFilename(std::string fi
 
   if (isParallel) {
     std::ostringstream fname;
+#ifdef CF_HAVE_BOOST_1_85
+    fname << boost::filesystem::path(fileName).stem().string()
+          << "-" << PE::GetPE().GetRank()
+          << boost::filesystem::path(fileName).extension().string();
+#else
     fname << boost::filesystem::basename(boost::filesystem::path(fileName))
           << "-" << PE::GetPE().GetRank()
           << boost::filesystem::extension(boost::filesystem::path(fileName));
+#endif
   }
 
   return boost::filesystem::path(fileName);

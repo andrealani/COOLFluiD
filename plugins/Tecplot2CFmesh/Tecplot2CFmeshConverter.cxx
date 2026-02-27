@@ -160,8 +160,12 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
   vector<string> words;
   SelfRegistPtr<FileHandlerInput>* fhandle = 
 	SingleBehaviorFactory<FileHandlerInput>::getInstance().createPtr();
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(extension);
+#else
   path meshFile = change_extension(filepath, extension);
-  
+#endif
+
   ifstream& fin = (*fhandle)->open(meshFile);
   getTecplotWordsFromLine(fin, line, countl, words); // TITLE
   
@@ -485,8 +489,12 @@ void Tecplot2CFmeshConverter::writeTecplot(const boost::filesystem::path& filepa
   CFAUTOTRACE;
 
 //   using namespace boost::filesystem;
+//#ifdef CF_HAVE_BOOST_1_85
+//   path outFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension()); 
+//#else
 //   path outFile = change_extension(filepath, getOriginExtension());
-  
+//#endif
+
 //   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
 //   ofstream& fout = fhandle->open(outFile);
 }
@@ -1179,9 +1187,12 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   
   Stopwatch<WallTime> stp;
   stp.start();
-  
+#ifdef CF_HAVE_BOOST_1_85
+  path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path meshFile = change_extension(filepath, getOriginExtension());
-  
+#endif
+
   //SelfRegistPtr<FileHandlerOutput>* fhandle = 
   //	SingleBehaviorFactory<FileHandlerOutput>::getInstance().createPtr();
   
@@ -1272,7 +1283,11 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  PRECISION = 9\n";
   fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
 
+#ifdef CF_HAVE_BOOST_1_85
+  path allSurfFile = boost::filesystem::path(filepath).replace_extension("allsurf.plt");
+#else
   path allSurfFile = change_extension(filepath, "allsurf.plt");
+#endif
  
 #if defined CF_HAVE_BOOST_1_60 || defined CF_HAVE_BOOST_1_62 || defined CF_HAVE_BOOST_1_66 || defined CF_HAVE_BOOST_1_70 || defined CF_HAVE_BOOST_1_72 || defined CF_HAVE_BOOST_1_59 || defined CF_HAVE_BOOST_1_55 || defined CF_HAVE_BOOST_1_54 || defined CF_HAVE_BOOST_1_53
   fout << "$!WRITEDATASET  \"|MFBD|/" << allSurfFile.filename().string() << "\"\n";

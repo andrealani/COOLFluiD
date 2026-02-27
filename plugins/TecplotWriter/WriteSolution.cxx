@@ -1104,7 +1104,11 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
           if (getMethodData().getAppendAuxData())
             fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                  << ", AUXDATA TRS=\"" << trs->getName() << "\""
+#ifdef CF_HAVE_BOOST_1_85
+                 << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
+#else
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+#endif
                  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
                  << ", AUXDATA Iter=\"" << subSysStatus->getNbIter() << "\""
                  << ", AUXDATA PhysTime=\"" << subSysStatus->getCurrentTimeDim() << "\""
@@ -1243,7 +1247,11 @@ void WriteSolution::writeBoundarySurface()
   // else Tecplot cannot handle it and you have manually to skip the file
   if (countTRToWrite > 0) {
     path cfgpath = getMethodData().getFilename();
+#ifdef CF_HAVE_BOOST_1_85
+    path filepath = cfgpath.parent_path() / ( cfgpath.stem().string() + "-surf" + cfgpath.extension().string() );
+#else
     path filepath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );
+#endif
 
     Common::SelfRegistPtr<Environment::FileHandlerOutput>* fhandle =
       Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().createPtr();

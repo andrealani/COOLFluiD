@@ -5,6 +5,9 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 #include <numeric>
+#ifdef CF_HAVE_BOOST_1_85
+#define BOOST_TIMER_ENABLE_DEPRECATED
+#endif
 #include <boost/progress.hpp>
 
 #include "Framework/MethodCommandProvider.hh"

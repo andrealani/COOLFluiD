@@ -118,7 +118,8 @@ my %packages = (  #  version   default install priority      function
 #    "boost"      => [ "1_66_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_70_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_79_0", 'on' ,  'off', $priority++,  \&install_boost ],
-    "boost"      => [ "1_76_0", 'on' ,  'off', $priority++,  \&install_boost ],
+#    "boost"      => [ "1_76_0", 'on' ,  'off', $priority++,  \&install_boost ],
+     "boost"      => [ "1_85_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #    "boost"      => [ "1_72_0", 'on' ,  'off', $priority++,  \&install_boost ],
 #   "openmpi"    => [ "1.4.2",  'off',  'off', $priority++,  \&install_openmpi ],
 #    "openmpi"    => [ "1.6.5",  'off',  'off', $priority++,  \&install_openmpi ],
@@ -1660,7 +1661,7 @@ sub install_boost()
       }    
     
     my $boostmpiopt=" --without-mpi ";
-    unless ($opt_nompi or $version  eq "1_59_0" or $version eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" or $version eq "1_72_0" or $version eq "1_76_0" or $version eq "1_79_0")  {
+    unless ($opt_nompi or $version  eq "1_59_0" or $version eq "1_62_0" or $version eq "1_66_0" or $version eq "1_70_0" or $version eq "1_72_0" or $version eq "1_76_0" or $version eq "1_79_0" or $version eq "1_85_0")  {
       $boostmpiopt=" --with-mpi cxxflags=-DBOOST_MPI_HOMOGENEOUS ";
       open  (USERCONFIGJAM, ">>./tools/build/v2/user-config.jam") || die("Cannot Open File ./tools/build/v2/user-config.jam") ;
       print  USERCONFIGJAM <<ZZZ;
@@ -1690,7 +1691,7 @@ ZZZ
 	run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time toolset=$toolset threading=multi variant=release stage");
 	run_command_or_die("./b2 $static_link install");
       }
-   if ($version eq "1_79_0")
+   if ($version eq "1_79_0" or $version eq "1_85_0")
       {
         run_command_or_die("./bootstrap.sh --prefix=$opt_install_dir -with-libraries=test,thread,iostreams,filesystem,system,regex,date_time,atomic toolset=$toolset threading=multi variant=release stage");
         run_command_or_die("./b2 $static_link install");

@@ -246,7 +246,12 @@ void ComputeDiscreteError::openFile(bool append)
 
   boost::filesystem::path fpath = Environment::DirPaths::getInstance().getResultsDir() /
 boost::filesystem::path(m_nameOutputFile);
+
+#ifdef CF_HAVE_BOOST_1_85
+  fpath.replace_extension(".plt");
+#else
   boost::filesystem::change_extension(fpath,".plt");
+#endif
   fpath = Framework::PathAppender::getInstance().appendParallel( fpath );
 
   if (append)

@@ -393,9 +393,15 @@ boost::filesystem::path RMSJouleHeatSource::constructFilename()
 
   if (isParallel) {
     std::ostringstream fname;
+#ifdef CF_HAVE_BOOST_1_85
+    fname << boost::filesystem::path(m_nameOutputFileEMField).stem().string()
+          << "-" << PE::GetPE().GetRank("Default")
+          << boost::filesystem::path(m_nameOutputFileEMField).extension().string();
+#else
     fname << boost::filesystem::basename(boost::filesystem::path(m_nameOutputFileEMField))
           << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::extension(boost::filesystem::path(m_nameOutputFileEMField));
+#endif
   }
   
   CFLog(VERBOSE, "RMSJouleHeatSource::constructFilename() => Writing Electromagnetic Field to : " << m_nameOutputFileEMField << "\n");

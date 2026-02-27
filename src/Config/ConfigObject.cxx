@@ -8,7 +8,11 @@
 #include <fstream>
 
 #include <boost/filesystem/operations.hpp>
+#ifdef CF_HAVE_BOOST_1_85
+#include <boost/filesystem.hpp>
+#else
 #include <boost/filesystem/convenience.hpp>
+#endif 
 
 #include "Common/CFLog.hh"
 #include "Common/PE.hh"

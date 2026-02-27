@@ -119,7 +119,11 @@ void ReadWallDistance::execute()
 
   path file = Environment::DirPaths::getInstance().getWorkingDir() / path(_nameInputFile);
   file = Framework::PathAppender::getInstance().appendParallel( file );
-  change_extension(file,".dat");
+#ifdef CF_HAVE_BOOST_1_85
+  file.replace_extension(".dat");
+#else
+   change_extension(file,".dat");
+#endif
 
   SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
   ifstream& fin = fhandle->open(file);

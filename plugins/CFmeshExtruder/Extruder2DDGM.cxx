@@ -6,6 +6,9 @@
 
 #include <ctime>
 #include <cstdlib>
+#ifdef CF_HAVE_BOOST_1_85
+#define BOOST_TIMER_ENABLE_DEPRECATED
+#endif
 #include <boost/progress.hpp>
 
 #include "Common/Stopwatch.hh"

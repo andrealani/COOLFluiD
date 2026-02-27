@@ -124,7 +124,11 @@ void CGNS2CFmeshConverter::readFiles(const boost::filesystem::path& filepath)
   {
 
     using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+    path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
     path meshFile = change_extension(filepath, getOriginExtension());
+#endif
 
   // this downloads the mesh if it is not present in the filesystem
   //    Common::SelfRegistPtr<Environment::FileHandlerInput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerInput>::getInstance().create();
@@ -295,7 +299,11 @@ void CGNS2CFmeshConverter::writeSP(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path outFile = boost::filesystem::path(filepath).replace_extension(".SP");
+#else
   path outFile = change_extension(filepath, ".SP");
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(outFile);
@@ -318,7 +326,11 @@ void CGNS2CFmeshConverter::writeTHOR(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
+#ifdef CF_HAVE_BOOST_1_85
+  path outFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
+#else
   path outFile = change_extension(filepath, getOriginExtension());
+#endif
 
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle = Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
   ofstream& fout = fhandle->open(outFile);

@@ -124,7 +124,11 @@ void ParWriteSolution::execute()
     
     if (!getMethodData().getSurfaceTRSsToWrite().empty()) {
       // write boundary surface data
+#ifdef CF_HAVE_BOOST_1_85
+      boost::filesystem::path bpath = cfgpath.parent_path() / ( cfgpath.stem().string() + ".surf" + cfgpath.extension().string() );
+#else
       boost::filesystem::path bpath = cfgpath.branch_path() / ( basename(cfgpath) + ".surf" + extension(cfgpath) );
+#endif
       writeData(bpath, _isNewBFile, string("Boundary data"), &ParWriteSolution::writeBoundaryData);
     }
   }
@@ -1637,7 +1641,11 @@ void ParWriteSolution::writeInnerZoneHeader(std::ofstream* fout,
   
   if (getMethodData().getAppendAuxData()) {
     *fout << ", AUXDATA TRS=\"" << trs->getName() << "\""
+#ifdef CF_HAVE_BOOST_1_85
+          << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
+#else
 	  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
+#endif
 	  << ", AUXDATA ElementType=\"" << eType.getShape() << "\""
 	  << ", AUXDATA Iter=\"" << std::noshowpos << setw(_intWordFormatSize) << subSysStatus->getNbIter() << "\""
 	  << ", AUXDATA PhysTime=\"";

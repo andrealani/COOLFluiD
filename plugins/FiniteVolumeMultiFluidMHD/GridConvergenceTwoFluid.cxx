@@ -355,9 +355,15 @@ boost::filesystem::path GridConvergenceTwoFluid::constructFilename()
 
   if (isParallel) {
     std::ostringstream fname;
+#ifdef CF_HAVE_BOOST_1_85
+    fname << boost::filesystem::path(m_nameOutputFileError).stem().string()
+          << "-" << PE::GetPE().GetRank("Default")
+          << boost::filesystem::path(m_nameOutputFileError).extension().string();
+#else
     fname << boost::filesystem::basename(boost::filesystem::path(m_nameOutputFileError))
           << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::extension(boost::filesystem::path(m_nameOutputFileError));
+#endif
   }
 
   CFout << "Writing Error file to: " << m_nameOutputFileError << "\n";

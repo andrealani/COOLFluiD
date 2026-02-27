@@ -1204,9 +1204,15 @@ boost::filesystem::path DivMonitoring::constructFilename()
   
   if (isParallel) {
     std::ostringstream fname;
+#ifdef CF_HAVE_BOOST_1_85
+    fname << boost::filesystem::path(m_nameOutputFileDivMonitoring).stem().string()
+          << "-" << PE::GetPE().GetRank("Default")
+          << boost::filesystem::path(m_nameOutputFileDivMonitoring).extension().string();
+#else
     fname << boost::filesystem::basename(boost::filesystem::path(m_nameOutputFileDivMonitoring))
           << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::extension(boost::filesystem::path(m_nameOutputFileDivMonitoring));
+#endif  
   }
   
   CFout << "Writing Electric and Magnetic Field Divergence to : " << m_nameOutputFileDivMonitoring << "\n";
