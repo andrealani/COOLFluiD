@@ -7,7 +7,7 @@ MACRO( CF_ADD_C_FLAGS m_c_flags )
     SET( N_CFLAG 0 )
   ENDIF()
 
- 	MATH ( EXPR N_CFLAG '${N_CFLAG}+1'  )    
+	MATH ( EXPR N_CFLAG "${N_CFLAG}+1"  )
 
   CHECK_C_COMPILER_FLAG ( ${m_c_flags} C_FLAG_TEST_${N_CFLAG} )
 
@@ -29,7 +29,7 @@ MACRO( CF_ADD_CXX_FLAGS m_cxx_flags )
     SET( N_CXXFLAG 0 )
   ENDIF()
 
- 	MATH ( EXPR N_CXXFLAG '${N_CXXFLAG}+1'  )    
+	MATH ( EXPR N_CXXFLAG "${N_CXXFLAG}+1"  )
 
   CHECK_CXX_COMPILER_FLAG ( ${m_cxx_flags} CXX_FLAG_TEST_${N_CXXFLAG} )
 
