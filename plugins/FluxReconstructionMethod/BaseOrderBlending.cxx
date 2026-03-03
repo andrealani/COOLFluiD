@@ -388,13 +388,15 @@ void BaseOrderBlending::execute()
         // Only apply sweeps to parallel updatable cells
         if ((*m_cellStates)[0]->isParUpdatable())
         {
-          // get the cell blending coefficient
-          m_filterStrength = output[((*m_cellStates)[0])->getLocalID()];
+          // get the cell's own blending coefficient (before sweep)
+          const CFreal ownAlpha = output[((*m_cellStates)[0])->getLocalID()];
 
-          m_filterStrength = std::max(m_filterStrength, m_sweepWeight * alpha_neighbor);
+          // Sweep: propagate neighbor influence with damping
+          const CFreal sweptAlpha = m_sweepDamping * std::max(ownAlpha, m_sweepWeight * alpha_neighbor);
 
-          // Apply alpha limits after sweeping operations
-          CFreal finalAlpha = applyAlphaLimits(m_sweepDamping * m_filterStrength);
+          // The sweep can only raise alpha via neighbor propagation, never reduce
+          // a cell's own legitimately computed value
+          CFreal finalAlpha = applyAlphaLimits(std::max(ownAlpha, sweptAlpha));
 
           for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
           {
@@ -632,16 +634,17 @@ void BaseOrderBlending::computeSmoothnessModal()
     const bool isPRho = (m_modalMonitoredExpression == "p/rho");
     const bool isRhoOverP = (m_modalMonitoredExpression == "rho/p");
     const bool isVelMag = (m_modalMonitoredExpression == "velocity_magnitude");
-    
-    if (!isRhoP && !isPRho && !isRhoOverP && !isVelMag)
+    const bool isMagPressure = (m_modalMonitoredExpression == "B2");
+
+    if (!isRhoP && !isPRho && !isRhoOverP && !isVelMag && !isMagPressure)
     {
-      CFLog(WARN, "Unknown ModalMonitoredExpression '" << m_modalMonitoredExpression 
+      CFLog(WARN, "Unknown ModalMonitoredExpression '" << m_modalMonitoredExpression
                   << "', defaulting to 'rho*p'\n");
     }
-    
+
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      if (isRhoP || (!isPRho && !isRhoOverP && !isVelMag)) // Default case
+      if (isRhoP || (!isPRho && !isRhoOverP && !isVelMag && !isMagPressure)) // Default case
       {
         m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[0] * (*((*m_cellStates)[iSol]))[7];
       }
@@ -661,6 +664,13 @@ void BaseOrderBlending::computeSmoothnessModal()
         CFreal vy = (*((*m_cellStates)[iSol]))[2];
         CFreal vz = (*((*m_cellStates)[iSol]))[3];
         m_tempSolPntVec[iSol] = std::sqrt(vx*vx + vy*vy + vz*vz);
+      }
+      else if (isMagPressure)
+      {
+        CFreal bx = (*((*m_cellStates)[iSol]))[4];
+        CFreal by = (*((*m_cellStates)[iSol]))[5];
+        CFreal bz = (*((*m_cellStates)[iSol]))[6];
+        m_tempSolPntVec[iSol] = bx*bx + by*by + bz*bz;
       }
     }
   }

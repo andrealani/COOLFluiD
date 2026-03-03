@@ -485,6 +485,8 @@ MeshFittingAlgorithmFRQ2Quads.cxx
 MeshFittingAlgorithmFRQ2Quads.hh
 BaseOrderBlending.cxx
 BaseOrderBlending.hh
+EntropyFilter.cxx
+EntropyFilter.hh
 )
 
 IF (NOT CF_HAVE_CUDA)

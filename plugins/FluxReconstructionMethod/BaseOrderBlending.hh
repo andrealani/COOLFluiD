@@ -77,6 +77,11 @@ public:
    */
   void execute();
 
+  /**
+   * Computes vector of maximum modal order (static, usable by other classes)
+   */
+  static RealVector getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint m_order);
+
 protected: // functions
 
   /**
@@ -122,11 +127,6 @@ protected: // functions
   * Apply alpha limits to blending coefficient
   */
   CFreal applyAlphaLimits(CFreal alpha);
-
-  /**
-   * Computes vector of maximum modal order
-   */
-  RealVector getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint m_order);
   
 
 protected: // data
