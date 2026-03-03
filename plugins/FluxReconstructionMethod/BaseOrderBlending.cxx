@@ -6,6 +6,7 @@
 
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
+#include "Framework/BaseTerm.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/BaseOrderBlending.hh"
@@ -388,15 +389,13 @@ void BaseOrderBlending::execute()
         // Only apply sweeps to parallel updatable cells
         if ((*m_cellStates)[0]->isParUpdatable())
         {
-          // get the cell's own blending coefficient (before sweep)
-          const CFreal ownAlpha = output[((*m_cellStates)[0])->getLocalID()];
+          // get the cell blending coefficient
+          m_filterStrength = output[((*m_cellStates)[0])->getLocalID()];
 
-          // Sweep: propagate neighbor influence with damping
-          const CFreal sweptAlpha = m_sweepDamping * std::max(ownAlpha, m_sweepWeight * alpha_neighbor);
+          m_filterStrength = std::max(m_filterStrength, m_sweepWeight * alpha_neighbor);
 
-          // The sweep can only raise alpha via neighbor propagation, never reduce
-          // a cell's own legitimately computed value
-          CFreal finalAlpha = applyAlphaLimits(std::max(ownAlpha, sweptAlpha));
+          // Apply alpha limits after sweeping operations
+          CFreal finalAlpha = applyAlphaLimits(m_sweepDamping * m_filterStrength);
 
           for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
           {
@@ -609,68 +608,70 @@ void BaseOrderBlending::computeSmoothnessModal()
   std::vector<CFreal> modalCoeffs(m_nbrSolPnts, 0.0);
   CFreal max_indicator = 0.0;
 
-  // Step 1: Load sol pnts values for monitored variable based on expression (optimized)
-  if (m_modalMonitoredExpression == "rho")
+  // Step 1: Load sol pnts values for monitored variable based on expression
+  // Uses computePhysicalData to extract physics-agnostic quantities (pressure, velocity)
+  // BaseTerm::P = 1 is universal for pressure in physical data
+  const bool isRho = (m_modalMonitoredExpression == "rho");
+  const bool isP = (m_modalMonitoredExpression == "p");
+  const bool isRhoP = (m_modalMonitoredExpression == "rho*p");
+  const bool isPRho = (m_modalMonitoredExpression == "p/rho");
+  const bool isRhoOverP = (m_modalMonitoredExpression == "rho/p");
+  const bool isVelMag = (m_modalMonitoredExpression == "velocity_magnitude");
+  const bool isMagPressure = (m_modalMonitoredExpression == "B2");
+
+  if (!isRho && !isP && !isRhoP && !isPRho && !isRhoOverP && !isVelMag && !isMagPressure)
   {
-    // Extract density values
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    CFLog(WARN, "Unknown ModalMonitoredExpression '" << m_modalMonitoredExpression
+                << "', defaulting to 'rho*p'\n");
+  }
+
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    if (isRho)
     {
+      // Density: index 0 is correct for all variable sets
       m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[0];
     }
-  }
-  else if (m_modalMonitoredExpression == "p")
-  {
-    // Extract pressure values
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    else if (isMagPressure)
     {
-      m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[7];
+      // Magnetic pressure B^2: indices 4,5,6 correct for MHD conservative
+      CFreal bx = (*((*m_cellStates)[iSol]))[4];
+      CFreal by = (*((*m_cellStates)[iSol]))[5];
+      CFreal bz = (*((*m_cellStates)[iSol]))[6];
+      m_tempSolPntVec[iSol] = bx*bx + by*by + bz*bz;
     }
-  }
-  else
-  {
-    // For more complex expressions, we need the loop but it's more efficient
-    // to check the expression once outside the loop
-    const bool isRhoP = (m_modalMonitoredExpression == "rho*p");
-    const bool isPRho = (m_modalMonitoredExpression == "p/rho");
-    const bool isRhoOverP = (m_modalMonitoredExpression == "rho/p");
-    const bool isVelMag = (m_modalMonitoredExpression == "velocity_magnitude");
-    const bool isMagPressure = (m_modalMonitoredExpression == "B2");
-
-    if (!isRhoP && !isPRho && !isRhoOverP && !isVelMag && !isMagPressure)
+    else if (isVelMag)
     {
-      CFLog(WARN, "Unknown ModalMonitoredExpression '" << m_modalMonitoredExpression
-                  << "', defaulting to 'rho*p'\n");
+      // Velocity magnitude from momenta: sqrt((rhoU^2+rhoV^2+rhoW^2)/rho^2)
+      const CFreal rho = (*((*m_cellStates)[iSol]))[0];
+      const CFreal rhoInv = 1.0 / std::max(std::abs(rho), MathTools::MathConsts::CFrealEps());
+      const CFreal u = (*((*m_cellStates)[iSol]))[1] * rhoInv;
+      const CFreal v = (*((*m_cellStates)[iSol]))[2] * rhoInv;
+      const CFreal w = (m_dim == 3) ? (*((*m_cellStates)[iSol]))[3] * rhoInv : 0.0;
+      m_tempSolPntVec[iSol] = std::sqrt(u*u + v*v + w*w);
     }
-
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    else
     {
-      if (isRhoP || (!isPRho && !isRhoOverP && !isVelMag && !isMagPressure)) // Default case
+      // Expressions involving pressure: use computePhysicalData for physics-agnostic extraction
+      m_obUpdateVarSet->computePhysicalData(*((*m_cellStates)[iSol]), m_obPData);
+      const CFreal p = m_obPData[1]; // BaseTerm::P = 1, universal across physics models
+      const CFreal rho = (*((*m_cellStates)[iSol]))[0];
+
+      if (isP)
       {
-        m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[0] * (*((*m_cellStates)[iSol]))[7];
+        m_tempSolPntVec[iSol] = p;
       }
       else if (isPRho)
       {
-        CFreal rho = (*((*m_cellStates)[iSol]))[0];
-        m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[7] / std::max(rho, MathTools::MathConsts::CFrealEps());
+        m_tempSolPntVec[iSol] = p / std::max(std::abs(rho), MathTools::MathConsts::CFrealEps());
       }
       else if (isRhoOverP)
       {
-        CFreal p = (*((*m_cellStates)[iSol]))[7];
-        m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[0] / std::max(p, MathTools::MathConsts::CFrealEps());
+        m_tempSolPntVec[iSol] = rho / std::max(std::abs(p), MathTools::MathConsts::CFrealEps());
       }
-      else if (isVelMag)
+      else // isRhoP or default
       {
-        CFreal vx = (*((*m_cellStates)[iSol]))[1];
-        CFreal vy = (*((*m_cellStates)[iSol]))[2];
-        CFreal vz = (*((*m_cellStates)[iSol]))[3];
-        m_tempSolPntVec[iSol] = std::sqrt(vx*vx + vy*vy + vz*vz);
-      }
-      else if (isMagPressure)
-      {
-        CFreal bx = (*((*m_cellStates)[iSol]))[4];
-        CFreal by = (*((*m_cellStates)[iSol]))[5];
-        CFreal bz = (*((*m_cellStates)[iSol]))[6];
-        m_tempSolPntVec[iSol] = bx*bx + by*by + bz*bz;
+        m_tempSolPntVec[iSol] = rho * p;
       }
     }
   }
@@ -701,13 +702,14 @@ void BaseOrderBlending::computeSmoothnessModal()
   {
     const CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
     energy_total += mj2;
-    
-    if (j >= m_nbrSolPntsMinOne)
+
+    const CFuint modeOrder = static_cast<CFuint>(m_maxModalOrder[j]);
+    if (modeOrder == m_order)
     {
       // P modes (highest)
       energy_P += mj2;
     }
-    else if (j >= m_nbrSolPntsMinTwo)
+    else if (modeOrder == m_order - 1)
     {
       // P-1 modes
       energy_Pm1 += mj2;
@@ -894,7 +896,7 @@ RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape,
             for (CFuint iOrderKsi = totalOrderXY; iOrderKsi >= 0; --iOrderKsi)
             {
               CFuint iOrderEta = totalOrderXY - iOrderKsi;
-              maxModalOrder[modeIndex] = totalOrderXY;
+              maxModalOrder[modeIndex] = std::max(totalOrderXY, iOrderZta);
               modeIndex+=1;
               if (iOrderKsi == 0) break;
             }
@@ -1005,8 +1007,13 @@ void BaseOrderBlending::setup()
   m_tempSolPntVec2.resize(m_nbrSolPnts);
 
   m_vdm = *(frLocalData[0]->getVandermondeMatrix());
-  
+
   m_vdmInv = *(frLocalData[0]->getVandermondeMatrixInv());
+
+  // Initialize update variable set and physical data for monitored expression
+  m_obUpdateVarSet = getMethodData().getUpdateVar();
+  SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm();
+  convTerm->resizePhysicalData(m_obPData);
   
   m_NeighborIDs.resize(nbrCells);
 
