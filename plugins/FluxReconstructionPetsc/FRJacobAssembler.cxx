@@ -70,14 +70,14 @@ void FRJacobAssembler::computeBeforeSolving()
   CFLog(INFO, "FRJacobAssembler::computeBeforeSolving() => assembling Jacobian\n");
 
   // FRJacobAssembler relies on PETSc's native PCILU operating on precondMat.
-  // Bug #4: Requires DifferentPreconditionerMatrix=true to create a real matrix.
+  // Requires DifferentPreconditionerMatrix=true to create a real matrix.
   cf_assert(getMethodData().getDifferentPreconditionerMatrix() &&
     "FRJacobAssembler requires DifferentPreconditionerMatrix = true in CFcase");
-  // Bug #5: Requires the ParBAIJ path (!useBlockPreconditionerMatrix) so that
+  // Requires the ParBAIJ path (!useBlockPreconditionerMatrix) so that
   // KSPSetOperators passes precondMat (not shellMat) as the PC matrix.
-  // With useBlockPreconditionerMatrix=true, ParJFSolveSys routes
-  // KSPSetOperators(ksp, shellMat, shellMat), which makes PETSc try
-  // PCILU on a MATSHELL => crash.
+  // With useBlockPreconditionerMatrix=true, ParJFSolveSys passes shellMat
+  // as both A and P to KSPSetOperators, making PETSc apply PCILU on a
+  // MATSHELL which crashes.
   cf_assert(!getMethodData().useBlockPreconditionerMatrix() &&
     "FRJacobAssembler requires UseBlockPreconditioner = false (needs ParBAIJ path for PETSc PCILU)");
 
@@ -85,11 +85,11 @@ void FRJacobAssembler::computeBeforeSolving()
   SafePtr<SpaceMethod> spaceMtd = jfc->spaceMethod;
   SafePtr<SpaceMethodData> spaceData = spaceMtd->getSpaceMethodData();
 
-  // ---- Step 1: Save flags ----
+  // Save flags
   const bool savedDoComputeJacob = spaceData->doComputeJacobian();
   const bool savedFillPrecondMat = spaceData->fillPreconditionerMatrix();
 
-  // ---- Step 2: Backup updateCoeff and rhs ----
+  // Backup updateCoeff and rhs
   DataHandle<CFreal> updateCoeff = jfc->updateCoeff->getDataHandle();
   DataHandle<CFreal> rhs = jfc->rhs->getDataHandle();
   DataHandle<State*, GLOBAL> states = jfc->states->getDataHandle();
@@ -109,27 +109,27 @@ void FRJacobAssembler::computeBeforeSolving()
     bkpRhs[i] = rhs[i];
   }
 
-  // ---- Step 3: Enable Jacobian assembly into preconditioner matrix ----
+  // Enable Jacobian assembly into preconditioner matrix
   spaceData->setComputeJacobianFlag(true);
   spaceData->setFillPreconditionerMatrix(true);
 
-  // ---- Step 4: Zero the preconditioner matrix ----
+  // Zero the preconditioner matrix
   PetscMatrix& precondMat = jfc->petscData->getPreconditionerMatrix();
   precondMat.resetToZeroEntries();
 
-  // ---- Step 5: Reset updateCoeff and compute residuals ----
+  // Reset updateCoeff and compute residuals
   updateCoeff = 0.0;
   spaceMtd->computeSpaceResidual(1.0);
   spaceMtd->computeTimeResidual(1.0);
 
-  // ---- Step 6: Finalize preconditioner matrix assembly ----
+  // Finalize preconditioner matrix assembly
   precondMat.finalAssembly();
 
-  // ---- Step 7: Restore flags ----
+  // Restore flags
   spaceData->setComputeJacobianFlag(savedDoComputeJacob);
   spaceData->setFillPreconditionerMatrix(savedFillPrecondMat);
 
-  // ---- Step 8: Restore updateCoeff and rhs ----
+  // Restore updateCoeff and rhs
   for (CFuint i = 0; i < nbStates; ++i)
   {
     updateCoeff[i] = bkpUpdateCoeff[i];
@@ -146,7 +146,7 @@ void FRJacobAssembler::computeBeforeSolving()
 
 void FRJacobAssembler::computeAfterSolving()
 {
-  // No-op: the preconditioner matrix is managed by PETSc
+  // No-op: preconditioner matrix persists until the next computeBeforeSolving() call
 }
 
 //////////////////////////////////////////////////////////////////////////////

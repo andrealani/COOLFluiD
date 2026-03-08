@@ -50,7 +50,7 @@ public: // functions
   /// Number of updatable cells
   CFuint nUpdatableCells;
 
-  /// Pointer to JFContext (provides states, spaceMethod, upStatesGlobalIDs, etc.)
+  /// Pointer to JFContext (provides states, rhs, updateCoeff, spaceMethod, petscData)
   JFContext* pJFC;
 
 }; // end of class FRBlockJacobiPcJFContext

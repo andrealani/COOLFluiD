@@ -35,8 +35,9 @@ namespace COOLFluiD {
  *   - PointBlock:   smoother uses per-DOF (nEqs)^2 diagonal sub-blocks
  *
  * P0 blocks are derived from the assembled Jacobian via Galerkin projection
- * (R * B * P), inverted as element-local nEqs x nEqs systems.
- * No separate P0 sparse matrix, no inner KSP.
+ * (R * B * P). Two coarse solve modes (config option CoarseSolveType):
+ *   - BlockDiag (default): element-local nEqs x nEqs block inversion
+ *   - ILU: face-coupled P0 sparse matrix with inner GMRES + ILU(0) solve
  *
  * @author Rayan Dhib
  */

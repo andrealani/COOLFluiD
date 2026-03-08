@@ -31,7 +31,7 @@ namespace COOLFluiD {
  * (nSolPts*nEqs x nSolPts*nEqs), inverts them, and applies the
  * inverse as a block-Jacobi preconditioner during GMRES iterations.
  *
- * Unlike the scalar FRP0Preconditioner, this captures:
+ * Unlike the FRP0Preconditioner PointBlock mode, this captures:
  * - Inter-equation coupling (dF_rho/d(rhoU), etc.)
  * - Intra-cell coupling between solution points
  * - Per-sol-pt time diagonal variation

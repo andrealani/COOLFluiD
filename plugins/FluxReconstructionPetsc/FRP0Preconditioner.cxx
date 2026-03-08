@@ -384,11 +384,11 @@ void FRP0Preconditioner::computeBeforeSolving()
   SafePtr<FluxReconstructionSolverData> frData =
     spaceData.d_castTo<FluxReconstructionSolverData>();
 
-  // ---- Step 1: Save flags ----
+  // Save flags
   const bool savedDoComputeJacob = spaceData->doComputeJacobian();
   const bool savedFillPrecondMat = spaceData->fillPreconditionerMatrix();
 
-  // ---- Step 2: Backup updateCoeff and rhs ----
+  // Backup updateCoeff and rhs
   DataHandle<CFreal> updateCoeff = _pcc.pJFC->updateCoeff->getDataHandle();
   DataHandle<CFreal> rhs = _pcc.pJFC->rhs->getDataHandle();
   DataHandle<State*, GLOBAL> states = _pcc.pJFC->states->getDataHandle();
@@ -582,7 +582,7 @@ void FRP0Preconditioner::computeBeforeSolving()
   }
   else
   {
-    // ======== LEGACY MODE: assemble into PETSc preconditioner matrix ========
+    // ======== PETSc MATRIX MODE: assemble into preconditioner matrix ========
 
     // Allocate P0 off-diagonal map for capturing face cross-blocks
     std::map<std::pair<CFuint,CFuint>, RealMatrix> p0OffDiagMap;
@@ -760,7 +760,7 @@ void FRP0Preconditioner::computeBeforeSolving()
       }
     }
 
-    // Assemble P0 sparse matrix for ILU mode (legacy path)
+    // Assemble P0 sparse matrix for ILU mode
     if (_pcc.useP0ILU)
     {
       CF_CHKERRCONTINUE(MatAssemblyBegin(_pcc.p0Mat, MAT_FINAL_ASSEMBLY));

@@ -28,7 +28,7 @@ namespace COOLFluiD {
  * PETSc's built-in PC (e.g. ILU, ASM, BJACOBI) operates directly
  * on precondMat.
  *
- * Unlike FRBlockJacobi or FRP0Precond, this class does NOT call
+ * Unlike FRBlockJacobiPreconditioner or FRP0Preconditioner, this class does NOT call
  * PCShellSetApply(), so the PCType set in the config (PCILU, etc.)
  * is preserved and used by PETSc natively.
  *

@@ -171,11 +171,11 @@ void FRBlockJacobiPreconditioner::computeBeforeSolving()
   SafePtr<SpaceMethod> spaceMtd = _pcc.pJFC->spaceMethod;
   SafePtr<SpaceMethodData> spaceData = spaceMtd->getSpaceMethodData();
 
-  // ---- Step 1: Save flags ----
+  // Save flags
   const bool savedDoComputeJacob = spaceData->doComputeJacobian();
   const bool savedFillPrecondMat = spaceData->fillPreconditionerMatrix();
 
-  // ---- Step 2: Backup updateCoeff and rhs ----
+  // Backup updateCoeff and rhs
   DataHandle<CFreal> updateCoeff = _pcc.pJFC->updateCoeff->getDataHandle();
   DataHandle<CFreal> rhs = _pcc.pJFC->rhs->getDataHandle();
   DataHandle<State*, GLOBAL> states = _pcc.pJFC->states->getDataHandle();
@@ -190,36 +190,33 @@ void FRBlockJacobiPreconditioner::computeBeforeSolving()
   }
 
   // Backup socket_rhs: computeSpaceResidual/computeTimeResidual will overwrite it.
-  // Although computeJFMat recomputes rhs before reading it, the backup ensures
-  // no stale data persists if the code flow changes in the future.
   RealVector bkpRhs(rhsSize);
   for (CFuint i = 0; i < rhsSize; ++i)
   {
     bkpRhs[i] = rhs[i];
   }
 
-  // ---- Step 3: Enable Jacobian assembly into preconditioner matrix ----
+  // Enable Jacobian assembly into preconditioner matrix
   spaceData->setComputeJacobianFlag(true);
   spaceData->setFillPreconditionerMatrix(true);
 
-  // ---- Step 4: Zero the preconditioner matrix ----
+  // Zero the preconditioner matrix
   PetscMatrix& precondMat = _pcc.pJFC->petscData->getPreconditionerMatrix();
   precondMat.resetToZeroEntries();
 
-  // ---- Step 5: Reset updateCoeff and compute residuals ----
-  // This fills the preconditioner matrix with the full Jacobian
+  // Reset updateCoeff and compute residuals (fills preconditioner matrix with full Jacobian)
   updateCoeff = 0.0;
   spaceMtd->computeSpaceResidual(1.0);
   spaceMtd->computeTimeResidual(1.0);
 
-  // ---- Step 6: Finalize preconditioner matrix assembly ----
+  // Finalize preconditioner matrix assembly
   precondMat.finalAssembly();
 
-  // ---- Step 7: Restore flags ----
+  // Restore flags
   spaceData->setComputeJacobianFlag(savedDoComputeJacob);
   spaceData->setFillPreconditionerMatrix(savedFillPrecondMat);
 
-  // ---- Step 8: Restore updateCoeff and rhs ----
+  // Restore updateCoeff and rhs
   for (CFuint i = 0; i < nbStates; ++i)
   {
     updateCoeff[i] = bkpUpdateCoeff[i];
@@ -229,14 +226,11 @@ void FRBlockJacobiPreconditioner::computeBeforeSolving()
     rhs[i] = bkpRhs[i];
   }
 
-  // ---- Step 9: Extract and invert per-cell diagonal blocks ----
+  // Extract and invert per-cell diagonal blocks
 
   // FRBlockJacobi operates on a SeqBAIJ matrix (useBlockPreconditionerMatrix=true),
   // which uses 0-based local indexing. The cellToUpStateIdx already stores
   // locally-updatable indices (0-based), so we use upIdx * nEqs + iEq directly.
-  // Note: the old code used upStatesGlobalIDs (MPI-global indices), which works
-  // in serial (global==local) but fails in parallel where global IDs have a
-  // rank-specific offset that doesn't match SeqBAIJ's local indexing.
 
   // Track current inverter size to handle mixed meshes (different nSolPts per cell)
   CFuint currentInverterSize = 0;
@@ -336,9 +330,7 @@ PetscErrorCode FRBlockJacobiPcApply(PC pc, Vec X, Vec Y)
     const CFuint blockSize = nSolPts * nEqs;
     const RealMatrix& invBlock = pcContext->invElemBlocks[iCell];
 
-    // Gather: build local x_block from the PETSc vector
-    // Apply: y_block = invBlock * x_block
-    // Scatter: write y_block back to PETSc vector
+    // y_cell = invBlock * x_cell (gathered/scattered via upStateIndices)
     for (CFuint iRow = 0; iRow < blockSize; ++iRow)
     {
       const CFuint iSol = iRow / nEqs;

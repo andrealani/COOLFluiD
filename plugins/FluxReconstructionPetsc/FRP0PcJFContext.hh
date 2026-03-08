@@ -32,8 +32,8 @@ namespace COOLFluiD {
  *   - PointBlock:   per-DOF nEqs^2 diagonal sub-blocks (smoother)
  *                   + averaged nEqs^2 P0 blocks (coarse)
  *
- * P0 blocks are derived from the assembled Jacobian via Galerkin projection
- * (no separate P0 matrix, no inner KSP).
+ * P0 blocks are derived from the assembled Jacobian via Galerkin projection.
+ * Supports BlockDiag (element-local inversion) and ILU (sparse matrix + inner KSP) modes.
  *
  * @author Rayan Dhib
  */
@@ -62,7 +62,7 @@ public:
   /// Pointer to JFContext
   JFContext* pJFC;
 
-  /// Number of sol pts per cell (uniform across all cells)
+  /// Maximum number of sol pts per cell (used for logging)
   CFuint nSolPtsPerCell;
 
   // ---- Mode flag ----
@@ -96,7 +96,7 @@ public:
   // ---- P0 ILU coarse solve data (when useP0ILU == true) ----
 
   /// true = use face-coupled P0 sparse matrix with inner ILU-GMRES solve
-  /// false = use element-diagonal P0 block inversion (legacy)
+  /// false = use element-diagonal P0 block inversion (default)
   bool useP0ILU;
 
   /// Cell-to-cell adjacency: cellNeighbors[iUpdCell] = updatable cell indices of face neighbors
