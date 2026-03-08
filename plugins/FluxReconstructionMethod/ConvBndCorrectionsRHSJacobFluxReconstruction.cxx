@@ -185,9 +185,10 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::executeOnTrs()
     
         const CFuint interval = iter - iterFreeze;
       
-        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+        if (getMethodData().doComputeJacobian() &&
+            (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0))
         {
-	
+
 	  // if the cell is parallel updatable, compute the contribution to the numerical jacobian
 	  if ((*m_cellStates)[0]->isParUpdatable())
 	  {
@@ -324,8 +325,8 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlock(acc, m_intCell->getID());
   }
 
   // reset to zero the entries in the block accumulator

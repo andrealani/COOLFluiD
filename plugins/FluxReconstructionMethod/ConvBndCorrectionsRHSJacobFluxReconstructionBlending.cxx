@@ -145,32 +145,17 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::executeOnTrs()
 	CFLog(VERBOSE,"coord state 0: " << (((*m_cellStates)[0])->getCoordinates()) << "\n");
 
 
-  /////// NEW HERE --- P0 state ///////
-         
-  RealMatrix transformationMatrixL;
-  RealMatrix filterL;
-
-  filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-  transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-  // Construct the filter matrix 
-  filterL = 0.0;
- filterL(0, 0) = 1.0;
-
-  // Compute the transformation matrix
-
-  transformationMatrixL = m_vdm * filterL * m_vdmInv;
-
-    // Applying filter
-  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+  /////// P0 state via rank-1 projection ///////
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
   {
-    for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-    { 
-     m_P0State[i][iEq] = 0.;
-      for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-      { 
-       m_P0State[i][iEq] += transformationMatrixL(i, j) * (*((*(m_cellStates))[j]))[iEq];
-      }
+    CFreal c = 0.0;
+    for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+    {
+      c += m_vdmInvRow0[j] * (*((*(m_cellStates))[j]))[iEq];
+    }
+    for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+    {
+      m_P0State[i][iEq] = m_vdmCol0[i] * c;
     }
   }
 
@@ -225,9 +210,10 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::executeOnTrs()
     
         const CFuint interval = iter - iterFreeze;
       
-        if (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0)
+        if (getMethodData().doComputeJacobian() &&
+            (!getMethodData().freezeJacob() || iter < iterFreeze || interval % getMethodData().getFreezeJacobInterval() == 0))
         {
-	
+
 	  // if the cell is parallel updatable, compute the contribution to the numerical jacobian
 	  if ((*m_cellStates)[0]->isParUpdatable())
 	  {
@@ -372,8 +358,8 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlock(acc, m_intCell->getID());
   }
 
   // reset to zero the entries in the block accumulator

@@ -477,6 +477,8 @@ SimpleEdgeGraphFRQ2.cxx
 SimpleEdgeGraphFRQ2.hh
 ComputeFieldFromPotential.hh
 ComputeFieldFromPotential.cxx
+OutputGradients.hh
+OutputGradients.cxx
 TransferField.hh
 TransferField.cxx
 InitStateAddVar.hh

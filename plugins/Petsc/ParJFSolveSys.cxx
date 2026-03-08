@@ -35,17 +35,19 @@ namespace COOLFluiD {
 
     namespace Petsc {
 
-extern PetscErrorCode computeJFMat(Mat petscMat, Vec x, Vec y);
+// Forward declaration of MFFD residual callback
+PetscErrorCode computeResidualForMFFD(void* ctx, Vec U, Vec F);
+
 extern PetscErrorCode LUSGSPcApply(void *ctx, Vec X, Vec Y);
 extern PetscErrorCode DPLURPcApply(void *ctx, Vec X, Vec Y);
 extern PetscErrorCode TridiagPcApply(void *ctx, Vec X, Vec Y);
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule> 
+MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>
 parJFSolveSysProvider("ParJFSolveSys");
 
-MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule> 
+MethodCommandProvider<ParJFSolveSys, PetscLSSData, PetscModule>
 seqJFSolveSysProvider("SeqJFSolveSys");
 
 //////////////////////////////////////////////////////////////////////////////
@@ -93,8 +95,6 @@ void ParJFSolveSys::execute()
   PetscMatrix& mat = getMethodData().getMatrix();
   PetscMatrix& precondMat = getMethodData().getPreconditionerMatrix();
 
-  mat.setJFFunction((void (*)(void))computeJFMat);
-
   PetscVector& rhsVec = getMethodData().getRhsVector();
   PetscVector& solVec = getMethodData().getSolVector();
 
@@ -113,15 +113,17 @@ void ParJFSolveSys::execute()
   rhsVec.assembly();
 
   if(jfc->differentPreconditionerMatrix) {
+    getMethodData().getShellPreconditioner()->computeBeforeSolving();
+
     if(!getMethodData().useBlockPreconditionerMatrix()) {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix ParBAIJ with Petsc preconditioner \n\n\n";
       precondMat.finalAssembly();
-      
+
 #if PETSC_VERSION_MINOR >= 6
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat()));
 #else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), precondMat.getMat(), DIFFERENT_NONZERO_PATTERN));
-#endif	   
+#endif
     }
     else {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix with Shell preconditioner \n\n\n";
@@ -131,7 +133,6 @@ void ParJFSolveSys::execute()
 #else
       CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
 #endif
-      getMethodData().getShellPreconditioner()->computeBeforeSolving();
     }
   }
   else {
@@ -143,36 +144,74 @@ void ParJFSolveSys::execute()
 #endif
     getMethodData().getShellPreconditioner()->computeBeforeSolving();
   }
-  
+
   CF_CHKERRCONTINUE(KSPSetUp(ksp));
 
-  void* ctx;
-  mat.getJFContext(&ctx);
-	
-	// Testing stuff
-	/*
-	/// begin
-	//ierr = KSPSetInitialGuessNonzero(ksp, PETSC_TRUE); CHKERRCONTINUE(ierr);
-	// getting the LU-SGS preconditioner context
-	void* pcContext;
-	PC _pc;
-	KSPGetPC(ksp, &_pc);
-	PCShellGetContext(_pc, &pcContext);
-	//cout << "after get LUSGSPc-context" << endl;
-	/// DP-LUR
-	//DPLURPcApply((void*)pcContext, rhsVec.getVec(), solVec.getVec());
-	/// LUSGS
-	//LUSGSPcApply((void*)pcContext, rhsVec.getVec(), solVec.getVec());
-	//cout << "after LUSGSPc-apply" << endl;
-	TridiagPcApply((void*)pcContext, rhsVec.getVec(), solVec.getVec());
-	/// end
-	*/
-	
+  // --- MatMFFDSetBase: set the linearization point (U, F(U)) ---
+  // Pack current states into stateVec for PETSc's MatMFFD
+  // Option 1: pass F=NULL, PETSc evaluates F(U) via callback on first MatMult
+  // (1 extra residual eval per Newton step — negligible vs 60+ KSP evals)
+  for (CFuint i = 0; i < vecSize; ++i) {
+    const CFint localID = _upLocalIDs[i];
+    const CFuint stateIdx = localID / nbEqs;
+    const CFuint eqIdx = localID % nbEqs;
+    CF_CHKERRCONTINUE(VecSetValue(jfc->stateVec, _upStatesGlobalIDs[i],
+      (*states[stateIdx])[eqIdx], INSERT_VALUES));
+  }
+  CF_CHKERRCONTINUE(VecAssemblyBegin(jfc->stateVec));
+  CF_CHKERRCONTINUE(VecAssemblyEnd(jfc->stateVec));
+  CF_CHKERRCONTINUE(MatMFFDSetBase(mat.getMat(), jfc->stateVec, PETSC_NULL));
+
+  // --- Eisenstat-Walker adaptive KSP tolerance ---
+  if (jfc->useEisenstatWalker) {
+    // Reset EW state at the start of each new time step / outer iteration
+    const CFuint currTimeStep = SubSystemStatusStack::getActive()->getNbIter();
+    if (currTimeStep != jfc->ewLastTimeStep) {
+      jfc->prevNonlinResNorm = -1.0;
+      jfc->prevEta = 0.5;
+      jfc->ewLastTimeStep = currTimeStep;
+    }
+
+    // Get current nonlinear residual norm from the rhs vector
+    PetscReal currResNorm;
+    CF_CHKERRCONTINUE(VecNorm(rhsVec.getVec(), NORM_2, &currResNorm));
+
+    CFreal eta;
+    if (jfc->prevNonlinResNorm > 0.0) {
+      // Eisenstat-Walker Choice 2: eta = gamma * (||F_k|| / ||F_{k-1}||)^alpha
+      eta = jfc->ewGamma * std::pow(currResNorm / jfc->prevNonlinResNorm, jfc->ewAlpha);
+
+      // Safeguard: prevent eta from decreasing too rapidly
+      // eta_k >= gamma * eta_{k-1}^alpha  (Eisenstat & Walker 1996, Section 2)
+      const CFreal etaSafeguard = jfc->ewGamma * std::pow(jfc->prevEta, jfc->ewAlpha);
+      eta = std::max(eta, etaSafeguard);
+
+      // Clamp to [ewMinEta, ewMaxEta]
+      eta = std::max(jfc->ewMinEta, std::min(eta, jfc->ewMaxEta));
+    }
+    else {
+      eta = 0.5;  // first Newton iteration: moderate tolerance
+    }
+
+    CF_CHKERRCONTINUE(KSPSetTolerances(ksp, eta, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
+    CFLog(INFO, "JFNK Eisenstat-Walker: eta = " << eta
+      << ", ||F|| = " << currResNorm << "\n");
+
+    jfc->prevNonlinResNorm = currResNorm;
+    jfc->prevEta = eta;
+  }
+
   CF_CHKERRCONTINUE(KSPSolve(ksp, rhsVec.getVec(), solVec.getVec()));
   CFint iter = 0;
   CF_CHKERRCONTINUE(KSPGetIterationNumber(ksp, &iter));
 
-  CFLog(INFO, "KSP convergence reached at iteration: " << iter << "\n");
+  PetscReal kspResNorm;
+  CF_CHKERRCONTINUE(KSPGetResidualNorm(ksp, &kspResNorm));
+  KSPConvergedReason reason;
+  CF_CHKERRCONTINUE(KSPGetConvergedReason(ksp, &reason));
+  CFLog(INFO, "KSP convergence reached at iteration: " << iter
+    << ", residual norm: " << kspResNorm
+    << ", reason: " << reason << "\n");
 
   getMethodData().getShellPreconditioner()->computeAfterSolving();
 
@@ -195,6 +234,39 @@ void ParJFSolveSys::setup()
   const CFuint nbStates = socket_states.getDataHandle().size();
   jfc->bkpUpdateCoeff.resize(nbStates);
 
+  // In JF mode, Jacobian assembly must be disabled: the main matrix is a
+  // MatMFFD that does not support MatSetValues.  The Jacob commands
+  // (ConvRHSJacob, StdTimeRHSJacob, etc.) check doComputeJacobian() and
+  // skip all matrix operations when the flag is false, while still computing
+  // the RHS residual.  NewtonIterator resets the flag each sub-iteration
+  // via setComputeJacobianFlag(getDoComputeJacobFlag()), so users of
+  // NewtonIterator should set DoComputeJacobian = false in their CFcase.
+  jfc->spaceMethod->setComputeJacobianFlag(false);
+
+  // Register the MFFD residual evaluation callback.
+  // PETSc's MatMFFD calls this function to evaluate F(U) at perturbed states;
+  // it then computes the finite difference (F(U+hv) - F(U))/h internally.
+  PetscMatrix& mat = getMethodData().getMatrix();
+  CF_CHKERRCONTINUE(MatMFFDSetFunction(mat.getMat(),
+    (PetscErrorCode (*)(void*, Vec, Vec))computeResidualForMFFD, (void*)(jfc)));
+
+  CFLog(INFO, "ParJFSolveSys::setup() => MatMFFD callback registered\n");
+
+  // FGMRES recommendation when using variable preconditioner
+  if (jfc->differentPreconditionerMatrix) {
+    KSPType currentType;
+    CF_CHKERRCONTINUE(KSPGetType(getMethodData().getKSP(), &currentType));
+    if (std::string(currentType) != std::string(KSPFGMRES)) {
+      CFLog(WARN, "JFNK with DifferentPreconditionerMatrix: FGMRES is recommended "
+        "for variable preconditioners (inner KSP). Current KSP type: " << currentType
+        << ". Set KSPType = KSPFGMRES in CFcase if using ILU or nested KSP.\n");
+    } else {
+      // FGMRES is inherently right-preconditioned. Set explicitly for clarity.
+      CF_CHKERRCONTINUE(KSPSetPCSide(getMethodData().getKSP(), PC_RIGHT));
+      CFLog(INFO, "JFNK: FGMRES with right preconditioning (required for variable PC)\n");
+    }
+  }
+
   // set the preconditioner for later use
   //if(!jfc->differentPreconditionerMatrix) {
     getMethodData().getShellPreconditioner()->setPreconditioner();
@@ -203,152 +275,82 @@ void ParJFSolveSys::setup()
 
 //////////////////////////////////////////////////////////////////////////////
 
-PetscErrorCode computeJFMat(Mat petscMat, Vec x, Vec y)
+/// MatMFFD residual callback: evaluates F(U) = -R(U) at the given state U.
+/// PETSc calls this function during MatMult to evaluate the operator at
+/// perturbed states. PETSc handles the finite differencing internally:
+///   A·v ≈ (F(U+hv) - F(U)) / h
+/// where A = -dR/dU is the Jacobian operator.
+///
+/// Sign convention: COOLFluiD's rhs = R(U). We need dF/dU = A = -dR/dU,
+/// so F(U) = -R(U) = -rhs.
+PetscErrorCode computeResidualForMFFD(void* ctx, Vec U, Vec F)
 {
-  void* ctx;
-
-  CF_CHKERRCONTINUE(MatShellGetContext(petscMat, &ctx));
+  PetscFunctionBeginUser;
 
   JFContext* jfc = (JFContext*)(ctx);
-  DataHandle<State*, GLOBAL> states = jfc->states->getDataHandle(); 
+  DataHandle<State*, GLOBAL> states = jfc->states->getDataHandle();
+  DataHandle<CFreal> rhs = jfc->rhs->getDataHandle();
+  DataHandle<CFreal> updateCoeff = jfc->updateCoeff->getDataHandle();
 
   const CFuint nbEqs = states[0]->size();
   const CFuint nbStates = states.size();
 
-  DataHandle<CFreal> rhs = jfc->rhs->getDataHandle(); 
-  DataHandle<CFreal> updateCoeff = jfc->updateCoeff->getDataHandle();
-  SafePtr<PetscVector> rhsVec = jfc->rhsVec;
-
-  CFreal* statesArray;
-  CF_CHKERRCONTINUE(VecGetArray(x, &statesArray));
-
-  // loop over states - doing backup of states vector
-  RealVector& bkpStates = jfc->bkpStates; 
-  RealVector& bkpUpdateCoeff = jfc->bkpUpdateCoeff;
-
-  const CFreal eps = jfc->eps;
+  // --- Step 1: Copy Vec U (perturbed state from PETSc) into COOLFluiD states ---
+  const CFreal* uArray;
+  CF_CHKERRCONTINUE(VecGetArrayRead(U, &uArray));
 
   CFuint idx = 0;
-
-  CFreal* rhsArray;
-  CF_CHKERRCONTINUE(VecGetArray(rhsVec->getVec(), &rhsArray));
-
-  for(CFuint i = 0; i < nbStates; ++i) 
-  {
-    if (states[i]->isParUpdatable()) 
-    {
-      const CFuint idxTimesEq = idx*nbEqs;
-      const CFuint iTimesEq = i*nbEqs;
+  for (CFuint i = 0; i < nbStates; ++i) {
+    if (states[i]->isParUpdatable()) {
+      const CFuint idxTimesEq = idx * nbEqs;
       State& currState = *states[i];
-      for(CFuint j = 0; j < nbEqs; ++j) {
-        // states = U + eps*delta_U, U = bkpStates, delta_U = statesArray
-        currState[j] = bkpStates[iTimesEq + j] + eps*statesArray[idxTimesEq + j];
+      for (CFuint j = 0; j < nbEqs; ++j) {
+        currState[j] = uArray[idxTimesEq + j];
       }
       idx++;
     }
-
-    // back up the update coefficient
-    bkpUpdateCoeff[i] = updateCoeff[i];
+    // Backup updateCoeff for all states (including ghosts)
+    jfc->bkpUpdateCoeff[i] = updateCoeff[i];
   }
+  CF_CHKERRCONTINUE(VecRestoreArrayRead(U, &uArray));
 
-  // syncronize the states after the modifications
+  // --- Step 2: Synchronize ghost states ---
   if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
     states.synchronize();
-  } 
+  }
   else {
     states.beginSync();
     states.endSync();
   }
-  
-  // computation of F(U + eps*delta_U)
-  jfc->spaceMethod->setComputeJacobianFlag(false);
 
-  // reset to 0. the updateCoeff storage
+  // --- Step 3: Evaluate residual R(U) ---
+  jfc->spaceMethod->setComputeJacobianFlag(false);
   updateCoeff = 0.0;
   jfc->spaceMethod->computeSpaceResidual(1.0);
   jfc->spaceMethod->computeTimeResidual(1.0);
 
-  if (!jfc->jfApprox2ndOrder) { // if 1st order of J-F approximation was chosen
-    // final assignment into PetscVec y
-    const CFuint vecSize = jfc->upLocalIDs.size();
-    const CFreal invEps = 1.0/eps;
-    for(CFuint i = 0; i < vecSize; ++i) {
-      const CFreal Fv = (rhsArray[i] - rhs[jfc->upLocalIDs[i]])*invEps;
-      VecSetValue(y, jfc->upStatesGlobalIDs[i], Fv, INSERT_VALUES);
-    }
+  // --- Step 4: Copy F = -R(U) = -rhs into output Vec F ---
+  // Sign: F = -rhs so that dF/dU = -dR/dU = A (the Jacobian operator)
+  const CFuint vecSize = jfc->upLocalIDs.size();
+  for (CFuint i = 0; i < vecSize; ++i) {
+    CF_CHKERRCONTINUE(VecSetValue(F, jfc->upStatesGlobalIDs[i],
+      -rhs[jfc->upLocalIDs[i]], INSERT_VALUES));
   }
-  else { // if 2nd order of J-F approximation was chosen
-    // assignment of RHS(U + eps*deltaU) into PetscVec y
-    const CFuint vecSize = jfc->upLocalIDs.size();
-    for(CFuint i = 0; i < vecSize; ++i) {
-      VecSetValue(y, jfc->upStatesGlobalIDs[i], -rhs[jfc->upLocalIDs[i]], INSERT_VALUES);
-    }
+  CF_CHKERRCONTINUE(VecAssemblyBegin(F));
+  CF_CHKERRCONTINUE(VecAssemblyEnd(F));
 
-    CF_CHKERRCONTINUE(VecAssemblyBegin(y));
-    CF_CHKERRCONTINUE(VecAssemblyEnd(y));
-
-    idx = 0;
-    for(CFuint i = 0; i < nbStates; ++i) {
-      if (states[i]->isParUpdatable()) {
-        const CFuint idxTimesEq = idx*nbEqs;
-        const CFuint iTimesEq = i*nbEqs;
-        State& currState = *states[i];
-        for(CFuint j = 0; j < nbEqs; ++j) {
-          // states = U - eps*delta_U, U = bkpStates, delta_U = statesArray
-          currState[j] = bkpStates[iTimesEq + j] - eps*statesArray[idxTimesEq + j];
-        }
-        idx++;
-      }
-    }
-
-    // syncronize the states after the modifications
-    if (CFEnv::getInstance().getVars()->SyncAlgo != "Old") {
-      states.synchronize();
-    } 
-    else {
-      states.beginSync();
-      states.endSync();
-    }
-
-    // computation of F(U + eps*delta_U)
-    jfc->spaceMethod->setComputeJacobianFlag(false);
-
-    // reset to 0. the updateCoeff storage
-    updateCoeff = 0.0;
-    jfc->spaceMethod->computeSpaceResidual(1.0);
-    jfc->spaceMethod->computeTimeResidual(1.0);
-
-    // assignment of RHS(U - eps*deltaU) to y vector
-    for(CFuint i = 0; i < vecSize; ++i) {
-      VecSetValue(y, jfc->upStatesGlobalIDs[i], rhs[jfc->upLocalIDs[i]], ADD_VALUES);
-    }
-
-    CF_CHKERRCONTINUE(VecAssemblyBegin(y));
-    CF_CHKERRCONTINUE(VecAssemblyEnd(y));
-
-    // multiplying with 1.0/2eps
-    const CFreal inv2Eps = 0.5/eps;
-    CF_CHKERRCONTINUE(VecScale (y, inv2Eps));
-  }
-
-  CF_CHKERRCONTINUE(VecAssemblyBegin(y));
-  CF_CHKERRCONTINUE(VecAssemblyEnd(y));
-
-  CF_CHKERRCONTINUE(VecRestoreArray(x, &statesArray));
-  CF_CHKERRCONTINUE(VecRestoreArray(rhsVec->getVec(), &rhsArray));
-
-  /// AL: the restoring of the states should be done here otherwise the states
-  ///     the preconditioning is performed starting from wrong states
-  for(CFuint i = 0; i < nbStates; ++i)
-  {
-    const CFuint iTimesEq = i*nbEqs;
+  // --- Step 5: Restore states and updateCoeff from backup ---
+  // This is critical: the preconditioner may read COOLFluiD states between
+  // MatMult calls, so states must be restored to the base point after each
+  // MFFD function evaluation.
+  const RealVector& bkpStates = jfc->bkpStates;
+  for (CFuint i = 0; i < nbStates; ++i) {
+    const CFuint iTimesEq = i * nbEqs;
     State& currState = *states[i];
-
-    for(CFuint j = 0; j < nbEqs; ++j) {
+    for (CFuint j = 0; j < nbEqs; ++j) {
       currState[j] = bkpStates[iTimesEq + j];
     }
-    // restore the update coefficient
-    updateCoeff[i] = bkpUpdateCoeff[i];
+    updateCoeff[i] = jfc->bkpUpdateCoeff[i];
   }
 
   PetscFunctionReturn(0);
@@ -369,5 +371,3 @@ vector<SafePtr<BaseDataSocketSink> > ParJFSolveSys::needsSockets()
     } // namespace Petsc
 
 } // namespace COOLFluiD
-
-//  LocalWords:  rhsArrayVecstatesArray

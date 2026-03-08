@@ -51,6 +51,9 @@ BaseSetup(name)
 
   _jfApprox2ndOrder = false;
   setParameter("JFApprox2ndOrder", &_jfApprox2ndOrder);
+
+  _useEisenstatWalker = true;
+  setParameter("UseEisenstatWalker", &_useEisenstatWalker);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -63,9 +66,11 @@ ParJFSetup::~ParJFSetup()
 
 void ParJFSetup::defineConfigOptions(Config::OptionList& options)
 {
-  options.addConfigOption< CFreal >("Epsilon","Epsilon for computing numerical derivative");
+  options.addConfigOption< CFreal >("Epsilon","DEPRECATED: Epsilon for numerical derivative (ignored with MatMFFD, which uses adaptive epsilon)");
 
-  options.addConfigOption< bool >("JFApprox2ndOrder", "2nd order of the Jacobian-free matrix vector product approximation (options: true/false)");
+  options.addConfigOption< bool >("JFApprox2ndOrder", "DEPRECATED: 2nd-order FD not supported with MatMFFD (ignored, logged as warning if true)");
+
+  options.addConfigOption< bool >("UseEisenstatWalker", "Enable Eisenstat-Walker adaptive KSP tolerance (default true)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -118,34 +123,58 @@ void ParJFSetup::setMatrix(const CFuint localSize,
   const CFuint nbEqs = getMethodData().getNbSysEquations();
   PetscMatrix& mat = getMethodData().getMatrix();
 
-  // set the data in the context 
+  // set the data in the context
   JFContext* ctx = getMethodData().getJFContext();
 
   ctx->petscData = &getMethodData();
   ctx->states = &socket_states;
   ctx->rhs = &socket_rhs;
   ctx->spaceMethod = getMethodData().getCollaborator<SpaceMethod>();
-  ctx->eps = _epsilon;
-  ctx->jfApprox2ndOrder = _jfApprox2ndOrder;
+  ctx->eps = _epsilon;  // kept for GMRESR variant and LUSGS/DPLUR preconditioners
   ctx->differentPreconditionerMatrix = getMethodData().getDifferentPreconditionerMatrix();
+
+  // Eisenstat-Walker config
+  ctx->useEisenstatWalker = _useEisenstatWalker;
+  ctx->prevNonlinResNorm = -1.0;
+  ctx->prevEta = 0.5;
+
+  // DEPRECATED options — log warnings
+  ctx->jfApprox2ndOrder = _jfApprox2ndOrder;
+  if (_jfApprox2ndOrder) {
+    CFLog(WARN, "ParJFSetup: JFApprox2ndOrder=true is DEPRECATED and ignored. "
+      "MatMFFD uses adaptive 1st-order FD (DS formula) which is more robust.\n");
+  }
+  if (std::abs(_epsilon - 1e-6) > 1e-15) {
+    CFLog(WARN, "ParJFSetup: User-specified Epsilon=" << _epsilon << " is DEPRECATED and ignored. "
+      "MatMFFD computes epsilon adaptively via the DS formula.\n");
+  }
 
   ctx->bkpStates.resize(nbStates*nbEqs);
   ctx->rhsVec = &getMethodData().getRhsVector();
-  
+
   const std::string nsp = getMethodData().getNamespace();
-  
-  CFLog(VERBOSE, "ParJFSetup::setMatrix() => P" <<  Common::PE::GetPE().GetRank(nsp) << " matrix localSize = " 
+
+  CFLog(VERBOSE, "ParJFSetup::setMatrix() => P" <<  Common::PE::GetPE().GetRank(nsp) << " matrix localSize = "
 	<< localSize << ", globalSize = " << globalSize << "\n");
-  
-  // create a parallel Jacobian-Free matrix
-  mat.createParJFMat(PE::GetPE().GetCommunicator(nsp),
-                     localSize *nbEqs,
-                     localSize *nbEqs,
-                     globalSize *nbEqs,
-                     globalSize *nbEqs,
-                     (void*)(ctx),
-                     "JFMatrix");
-  
+
+  // Create a parallel Matrix-Free Finite Difference (MFFD) matrix.
+  // PETSc handles epsilon computation adaptively (DS formula by default).
+  mat.createParMFFDMat(PE::GetPE().GetCommunicator(nsp),
+                       localSize * nbEqs,
+                       localSize * nbEqs,
+                       globalSize * nbEqs,
+                       globalSize * nbEqs,
+                       "JFMatrix");
+
+  // Allocate a PETSc Vec for packing current states (used by MatMFFDSetBase in execute())
+  CF_CHKERRCONTINUE(VecDuplicate(getMethodData().getRhsVector().getVec(), &ctx->stateVec));
+
+  CFLog(INFO, "ParJFSetup: Using PETSc MatMFFD with adaptive epsilon (DS formula)\n");
+  if (_useEisenstatWalker) {
+    CFLog(INFO, "ParJFSetup: Eisenstat-Walker adaptive KSP tolerance enabled "
+      "(gamma=" << ctx->ewGamma << ", alpha=" << ctx->ewAlpha << ")\n");
+  }
+
   // if one would like to use matrix preconditioner
   if(ctx->differentPreconditionerMatrix) {
     getMethodData().getCollaborator<SpaceMethod>()->getSpaceMethodData()->setFillPreconditionerMatrix(true);
@@ -156,25 +185,27 @@ void ParJFSetup::setMatrix(const CFuint localSize,
     // ghost neighbors (out of diagonal submatrix non zero entries)
     std::valarray<CFint> outDiagNonZero(nbStates);
     outDiagNonZero = 0;
-    
+
     SelfRegistPtr<GlobalJacobianSparsity> sparsity = getMethodData().getCollaborator<SpaceMethod>()->createJacobianSparsity();
-    
+
     sparsity->setDataSockets(socket_states, socket_nodes, socket_bStatesNeighbors);
     sparsity->computeNNz(allNonZero, outDiagNonZero);
-    
+
     std::valarray<CFint> allNonZeroUp(localSize);
+    std::valarray<CFint> outDiagNonZeroUp(localSize);
     CFuint countUp = 0;
     for (CFuint i = 0; i < nbStates; ++i) {
       if (states[i]->isParUpdatable()) {
         allNonZeroUp[countUp]     = allNonZero[i];
+        outDiagNonZeroUp[countUp] = outDiagNonZero[i];
         ++countUp;
       }
     }
-    //cout << "Number of states = " << nbStates << endl;
+
     PetscMatrix& precondMat = getMethodData().getPreconditionerMatrix();
     // create a parallel sparse matrix in block compressed row format
     if(!getMethodData().useBlockPreconditionerMatrix()) {
-      cout << "Using different preconditioner with ParBAIJ matrix" << endl;
+      CFLog(INFO, "ParJFSetup: Using different preconditioner with ParBAIJ matrix\n");
       precondMat.createParBAIJ(PE::GetPE().GetCommunicator(nsp),
                                nbEqs,
                                localSize*nbEqs,
@@ -182,11 +213,11 @@ void ParJFSetup::setMatrix(const CFuint localSize,
                                globalSize*nbEqs,
                                globalSize*nbEqs,
                                0, &allNonZeroUp[0],
-                               0, CFNULL,
+                               0, &outDiagNonZeroUp[0],
                                "PreconditionerMatrix");
     }
     else {
-      cout << "Using Block Preconditioner with SeqBAIJ matrix" << endl;
+      CFLog(INFO, "ParJFSetup: Using Block Preconditioner with SeqBAIJ matrix\n");
       precondMat.createSeqBAIJ(nbEqs,
                                localSize*nbEqs,
                                localSize*nbEqs,

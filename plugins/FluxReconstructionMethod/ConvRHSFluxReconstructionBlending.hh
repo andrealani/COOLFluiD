@@ -411,7 +411,13 @@ protected: //data
 
   /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
   CFreal m_mappedFaceNormalDir;
-  
+
+  /// First column of VDM (for rank-1 P0 projection)
+  RealVector m_vdmCol0;
+
+  /// First row of VDM inverse (for rank-1 P0 projection)
+  RealVector m_vdmInvRow0;
+
 }; // class Solve
 
 //////////////////////////////////////////////////////////////////////////////

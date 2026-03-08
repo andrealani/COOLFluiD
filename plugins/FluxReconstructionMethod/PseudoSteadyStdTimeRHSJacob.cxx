@@ -129,8 +129,8 @@ void PseudoSteadyStdTimeRHSJacob::execute()
 {
   CFAUTOTRACE;
 
-  // get jacobian matrix
-  m_jacobMatrix = m_lss->getMatrix();
+  // get jacobian matrix (respects fillPreconditionerMatrix flag)
+  m_jacobMatrix = getMethodData().getLSSMatrix(0);
 
   // get cfl number and time step
   const CFreal cfl = getMethodData().getCFL()->getCFLValue();
@@ -185,6 +185,9 @@ void PseudoSteadyStdTimeRHSJacob::execute()
 
       // get the states in this cell
       m_cellStates = cell->getStates();
+
+      // store cell TRS-local index for use by addTimeResidual()
+      m_currCellTRSIdx = elemIdx;
 
       // compute diagonal values
       if ((*m_cellStates)[0]->isParUpdatable())
@@ -316,9 +319,8 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
     if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
     {
-      // add the values in the jacobian matrix
-      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
-      m_lss->getMatrix()->addValues(*m_acc);
+      // add the values to the jacobian matrix (or direct element blocks)
+      getMethodData().assembleJacobBlock(*m_acc, m_currCellTRSIdx);
 
       // reset to zero the entries in the block accumulator
       m_acc->reset();

@@ -214,39 +214,25 @@ void ConvRHSFluxReconstructionBlending::execute()
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
 
 
-      /////// NEW HERE --- P0 state ///////
-  
-        RealMatrix transformationMatrixL;
-        RealMatrix filterL;
-
-        filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-        transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-        // Construct the filter matrix 
-        filterL = 0.0;
-        filterL(0, 0) = 1.0;
-
-
-        // Compute the transformation matrix
-      
-        transformationMatrixL = m_vdm * filterL * m_vdmInv;
-      
-          // Applying filter
-        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+      /////// P0 state via rank-1 projection ///////
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-          { 
-            m_statesP0[LEFT][i][iEq] = 0.;
-            m_statesP0[RIGHT][i][iEq] = 0.;
-            for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-            { 
-              m_statesP0[LEFT][i][iEq] += transformationMatrixL(i, j) * (*((*(m_states[LEFT]))[j]))[iEq];
-              m_statesP0[RIGHT][i][iEq] += transformationMatrixL(i, j) * (*((*(m_states[RIGHT]))[j]))[iEq];
-            }
+          // Compute cell-average modal coefficient: c = dot(V^{-1}(0,:), state_vector)
+          CFreal cL = 0.0;
+          CFreal cR = 0.0;
+          for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+          {
+            cL += m_vdmInvRow0[j] * (*((*(m_states[LEFT]))[j]))[iEq];
+            cR += m_vdmInvRow0[j] * (*((*(m_states[RIGHT]))[j]))[iEq];
+          }
+          // Broadcast to all sol points: P0State[i] = V(i,0) * c
+          for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+          {
+            m_statesP0[LEFT][i][iEq] = m_vdmCol0[i] * cL;
+            m_statesP0[RIGHT][i][iEq] = m_vdmCol0[i] * cR;
           }
         }
-      
-        //////////////////////////////////////
+      //////////////////////////////////////
 
         // if one of the neighbouring cells is parallel updatable or if the gradients have to be computed, set the bnd face data
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable() || hasDiffTerm)
@@ -315,42 +301,17 @@ void ConvRHSFluxReconstructionBlending::execute()
       m_cellStates = m_cell->getStates();
       
 
-      /////// NEW HERE --- P0 state ///////
-
-
-      //Framework::State* newState = new Framework::State();
-
-      //Framework::State* oldState = (*m_cellStates)[0];
-
-      //newState->clone(*oldState);
-
-      //m_cellStatesP0->resize(1);
-      //(*m_cellStatesP0)[0] = newState;
-         
-           RealMatrix transformationMatrixL;
-           RealMatrix filterL;
-         
-           filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-           transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-           // Construct the filter matrix 
-           filterL = 0.0;
-          filterL(0, 0) = 1.0;
-
-           // Compute the transformation matrix
-         
-           transformationMatrixL = m_vdm * filterL * m_vdmInv;
-         
-             // Applying filter
-           for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+      /////// P0 state via rank-1 projection ///////
+           for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
            {
-             for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-             { 
-              m_P0State[i][iEq] = 0.;
-               for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-               { 
-                m_P0State[i][iEq] += transformationMatrixL(i, j) * (*((*(m_cellStates))[j]))[iEq];
-               }
+             CFreal c = 0.0;
+             for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+             {
+               c += m_vdmInvRow0[j] * (*((*(m_cellStates))[j]))[iEq];
+             }
+             for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+             {
+               m_P0State[i][iEq] = m_vdmCol0[i] * c;
              }
            }
 
@@ -358,10 +319,9 @@ void ConvRHSFluxReconstructionBlending::execute()
            {
              for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
              {
-               (*((*(m_cellStatesP0))[iState]))[iVar] =m_P0State[iState][iVar];
+               (*((*(m_cellStatesP0))[iState]))[iVar] = m_P0State[iState][iVar];
              }
            }
-
            //////////////////////////////////////
 
       // if the states in the cell are parallel updatable or the gradients need to be computed, set the cell data
@@ -860,6 +820,7 @@ void ConvRHSFluxReconstructionBlending::computeCorrection(CFuint side, vector< R
 {
   cf_assert(corrections.size() == m_nbrSolPnts);
 
+  // Revert to per-side alpha for debugging
   DataHandle< CFreal > output = socket_alpha.getDataHandle();
   CFreal alpha = output[(*m_states[side])[0]->getLocalID()];
 
@@ -1268,8 +1229,18 @@ void ConvRHSFluxReconstructionBlending::setup()
   m_Filtered_DiscontFlux.resize(m_nbrSolPnts);
 
   m_vdm = *(frLocalData[0]->getVandermondeMatrix());
-  
+
   m_vdmInv = *(frLocalData[0]->getVandermondeMatrixInv());
+
+  // Extract rank-1 projection vectors for efficient P0 state computation
+  // P0 projection = V(:,0) * V^{-1}(0,:), so we only need these two vectors
+  m_vdmCol0.resize(m_nbrSolPnts);
+  m_vdmInvRow0.resize(m_nbrSolPnts);
+  for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+  {
+    m_vdmCol0[j] = m_vdm(j, 0);
+    m_vdmInvRow0[j] = m_vdmInv(0, j);
+  }
 
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
