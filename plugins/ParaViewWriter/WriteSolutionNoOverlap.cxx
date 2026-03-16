@@ -694,6 +694,10 @@ void WriteSolutionNoOverlap::setup()
 
   m_nbCellsNoPartition = 0;
 
+  // get the nodes datahandle
+  DataHandle < Framework::State*, Framework::GLOBAL > states = socket_states.getDataHandle();
+  const bool isFVM = (nbAllCells == states.size());
+  
   // get the element type data
   SafePtr<vector<ElementTypeData> > elemType =  MeshDataStack::getActive()->getElementTypeData();
   const CFuint nbrElemTypes = elemType->size();
@@ -706,7 +710,9 @@ void WriteSolutionNoOverlap::setup()
       const CFuint nbrNodes = cellNodes->nbCols(elemIdx);
       for (CFuint iNode = 0; iNode < nbrNodes; ++iNode) {
 	const CFuint nodeID = (*cellNodes)(elemIdx,iNode);
-	if (m_isPartitionNode[nodeID]) {
+	// for FVM a state/cell close to the partition boundary can be parallel updatable and fully valid
+	// if ((isFVM && m_isPartitionNode[nodeID] && !states[elemIdx]->isParUpdatable()) || (!isFVM && m_isPartitionNode[nodeID])) {
+	if ((isFVM && !states[elemIdx]->isParUpdatable()) || (!isFVM && m_isPartitionNode[nodeID])) {
 	  m_cellWithPartitionNodes[elemIdx] = true;
 	  break;
 	}
