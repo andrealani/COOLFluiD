@@ -63,6 +63,12 @@ void ModuleLoader::loadExternalModules()
   setSearchPaths(paths);
 
   // attempt to load all modules from the list
+  std::string key="libShapeFunctions";
+  if (! std::count(m_moduleNames.begin(), m_moduleNames.end(), key))
+  {
+    // if not found libShapeFunctions, then add it.
+    m_moduleNames.push_back(key);
+  }
   if( !m_moduleNames.empty() )
   {
     std::for_each( m_moduleNames.begin(), m_moduleNames.end(), mem_fun_arg(*this,(&ModuleLoader::loadModule)) );
