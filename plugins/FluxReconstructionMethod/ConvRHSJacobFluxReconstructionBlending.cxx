@@ -140,34 +140,20 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       m_states[LEFT ] = m_cells[LEFT ]->getStates();
       m_states[RIGHT] = m_cells[RIGHT]->getStates();
 
-      /////// NEW HERE --- P0 state ///////
-      RealMatrix transformationMatrixL;
-      RealMatrix filterL;
-
-      filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-      transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-      // Construct the filter matrix 
-      filterL = 0.0;
-      filterL(0, 0) = 1.0;
-
-
-      // Compute the transformation matrix
-    
-      transformationMatrixL = m_vdm * filterL * m_vdmInv;
-    
-        // Applying filter
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+      /////// P0 state via rank-1 projection ///////
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
-        for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-        { 
-          m_statesP0[LEFT][i][iEq] = 0.;
-          m_statesP0[RIGHT][i][iEq] = 0.;
-          for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-          { 
-            m_statesP0[LEFT][i][iEq] += transformationMatrixL(i, j) * (*((*(m_states[LEFT]))[j]))[iEq];
-            m_statesP0[RIGHT][i][iEq] += transformationMatrixL(i, j) * (*((*(m_states[RIGHT]))[j]))[iEq];
-          }
+        CFreal cL = 0.0;
+        CFreal cR = 0.0;
+        for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+        {
+          cL += m_vdmInvRow0[j] * (*((*(m_states[LEFT]))[j]))[iEq];
+          cR += m_vdmInvRow0[j] * (*((*(m_states[RIGHT]))[j]))[iEq];
+        }
+        for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+        {
+          m_statesP0[LEFT][i][iEq] = m_vdmCol0[i] * cL;
+          m_statesP0[RIGHT][i][iEq] = m_vdmCol0[i] * cR;
         }
       }
 
@@ -175,13 +161,12 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       {
         for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
         {
-          (*((*(m_states_P0[LEFT]))[iState]))[iVar] =m_statesP0[LEFT][iState][iVar];
-          (*((*(m_states_P0[RIGHT]))[iState]))[iVar] =m_statesP0[RIGHT][iState][iVar];
+          (*((*(m_states_P0[LEFT]))[iState]))[iVar] = m_statesP0[LEFT][iState][iVar];
+          (*((*(m_states_P0[RIGHT]))[iState]))[iVar] = m_statesP0[RIGHT][iState][iVar];
         }
       }
-    
       //////////////////////////////////////
-      
+
       // if one of the neighbouring cells is parallel updatable or if the gradients have to be computed, set the bnd face data and compute the discontinuous flx
       if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable() || hasDiffTerm)
       {
@@ -221,17 +206,21 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       }
 
       // compute the contribution to the numerical jacobian
-      if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+      // (skip perturbation loops entirely in Jacobian-Free Newton-Krylov mode)
+      if (getMethodData().doComputeJacobian())
       {
-        computeBothJacobs();
-      }
-      else if ((*m_states[LEFT])[0]->isParUpdatable())
-      {
-        computeOneJacob(LEFT);
-      }
-      else if ((*m_states[RIGHT])[0]->isParUpdatable())
-      {
-        computeOneJacob(RIGHT);
+        if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeBothJacobs();
+        }
+        else if ((*m_states[LEFT])[0]->isParUpdatable())
+        {
+          computeOneJacob(LEFT);
+        }
+        else if ((*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeOneJacob(RIGHT);
+        }
       }
 
       // release the GeometricEntity
@@ -264,32 +253,17 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       m_cellStates = m_cell->getStates();
 
       
-        /////// NEW HERE --- P0 state ///////
-      
-        RealMatrix transformationMatrixL;
-        RealMatrix filterL;
-      
-        filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-        transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-        // Construct the filter matrix 
-        filterL = 0.0;
-        filterL(0, 0) = 1.0;
-
-        // Compute the transformation matrix
-      
-        transformationMatrixL = m_vdm * filterL * m_vdmInv;
-      
-          // Applying filter
-        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+        /////// P0 state via rank-1 projection ///////
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-          { 
-            m_P0State[i][iEq] = 0.;
-            for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-            { 
-              m_P0State[i][iEq] += transformationMatrixL(i, j) * (*((*(m_cellStates))[j]))[iEq];
-            }
+          CFreal c = 0.0;
+          for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+          {
+            c += m_vdmInvRow0[j] * (*((*(m_cellStates))[j]))[iEq];
+          }
+          for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+          {
+            m_P0State[i][iEq] = m_vdmCol0[i] * c;
           }
         }
 
@@ -327,7 +301,8 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       }
 
       // if the states in the cell are parallel updatable, compute the contribution to the numerical jacobian
-      if ((*m_cellStates)[0]->isParUpdatable())
+      // (skip perturbation loops entirely in Jacobian-Free Newton-Krylov mode)
+      if (getMethodData().doComputeJacobian() && (*m_cellStates)[0]->isParUpdatable())
       {
 	// add the contributions to the Jacobian
 	computeJacobConvCorrection();
@@ -505,8 +480,8 @@ void ConvRHSJacobFluxReconstructionBlending::computeBothJacobs()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -660,8 +635,8 @@ void ConvRHSJacobFluxReconstructionBlending::computeOneJacob(const CFuint side)
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -738,10 +713,10 @@ void ConvRHSJacobFluxReconstructionBlending::computePertInterfaceFlxCorrection()
 //////////////////////////////////////////////////////////////////////////////
 
 void ConvRHSJacobFluxReconstructionBlending::computePertCorrection(CFuint side, RealVector& corrections)
-{ 
+{
   cf_assert(corrections.size() == m_nbrSolPnts*m_nbrEqs);
 
-  // Get alpha (frozen from socket)
+  // Revert to per-side alpha for debugging
   DataHandle< CFreal > output = socket_alpha.getDataHandle();
   const CFreal alpha = output[(*m_states[side])[0]->getLocalID()];
 
@@ -1023,8 +998,8 @@ void ConvRHSJacobFluxReconstructionBlending::computeJacobConvCorrection()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlock(acc, m_cell->getID());
   }
 
   // reset to zero the entries in the block accumulator

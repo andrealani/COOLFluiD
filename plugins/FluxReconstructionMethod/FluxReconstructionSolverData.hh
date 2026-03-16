@@ -23,6 +23,11 @@
 
 #include "FluxReconstructionMethod/CellToFaceGEBuilder.hh"
 
+#include "MathTools/RealMatrix.hh"
+#include "Framework/BlockAccumulator.hh"
+#include <map>
+#include <utility>
+
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
@@ -100,6 +105,7 @@ public: // functions
     Framework::MultiMethodHandle< Framework::LinearSystemSolver > lss )
   {
     m_lss = lss;
+    SpaceMethodData::setLinearSystemSolver(lss);
   }
 
   /// Get the linear system solver
@@ -109,6 +115,41 @@ public: // functions
     cf_assert(m_lss.isNotNull());
     return m_lss;
   }
+
+  /// Get the LSS matrix (system or preconditioner depending on fillPreconditionerMatrix flag)
+  /// Uses FR's own m_lss handle
+  Common::SafePtr<Framework::LSSMatrix> getLSSMatrix(CFuint iSys)
+  {
+    return (!fillPreconditionerMatrix()) ? m_lss[iSys]->getMatrix() : m_lss[iSys]->getPreconditionerMatrix();
+  }
+
+  /// Enable/disable direct element-diagonal block accumulation (bypasses PETSc matrix)
+  void setFillElemDiagBlocks(bool flag, std::vector<RealMatrix>* blocks = CFNULL)
+  {
+    m_fillElemDiagBlocks = flag;
+    m_elemDiagBlocks = blocks;
+  }
+
+  /// Check if direct element-diagonal block accumulation is active
+  bool fillElemDiagBlocks() const { return m_fillElemDiagBlocks; }
+
+  /// Set P0 off-diagonal block storage (owned by preconditioner).
+  /// Map key: (leftCellTRSIdx, rightCellTRSIdx) -> Galerkin-projected nEqs x nEqs block
+  void setP0OffDiagBlocks(std::map<std::pair<CFuint,CFuint>, RealMatrix>* blocks)
+  {
+    m_p0OffDiagBlocks = blocks;
+  }
+
+  /// Assemble single-cell Jacobian block (volume, boundary, time contributions).
+  /// If fillElemDiagBlocks is true, accumulates into element-diagonal block storage.
+  /// Otherwise, writes to the PETSc matrix via addValues.
+  void assembleJacobBlock(Framework::BlockAccumulator& acc, CFuint cellIdx);
+
+  /// Assemble two-cell (internal face) Jacobian block.
+  /// Extracts L*L and R*R diagonal sub-blocks from the 2N*2N face accumulator.
+  void assembleJacobBlockFace(Framework::BlockAccumulator& acc,
+                               CFuint leftCellIdx, CFuint rightCellIdx,
+                               CFuint nSolPtsPerSide);
 
   /// Sets the ConvergenceMethod for this SpaceMethod to use
   /// @pre the pointer to ConvergenceMethod is not constant to
@@ -478,6 +519,15 @@ private:  // data
   
   /// amount of iterations to freeze the Jacobian before recalculation
   CFuint m_freezeJacobInterval;
+
+  /// flag: redirect Jacobian assembly to element-diagonal blocks
+  bool m_fillElemDiagBlocks;
+
+  /// pointer to element-diagonal block storage (owned by preconditioner)
+  std::vector<RealMatrix>* m_elemDiagBlocks;
+
+  /// pointer to P0 off-diagonal block storage (owned by preconditioner)
+  std::map<std::pair<CFuint,CFuint>, RealMatrix>* m_p0OffDiagBlocks;
 
 };  // end of class FluxReconstructionSolverData
 

@@ -13,6 +13,7 @@
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
+#include "Framework/LSSMatrix.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
@@ -87,7 +88,10 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_innerFacesStartIdxs(),
   m_partitionFacesStartIdxs(),
   m_updateToSolutionVecTrans(),
-  m_solToUpdateInUpdateMatTrans()
+  m_solToUpdateInUpdateMatTrans(),
+  m_fillElemDiagBlocks(false),
+  m_elemDiagBlocks(CFNULL),
+  m_p0OffDiagBlocks(CFNULL)
 {
   addConfigOptionsTo(this);
   
@@ -439,6 +443,99 @@ void FluxReconstructionSolverData::createFRLocalData()
                                       + StringOps::to_str(elemShape) + ".");
       }
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::assembleJacobBlock(BlockAccumulator& acc, CFuint cellIdx)
+{
+  if (m_fillElemDiagBlocks)
+  {
+    cf_assert(m_elemDiagBlocks != CFNULL);
+    cf_assert(cellIdx < m_elemDiagBlocks->size());
+    RealMatrix& block = (*m_elemDiagBlocks)[cellIdx];
+    const CFuint nSolPts = acc.getM();
+    const CFuint nEqs = acc.getNB();
+    for (CFuint i = 0; i < nSolPts; ++i)
+      for (CFuint j = 0; j < nSolPts; ++j)
+        for (CFuint ib = 0; ib < nEqs; ++ib)
+          for (CFuint jb = 0; jb < nEqs; ++jb)
+            block(i * nEqs + ib, j * nEqs + jb) += acc.getValue(i, j, ib, jb);
+  }
+  else
+  {
+    getLSSMatrix(0)->addValues(acc);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
+                                                           CFuint leftCellIdx,
+                                                           CFuint rightCellIdx,
+                                                           CFuint nSolPtsPerSide)
+{
+  if (m_fillElemDiagBlocks)
+  {
+    cf_assert(m_elemDiagBlocks != CFNULL);
+    cf_assert(leftCellIdx < m_elemDiagBlocks->size());
+    cf_assert(rightCellIdx < m_elemDiagBlocks->size());
+    RealMatrix& blockL = (*m_elemDiagBlocks)[leftCellIdx];
+    RealMatrix& blockR = (*m_elemDiagBlocks)[rightCellIdx];
+    const CFuint nEqs = acc.getNB();
+    const CFuint N = nSolPtsPerSide;
+
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint j = 0; j < N; ++j)
+        for (CFuint ib = 0; ib < nEqs; ++ib)
+          for (CFuint jb = 0; jb < nEqs; ++jb)
+            blockL(i * nEqs + ib, j * nEqs + jb) += acc.getValue(i, j, ib, jb);
+
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint j = 0; j < N; ++j)
+        for (CFuint ib = 0; ib < nEqs; ++ib)
+          for (CFuint jb = 0; jb < nEqs; ++jb)
+            blockR(i * nEqs + ib, j * nEqs + jb) += acc.getValue(i + N, j + N, ib, jb);
+  }
+  else
+  {
+    getLSSMatrix(0)->addValues(acc);
+  }
+
+  if (m_p0OffDiagBlocks != CFNULL)
+  {
+    const CFuint nEqs = acc.getNB();
+    const CFuint N = nSolPtsPerSide;
+    const CFreal invN = 1.0 / (CFreal)N;
+
+    auto keyLR = std::make_pair(leftCellIdx, rightCellIdx);
+    auto itLR = m_p0OffDiagBlocks->find(keyLR);
+    if (itLR == m_p0OffDiagBlocks->end())
+    {
+      (*m_p0OffDiagBlocks)[keyLR].resize(nEqs, nEqs, 0.0);
+      itLR = m_p0OffDiagBlocks->find(keyLR);
+    }
+    RealMatrix& p0LR = itLR->second;
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint j = 0; j < N; ++j)
+        for (CFuint ib = 0; ib < nEqs; ++ib)
+          for (CFuint jb = 0; jb < nEqs; ++jb)
+            p0LR(ib, jb) += invN * acc.getValue(i, j + N, ib, jb);
+
+    auto keyRL = std::make_pair(rightCellIdx, leftCellIdx);
+    auto itRL = m_p0OffDiagBlocks->find(keyRL);
+    if (itRL == m_p0OffDiagBlocks->end())
+    {
+      (*m_p0OffDiagBlocks)[keyRL].resize(nEqs, nEqs, 0.0);
+      itRL = m_p0OffDiagBlocks->find(keyRL);
+    }
+    RealMatrix& p0RL = itRL->second;
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint j = 0; j < N; ++j)
+        for (CFuint ib = 0; ib < nEqs; ++ib)
+          for (CFuint jb = 0; jb < nEqs; ++jb)
+            p0RL(ib, jb) += invN * acc.getValue(i + N, j, ib, jb);
   }
 }
 

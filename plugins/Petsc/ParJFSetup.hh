@@ -67,11 +67,14 @@ private: //helper functions
 
 private:
 
-  /// epsilon for computing numerical derivative
+  /// epsilon for computing numerical derivative (DEPRECATED with MatMFFD — ignored)
   CFreal _epsilon;
 
-  /// Order of the Jacobian-free matrix vector product approximation (1 or 2)
+  /// DEPRECATED: 2nd-order FD not supported with MatMFFD
   bool _jfApprox2ndOrder;
+
+  /// Enable/Disable Eisenstat-Walker adaptive KSP tolerance
+  bool _useEisenstatWalker;
 
 }; // class Setup
 

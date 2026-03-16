@@ -60,7 +60,8 @@ ConvergenceMethodData::ConvergenceMethodData(Common::SafePtr<Method> owner)
   setParameter("SolvingRate",&m_solvingRate);  
   
   m_doComputeJacob = true;
-  setParameter("DoComputeJacobian",&m_doComputeJacob);  
+  m_configDoComputeJacob = true;
+  setParameter("DoComputeJacobian",&m_doComputeJacob);
   
   m_doUpdateSolution = true;
   setParameter("DoUpdateSolution",&m_doUpdateSolution);
@@ -109,6 +110,10 @@ void ConvergenceMethodData::configure ( Config::ConfigArgs& args )
 void ConvergenceMethodData::setup()
 {
   MethodData::setup();
+
+  // preserve the user-configured DoComputeJacobian value before
+  // convergence methods start overriding it at each sub-iteration
+  m_configDoComputeJacob = m_doComputeJacob;
 
   m_computeNorm->setup();
 

@@ -158,6 +158,24 @@ public: // functions
 		      void* ctx,
 		      const char* name = CFNULL);
 #endif
+
+  /**
+   * Create a parallel Matrix-Free Finite Difference (MFFD) matrix.
+   * Uses PETSc's MatCreateMFFD with adaptive epsilon (DS or WP formula).
+   * @param comm MPI communicator
+   * @param m local number of Rows
+   * @param n local number of Columns
+   * @param M global number of Rows
+   * @param N global number of Columns
+   */
+#ifdef CF_HAVE_MPI
+  void createParMFFDMat(MPI_Comm comm,
+                        const CFint m,
+                        const CFint n,
+                        const CFint M,
+                        const CFint N,
+                        const char* name = CFNULL);
+#endif
   
   /**
    * Start to assemble the matrix
@@ -310,7 +328,7 @@ public: // functions
    */
   void resetToZeroEntries()
   {
-    if (!_isMatShell) {
+    if (!_isMatShell && !_isMatMFFD) {
       CF_CHKERRCONTINUE(MatZeroEntries(m_mat));
     }
   }
@@ -368,7 +386,10 @@ private: // data
 
   /// flag to tell if the matrix is a shell matrix
   bool _isMatShell;
-  
+
+  /// flag to tell if the matrix is a MatMFFD (matrix-free finite difference)
+  bool _isMatMFFD;
+
   /// flag to tell if the matrix is a AIJ
   bool _isAIJ;
   

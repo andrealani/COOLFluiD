@@ -82,11 +82,20 @@ public: // functions
   {
     m_doComputeJacob = doComputeJacobian;
   }
-  
+
   /// Get the flag telling if to compute the jacobian
   bool getDoComputeJacobFlag() const
   {
     return m_doComputeJacob;
+  }
+
+  /// Get the initial (user-configured) DoComputeJacobian flag.
+  /// Unlike getDoComputeJacobFlag(), this value is preserved across
+  /// runtime overrides by convergence methods (e.g., Jacobian freezing
+  /// logic in NewtonIterator).
+  bool getInitialDoComputeJacobFlag() const
+  {
+    return m_configDoComputeJacob;
   }
 
   /// Get the flag telling if to update the solution
@@ -186,6 +195,10 @@ private: // data
   
   /// flag to tell to compute the jacobian
   bool m_doComputeJacob;
+
+  /// initial (user-configured) value of m_doComputeJacob,
+  /// preserved across runtime overrides by convergence methods
+  bool m_configDoComputeJacob;
   
   /// flag to tell to update the solution
   bool m_doUpdateSolution;

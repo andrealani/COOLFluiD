@@ -135,6 +135,9 @@ protected:
   /// number of sol pnts
   CFuint m_nbrSolPnts;
 
+  /// current cell TRS-local index (set in execute(), used by addTimeResidual())
+  CFuint m_currCellTRSIdx;
+
 }; // class PseudoSteadyStdTimeRHSJacob
 
 //////////////////////////////////////////////////////////////////////////////

@@ -232,9 +232,12 @@ void NewtonIterator::takeStepImpl()
     getMethodData()->getCollaborator<SpaceMethod>()->prepareComputation();
    
     CFLog(VERBOSE, "NewtonIterator::takeStep(): m_data->freezeJacobian() " << m_data->freezeJacobian() << "\n");
-    // this will make the solvers compute the jacobian only during the first iteration at each time step
-    (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
-    
+    // Compute Jacobian at first sub-iteration (or every sub-iteration if not frozen),
+    // but only if the user has not disabled it via DoComputeJacobian = false (JFNK mode).
+    const bool computeJac = !(m_data->freezeJacobian() && k > 1) &&
+                             m_data->getInitialDoComputeJacobFlag();
+    m_data->setDoComputeJacobFlag(computeJac);
+
     // this is needed for cases like jacobian free
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag( m_data->getDoComputeJacobFlag() );
     
@@ -244,7 +247,10 @@ void NewtonIterator::takeStepImpl()
     
     CFLog(VERBOSE, "NewtonIterator::takeStep(): before second update CFL\n");
     
-    if (m_data->getDoComputeJacobFlag()) {
+    // Update CFL when computing Jacobian, or always in JFNK mode
+    // (DoComputeJacobian = false) since there is no matrix to freeze
+    if (m_data->getDoComputeJacobFlag() ||
+        !m_data->getInitialDoComputeJacobFlag()) {
       getConvergenceMethodData()->getCFL()->update(cvgst.get());
     }
     

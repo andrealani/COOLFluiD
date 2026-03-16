@@ -477,6 +477,8 @@ SimpleEdgeGraphFRQ2.cxx
 SimpleEdgeGraphFRQ2.hh
 ComputeFieldFromPotential.hh
 ComputeFieldFromPotential.cxx
+OutputGradients.hh
+OutputGradients.cxx
 TransferField.hh
 TransferField.cxx
 InitStateAddVar.hh
@@ -485,6 +487,8 @@ MeshFittingAlgorithmFRQ2Quads.cxx
 MeshFittingAlgorithmFRQ2Quads.hh
 BaseOrderBlending.cxx
 BaseOrderBlending.hh
+EntropyFilter.cxx
+EntropyFilter.hh
 )
 
 IF (NOT CF_HAVE_CUDA)

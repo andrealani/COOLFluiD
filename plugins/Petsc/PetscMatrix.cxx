@@ -22,6 +22,7 @@ PetscMatrix::PetscMatrix() :
   Framework::LSSMatrix(),
   m_mat(),
   _isMatShell(false),
+  _isMatMFFD(false),
   _isAIJ(false)
 {
 }
@@ -219,7 +220,27 @@ void PetscMatrix::createParJFMat(MPI_Comm comm,
   // creation of the matrix
   CF_CHKERRCONTINUE(MatCreateShell(comm, m, n, M, N, ctx, &m_mat));
   _isMatShell = true;
-  
+
+  if (name != CFNULL) {
+    CF_CHKERRCONTINUE(PetscObjectSetName((PetscObject) m_mat, name));
+  }
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+#ifdef CF_HAVE_MPI
+void PetscMatrix::createParMFFDMat(MPI_Comm comm,
+                                   const CFint m,
+                                   const CFint n,
+                                   const CFint M,
+                                   const CFint N,
+                                   const char* name)
+{
+  CF_CHKERRCONTINUE(MatCreateMFFD(comm, m, n, M, N, &m_mat));
+  _isMatShell = false;
+  _isMatMFFD = true;
+
   if (name != CFNULL) {
     CF_CHKERRCONTINUE(PetscObjectSetName((PetscObject) m_mat, name));
   }

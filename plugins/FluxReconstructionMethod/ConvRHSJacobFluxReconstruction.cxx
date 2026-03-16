@@ -179,17 +179,21 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
 
       // compute the contribution to the numerical jacobian
-      if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+      // (skip perturbation loops entirely in Jacobian-Free Newton-Krylov mode)
+      if (getMethodData().doComputeJacobian())
       {
-        computeBothJacobs();
-      }
-      else if ((*m_states[LEFT])[0]->isParUpdatable())
-      {
-        computeOneJacob(LEFT);
-      }
-      else if ((*m_states[RIGHT])[0]->isParUpdatable())
-      {
-        computeOneJacob(RIGHT);
+        if ((*m_states[LEFT])[0]->isParUpdatable() && (*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeBothJacobs();
+        }
+        else if ((*m_states[LEFT])[0]->isParUpdatable())
+        {
+          computeOneJacob(LEFT);
+        }
+        else if ((*m_states[RIGHT])[0]->isParUpdatable())
+        {
+          computeOneJacob(RIGHT);
+        }
       }
 
       // release the GeometricEntity
@@ -245,7 +249,8 @@ void ConvRHSJacobFluxReconstruction::execute()
       }
 
       // if the states in the cell are parallel updatable, compute the contribution to the numerical jacobian
-      if ((*m_cellStates)[0]->isParUpdatable())
+      // (skip perturbation loops entirely in Jacobian-Free Newton-Krylov mode)
+      if (getMethodData().doComputeJacobian() && (*m_cellStates)[0]->isParUpdatable())
       {
 	// add the contributions to the Jacobian
 	computeJacobConvCorrection();
@@ -414,8 +419,8 @@ void ConvRHSJacobFluxReconstruction::computeBothJacobs()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -560,8 +565,8 @@ void ConvRHSJacobFluxReconstruction::computeOneJacob(const CFuint side)
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -813,8 +818,8 @@ void ConvRHSJacobFluxReconstruction::computeJacobConvCorrection()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlock(acc, m_cell->getID());
   }
 
   // reset to zero the entries in the block accumulator

@@ -200,35 +200,19 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::executeOnTrs()
 //	}
 
 
-      /////// NEW HERE --- P0 state ///////
-         
-      RealMatrix transformationMatrixL;
-      RealMatrix filterL;
-    
-      filterL.resize(m_nbrSolPnts, m_nbrSolPnts);
-      transformationMatrixL.resize(m_nbrSolPnts, m_nbrSolPnts);
-
-      // Construct the filter matrix 
-      filterL = 0.0;
-     filterL(0, 0) = 1.0;
-
-      // Compute the transformation matrix
-    
-      transformationMatrixL = m_vdm * filterL * m_vdmInv;
-    
-        // Applying filter
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq) 
+      /////// P0 state via rank-1 projection ///////
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
-        for (CFuint i = 0; i < m_nbrSolPnts; ++i) 
-        { 
-         m_P0State[i][iEq] = 0.;
-          for (CFuint j = 0; j < m_nbrSolPnts; ++j) 
-          { 
-           m_P0State[i][iEq] += transformationMatrixL(i, j) * (*((*(m_cellStates))[j]))[iEq];
-          }
+        CFreal c = 0.0;
+        for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+        {
+          c += m_vdmInvRow0[j] * (*((*(m_cellStates))[j]))[iEq];
+        }
+        for (CFuint i = 0; i < m_nbrSolPnts; ++i)
+        {
+          m_P0State[i][iEq] = m_vdmCol0[i] * c;
         }
       }
-
       //////////////////////////////////////
 
 
@@ -845,6 +829,14 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::setup()
   
   m_vdmInv = *(frLocalData[0]->getVandermondeMatrixInv());
 
+  // Extract rank-1 projection vectors from VDM
+  m_vdmCol0.resize(m_nbrSolPnts);
+  m_vdmInvRow0.resize(m_nbrSolPnts);
+  for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+  {
+    m_vdmCol0[j] = m_vdm(j, 0);
+    m_vdmInvRow0[j] = m_vdmInv(0, j);
+  }
 
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   { 

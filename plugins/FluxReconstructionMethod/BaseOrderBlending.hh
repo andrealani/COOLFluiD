@@ -77,6 +77,11 @@ public:
    */
   void execute();
 
+  /**
+   * Computes vector of maximum modal order (static, usable by other classes)
+   */
+  static RealVector getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint m_order);
+
 protected: // functions
 
   /**
@@ -122,11 +127,6 @@ protected: // functions
   * Apply alpha limits to blending coefficient
   */
   CFreal applyAlphaLimits(CFreal alpha);
-
-  /**
-   * Computes vector of maximum modal order
-   */
-  RealVector getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint m_order);
   
 
 protected: // data
@@ -278,6 +278,12 @@ protected: // data
 
   /// Expression for monitored variable in modal method
   std::string m_modalMonitoredExpression;
+
+  /// Update variable set for computing physical data (pressure, etc.)
+  Common::SafePtr<Framework::ConvectiveVarSet> m_obUpdateVarSet;
+
+  /// Physical data vector for extracting derived quantities
+  RealVector m_obPData;
 
 }; // class BaseOrderBlending
 
