@@ -52,7 +52,9 @@ SpaceMethodData::SpaceMethodData(Common::SafePtr<Method> owner)
   
   _freezeSysMatEverIter = false;
   setParameter("FreezeSysMatrix",&_freezeSysMatEverIter);
-  
+
+  m_linearResidualMode = false;
+
   _updateVarStr = "Null";
   setParameter("UpdateVar",&_updateVarStr);
   

@@ -100,9 +100,6 @@ private:
   /// Inner KSP max iterations for P0 coarse solve (default 5)
   CFuint _coarseMaxIter;
 
-  /// Direct element-diagonal block storage (indexed by cell TRS-local index)
-  std::vector<RealMatrix> m_cellBlocks;
-
 }; // end of class FRP0Preconditioner
 
 //////////////////////////////////////////////////////////////////////////////

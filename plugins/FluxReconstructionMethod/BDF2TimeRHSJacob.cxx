@@ -139,9 +139,8 @@ void BDF2TimeRHSJacob::addTimeResidual()
     
     if((!getMethodData().isSysMatrixFrozen()) && getMethodData().doComputeJacobian())
     {
-      // add the values in the jacobian matrix
-      //getMethodData().getLSSMatrix(0)->addValues(*m_acc);
-      m_lss->getMatrix()->addValues(*m_acc);
+      // add the values to the jacobian matrix (or direct element blocks)
+      getMethodData().assembleJacobBlock(*m_acc, m_currCellTRSIdx);
 
       // reset to zero the entries in the block accumulator
       m_acc->reset();

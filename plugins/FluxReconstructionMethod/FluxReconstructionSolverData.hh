@@ -31,6 +31,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
+  namespace Framework { class SpaceMethod; }
   namespace FluxReconstructionMethod {
 
     // Forward declarations
@@ -133,6 +134,15 @@ public: // functions
   /// Check if direct element-diagonal block accumulation is active
   bool fillElemDiagBlocks() const { return m_fillElemDiagBlocks; }
 
+  /// Enable/disable per-DOF point-diagonal block accumulation.
+  /// When active, assembleJacobBlock/Face only stores the sol-pt diagonal entries
+  /// (nEqs x nEqs per DOF) instead of full element blocks.
+  void setFillPointDiagBlocks(bool flag, std::vector<std::vector<RealMatrix>>* blocks = CFNULL)
+  {
+    m_fillPointDiagBlocks = flag;
+    m_pointDiagBlocks = blocks;
+  }
+
   /// Set P0 off-diagonal block storage (owned by preconditioner).
   /// Map key: (leftCellTRSIdx, rightCellTRSIdx) -> Galerkin-projected nEqs x nEqs block
   void setP0OffDiagBlocks(std::map<std::pair<CFuint,CFuint>, RealMatrix>* blocks)
@@ -150,6 +160,19 @@ public: // functions
   void assembleJacobBlockFace(Framework::BlockAccumulator& acc,
                                CFuint leftCellIdx, CFuint rightCellIdx,
                                CFuint nSolPtsPerSide);
+
+  /// Compute element-diagonal Jacobian blocks for all cells.
+  /// Temporarily enables doComputeJacobian + fillElemDiagBlocks + linearResidualMode,
+  /// calls the space method's residual pipeline, then restores all flags.
+  /// Caller must backup/restore rhs and updateCoeff before/after this call.
+  /// Caller must zero 'blocks' before calling.
+  void computeDiagBlocks(std::vector<RealMatrix>& blocks,
+                         Framework::SpaceMethod* spaceMtd);
+
+  /// Compute per-DOF point-diagonal Jacobian blocks via the residual pipeline.
+  /// Like computeDiagBlocks but only accumulates the sol-pt diagonal (nEqs x nEqs per DOF).
+  void computePointDiagBlocks(std::vector<std::vector<RealMatrix>>& pointBlocks,
+                              Framework::SpaceMethod* spaceMtd);
 
   /// Sets the ConvergenceMethod for this SpaceMethod to use
   /// @pre the pointer to ConvergenceMethod is not constant to
@@ -528,6 +551,14 @@ private:  // data
 
   /// pointer to P0 off-diagonal block storage (owned by preconditioner)
   std::map<std::pair<CFuint,CFuint>, RealMatrix>* m_p0OffDiagBlocks;
+
+  /// flag: redirect Jacobian assembly to per-DOF point-diagonal blocks
+  bool m_fillPointDiagBlocks;
+
+  /// pointer to per-DOF point-diagonal block storage (owned by preconditioner).
+  /// Outer vector indexed by TRS-local cell ID, inner vector by cell-local sol pt index.
+  /// Each RealMatrix is nEqs x nEqs.
+  std::vector<std::vector<RealMatrix>>* m_pointDiagBlocks;
 
 };  // end of class FluxReconstructionSolverData
 

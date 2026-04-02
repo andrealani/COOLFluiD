@@ -225,10 +225,15 @@ void LLAVFluxReconstruction::execute()
   
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
   
+  // nbrElemTypes is also used in the face flux loop below, so declared before the guard
+  const CFuint nbrElemTypes = elemType->size();
+
+  if (!getMethodData().isLinearResidualMode())
+  {
   m_useMax = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
   m_totalEps = 0.0;
-  
-//  if (iter < m_freezeSmoothnessIter) 
+
+//  if (iter < m_freezeSmoothnessIter)
 //  {
 //    m_s0 = 0.2*(m_Smax - m_kappa) + 0.8*m_s0;
 //    m_s0Prev = m_s0;
@@ -238,18 +243,17 @@ void LLAVFluxReconstruction::execute()
 //    m_s0 = m_s0Prev;
 //  }
   //m_peclet = m_minValue/pow(10,m_s0);
-  
+
   m_Smax = -100.0;
-  
+
   m_nodeEpsilons = 0.0;
-  
+
   m_nbPosPrev = 0;
   m_maxLambda = 0.;
-  
+
   //// Loop over the elements to compute the artificial viscosities
-  
+
   // loop over element types, for the moment there should only be one
-  const CFuint nbrElemTypes = elemType->size();
   cf_assert(nbrElemTypes == 1);
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
@@ -267,36 +271,36 @@ void LLAVFluxReconstruction::execute()
 
       // get the states in this cell
       m_cellStates = m_cell->getStates();
-      
+
       //CFLog(INFO, "state: " << *((*m_cellStates)[0]) << "\n");
-      
+
       // get the nodes in this cell
       m_cellNodes  = m_cell->getNodes();
-      
+
 //       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
 //       if ((*m_cellStates)[0]->isParUpdatable())
 //       {
       // compute the states projected on order P-1
       computeProjStates(m_statesPMinOne);
-	
+
       //CFLog(INFO, "projstate: " << m_statesPMinOne[0] << "\n");
-	
+
       // compute the artificial viscosity
       computeEpsilon();
-	
+
       // store epsilon
       storeEpsilon();
-//       } 
-      
+//       }
+
       //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
-  
+
   //CFLog(INFO, "max lambda: " << m_maxLambda << "\n");
-  
+
   const std::string nsp = this->getMethodData().getNamespace();
-  
+
 #ifdef CF_HAVE_MPI
     MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
     PE::GetPE().setBarrier(nsp);
@@ -304,16 +308,17 @@ void LLAVFluxReconstruction::execute()
     MPI_Allreduce(&m_totalEps, &m_totalEpsGlobal, count, MPI_DOUBLE, MPI_SUM, comm);
     MPI_Allreduce(&m_Smax, &m_SmaxGlobal, count, MPI_DOUBLE, MPI_MAX, comm);
 #endif
-    
-  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
+
+  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0)
   {
     // print total artificial viscosity
     CFLog(INFO, "total eps: " << m_totalEpsGlobal << ", Smax: " << m_SmaxGlobal << "\n");
   }
 
   PE::GetPE().setBarrier(nsp);
-  
+
   m_Smax = m_SmaxGlobal;
+  } // end !linearResidualMode (sensor pass)
   
   m_flagComputeNbNghb = false;
   

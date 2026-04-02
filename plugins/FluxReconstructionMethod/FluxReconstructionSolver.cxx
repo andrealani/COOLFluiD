@@ -466,24 +466,26 @@ void FluxReconstructionSolver::initializeSolutionImpl(bool isRestart)
 void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
 {
   CFAUTOTRACE;
-  
+
   cf_assert(isConfigured());
   cf_assert(isSetup());
-  
+
+  const bool linearMode = m_data->isLinearResidualMode();
+
   // apply preprocessor
   cf_assert(m_preprocess.isNotNull());
-  m_preprocess->execute();
-  
+  if (!linearMode) { m_preprocess->execute(); }
+
   // set the residual factor in the MethodData
   m_data->setResFactor(factor);
-  
+
   // prepare the computation (reset rhs, updatecoeff, grads)
   cf_assert(m_prepare.isNotNull());
   m_prepare->execute();
-  
+
   // enforce physicality of the solution
   cf_assert(m_physicality.isNotNull());
-  m_physicality->execute();
+  if (!linearMode) { m_physicality->execute(); }
   
   // apply the boundary conditions (this function is in SpaceMethod and is not called anywhere else)
   applyBC();
@@ -511,7 +513,7 @@ void FluxReconstructionSolver::computeSpaceResidualImpl(CFreal factor)
   addSourceTermsImpl();
   
   cf_assert(m_computeError.isNotNull());
-  m_computeError->execute();
+  if (!linearMode) { m_computeError->execute(); }
   
   if (m_data->isResidualTransformationNeeded())
   {

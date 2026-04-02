@@ -2271,8 +2271,8 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -2935,8 +2935,8 @@ void ConvDiffLLAVJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFui
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator

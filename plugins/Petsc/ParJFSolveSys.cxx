@@ -12,6 +12,7 @@
 #include "Framework/SubSystemStatus.hh"
 #include "Framework/State.hh"
 #include "Framework/SpaceMethod.hh"
+#include "Framework/SpaceMethodData.hh"
 
 #include "Petsc/Petsc.hh"
 #include "Petsc/ParJFSolveSys.hh"
@@ -52,10 +53,29 @@ seqJFSolveSysProvider("SeqJFSolveSys");
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ParJFSolveSys::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption<CFuint>("LagFrequency",
+    "Rebuild preconditioner every N Newton steps (default 1 = every step)");
+  options.addConfigOption<CFreal>("LagKSPGrowthThreshold",
+    "Rebuild when KSP iterations exceed this factor of baseline (default 2.0, 0=disabled)");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 ParJFSolveSys::ParJFSolveSys(const string& name) :
   StdParSolveSys(name),
   socket_updateCoeff("updateCoeff")
 {
+  addConfigOptionsTo(this);
+  m_lagFrequency = 1;
+  setParameter("LagFrequency", &m_lagFrequency);
+  m_lagKSPGrowthThreshold = 2.0;
+  setParameter("LagKSPGrowthThreshold", &m_lagKSPGrowthThreshold);
+  m_lagCounter = 0;
+  m_lastKSPIters = 0;
+  m_lastRebuildKSP = 0;
+  m_lastRebuildTimeStep = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -112,8 +132,23 @@ void ParJFSolveSys::execute()
   // assemble the rhs vector
   rhsVec.assembly();
 
+  // --- Preconditioner lagging: decide whether to rebuild ---
+  bool shouldRebuild = (m_lagCounter == 0);  // always rebuild on first call
+  if (!shouldRebuild && m_lagFrequency > 0)
+    shouldRebuild = (m_lagCounter % m_lagFrequency == 0);
+  if (!shouldRebuild && m_lagKSPGrowthThreshold > 0 && m_lastRebuildKSP > 0)
+    shouldRebuild = (m_lastKSPIters > m_lagKSPGrowthThreshold * m_lastRebuildKSP);
+  // Always rebuild on first iteration of a new time step
+  const CFuint currTimeStep = SubSystemStatusStack::getActive()->getNbIter();
+  if (currTimeStep != m_lastRebuildTimeStep) shouldRebuild = true;
+  m_lagCounter++;
+
   if(jfc->differentPreconditionerMatrix) {
-    getMethodData().getShellPreconditioner()->computeBeforeSolving();
+    if (shouldRebuild) {
+      getMethodData().getShellPreconditioner()->computeBeforeSolving();
+      m_lastRebuildKSP = m_lastKSPIters;
+      m_lastRebuildTimeStep = currTimeStep;
+    }
 
     if(!getMethodData().useBlockPreconditionerMatrix()) {
       //cout << "\n\n\n Setting up J-F different preconditioner matrix ParBAIJ with Petsc preconditioner \n\n\n";
@@ -142,7 +177,11 @@ void ParJFSolveSys::execute()
 #else
     CF_CHKERRCONTINUE(KSPSetOperators(ksp, mat.getMat(), mat.getMat(), DIFFERENT_NONZERO_PATTERN));
 #endif
-    getMethodData().getShellPreconditioner()->computeBeforeSolving();
+    if (shouldRebuild) {
+      getMethodData().getShellPreconditioner()->computeBeforeSolving();
+      m_lastRebuildKSP = m_lastKSPIters;
+      m_lastRebuildTimeStep = currTimeStep;
+    }
   }
 
   CF_CHKERRCONTINUE(KSPSetUp(ksp));
@@ -165,7 +204,6 @@ void ParJFSolveSys::execute()
   // --- Eisenstat-Walker adaptive KSP tolerance ---
   if (jfc->useEisenstatWalker) {
     // Reset EW state at the start of each new time step / outer iteration
-    const CFuint currTimeStep = SubSystemStatusStack::getActive()->getNbIter();
     if (currTimeStep != jfc->ewLastTimeStep) {
       jfc->prevNonlinResNorm = -1.0;
       jfc->prevEta = 0.5;
@@ -204,6 +242,7 @@ void ParJFSolveSys::execute()
   CF_CHKERRCONTINUE(KSPSolve(ksp, rhsVec.getVec(), solVec.getVec()));
   CFint iter = 0;
   CF_CHKERRCONTINUE(KSPGetIterationNumber(ksp, &iter));
+  m_lastKSPIters = static_cast<CFuint>(iter);
 
   PetscReal kspResNorm;
   CF_CHKERRCONTINUE(KSPGetResidualNorm(ksp, &kspResNorm));
@@ -325,9 +364,11 @@ PetscErrorCode computeResidualForMFFD(void* ctx, Vec U, Vec F)
 
   // --- Step 3: Evaluate residual R(U) ---
   jfc->spaceMethod->setComputeJacobianFlag(false);
+  jfc->spaceMethod->getSpaceMethodData()->setLinearResidualMode(true);
   updateCoeff = 0.0;
   jfc->spaceMethod->computeSpaceResidual(1.0);
   jfc->spaceMethod->computeTimeResidual(1.0);
+  jfc->spaceMethod->getSpaceMethodData()->setLinearResidualMode(false);
 
   // --- Step 4: Copy F = -R(U) = -rhs into output Vec F ---
   // Sign: F = -rhs so that dF/dU = -dR/dU = A (the Jacobian operator)

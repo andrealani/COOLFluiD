@@ -309,6 +309,9 @@ void DiffRHSJacobFluxReconstruction::execute()
 
 void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 {
+  // Skip perturbation loop when Jacobian assembly is off (e.g. JFNK MFFD evaluations)
+  if (!getMethodData().doComputeJacobian()) return;
+
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
 
@@ -575,8 +578,8 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator
@@ -587,6 +590,9 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
 void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint side)
 {
+  // Skip perturbation loop when Jacobian assembly is off (e.g. JFNK MFFD evaluations)
+  if (!getMethodData().doComputeJacobian()) return;
+
   // get residual factor
   const CFreal resFactor = getMethodData().getResFactor();
 
@@ -786,8 +792,8 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
 
   if (getMethodData().doComputeJacobian())
   {
-    // add the values to the jacobian matrix
-    m_lss->getMatrix()->addValues(acc);
+    // add the values to the jacobian matrix (or direct element blocks)
+    getMethodData().assembleJacobBlockFace(acc, m_cells[LEFT]->getID(), m_cells[RIGHT]->getID(), m_nbrSolPnts);
   }
 
   // reset to zero the entries in the block accumulator

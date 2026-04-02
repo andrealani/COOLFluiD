@@ -82,8 +82,7 @@ FRP0Preconditioner::FRP0Preconditioner(const std::string& name) :
   _directBlocks(true),
   _coarseSolveType("BlockDiag"),
   _coarseKSPTol(0.1),
-  _coarseMaxIter(5),
-  m_cellBlocks()
+  _coarseMaxIter(5)
 {
   addConfigOptionsTo(this);
   setParameter("SmootherOmega", &_smootherOmega);
@@ -411,58 +410,65 @@ void FRP0Preconditioner::computeBeforeSolving()
   {
     // ======== DIRECT BLOCKS MODE: bypass PETSc matrix entirely ========
 
-    // Allocate/zero block storage for ALL cells in InnerCells TRS
     SafePtr<TopologicalRegionSet> cells =
       MeshDataStack::getActive()->getTrs("InnerCells");
     const CFuint nbAllCells = cells->getLocalNbGeoEnts();
 
-    m_cellBlocks.resize(nbAllCells);
-    for (CFuint iCell = 0; iCell < nbAllCells; ++iCell)
-    {
-      const CFuint nSolPts = cells->getNbStatesInGeo(iCell);
-      const CFuint blockSize = nSolPts * nEqs;
-      m_cellBlocks[iCell].resize(blockSize, blockSize);
-      m_cellBlocks[iCell] = 0.0;
-    }
-
-    // Allocate P0 off-diagonal map for capturing face cross-blocks
+    // P0 off-diagonal map (if ILU mode)
     std::map<std::pair<CFuint,CFuint>, RealMatrix> p0OffDiagMap;
     if (_pcc.useP0ILU)
     {
       frData->setP0OffDiagBlocks(&p0OffDiagMap);
     }
 
-    // Enable direct block accumulation
-    frData->setFillElemDiagBlocks(true, &m_cellBlocks);
-    spaceData->setComputeJacobianFlag(true);
+    // Mode-specific storage (only one is populated)
+    std::vector<RealMatrix> cellBlocks;                    // ElementBlock mode
+    std::vector<std::vector<RealMatrix>> pointBlocks;      // PointBlock mode
 
-    // Reset updateCoeff and compute residuals
-    updateCoeff = 0.0;
-    spaceMtd->computeSpaceResidual(1.0);
-    spaceMtd->computeTimeResidual(1.0);
+    if (_pcc.useElementBlocks)
+    {
+      // Allocate full element-diagonal blocks (temporary, freed after extraction)
+      cellBlocks.resize(nbAllCells);
+      for (CFuint i = 0; i < nbAllCells; ++i)
+      {
+        const CFuint nSolPts = cells->getNbStatesInGeo(i);
+        const CFuint blockSize = nSolPts * nEqs;
+        cellBlocks[i].resize(blockSize, blockSize, 0.0);
+      }
 
-    // Disable direct block accumulation
-    frData->setFillElemDiagBlocks(false);
-    spaceData->setComputeJacobianFlag(savedDoComputeJacob);
+      updateCoeff = 0.0;
+      frData->computeDiagBlocks(cellBlocks, &(*spaceMtd));
+    }
+    else
+    {
+      // Allocate compact per-DOF blocks (temporary, freed after extraction)
+      pointBlocks.resize(nbAllCells);
+      for (CFuint i = 0; i < nbAllCells; ++i)
+      {
+        const CFuint nSolPts = cells->getNbStatesInGeo(i);
+        pointBlocks[i].resize(nSolPts);
+        for (CFuint j = 0; j < nSolPts; ++j)
+          pointBlocks[i][j].resize(nEqs, nEqs, 0.0);
+      }
 
-    // Unregister off-diagonal map
-    frData->setP0OffDiagBlocks(CFNULL);
+      updateCoeff = 0.0;
+      frData->computePointDiagBlocks(pointBlocks, &(*spaceMtd));
+    }
 
-    // Zero the P0 sparse matrix for ILU mode
+    // Common: clear P0 off-diag pointer, zero P0 matrix, restore backup
+    if (_pcc.useP0ILU) frData->setP0OffDiagBlocks(CFNULL);
+
     if (_pcc.useP0ILU)
     {
       CF_CHKERRCONTINUE(MatZeroEntries(_pcc.p0Mat));
     }
 
-    // Restore updateCoeff and rhs
     for (CFuint i = 0; i < nbStates; ++i)
       updateCoeff[i] = bkpUpdateCoeff[i];
     for (CFuint i = 0; i < rhsSize; ++i)
       rhs[i] = bkpRhs[i];
 
     // ---- Extract, project, and invert blocks ----
-    // Map from updatable cell index (0..nCells-1) to TRS-local cell index
-    // Rebuild by iterating cells same as in setPreconditioner()
     CFuint updCellIdx = 0;
     RealMatrix p0Block(nEqs, nEqs);
     CFuint currentInverterSize = 0;
@@ -477,11 +483,11 @@ void FRP0Preconditioner::computeBeforeSolving()
 
       if (nSolPts == 0) { updCellIdx++; continue; }
 
-      // The direct block is already assembled in m_cellBlocks[iCell]
-      RealMatrix& elemBlock = m_cellBlocks[iCell];
-
       if (_pcc.useElementBlocks)
       {
+        // ElementBlock: extract from full element-diagonal blocks
+        RealMatrix& elemBlock = cellBlocks[iCell];
+
         // Compute P0 block via Galerkin projection
         p0Block = 0.0;
         for (CFuint i = 0; i < nSolPts; ++i)
@@ -501,21 +507,31 @@ void FRP0Preconditioner::computeBeforeSolving()
           _inverter.reset(MatrixInverter::create(blockSize, false));
           currentInverterSize = blockSize;
         }
-        _inverter->invert(elemBlock, _pcc.invElemBlocks[updCellIdx]);
+        {
+          CFreal blockNorm = 0.0;
+          const CFuint bsz = elemBlock.size();
+          for (CFuint _k = 0; _k < bsz; ++_k) {
+            const CFreal av = std::abs(elemBlock.ptr()[_k]);
+            if (av > blockNorm) blockNorm = av;
+          }
+          RealMatrix& invBlock = _pcc.invElemBlocks[updCellIdx];
+          if (blockNorm < 1e-14) {
+            invBlock = 0.0;
+            for (CFuint k = 0; k < blockSize; ++k) invBlock(k, k) = 1.0;
+          } else {
+            _inverter->invert(elemBlock, invBlock);
+          }
+        }
       }
       else
       {
-        // PointBlock mode: extract per-DOF diagonal sub-blocks
+        // PointBlock: extract from compact per-DOF blocks (no full element block needed)
         const std::vector<CFuint>& upStateIndices = _pcc.cellToUpStateIdx[updCellIdx];
-        RealMatrix dofBlock(nEqs, nEqs);
         p0Block = 0.0;
 
         for (CFuint iSol = 0; iSol < nSolPts; ++iSol)
         {
-          // Extract nEqs x nEqs diagonal sub-block for this DOF
-          for (CFuint e = 0; e < nEqs; ++e)
-            for (CFuint f = 0; f < nEqs; ++f)
-              dofBlock(e, f) = elemBlock(iSol * nEqs + e, iSol * nEqs + f);
+          RealMatrix& dofBlock = pointBlocks[iCell][iSol];
 
           // Accumulate for P0
           for (CFuint e = 0; e < nEqs; ++e)
@@ -524,7 +540,20 @@ void FRP0Preconditioner::computeBeforeSolving()
 
           // Invert DOF block for smoother
           const CFuint upIdx = upStateIndices[iSol];
-          _inverter->invert(dofBlock, _pcc.smootherInvBlocks[upIdx]);
+          {
+            CFreal blockNorm = 0.0;
+            for (CFuint _k = 0; _k < dofBlock.size(); ++_k) {
+              const CFreal av = std::abs(dofBlock.ptr()[_k]);
+              if (av > blockNorm) blockNorm = av;
+            }
+            RealMatrix& invBlock = _pcc.smootherInvBlocks[upIdx];
+            if (blockNorm < 1e-14) {
+              invBlock = 0.0;
+              for (CFuint k = 0; k < nEqs; ++k) invBlock(k, k) = 1.0;
+            } else {
+              _inverter->invert(dofBlock, invBlock);
+            }
+          }
         }
 
         const CFreal invNSol = 1.0 / (CFreal)nSolPts;
@@ -536,16 +565,26 @@ void FRP0Preconditioner::computeBeforeSolving()
       // ---- P0 coarse level: store or invert the projected block ----
       if (_pcc.useP0ILU)
       {
-        // Fill P0 matrix diagonal block
         PetscInt blockRow = static_cast<PetscInt>(updCellIdx);
         CF_CHKERRCONTINUE(MatSetValuesBlocked(_pcc.p0Mat,
           1, &blockRow, 1, &blockRow, &p0Block[0], INSERT_VALUES));
-
-        // Off-diagonal blocks are filled below from actual face cross-blocks
       }
       else
       {
-        _p0Inverter->invert(p0Block, _pcc.p0InvBlocks[updCellIdx]);
+        {
+          CFreal blockNorm = 0.0;
+          for (CFuint _k = 0; _k < p0Block.size(); ++_k) {
+            const CFreal av = std::abs(p0Block.ptr()[_k]);
+            if (av > blockNorm) blockNorm = av;
+          }
+          RealMatrix& invBlock = _pcc.p0InvBlocks[updCellIdx];
+          if (blockNorm < 1e-14) {
+            invBlock = 0.0;
+            for (CFuint k = 0; k < nEqs; ++k) invBlock(k, k) = 1.0;
+          } else {
+            _p0Inverter->invert(p0Block, invBlock);
+          }
+        }
       }
 
       updCellIdx++;
@@ -569,9 +608,6 @@ void FRP0Preconditioner::computeBeforeSolving()
       }
     }
 
-    // Free direct block storage (no longer needed after extraction)
-    m_cellBlocks.clear();
-
     // Assemble P0 sparse matrix for ILU mode
     if (_pcc.useP0ILU)
     {
@@ -594,6 +630,7 @@ void FRP0Preconditioner::computeBeforeSolving()
     // Enable Jacobian assembly into preconditioner matrix
     spaceData->setComputeJacobianFlag(true);
     spaceData->setFillPreconditionerMatrix(true);
+    spaceData->setLinearResidualMode(true);
 
     // Zero the preconditioner matrix
     PetscMatrix& precondMat = _pcc.pJFC->petscData->getPreconditionerMatrix();
@@ -610,6 +647,7 @@ void FRP0Preconditioner::computeBeforeSolving()
     // Restore flags
     spaceData->setComputeJacobianFlag(savedDoComputeJacob);
     spaceData->setFillPreconditionerMatrix(savedFillPrecondMat);
+    spaceData->setLinearResidualMode(false);
 
     // Unregister off-diagonal map
     frData->setP0OffDiagBlocks(CFNULL);
@@ -776,24 +814,8 @@ void FRP0Preconditioner::computeBeforeSolving()
 
 void FRP0Preconditioner::computeAfterSolving()
 {
-  const CFuint nCells = _pcc.nUpdatableCells;
-
-  if (_pcc.useElementBlocks)
-  {
-    for (CFuint i = 0; i < nCells; ++i)
-      _pcc.invElemBlocks[i] = 0.0;
-  }
-  else
-  {
-    for (CFuint i = 0; i < _pcc.smootherInvBlocks.size(); ++i)
-      _pcc.smootherInvBlocks[i] = 0.0;
-  }
-
-  if (!_pcc.useP0ILU)
-  {
-    for (CFuint i = 0; i < nCells; ++i)
-      _pcc.p0InvBlocks[i] = 0.0;
-  }
+  // Blocks are fully overwritten on the next computeBeforeSolving() call —
+  // no need to zero them here.
 }
 
 //////////////////////////////////////////////////////////////////////////////

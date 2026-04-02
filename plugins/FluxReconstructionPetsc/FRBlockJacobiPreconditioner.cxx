@@ -199,6 +199,7 @@ void FRBlockJacobiPreconditioner::computeBeforeSolving()
   // Enable Jacobian assembly into preconditioner matrix
   spaceData->setComputeJacobianFlag(true);
   spaceData->setFillPreconditionerMatrix(true);
+  spaceData->setLinearResidualMode(true);
 
   // Zero the preconditioner matrix
   PetscMatrix& precondMat = _pcc.pJFC->petscData->getPreconditionerMatrix();
@@ -215,6 +216,7 @@ void FRBlockJacobiPreconditioner::computeBeforeSolving()
   // Restore flags
   spaceData->setComputeJacobianFlag(savedDoComputeJacob);
   spaceData->setFillPreconditionerMatrix(savedFillPrecondMat);
+  spaceData->setLinearResidualMode(false);
 
   // Restore updateCoeff and rhs
   for (CFuint i = 0; i < nbStates; ++i)

@@ -170,6 +170,12 @@ public:
     return _computeJacobian;
   }
 
+  /// Set flag for linearized residual evaluation (e.g. MFFD J*v product)
+  void setLinearResidualMode(bool flag) { m_linearResidualMode = flag; }
+
+  /// Get flag for linearized residual evaluation
+  bool isLinearResidualMode() const { return m_linearResidualMode; }
+
   /// Check if the system matrix is frozen. If not, it should be recomputated on each iteration.
   bool isSysMatrixFrozen() const
   {
@@ -257,12 +263,15 @@ protected:
   
   /// flag telling if the jacobian has to be computed
   bool _computeJacobian;
-  
+
   /// Freezed System matrix
   bool _sysMatFrozen;
 
   /// Strategy to freeze system matrix
   bool _freezeSysMatEverIter;
+
+  /// flag for linearized residual evaluation (e.g. MFFD J*v product)
+  bool m_linearResidualMode;
     
   /// string for configuration of the update variables
   std::string _updateVarStr;

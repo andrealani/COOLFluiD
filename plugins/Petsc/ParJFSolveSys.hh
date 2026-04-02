@@ -32,6 +32,11 @@ class ParJFSolveSys : public StdParSolveSys {
 public:
 
   /**
+   * Defines configuration options for preconditioner lagging.
+   */
+  static void defineConfigOptions(Config::OptionList& options);
+
+  /**
    * Constructor.
    */
   explicit ParJFSolveSys(const std::string& name);
@@ -51,18 +56,37 @@ public:
    * in this command before processing phase
    */
   void setup();
-   
+
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
   virtual std::vector<Common::SafePtr<Framework::BaseDataSocketSink> > needsSockets();
-  
+
 protected: // data
-  
+
   /// socket for update coefficients
   Framework::DataSocketSink<CFreal> socket_updateCoeff;
-  
+
+  /// Rebuild preconditioner every N Newton steps (1 = every step, default)
+  CFuint m_lagFrequency;
+
+  /// Rebuild when KSP iterations exceed this factor times the baseline count
+  /// (0 = disabled, default 2.0)
+  CFreal m_lagKSPGrowthThreshold;
+
+  /// Call counter: increments every execute() call
+  CFuint m_lagCounter;
+
+  /// KSP iteration count from the most recent solve
+  CFuint m_lastKSPIters;
+
+  /// KSP iteration count at the time of the last preconditioner rebuild
+  CFuint m_lastRebuildKSP;
+
+  /// SubSystem iteration index at the time of the last preconditioner rebuild
+  CFuint m_lastRebuildTimeStep;
+
 }; // class SolveSys
 
 //////////////////////////////////////////////////////////////////////////////

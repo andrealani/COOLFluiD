@@ -26,6 +26,7 @@
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/ReconstructStatesFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
+#include "Framework/SpaceMethod.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -91,7 +92,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_solToUpdateInUpdateMatTrans(),
   m_fillElemDiagBlocks(false),
   m_elemDiagBlocks(CFNULL),
-  m_p0OffDiagBlocks(CFNULL)
+  m_p0OffDiagBlocks(CFNULL),
+  m_fillPointDiagBlocks(false),
+  m_pointDiagBlocks(CFNULL)
 {
   addConfigOptionsTo(this);
   
@@ -450,7 +453,20 @@ void FluxReconstructionSolverData::createFRLocalData()
 
 void FluxReconstructionSolverData::assembleJacobBlock(BlockAccumulator& acc, CFuint cellIdx)
 {
-  if (m_fillElemDiagBlocks)
+  if (m_fillPointDiagBlocks)
+  {
+    cf_assert(m_pointDiagBlocks != CFNULL);
+    cf_assert(cellIdx < m_pointDiagBlocks->size());
+    auto& cellPtBlocks = (*m_pointDiagBlocks)[cellIdx];
+    const CFuint nSolPts = acc.getM();
+    const CFuint nEqs = acc.getNB();
+    cf_assert(cellPtBlocks.size() == nSolPts);
+    for (CFuint i = 0; i < nSolPts; ++i)
+      for (CFuint ib = 0; ib < nEqs; ++ib)
+        for (CFuint jb = 0; jb < nEqs; ++jb)
+          cellPtBlocks[i](ib, jb) += acc.getValue(i, i, ib, jb);
+  }
+  else if (m_fillElemDiagBlocks)
   {
     cf_assert(m_elemDiagBlocks != CFNULL);
     cf_assert(cellIdx < m_elemDiagBlocks->size());
@@ -476,7 +492,29 @@ void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
                                                            CFuint rightCellIdx,
                                                            CFuint nSolPtsPerSide)
 {
-  if (m_fillElemDiagBlocks)
+  if (m_fillPointDiagBlocks)
+  {
+    cf_assert(m_pointDiagBlocks != CFNULL);
+    cf_assert(leftCellIdx < m_pointDiagBlocks->size());
+    cf_assert(rightCellIdx < m_pointDiagBlocks->size());
+    auto& leftPtBlocks = (*m_pointDiagBlocks)[leftCellIdx];
+    auto& rightPtBlocks = (*m_pointDiagBlocks)[rightCellIdx];
+    const CFuint nEqs = acc.getNB();
+    const CFuint N = nSolPtsPerSide;
+
+    // Left diagonal: acc(i, i, ...) for i in [0, N)
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint ib = 0; ib < nEqs; ++ib)
+        for (CFuint jb = 0; jb < nEqs; ++jb)
+          leftPtBlocks[i](ib, jb) += acc.getValue(i, i, ib, jb);
+
+    // Right diagonal: acc(i+N, i+N, ...) for i in [0, N)
+    for (CFuint i = 0; i < N; ++i)
+      for (CFuint ib = 0; ib < nEqs; ++ib)
+        for (CFuint jb = 0; jb < nEqs; ++jb)
+          rightPtBlocks[i](ib, jb) += acc.getValue(i + N, i + N, ib, jb);
+  }
+  else if (m_fillElemDiagBlocks)
   {
     cf_assert(m_elemDiagBlocks != CFNULL);
     cf_assert(leftCellIdx < m_elemDiagBlocks->size());
@@ -537,6 +575,46 @@ void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
           for (CFuint jb = 0; jb < nEqs; ++jb)
             p0RL(ib, jb) += invN * acc.getValue(i + N, j, ib, jb);
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::computeDiagBlocks(
+    std::vector<RealMatrix>& blocks,
+    Framework::SpaceMethod* spaceMtd)
+{
+  const bool savedJacob = doComputeJacobian();
+
+  setComputeJacobianFlag(true);
+  setFillElemDiagBlocks(true, &blocks);
+  setLinearResidualMode(true);
+
+  spaceMtd->computeSpaceResidual(1.0);
+  spaceMtd->computeTimeResidual(1.0);
+
+  setFillElemDiagBlocks(false);
+  setComputeJacobianFlag(savedJacob);
+  setLinearResidualMode(false);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FluxReconstructionSolverData::computePointDiagBlocks(
+    std::vector<std::vector<RealMatrix>>& pointBlocks,
+    Framework::SpaceMethod* spaceMtd)
+{
+  const bool savedJacob = doComputeJacobian();
+
+  setComputeJacobianFlag(true);
+  setFillPointDiagBlocks(true, &pointBlocks);
+  setLinearResidualMode(true);
+
+  spaceMtd->computeSpaceResidual(1.0);
+  spaceMtd->computeTimeResidual(1.0);
+
+  setFillPointDiagBlocks(false);
+  setComputeJacobianFlag(savedJacob);
+  setLinearResidualMode(false);
 }
 
 //////////////////////////////////////////////////////////////////////////////
