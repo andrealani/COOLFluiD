@@ -22,6 +22,15 @@ Do not forget to change the PETSc also in each if statement after indicating CON
 ```
 module load PETSc/3.20.3-foss-2023a
 ```
+
+- wICE
+
+```
+module load cluster/wice/batch
+module load CMake/3.29.3-GCCcore-13.3.0
+module load PETSc/3.24.4-gfbf-2024a-MPICH
+```
+
 3. After step proceed with step 5 in the WIKIHOW. In case you get an error immediately regarding the first lines of install_COOLFluid.sh script you can locally run from the terminal
 ```
 dos2unix install_COOLFluiD.sh
