@@ -44,6 +44,8 @@ MLPLimiterMHD3D.hh
 MLPLimiterMHD3D.cxx
 ComputeErrorMHD.hh
 ComputeErrorMHD.cxx
+HelioInitState.hh
+HelioInitState.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )
