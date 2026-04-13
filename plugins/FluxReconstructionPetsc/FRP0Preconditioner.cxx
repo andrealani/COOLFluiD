@@ -366,7 +366,7 @@ void FRP0Preconditioner::setPreconditioner()
 
 void FRP0Preconditioner::computeBeforeSolving()
 {
-  CFLog(INFO, "FRP0Preconditioner::computeBeforeSolving() => assembling Jacobian + extracting blocks"
+  CFLog(VERBOSE, "FRP0Preconditioner::computeBeforeSolving() => assembling Jacobian + extracting blocks"
     << " (DirectBlocks = " << _directBlocks << ")\n");
 
   const CFuint nEqs = _pcc.nEqs;
@@ -807,7 +807,7 @@ void FRP0Preconditioner::computeBeforeSolving()
     }
   }
 
-  CFLog(INFO, "FRP0Preconditioner::computeBeforeSolving() => DONE\n");
+  CFLog(VERBOSE, "FRP0Preconditioner::computeBeforeSolving() => DONE\n");
 }
 
 //////////////////////////////////////////////////////////////////////////////

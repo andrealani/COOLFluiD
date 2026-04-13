@@ -606,45 +606,31 @@ void ConvRHSFluxReconstructionBlending::computeDivDiscontFlx(vector< RealVector 
 //    }
   }
 
-  // Loop over solution pnts to calculate the divergence of the discontinuous flux
+  // Loop over solution pnts to calculate the divergence of the discontinuous flux.
+  // Note: the P0 volume flux divergence is analytically zero (derivative of a constant
+  // basis is zero), so there is no P0 contribution to the volume term. The P0 residual
+  // comes entirely from the correction function terms below.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
   {
-
-    // reset the residual updates
     residuals[iSolPnt] = 0.0;
-    
-    // Loop over solution pnts to count the factor of all sol pnt polys
+
+    // HO volume flux divergence, scaled by (1-alpha)
     for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
     {
       const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
 
-      // Loop over deriv directions and sum them to compute divergence
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
         const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolPnt][iDir][jSolIdx];
 
-        //const CFreal polyCoefP0 = (*m_solPolyDerivAtSolPntsP0)[0][iDir][0];
-
-        // Loop over conservative fluxes
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          // Store divFD in the vector that will be divFC
-          residuals[iSolPnt][iEq] -= polyCoef*(m_contFlx[jSolIdx][iDir][iEq]) * (1.-alpha) ; // + polyCoefP0*(m_contFlxP0[0][iDir][iEq]) * alpha;
+          residuals[iSolPnt][iEq] -= polyCoef * m_contFlx[jSolIdx][iDir][iEq] * (1.-alpha);
         }
       }
     }
 
-    // add P0 divFD to the residual updates
-    for (CFuint iDir = 0; iDir < m_dim; ++iDir)
-    {
-      const CFreal polyCoefP0 = (*m_solPolyDerivAtSolPntsP0)[0][iDir][0];
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        residuals[iSolPnt][iEq] -= polyCoefP0*(m_contFlxP0[0][iDir][iEq]) * alpha;// * (*m_cellAvgSolCoefs)[iSolPnt];
-      }
-    }
-
-    // add divhFD to the residual updates
+    // HO correction flux divergence, scaled by (1-alpha)
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
       const CFuint flxIdx = (*m_solFlxDep)[iSolPnt][iFlxPnt];
@@ -752,13 +738,21 @@ void ConvRHSFluxReconstructionBlending::updateWaveSpeed()
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     CFreal alpha = output[(*m_states[iSide])[0]->getLocalID()];
+
+    // Per-face P0 wave speed factor: look up via same connectivity as computeCorrection()
+    const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide][0];
+    const CFuint flxIdxP0 = (*m_faceFlxPntConnP0)[m_flxPntFaceConn[flxIdx]][0];
+    const CFreal factorP0 = m_corrFctDivP0WaveSpeedFactor[flxIdxP0];
+
     for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      // get the local ID of the current sol pnt
       const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
- 
-      // add the wave speed update previously computed
-      updateCoeff[solID] += (m_waveSpeedUpd[iSide]*(2.0*m_order+1));//*(1.-alpha) + (m_waveSpeedUpdP0[iSide]*(1))*alpha;
+      // P0 term scaled by nbrSolPnts to compensate for jacobDet splitting in time diagonal:
+      // PseudoSteadyStdTimeRHSJacob uses diagValues[iSol] = updateCoeff * jacobDet[iSol] / (V * cfl)
+      // For P1 mesh: jacobDet[iSol] ≈ V/nbrSolPnts, so effective diagonal = updateCoeff/(nbrSolPnts*cfl)
+      // Pure P0 has jacobDet[0] ≈ V, giving diagonal = updateCoeff/cfl
+      // Scaling P0 contribution by nbrSolPnts recovers the correct P0 diagonal strength
+      updateCoeff[solID] += (m_waveSpeedUpd[iSide]*(2.0*m_order+1))*(1.-alpha) + (m_waveSpeedUpdP0[iSide]*factorP0*m_nbrSolPnts)*alpha;
     }
   }
 }
@@ -800,17 +794,17 @@ void ConvRHSFluxReconstructionBlending::computeWaveSpeedUpdates(vector< CFreal >
 
       // transform update states to physical data to calculate eigenvalues
       m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPnt[iSide][iFlx]), m_pData);
-      
+
       waveSpeedUpd[iSide] += jacobXIntCoef * m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPnts[iFlx]);
     }
-    
+
     const CFreal jacobXIntCoef = m_faceJacobVecAbsSizeFlxPntsP0[0]*(*m_faceIntegrationCoefsP0)[0];
 
     // transform update states to physical data to calculate eigenvalues
     m_updateVarSet->computePhysicalData(*(m_cellStatesFlxPntP0[iSide][0]), m_pData);
-    
+
     waveSpeedUpdP0[iSide] += jacobXIntCoef * m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPntsP0[0]);
-  
+
   }
 }
 
@@ -1382,6 +1376,25 @@ void ConvRHSFluxReconstructionBlending::setup()
   // compute the divergence of the correction function
   m_corrFctComputer->computeDivCorrectionFunction(frLocalDataP0,m_corrFctDivP0);
 
+  // Precompute per-flux-point P0 wave speed factor: |corrFctDivP0[iFlx]| / 0.5
+  // For quads/hexas all values are 0.5 → factor = 1.0 everywhere (no change)
+  // For prisms: triag faces → factor = 1.0, quad faces → factor = 4.0 or 5.66
+  // This gives each face its correct scaling instead of penalizing all faces
+  // with the global max (which over-scaled prism triag faces by ~5.66x).
+  {
+    m_corrFctDivP0WaveSpeedFactor.resize(m_corrFctDivP0[0].size());
+    for (CFuint iFlx = 0; iFlx < m_corrFctDivP0[0].size(); ++iFlx)
+    {
+      m_corrFctDivP0WaveSpeedFactor[iFlx] = std::max(1.0, std::abs(m_corrFctDivP0[0][iFlx]) / 0.5);
+    }
+    CFLog(VERBOSE, "P0 corrFctDiv and wave speed factors per flux point:\n");
+    for (CFuint iFlx = 0; iFlx < m_corrFctDivP0[0].size(); ++iFlx)
+    {
+      CFLog(VERBOSE, "  flx " << iFlx << ": corrFctDivP0 = " << m_corrFctDivP0[0][iFlx]
+                     << "  factor = " << m_corrFctDivP0WaveSpeedFactor[iFlx] << "\n");
+    }
+  }
+
   // get solution point local coordinates
   m_solPntsLocalCoordsP0 = frLocalDataP0->getSolPntsLocalCoords();
 
@@ -1393,10 +1406,7 @@ void ConvRHSFluxReconstructionBlending::setup()
   
   // get the coefs for extrapolation of the states to the flx pnts
   m_solPolyValsAtFlxPntsP0 = frLocalDataP0->getCoefSolPolyInFlxPnts();
-  
-  // get the coefs for derivation of the states in the sol pnts
-  m_solPolyDerivAtSolPntsP0 = frLocalDataP0->getCoefSolPolyDerivInSolPnts();
-  
+
   // get the dimension on which to project the flux in a flux point
   m_flxPntFlxDimP0 = frLocalDataP0->getFluxPntFluxDim();
   

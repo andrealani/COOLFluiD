@@ -223,7 +223,10 @@ protected: // data
   /// Divergence of the P0 correction function
   std::vector< std::vector< CFreal > > m_corrFctDivP0;
 
-  /// Filtered interface fluxes at the flux points of a face 
+  /// Per-flux-point P0 wave speed factor: |corrFctDivP0[iFlx]|/0.5, clamped to >=1.0
+  std::vector<CFreal> m_corrFctDivP0WaveSpeedFactor;
+
+  /// Filtered interface fluxes at the flux points of a face
   std::vector< RealVector > m_Filtered_flxPntRiemannFlux;
   
   /// Vandermonde Matrix

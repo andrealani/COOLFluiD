@@ -11,7 +11,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -7.65426
+### Residual = -7.64603
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -141,13 +141,10 @@ Simulator.SubSystem.FluxReconstruction.UseBlending = true
 Simulator.SubSystem.FluxReconstruction.PreProcessCom = OrderBlending
 
 #==========================================================================
-# MAIN PARAMETERS (Log-Scale Method)
+# MAIN PARAMETERS
 #==========================================================================
-# Use log-scale method (true = recommended, false = legacy sigmoid)
-Simulator.SubSystem.FluxReconstruction.OrderBlending.UseLogScale = true
-
 # Reference smoothness: s0 = -S0 * log10(N+1)
-# Higher S0 = more dissipation. Typical values for MHD cases: 3.0 - 8.0 
+# Higher S0 = more dissipation. Typical values: 3.0 - 8.0 
 Simulator.SubSystem.FluxReconstruction.OrderBlending.S0 = 6.
 
 # Transition half-width in log-space. Typical: 1.0 - 2.0

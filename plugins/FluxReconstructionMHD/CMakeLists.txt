@@ -46,6 +46,8 @@ ComputeErrorMHD.hh
 ComputeErrorMHD.cxx
 HelioInitState.hh
 HelioInitState.cxx
+BaseOrderBlendingMHD.hh
+BaseOrderBlendingMHD.cxx
 )
 
 LIST ( APPEND FluxReconstructionMHD_requires_mods MHD FluxReconstructionMethod )

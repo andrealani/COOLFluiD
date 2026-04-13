@@ -575,11 +575,17 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::updateWaveSpeed()
   DataHandle< CFreal > output = socket_alpha.getDataHandle();
   CFreal alpha = output[((*m_cellStates)[0])->getLocalID()];
 
+  // Per-face P0 wave speed factor: look up via same connectivity as computeBndFluxCorrection()
+  const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][0];
+  const CFuint flxIdxP0 = (*m_faceFlxPntConnP0)[m_flxPntFaceConn[flxIdx]][0];
+  const CFreal factorP0 = m_corrFctDivP0WaveSpeedFactor[flxIdxP0];
+
   // loop over sol pnts to add the wave speed updates to the socket
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
     const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-    updateCoeff[solID] += (m_waveSpeedUpd*(2.0*m_order+1));//*(1.-alpha) + (m_waveSpeedUpdP0*(1))*alpha;
+    // P0 term scaled by nbrSolPnts: same jacobDet compensation as interior faces
+    updateCoeff[solID] += (m_waveSpeedUpd*(2.0*m_order+1))*(1.-alpha) + (m_waveSpeedUpdP0*factorP0*m_nbrSolPnts)*alpha;
   }
 }
 
@@ -920,6 +926,15 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::setup()
 
   // compute the divergence of the correction function
   m_corrFctComputer->computeDivCorrectionFunction(frLocalDataP0,m_corrFctDivP0);
+
+  // Precompute per-flux-point P0 wave speed factor
+  {
+    m_corrFctDivP0WaveSpeedFactor.resize(m_corrFctDivP0[0].size());
+    for (CFuint iFlx = 0; iFlx < m_corrFctDivP0[0].size(); ++iFlx)
+    {
+      m_corrFctDivP0WaveSpeedFactor[iFlx] = std::max(1.0, std::abs(m_corrFctDivP0[0][iFlx]) / 0.5);
+    }
+  }
 
   m_solPolyValsAtFlxPntsP0 = frLocalDataP0->getCoefSolPolyInFlxPnts();
 

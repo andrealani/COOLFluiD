@@ -9,7 +9,7 @@
 #
 ################################################################################
 #
-### Residual = -7.76988
+### Residual = -7.76548
 #
 
 CFEnv.ExceptionLogLevel    = 1000
@@ -154,7 +154,6 @@ Simulator.SubSystem.FluxReconstruction.ExtrapolateCom = Null
 # Order blending
 Simulator.SubSystem.FluxReconstruction.UseBlending = true
 Simulator.SubSystem.FluxReconstruction.PreProcessCom = OrderBlending
-Simulator.SubSystem.FluxReconstruction.OrderBlending.UseLogScale = true
 Simulator.SubSystem.FluxReconstruction.OrderBlending.S0 = 6.
 Simulator.SubSystem.FluxReconstruction.OrderBlending.Kappa = 1.5
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ModalMonitoredExpression = rho

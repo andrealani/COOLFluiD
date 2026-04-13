@@ -232,7 +232,7 @@ void ParJFSolveSys::execute()
     }
 
     CF_CHKERRCONTINUE(KSPSetTolerances(ksp, eta, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT));
-    CFLog(INFO, "JFNK Eisenstat-Walker: eta = " << eta
+    CFLog(VERBOSE, "JFNK Eisenstat-Walker: eta = " << eta
       << ", ||F|| = " << currResNorm << "\n");
 
     jfc->prevNonlinResNorm = currResNorm;
@@ -248,8 +248,8 @@ void ParJFSolveSys::execute()
   CF_CHKERRCONTINUE(KSPGetResidualNorm(ksp, &kspResNorm));
   KSPConvergedReason reason;
   CF_CHKERRCONTINUE(KSPGetConvergedReason(ksp, &reason));
-  CFLog(INFO, "KSP convergence reached at iteration: " << iter
-    << ", residual norm: " << kspResNorm
+  CFLog(INFO, "KSP converged in " << iter << " iterations\n");
+  CFLog(VERBOSE, "KSP residual norm: " << kspResNorm
     << ", reason: " << reason << "\n");
 
   getMethodData().getShellPreconditioner()->computeAfterSolving();

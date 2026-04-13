@@ -326,21 +326,33 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computeJacobConvBndCo
       }
       
       for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
-      {   
+      {
         const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
 
         m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
         for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
         {
           const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-          
+
           if (!m_solPntUpdated[solIdx])
           {
             m_solPntUpdated[solIdx] = true;
             acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
           }
-        }  
-      } 
+        }
+      }
+
+      // P0 blending: the P0 correction affects ALL sol points (cell-average coupling),
+      // not just those within the P1 flux-point stencil. Add Jacobian entries for any
+      // sol points not already covered by the P1 connectivity above.
+      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+      {
+        if (!m_solPntUpdated[iSolPnt])
+        {
+          m_solPntUpdated[iSolPnt] = true;
+          acc.addValues(iSolPnt,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*iSolPnt]);
+        }
+      }
 
       // restore physical variable in state
       m_numJacob->restore(pertState[m_pertVar]);
@@ -444,40 +456,25 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computePertCorrection
   DataHandle< CFreal > output = socket_alpha.getDataHandle();
   const CFreal alpha = output[((*m_cellStates)[0])->getLocalID()];
 
-  // reset updated flags
+  // reset ALL corrections (needed so m_pertResUpdates and m_resUpdates use the same structure)
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    m_solPntUpdated[iSol] = false;
+    corrections[iSol] = 0.0;
   }
 
-  // reset corrections for all influenced solution points (following original structure)
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  // STEP 1: Add high-order contributions from ALL flux points on this face.
+  // We loop over all flux points (not just influenced) so that m_pertResUpdates
+  // and m_resUpdates use the same flux point set. For uninfluenced flux points,
+  // m_flxPntRiemannFlux still holds unperturbed values, so they cancel exactly
+  // in the finite difference.
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
-    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][m_influencedFlxPnts[iFlxPnt]];
-    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();      
-    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
-    {
-      const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-      if (!m_solPntUpdated[solIdx])
-      {
-        m_solPntUpdated[solIdx] = true;
-        corrections[solIdx] = 0.0;
-      }
-    }
-  }  
-  
-  // STEP 1: Add high-order contributions (loop over flux points)
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
-  { 
-    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][ m_influencedFlxPnts[iFlxPnt] ];
-    
-    // the current correction factor previously computed
-    // This is the high-order flux correction
-    const RealVector& currentCorrFactor = m_flxPntRiemannFlux[ m_influencedFlxPnts[iFlxPnt] ];
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+
+    const RealVector& currentCorrFactor = m_flxPntRiemannFlux[iFlxPnt];
 
     cf_assert(currentCorrFactor.size() == m_nbrEqs);
     m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-    // compute the term due to each flx pnt for all affected solution points
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
       const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -487,8 +484,8 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionBlending::computePertCorrection
 
       // Fill in the high-order corrections with blending factor (1-alpha)
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {  
-        corrections[solIdx][iVar] -= currentCorrFactor[iVar] * divh * (1.0 - alpha); 
+      {
+        corrections[solIdx][iVar] -= currentCorrFactor[iVar] * divh * (1.0 - alpha);
       }
     }
   }

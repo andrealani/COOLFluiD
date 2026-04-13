@@ -81,7 +81,7 @@ void ConvRHSJacobFluxReconstructionBlending::configure ( Config::ConfigArgs& arg
 void ConvRHSJacobFluxReconstructionBlending::execute()
 {
   CFAUTOTRACE;
-  
+
   CFLog(VERBOSE, "ConvRHSJacobFluxReconstructionBlending::execute()\n");
   
   // boolean telling whether there is a diffusive term
@@ -453,14 +453,26 @@ void ConvRHSJacobFluxReconstructionBlending::computeBothJacobs()
             for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
             {
               const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-              
+
               if (!m_solPntUpdated[solIdx])
               {
                 m_solPntUpdated[solIdx] = true;
                 acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
               }
             }
-          }  
+          }
+
+          // P0 blending: the P0 correction affects ALL sol points (cell-average coupling),
+          // not just those within the P1 flux-point stencil. Add Jacobian entries for any
+          // sol points not already covered by the P1 connectivity above.
+          for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+          {
+            if (!m_solPntUpdated[iSolPnt])
+            {
+              m_solPntUpdated[iSolPnt] = true;
+              acc.addValues(iSolPnt+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*iSolPnt]);
+            }
+          }
         }
         
         // restore physical variable in state
@@ -615,18 +627,30 @@ void ConvRHSJacobFluxReconstructionBlending::computeOneJacob(const CFuint side)
           for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
           {
             const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-            
+
             if (!m_solPntUpdated[solIdx])
             {
               m_solPntUpdated[solIdx] = true;
               acc.addValues(solIdx+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
             }
           }
-        }  
-        
+        }
+
+        // P0 blending: the P0 correction affects ALL sol points (cell-average coupling),
+        // not just those within the P1 flux-point stencil. Add Jacobian entries for any
+        // sol points not already covered by the P1 connectivity above.
+        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+        {
+          if (!m_solPntUpdated[iSolPnt])
+          {
+            m_solPntUpdated[iSolPnt] = true;
+            acc.addValues(iSolPnt+sideTerm,m_pertSol+pertSideTerm,m_pertVar,&m_derivResUpdates[m_nbrEqs*iSolPnt]);
+          }
+        }
+
         // restore physical variable in state
         m_numJacob->restore(pertState[m_pertVar]);
-        
+
         // restore values that were overwritten
         restoreFromBackups();
       }
@@ -723,17 +747,20 @@ void ConvRHSJacobFluxReconstructionBlending::computePertCorrection(CFuint side, 
   // reset corrections
   corrections = 0.0;
 
-  // STEP 1: Add high-order contributions (loop over flux points)
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_NbInfluencedFlxPnts; ++iFlxPnt)
+  // STEP 1: Add high-order contributions from ALL flux points on this face.
+  // We loop over all flux points (not just influenced) so that m_pertResUpdates
+  // and m_resUpdates use the same flux point set. For uninfluenced flux points,
+  // m_cellFlx still holds unperturbed values (from the main RHS pass), so they
+  // cancel exactly in the finite difference — but they MUST be present here to
+  // avoid corrupting m_derivResUpdates for sol points outside the P1 stencil.
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
-    const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][ m_influencedFlxPnts[iFlxPnt] ];  
+    const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];
 
-    // the current correction factor corresponding to the interface flux (stored in cellFlx)
-    // This is the high-order flux correction
-    const RealVector& currentCorrFactor = m_cellFlx[side][ m_influencedFlxPnts[iFlxPnt] ];
-    
+    // the current correction factor corresponding to the interface flux
+    const RealVector& currentCorrFactor = m_cellFlx[side][iFlxPnt];
+
     m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-    // loop over sol pnts affected by this flux point to compute the corrections
     for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
     {
       const CFuint solIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
@@ -744,7 +771,7 @@ void ConvRHSJacobFluxReconstructionBlending::computePertCorrection(CFuint side, 
       // Fill in the high-order corrections with blending factor (1-alpha)
       for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
       {
-        corrections[m_nbrEqs*solIdx+iVar] -= currentCorrFactor[iVar] * divh * (1.0 - alpha); 
+        corrections[m_nbrEqs*solIdx+iVar] -= currentCorrFactor[iVar] * divh * (1.0 - alpha);
       }
     }
   }
@@ -1071,42 +1098,30 @@ void ConvRHSJacobFluxReconstructionBlending::computePertDivDiscontFlx(RealVector
   // reset the residual updates
   residuals = 0.0;
 
-  // Loop over affected solution pnts
+  // Loop over affected solution pnts.
+  // Note: the P0 volume flux divergence is analytically zero (derivative of a constant
+  // basis is zero), so no P0 contribution to the volume term is computed here.
   for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolSolDep; ++iSolPnt)
   {
     const CFuint iSolIdx = (*m_solSolDep)[m_pertSol][iSolPnt];
-    
-    // Loop over solution pnts to count the factor of all sol pnt polys
+
+    // HO volume flux divergence, scaled by (1-alpha)
     for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
     {
       const CFuint jSolIdx = (*m_solSolDep)[iSolIdx][jSolPnt];
 
-      // Loop over deriv directions and sum them to compute divergence
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-        const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][jSolIdx]; 
+        const CFreal polyCoef = (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][jSolIdx];
 
-        const CFreal polyCoefP0 = (*m_solPolyDerivAtSolPntsP0)[0][iDir][0];
-
-        // Loop over conservative fluxes 
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          // Store divFD in the vector that will be divFC
-          residuals[m_nbrEqs*iSolIdx+iEq] -= polyCoef*(m_contFlx[jSolIdx][iDir][iEq]) * (1.-alpha);// + polyCoefP0*(m_contFlxP0[0][iDir][iEq]) * alpha;
-	}
-      }
-    }
-        // add P0 divFD to the residual updates
-    for (CFuint iDir = 0; iDir < m_dim; ++iDir)
-    {
-      const CFreal polyCoefP0 = (*m_solPolyDerivAtSolPntsP0)[0][iDir][0];
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-      {
-        residuals[m_nbrEqs*iSolIdx+iEq] -= polyCoefP0*(m_contFlxP0[0][iDir][iEq]) * alpha;// * (*m_cellAvgSolCoefs)[iSolPnt];
+          residuals[m_nbrEqs*iSolIdx+iEq] -= polyCoef * m_contFlx[jSolIdx][iDir][iEq] * (1.-alpha);
+        }
       }
     }
 
-    // add divhFD to the residual updates
+    // HO correction flux divergence, scaled by (1-alpha)
     for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFlxDep; ++iFlxPnt)
     {
       const CFuint flxIdx = (*m_solFlxDep)[iSolIdx][iFlxPnt];

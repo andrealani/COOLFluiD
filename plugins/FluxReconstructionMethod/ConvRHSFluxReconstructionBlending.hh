@@ -273,7 +273,11 @@ protected: //data
   std::vector< CFreal > m_waveSpeedUpd;
 
   std::vector< CFreal > m_waveSpeedUpdP0;
-  
+
+  /// Per-flux-point P0 wave speed factor: |corrFctDivP0[iFlx]|/0.5, clamped to >=1.0
+  /// Accounts for non-uniform correction function divergence magnitudes (e.g. prism quad vs triag faces)
+  std::vector<CFreal> m_corrFctDivP0WaveSpeedFactor;
+
   /// face Jacobian vector sizes (abs)
   std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
 
@@ -318,8 +322,6 @@ protected: //data
 
   /// coefs to compute the derivative of the states in the sol pnts
   Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
-  
-  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPntsP0;
 
   /// dimensions on which to evaluate the flux in the flux points
   Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;

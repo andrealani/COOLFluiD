@@ -7,6 +7,7 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/BaseTerm.hh"
+#include "Common/BadValueException.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/BaseOrderBlending.hh"
@@ -18,7 +19,6 @@ using namespace std;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::MathTools;
-using namespace COOLFluiD::Common;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -30,126 +30,65 @@ namespace COOLFluiD {
 
 MethodCommandProvider<BaseOrderBlending, FluxReconstructionSolverData, FluxReconstructionModule>
     OrderBlendingFRProvider("OrderBlending");
+
 //////////////////////////////////////////////////////////////////////////////
 
 BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   FluxReconstructionSolverCom(name),
-  m_showrate(),
-  m_freezeFilterIter(),
+  socket_alpha("alpha"),
+  socket_prevAlpha("prevAlpha"),
+  socket_smoothness("smoothness"),
   m_cellBuilder(CFNULL),
-  m_iElemType(),
-  m_cell(),
-  m_cellStates(),
-  m_nbrEqs(),
-  m_dim(),
-  m_nbrSolPnts(),
-  m_maxNbrFlxPnts(),
-  m_order(),
-  m_vdm(),
-  m_vdmInv(),
-  m_solPolyValsAtFlxPnts(CFNULL),
-  m_cellStatesFlxPnt(),
-  m_nbLimits(),
-  m_totalNbLimits(),
-  m_NeighborIDs(),
+  m_cell(CFNULL),
+  m_cellStates(CFNULL),
+  m_sweepSnapshot(),
+  m_obUpdateVarSet(CFNULL),
+  m_obPData(),
   m_tempSolPntVec(),
   m_tempSolPntVec2(),
-  socket_prevAlpha("prevAlpha"),
-  socket_alpha("alpha"),
-  socket_smoothness("smoothness")
+  m_vdmInv(),
+  m_maxModalOrder(),
+  m_NeighborIDs(),
+  m_s(0.0),
+  m_order(0),
+  m_nbrSolPnts(0),
+  m_nbrEqs(0),
+  m_dim(0),
+  m_iElemType(0),
+  m_elemIdx(0)
 {
   addConfigOptionsTo(this);
-  
-  //==========================================================================
-  // MAIN PARAMETERS (Log-Scale Method - RECOMMENDED)
-  //==========================================================================
-  
-  // Use log-scale method (recommended) or legacy sigmoid
-  m_useLogScale = true;
-  setParameter( "UseLogScale", &m_useLogScale );
-  
-  // Reference smoothness: s0 = -S0 * log10(N+1)
-  // Higher S0 = more dissipation. Typical values: 3.0 - 5.0
-  m_s0 = 4.0;
-  setParameter( "S0", &m_s0);
-  
-  // Transition half-width in log-space
-  // Blending ramps over [s0 - Kappa, s0 + Kappa]
-  // Typical values: 1.0 - 2.0
-  m_kappa = 1.5;
-  setParameter( "Kappa", &m_kappa);
-  
-  // Monitored expression for smoothness detection
-  // Options: 'rho', 'p', 'rho*p', 'p/rho', 'rho/p', 'velocity_magnitude'
-  m_modalMonitoredExpression = "rho*p";
-  setParameter( "ModalMonitoredExpression", &m_modalMonitoredExpression );
-  
-  //==========================================================================
-  // BLENDING LIMITS
-  //==========================================================================
-  
-  // Minimum alpha (below this, alpha = 0)
-  m_alphaMin = 0.01;
-  setParameter( "AlphaMin", &m_alphaMin );
-  
-  // Maximum alpha cap
-  m_alphaMax = 1.0;
-  setParameter( "AlphaMax", &m_alphaMax );
-  
-  //==========================================================================
-  // NEIGHBOR AVERAGING & SWEEPS
-  //==========================================================================
-  
-  // Weight for neighbor influence (0 = disabled)
-  m_neighborWeight = 0.5;
-  setParameter( "NeighborWeight", &m_neighborWeight );
-  
-  // Number of smoothing sweeps (0 = disabled)
-  m_nbSweeps = 0;
-  setParameter( "NbSweeps", &m_nbSweeps );
-  
-  // Sweep parameters
-  m_sweepWeight = 0.5;
-  setParameter( "SweepWeight", &m_sweepWeight );
-  
-  m_sweepDamping = 0.7;
-  setParameter( "SweepDamping", &m_sweepDamping );
-  
-  //==========================================================================
-  // GENERAL SETTINGS
-  //==========================================================================
-  
-  // Iteration to freeze blending coefficient (very large = never freeze)
-  m_freezeFilterIter = 1000000;
-  setParameter( "freezeFilterIter", &m_freezeFilterIter );
-  
-  // Show rate for console output
-  m_showrate = 1;
-  setParameter( "ShowRate", &m_showrate );
-  
-  // Smoothness computation method (Modal recommended)
-  m_smoothnessMethod = "Modal";
-  setParameter( "SmoothnessMethod", &m_smoothnessMethod );
-  
-  // Monitored variable index (unused when ModalMonitoredExpression is set)
-  m_monitoredVar = 0;
-  setParameter( "MonitoredVar", &m_monitoredVar);
-  
-  //==========================================================================
-  // DEPRECATED PARAMETERS (Legacy Sigmoid - UseLogScale = false)
-  //==========================================================================
-  
-  // Threshold: T = a * 10^(-c * (N+1)^0.25)
-  m_thresholdA = 0.5;
-  setParameter( "ThresholdA", &m_thresholdA );
-  
-  m_thresholdC = 1.8;
-  setParameter( "ThresholdC", &m_thresholdC );
-  
-  // Sigmoid steepness: alpha = 1/(1 + exp(-s/T * (S - T)))
-  m_sigmoidS = 9.21024;
-  setParameter( "SigmoidS", &m_sigmoidS );
 
+  // Reference smoothness: s0 = -S0 * log10(N+1). Higher S0 = more lenient.
+  m_s0 = 4.0;
+  setParameter("S0", &m_s0);
+
+  // Transition half-width for the sinusoidal ramp in log-space.
+  m_kappa = 1.5;
+  setParameter("Kappa", &m_kappa);
+
+  // Physics-agnostic monitored expression. Physics-specific expressions
+  // (e.g. B2 for MHD) are handled by subclasses overriding extractMonitoredField.
+  m_modalMonitoredExpression = "rho*p";
+  setParameter("ModalMonitoredExpression", &m_modalMonitoredExpression);
+
+  m_alphaMin = 0.01;
+  setParameter("AlphaMin", &m_alphaMin);
+
+  m_alphaMax = 1.0;
+  setParameter("AlphaMax", &m_alphaMax);
+
+  // Decay factor for neighbor alpha during Jacobi smoothing.
+  m_neighborWeight = 0.5;
+  setParameter("NeighborWeight", &m_neighborWeight);
+
+  // Smoothing iterations beyond the initial spread: total passes = m_nbSweeps + 1.
+  m_nbSweeps = 0;
+  setParameter("NbSweeps", &m_nbSweeps);
+
+  // Iteration to freeze alpha (reuses prevAlpha). Default: never freeze.
+  m_freezeFilterIter = 1000000;
+  setParameter("freezeFilterIter", &m_freezeFilterIter);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -160,17 +99,44 @@ BaseOrderBlending::~BaseOrderBlending()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BaseOrderBlending::configure ( Config::ConfigArgs& args )
+void BaseOrderBlending::configure(Config::ConfigArgs& args)
 {
   FluxReconstructionSolverCom::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::vector< Common::SafePtr< BaseDataSocketSource > >
+void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("S0",
+    "Reference smoothness: s0 = -S0 * log10(N+1). Higher = more dissipation. Typical: 3.0-5.0.");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("Kappa",
+    "Transition half-width for the sinusoidal ramp around s0. Typical: 1.0-2.0.");
+  options.addConfigOption< std::string >("ModalMonitoredExpression",
+    "Monitored scalar for smoothness detection. Base class accepts: "
+    "'rho', 'p', 'rho*p', 'p/rho', 'rho/p', 'velocity_magnitude'. "
+    "Physics subclasses may add more (e.g. 'B2' in OrderBlendingMHD).");
+  options.addConfigOption< CFreal >("AlphaMin",
+    "Dead-band threshold: alpha < AlphaMin snaps to 0, alpha > 1-AlphaMin snaps to 1.");
+  options.addConfigOption< CFreal >("AlphaMax",
+    "Maximum blending coefficient cap.");
+  options.addConfigOption< CFreal >("NeighborWeight",
+    "Decay factor applied to neighbor alpha during Jacobi smoothing. "
+    "0 disables spreading.");
+  options.addConfigOption< CFuint >("NbSweeps",
+    "Number of smoothing iterations beyond the initial spread. "
+    "Total spreading passes = NbSweeps + 1.");
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("freezeFilterIter",
+    "Iteration number at which alpha is frozen (reuses prevAlpha). "
+    "Very large = never freeze.");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< SafePtr< BaseDataSocketSource > >
 BaseOrderBlending::providesSockets()
 {
-  std::vector< Common::SafePtr< BaseDataSocketSource > > result;
+  std::vector< SafePtr< BaseDataSocketSource > > result;
   result.push_back(&socket_alpha);
   result.push_back(&socket_prevAlpha);
   result.push_back(&socket_smoothness);
@@ -179,237 +145,97 @@ BaseOrderBlending::providesSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
-{
-  //==========================================================================
-  // MAIN PARAMETERS (Log-Scale Method - RECOMMENDED)
-  //==========================================================================
-  options.addConfigOption< bool >("UseLogScale",
-    "Use log-scale smoothness indicator (true, RECOMMENDED) or legacy sigmoid (false). Default: true.");
-  options.addConfigOption< CFreal,Config::DynamicOption<> >("S0",
-    "Reference smoothness: s0 = -S0 * log10(N+1). Higher = more dissipation. Typical: 3.0-5.0. Default: 4.0.");
-  options.addConfigOption< CFreal,Config::DynamicOption<> >("Kappa",
-    "Transition half-width in log-space. Blending ramps over [s0-Kappa, s0+Kappa]. Typical: 1.0-2.0. Default: 1.5.");
-  options.addConfigOption< std::string >("ModalMonitoredExpression",
-    "Expression for smoothness detection: 'rho', 'p', 'rho*p' (default), 'p/rho', 'rho/p', 'velocity_magnitude'.");
-  
-  //==========================================================================
-  // BLENDING LIMITS
-  //==========================================================================
-  options.addConfigOption< CFreal >("AlphaMin",
-    "Minimum blending coefficient. Below this, alpha = 0. Default: 0.01.");
-  options.addConfigOption< CFreal >("AlphaMax",
-    "Maximum blending coefficient cap. Default: 1.0.");
-  
-  //==========================================================================
-  // NEIGHBOR AVERAGING & SWEEPS
-  //==========================================================================
-  options.addConfigOption< CFreal >("NeighborWeight",
-    "Weight for neighbor influence (0 = disabled). Default: 0.5.");
-  options.addConfigOption< CFuint >("NbSweeps",
-    "Number of smoothing sweeps (0 = disabled). Default: 0.");
-  options.addConfigOption< CFreal >("SweepWeight",
-    "Weight factor for neighbor influence during sweeps. Default: 0.5.");
-  options.addConfigOption< CFreal >("SweepDamping",
-    "Damping factor applied after each sweep. Default: 0.7.");
-  
-  //==========================================================================
-  // GENERAL SETTINGS
-  //==========================================================================
-  options.addConfigOption< CFuint,Config::DynamicOption<> >("freezeFilterIter",
-    "Iteration to freeze blending coefficient. Very large = never. Default: 1000000.");
-  options.addConfigOption< CFuint >("ShowRate",
-    "Show rate for console output. Default: 1.");
-  options.addConfigOption< std::string >("SmoothnessMethod",
-    "Method for smoothness: 'Modal' (recommended) or 'Projection'. Default: Modal.");
-  options.addConfigOption< CFuint,Config::DynamicOption<> >("MonitoredVar",
-    "Index of monitored variable (unused when ModalMonitoredExpression is set). Default: 0.");
-  
-  //==========================================================================
-  // DEPRECATED PARAMETERS (Legacy Sigmoid - only used if UseLogScale = false)
-  //==========================================================================
-  options.addConfigOption< CFreal >("ThresholdA",
-    "[DEPRECATED] Parameter 'a' in threshold T = a * 10^(-c * (N+1)^0.25). Default: 0.5.");
-  options.addConfigOption< CFreal >("ThresholdC",
-    "[DEPRECATED] Parameter 'c' in threshold T = a * 10^(-c * (N+1)^0.25). Default: 1.8.");
-  options.addConfigOption< CFreal >("SigmoidS",
-    "[DEPRECATED] Sigmoid steepness in alpha = 1/(1 + exp(-s/T * (S - T))). Default: 9.21024.");
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void BaseOrderBlending::execute()
 {
   CFTRACEBEGIN;
 
-  // get the elementTypeData
-  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
-
-  // get InnerCells TopologicalRegionSet
+  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
 
-  // get the geodata of the geometric entity builder and set the TRS
   StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
   geoData.trs = cells;
 
-  DataHandle< CFreal > output = socket_alpha.getDataHandle();
-  DataHandle< CFreal > prevf = socket_prevAlpha.getDataHandle();
+  DataHandle<CFreal> output = socket_alpha.getDataHandle();
+  DataHandle<CFreal> prevAlpha = socket_prevAlpha.getDataHandle();
 
-  // number of element types, should be 1 in non-mixed grids
   const CFuint nbrElemTypes = elemType->size();
-  
-  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
-  
-  // variable to store the number of limits done
-  m_nbLimits = 0;
-  m_totalNbLimits = 0;
-  
-  // [NOTE] Threshold is now computed inside computeBlendingCoefficient() 
-  // based on m_useLogScale flag
-
-  // loop over element types, for the moment there should only be one
-  if (iter<m_freezeFilterIter)
-  {
   cf_assert(nbrElemTypes == 1);
+
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+
+  // Freeze path: reuse prevAlpha without recomputing anything.
+  if (iter >= m_freezeFilterIter)
+  {
+    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+    {
+      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
+      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+      {
+        geoData.idx = elemIdx;
+        m_cell = m_cellBuilder->buildGE();
+        m_cellStates = m_cell->getStates();
+        if ((*m_cellStates)[0]->isParUpdatable())
+        {
+          const CFreal frozen = prevAlpha[(*m_cellStates)[0]->getLocalID()];
+          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+          {
+            output[(*m_cellStates)[iSol]->getLocalID()] = frozen;
+          }
+        }
+        m_cellBuilder->releaseGE();
+      }
+    }
+    PE::GetPE().setBarrier(getMethodData().getNamespace());
+    CFTRACEEND;
+    return;
+  }
+
+  //
+  // Phase 1: per-cell physics compute. No neighbor interaction.
+  // Writes raw physics-based alpha to socket_alpha.
+  //
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
-    // get start and end indexes for this type of element
     const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
 
-
-    // loop over cells
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
-      CFreal alpha_neighbor = 0.0;
-      CFreal alpha_neighbor_i = 0.0;
-
-      // Loop over the neighbor IDs for the current element
-      for (CFuint i = 0; i < m_NeighborIDs[elemIdx].size(); ++i) 
-      {
-        // Build the GeometricEntity for each neighbor
-        geoData.idx = m_NeighborIDs[elemIdx][i];
-        m_cell = m_cellBuilder->buildGE();
-
-        // Get the states in this neighbor cell
-        m_cellStates = m_cell->getStates();
-        
-        // Check if neighbor is updatable before computing its influence
-        if ((*m_cellStates)[0]->isParUpdatable())
-        {
-          computeSmoothness();
-
-          alpha_neighbor_i = computeBlendingCoefficient(m_s);
-          alpha_neighbor_i = applyAlphaLimits(alpha_neighbor_i);
-          alpha_neighbor = std::max(alpha_neighbor, alpha_neighbor_i);
-        }
-
-        // Release the GeometricEntity of the neighbor
-        m_cellBuilder->releaseGE();
-      }
-
-      // build the GeometricEntity for current cell
       geoData.idx = elemIdx;
       m_elemIdx = elemIdx;
       m_cell = m_cellBuilder->buildGE();
-
-      // get the states in this cell
       m_cellStates = m_cell->getStates();
 
-      // Only compute blending for parallel updatable cells
       if ((*m_cellStates)[0]->isParUpdatable())
       {
-        // compute the smoothness
         computeSmoothness();
 
-        // Compute Filter Strength
-        CFreal alpha = computeBlendingCoefficient(m_s);
-        alpha = applyAlphaLimits(alpha);
-
-        m_filterStrength = std::max(alpha, m_neighborWeight * alpha_neighbor);
-
-        // Apply alpha limits after neighbor influence
-        m_filterStrength = applyAlphaLimits(m_filterStrength);
-
-        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
+        const CFreal alpha = applyAlphaLimits(computeBlendingCoefficient(m_s));
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          output[((*m_cellStates)[iSolPnt])->getLocalID()] = m_filterStrength;
+          output[(*m_cellStates)[iSol]->getLocalID()] = alpha;
         }
       }
 
-      //release the GeometricEntity
       m_cellBuilder->releaseGE();
     }
   }
 
-  /// Sweep to smooth out the blending coefficient strength/value 
-  for (CFuint sweep = 0; sweep < m_nbSweeps; ++sweep)
+  //
+  // Phase 2: (NbSweeps + 1) Jacobi smoothing iterations.
+  // Each iteration snapshots socket_alpha and writes max-pooled values back.
+  // The "+1" is the initial neighbor spread; NbSweeps additional passes extend it.
+  //
+  const CFuint nbIterations = m_nbSweeps + 1;
+  for (CFuint it = 0; it < nbIterations; ++it)
   {
-    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
-    {
-      // get start and end indexes for this type of element
-      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
-      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-
-      // loop over cells
-      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-      {
-        CFreal alpha_neighbor = 0.0;
-        CFreal alpha_neighbor_i = 0.0;
-
-        // Loop over the neighbor IDs for the current element
-        for (CFuint i = 0; i < m_NeighborIDs[elemIdx].size(); ++i) 
-        {
-          // Build the GeometricEntity for each neighbor
-          geoData.idx = m_NeighborIDs[elemIdx][i];
-          m_cell = m_cellBuilder->buildGE();
-
-          // Get the states in this neighbor cell
-          m_cellStates = m_cell->getStates();
-
-          // Only read alpha from updatable neighbors (avoid ghost cells in parallel)
-          if ((*m_cellStates)[0]->isParUpdatable())
-          {
-            alpha_neighbor_i = output[((*m_cellStates)[0])->getLocalID()];
-            alpha_neighbor = std::max(alpha_neighbor, alpha_neighbor_i);
-          }
-
-          // Release the GeometricEntity of the neighbor
-          m_cellBuilder->releaseGE();
-        }
-
-        // build the GeometricEntity for current cell
-        geoData.idx = elemIdx;
-        m_elemIdx = elemIdx;
-        m_cell = m_cellBuilder->buildGE();
-
-        // get the states in this cell
-        m_cellStates = m_cell->getStates();
-
-        // Only apply sweeps to parallel updatable cells
-        if ((*m_cellStates)[0]->isParUpdatable())
-        {
-          // get the cell blending coefficient
-          m_filterStrength = output[((*m_cellStates)[0])->getLocalID()];
-
-          m_filterStrength = std::max(m_filterStrength, m_sweepWeight * alpha_neighbor);
-
-          // Apply alpha limits after sweeping operations
-          CFreal finalAlpha = applyAlphaLimits(m_sweepDamping * m_filterStrength);
-
-          for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
-          {
-            output[((*m_cellStates)[iSolPnt])->getLocalID()] = finalAlpha;
-          }
-        }
-
-        //release the GeometricEntity
-        m_cellBuilder->releaseGE();
-      }
-    }
+    applyJacobiSmoothingPass();
   }
 
-  // After sweeps complete, store final alpha values to prevf for proper freezing
+  //
+  // Phase 3: snapshot final alpha into prevAlpha for the freeze mechanism.
+  //
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
     const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
@@ -421,228 +247,145 @@ void BaseOrderBlending::execute()
       m_cellStates = m_cell->getStates();
       if ((*m_cellStates)[0]->isParUpdatable())
       {
-        CFreal finalAlpha = output[((*m_cellStates)[0])->getLocalID()];
-        for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
+        const CFreal finalAlpha = output[(*m_cellStates)[0]->getLocalID()];
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          prevf[((*m_cellStates)[iSolPnt])->getLocalID()] = finalAlpha;
+          prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
         }
       }
       m_cellBuilder->releaseGE();
     }
   }
-}
-  else
-  {
 
-    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
-    {
-      // get start and end indexes for this type of element
-      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
-      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-  
-      // loop over cells
-      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-      {
-        // build the GeometricEntity
-        geoData.idx = elemIdx;
-        m_elemIdx = elemIdx;
-        m_cell = m_cellBuilder->buildGE();
+  PE::GetPE().setBarrier(getMethodData().getNamespace());
 
-        // get the states in this cell
-        m_cellStates = m_cell->getStates();
-
-        // Only update values for parallel updatable cells
-        if ((*m_cellStates)[0]->isParUpdatable())
-        {
-          m_filterStrength = prevf[((*m_cellStates)[0])->getLocalID()];
-
-          for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt) 
-          {
-            output[((*m_cellStates)[iSolPnt])->getLocalID()] = m_filterStrength;
-          }
-        }
-
-        //release the GeometricEntity
-        m_cellBuilder->releaseGE();
-      }
-    }
-  }
-
-
-  const std::string nsp = this->getMethodData().getNamespace();
-  
-#ifdef CF_HAVE_MPI
-    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
-    PE::GetPE().setBarrier(nsp);
-    const CFuint count = 1;
-    MPI_Allreduce(&m_nbLimits, &m_totalNbLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
-    //MPI_Allreduce(&m_nbAvLimits, &m_totalNbAvLimits, count, MPI_UNSIGNED, MPI_SUM, comm);
-#endif
-    
-  if (PE::GetPE().GetRank(nsp) == 0 && iter%m_showrate == 0) 
-  {
-    // print number of limits
-    //CFLog(NOTICE, "Number of times Flux Filtering enforced: " << m_totalNbLimits << "\n");
-  }
-
-  PE::GetPE().setBarrier(nsp);
-  
   CFTRACEEND;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::computeBlendingCoefficient(CFreal smoothness)
+
+void BaseOrderBlending::applyJacobiSmoothingPass()
 {
-  if (m_useLogScale)
+  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
+
+  DataHandle<CFreal> output = socket_alpha.getDataHandle();
+
+  // Snapshot current alpha into the scratch buffer before any writes this iteration.
+  // This gives true Jacobi updates — neighbor reads are independent of traversal order.
+  const CFuint nbStates = output.size();
+  cf_assert(m_sweepSnapshot.size() == nbStates);
+  for (CFuint i = 0; i < nbStates; ++i)
   {
-    // Log-scale approach with sinusoidal ramp (Persson-Peraire style)
-    // Smoothness s is already in log10 scale from computeSmoothnessModal()
-    // Reference threshold: s0 = -S0 * log10(N+1)
-    const CFreal s0 = computeReferenceThreshold();
-    
-    if (smoothness < s0 - m_kappa)
+    m_sweepSnapshot[i] = output[i];
+  }
+
+  const CFuint nbrElemTypes = elemType->size();
+  for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+  {
+    const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+    const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
+
+    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
-      // Smooth region: no blending needed
-      return 0.0;
-    }
-    else if (smoothness > s0 + m_kappa)
-    {
-      // Rough region: full blending
-      return 1.0;
-    }
-    else
-    {
-      // Transition region: smooth sinusoidal ramp
-      // alpha = 0.5 * (1 + sin(π*(s-s0)/(2*κ)))
-      return 0.5 * (1.0 + std::sin(MathTools::MathConsts::CFrealPi() * (smoothness - s0) / (2.0 * m_kappa)));
+      // Scan neighbors first (reading only from the snapshot).
+      CFreal alphaNeighborMax = 0.0;
+      for (CFuint i = 0; i < m_NeighborIDs[elemIdx].size(); ++i)
+      {
+        geoData.idx = m_NeighborIDs[elemIdx][i];
+        m_cell = m_cellBuilder->buildGE();
+        m_cellStates = m_cell->getStates();
+        if ((*m_cellStates)[0]->isParUpdatable())
+        {
+          const CFreal alphaN = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
+          alphaNeighborMax = std::max(alphaNeighborMax, alphaN);
+        }
+        m_cellBuilder->releaseGE();
+      }
+
+      // Update this cell: origin alpha is preserved (max), neighbor contribution is damped.
+      geoData.idx = elemIdx;
+      m_elemIdx = elemIdx;
+      m_cell = m_cellBuilder->buildGE();
+      m_cellStates = m_cell->getStates();
+
+      if ((*m_cellStates)[0]->isParUpdatable())
+      {
+        const CFreal alphaSelf = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
+        const CFreal alphaNew  = applyAlphaLimits(
+          std::max(alphaSelf, m_neighborWeight * alphaNeighborMax));
+
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          output[(*m_cellStates)[iSol]->getLocalID()] = alphaNew;
+        }
+      }
+
+      m_cellBuilder->releaseGE();
     }
   }
-  else
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal BaseOrderBlending::computeBlendingCoefficient(CFreal smoothness) const
+{
+  // Sinusoidal ramp (Persson-Peraire style) in log-space:
+  //   s0 = -S0 * log10(N+1)
+  //   alpha = 0                                   if s < s0 - kappa
+  //         = 1                                   if s > s0 + kappa
+  //         = 0.5 * (1 + sin(pi*(s-s0)/(2*kappa))) otherwise
+  const CFreal s0 = -m_s0 * std::log10(static_cast<CFreal>(m_order + 1));
+
+  if (smoothness < s0 - m_kappa)
   {
-    // [DEPRECATED] Legacy sigmoid approach
-    const CFreal threshold = computeThreshold_Legacy(m_order, m_thresholdA, m_thresholdC);
-    return 1.0 / (1.0 + std::exp(-m_sigmoidS / threshold * (smoothness - threshold)));
+    return 0.0;
   }
+  if (smoothness > s0 + m_kappa)
+  {
+    return 1.0;
+  }
+  return 0.5 * (1.0 + std::sin(MathTools::MathConsts::CFrealPi() * (smoothness - s0) / (2.0 * m_kappa)));
 }
 
 //////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::computeReferenceThreshold() const
-{
-  // Reference threshold for log-scale method: s0 = -S0 * log10(N+1)
-  // Higher S0 means more dissipation (stricter smoothness requirement)
-  return -m_s0 * std::log10(static_cast<CFreal>(m_order + 1));
-}
 
-//////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::computeThreshold_Legacy(CFuint N, CFreal a, CFreal c)
-{
-  // [DEPRECATED] Legacy threshold function for sigmoid blending
-  // T = a * 10^(-c * (N+1)^0.25)
-  return a * std::pow(10.0, -c * std::pow(N + 1, 0.25));
-}
-
-//////////////////////////////////////////////////////////////////////////////
-CFreal BaseOrderBlending::applyAlphaLimits(CFreal alpha)
+CFreal BaseOrderBlending::applyAlphaLimits(CFreal alpha) const
 {
   if (alpha < m_alphaMin)
   {
-    alpha= 0.0;
+    alpha = 0.0;
   }
   else if (alpha > 1.0 - m_alphaMin)
   {
-    alpha= 1.0;
+    alpha = 1.0;
   }
-
   return std::min(alpha, m_alphaMax);
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void BaseOrderBlending::computeSmoothness()
+
+void BaseOrderBlending::extractMonitoredField()
 {
-  if (m_smoothnessMethod == "Projection")
-  {
-    computeSmoothnessProjection();
-  }
-  else // Default to Modal method
-  {
-    computeSmoothnessModal();
-  }
-}
+  // Physics-agnostic expressions handled directly. B2 and any other
+  // physics-specific expression must be handled by a subclass override.
 
-//////////////////////////////////////////////////////////////////////////////
-void BaseOrderBlending::computeSmoothnessProjection()
-{ 
-  CFreal sNum = 0.0;
-  CFreal sDenom = 0.0;
-  
-  // Compute projected states to P-1
-  computeProjStates(m_statesPMinOne);
-  
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  if (m_modalMonitoredExpression == "rho")
   {
-    CFreal stateP = (*((*m_cellStates)[iSol]))[m_monitoredVar];
-    CFreal diffStatesPPMinOne = stateP - m_statesPMinOne[iSol][m_monitoredVar];
-    sNum += diffStatesPPMinOne*diffStatesPPMinOne;
-    sDenom += stateP*stateP;
-  }
-  
-  m_s = sNum / std::max(sDenom, MathTools::MathConsts::CFrealEps());
-  
-  // Store the smoothness value to all solution points of this element
-  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
-  
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
-  }
-  
-  if (m_s > m_Smax)
-  {
-      m_Smax = m_s;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-void BaseOrderBlending::computeSmoothnessModal()
-{
-  std::vector<CFreal> modalCoeffs(m_nbrSolPnts, 0.0);
-  CFreal max_indicator = 0.0;
-
-  // Step 1: Load sol pnts values for monitored variable based on expression
-  // Uses computePhysicalData to extract physics-agnostic quantities (pressure, velocity)
-  // BaseTerm::P = 1 is universal for pressure in physical data
-  const bool isRho = (m_modalMonitoredExpression == "rho");
-  const bool isP = (m_modalMonitoredExpression == "p");
-  const bool isRhoP = (m_modalMonitoredExpression == "rho*p");
-  const bool isPRho = (m_modalMonitoredExpression == "p/rho");
-  const bool isRhoOverP = (m_modalMonitoredExpression == "rho/p");
-  const bool isVelMag = (m_modalMonitoredExpression == "velocity_magnitude");
-  const bool isMagPressure = (m_modalMonitoredExpression == "B2");
-
-  if (!isRho && !isP && !isRhoP && !isPRho && !isRhoOverP && !isVelMag && !isMagPressure)
-  {
-    CFLog(WARN, "Unknown ModalMonitoredExpression '" << m_modalMonitoredExpression
-                << "', defaulting to 'rho*p'\n");
-  }
-
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    if (isRho)
+    // Density: index 0 is universal across variable sets.
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      // Density: index 0 is correct for all variable sets
       m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[0];
     }
-    else if (isMagPressure)
+    return;
+  }
+
+  if (m_modalMonitoredExpression == "velocity_magnitude")
+  {
+    // Velocity magnitude from conservative momenta: sqrt((rhoU^2 + rhoV^2 + rhoW^2) / rho^2).
+    // Assumes a conservative variable layout with momentum at indices 1..3.
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      // Magnetic pressure B^2: indices 4,5,6 correct for MHD conservative
-      CFreal bx = (*((*m_cellStates)[iSol]))[4];
-      CFreal by = (*((*m_cellStates)[iSol]))[5];
-      CFreal bz = (*((*m_cellStates)[iSol]))[6];
-      m_tempSolPntVec[iSol] = bx*bx + by*by + bz*bz;
-    }
-    else if (isVelMag)
-    {
-      // Velocity magnitude from momenta: sqrt((rhoU^2+rhoV^2+rhoW^2)/rho^2)
       const CFreal rho = (*((*m_cellStates)[iSol]))[0];
       const CFreal rhoInv = 1.0 / std::max(std::abs(rho), MathTools::MathConsts::CFrealEps());
       const CFreal u = (*((*m_cellStates)[iSol]))[1] * rhoInv;
@@ -650,284 +393,213 @@ void BaseOrderBlending::computeSmoothnessModal()
       const CFreal w = (m_dim == 3) ? (*((*m_cellStates)[iSol]))[3] * rhoInv : 0.0;
       m_tempSolPntVec[iSol] = std::sqrt(u*u + v*v + w*w);
     }
-    else
+    return;
+  }
+
+  // Pressure-based expressions: use computePhysicalData for physics-agnostic extraction.
+  // BaseTerm::P = 1 is the universal pressure slot across all physics models.
+  if (m_modalMonitoredExpression == "p" ||
+      m_modalMonitoredExpression == "rho*p" ||
+      m_modalMonitoredExpression == "p/rho" ||
+      m_modalMonitoredExpression == "rho/p")
+  {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
     {
-      // Expressions involving pressure: use computePhysicalData for physics-agnostic extraction
       m_obUpdateVarSet->computePhysicalData(*((*m_cellStates)[iSol]), m_obPData);
-      const CFreal p = m_obPData[1]; // BaseTerm::P = 1, universal across physics models
+      const CFreal p   = m_obPData[1];
       const CFreal rho = (*((*m_cellStates)[iSol]))[0];
 
-      if (isP)
+      if (m_modalMonitoredExpression == "p")
       {
         m_tempSolPntVec[iSol] = p;
       }
-      else if (isPRho)
+      else if (m_modalMonitoredExpression == "p/rho")
       {
         m_tempSolPntVec[iSol] = p / std::max(std::abs(rho), MathTools::MathConsts::CFrealEps());
       }
-      else if (isRhoOverP)
+      else if (m_modalMonitoredExpression == "rho/p")
       {
         m_tempSolPntVec[iSol] = rho / std::max(std::abs(p), MathTools::MathConsts::CFrealEps());
       }
-      else // isRhoP or default
+      else // rho*p
       {
         m_tempSolPntVec[iSol] = rho * p;
       }
     }
+    return;
   }
 
-  // Step 2: Transform to modal space: modalCoeffs = V^{-1} * solPntsValues
+  throw BadValueException(FromHere(),
+    "BaseOrderBlending: unknown ModalMonitoredExpression '" + m_modalMonitoredExpression +
+    "'. Base class accepts: rho, p, rho*p, p/rho, rho/p, velocity_magnitude. "
+    "For B2 or other physics-specific expressions, use a physics-aware subclass "
+    "(e.g. OrderBlendingMHD from libFluxReconstructionMHD).");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BaseOrderBlending::computeSmoothness()
+{
+  // Step 1: extract the monitored scalar at each solution point (virtual dispatch).
+  extractMonitoredField();
+
+  // Step 2: nodal-to-modal transform via inverse Vandermonde.
   m_tempSolPntVec2 = m_vdmInv * m_tempSolPntVec;
 
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    modalCoeffs[iSol] = m_tempSolPntVec2[iSol];
-  }
-
-  // Step 3: Compute modal energy ratios
-  // E1 = energy in P modes (highest) / total energy
-  // E2 = energy in P-1 modes / energy in modes 0 to P-1 (to catch odd-even decoupling)
-  // 
-  // For P<=2, E2 is problematic because P-1 modes represent physical linear gradients
-  // So we only use E2 for P>=3
-  
+  // Step 3: modal energy ratios.
+  // E1 = energy in P modes / total energy.
+  // E2 = energy in P-1 modes / energy in modes 0..P-1 (guards odd-even decoupling).
+  // For P <= 2, E2 would flag physical linear gradients, so only E1 is used.
   const CFreal eps = MathTools::MathConsts::CFrealEps();
-  
-  CFreal energy_total = 0.0;   // Total energy (all modes)
-  CFreal energy_P = 0.0;       // Energy in P modes (highest order)
-  CFreal energy_Pm1 = 0.0;     // Energy in P-1 modes (second highest)
-  CFreal energy_low = 0.0;     // Energy in modes 0 to P-2 (low modes)
+
+  CFreal energyTotal = 0.0;
+  CFreal energyP     = 0.0;
+  CFreal energyPm1   = 0.0;
+  CFreal energyLow   = 0.0;
 
   for (CFuint j = 0; j < m_nbrSolPnts; ++j)
   {
-    const CFreal mj2 = modalCoeffs[j] * modalCoeffs[j];
-    energy_total += mj2;
+    const CFreal mj2 = m_tempSolPntVec2[j] * m_tempSolPntVec2[j];
+    energyTotal += mj2;
 
     const CFuint modeOrder = static_cast<CFuint>(m_maxModalOrder[j]);
     if (modeOrder == m_order)
     {
-      // P modes (highest)
-      energy_P += mj2;
+      energyP += mj2;
     }
     else if (modeOrder == m_order - 1)
     {
-      // P-1 modes
-      energy_Pm1 += mj2;
+      energyPm1 += mj2;
     }
     else
     {
-      // Modes 0 to P-2 (low modes)
-      energy_low += mj2;
+      energyLow += mj2;
     }
   }
 
-  // E1: Highest mode energy ratio (always computed)
-  const CFreal E1 = energy_P / std::max(energy_total, eps);
-  
-  // Compute final energy ratio based on polynomial order
-  CFreal E_var;
+  const CFreal E1 = energyP / std::max(energyTotal, eps);
+
+  CFreal eVar;
   if (m_order >= 3)
   {
-    // For P>=3: Use both E1 and E2 to catch odd-even decoupling
-    // E2 = energy in P-1 modes / energy in modes 0 to P-1
-    const CFreal E2 = energy_Pm1 / std::max(energy_low + energy_Pm1, eps);
-    E_var = std::max(E1, E2);
+    const CFreal E2 = energyPm1 / std::max(energyLow + energyPm1, eps);
+    eVar = std::max(E1, E2);
   }
   else
   {
-    // For P<=2: Only use E1 (E2 would flag physical linear gradients)
-    E_var = E1;
+    eVar = E1;
   }
 
-  // Apply log transform if using log-scale method
-  if (m_useLogScale)
-  {
-    // Log-scale smoothness indicator: s = log10(E_var)
-    // Smooth regions: E_var ~ 10^-10 to 10^-6 => s ~ -10 to -6
-    // Rough regions:  E_var ~ 10^-2 to 10^0  => s ~ -2 to 0
-    m_s = std::log10(std::max(E_var, eps));
-  }
-  else
-  {
-    // [DEPRECATED] Legacy linear smoothness indicator
-    m_s = E_var;
-  }
+  // Step 4: log-transform to smoothness indicator.
+  m_s = std::log10(std::max(eVar, eps));
 
-  // Store the smoothness value to all solution points of this element
-  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
-  
+  // Store for visualization.
+  DataHandle<CFreal> smoothness = socket_smoothness.getDataHandle();
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    smoothness[(((*m_cellStates)[iSol]))->getLocalID()] = m_s;
-  }
-
-  if (m_s > m_Smax)
-  {
-    m_Smax = m_s;
+    smoothness[(*m_cellStates)[iSol]->getLocalID()] = m_s;
   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-void BaseOrderBlending::computeProjStates(std::vector< RealVector >& projStates)
+
+RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint order)
 {
-  cf_assert(m_nbrSolPnts == projStates.size());
-  
-  if (m_order != 1)
+  RealVector maxModalOrder;
+
+  switch (elemShape)
   {
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    case CFGeoShape::QUAD:
     {
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      const CFuint totalModes = (order + 1) * (order + 1);
+      maxModalOrder.resize(totalModes);
+      CFuint modeIndex = 0;
+      for (CFuint p = 0; p <= order; ++p)
       {
-        m_tempSolPntVec[iSol] = (*((*m_cellStates)[iSol]))[iEq];
-      }
-
-      m_tempSolPntVec2 = m_transformationMatrix*m_tempSolPntVec;
-
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-      {
-        projStates[iSol][iEq] = m_tempSolPntVec2[iSol];
-      }
-    }
-  }
-  else
-  {
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-    {
-      CFreal stateSum = 0.0;
-      
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-      {
-        stateSum += (*((*m_cellStates)[iSol]))[iEq];
-      }
-
-      stateSum /= m_nbrSolPnts;
-
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-      {
-        projStates[iSol][iEq] = stateSum;
-      }
-    }
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape, const CFuint m_order) 
-{
-  RealVector maxModalOrder; // This will be filled based on element shape and order
-
-  // Compute the correct function based on element shape
-  switch(elemShape) {
-      case CFGeoShape::QUAD:
-      {
-        // Calculate the number of modes for quadrilateral elements
-        CFuint totalModes = (m_order + 1) * (m_order + 1);
-        maxModalOrder.resize(totalModes);
-
-        CFuint modeIndex = 0;
-        for (CFuint p = 0; p <= m_order; ++p) {
-            for (CFuint i = (p)*(p); i < (p+1)*(p+1); ++i) {
-                maxModalOrder[modeIndex] = p;
-                modeIndex+=1;
-            }
-        }
-        cf_assert(modeIndex == totalModes);
-        break;
-      }
-      case CFGeoShape::TRIAG:
-      {
-        CFuint totalModes = ((m_order + 1)*(m_order + 2))/2.;
-        maxModalOrder.resize(totalModes);
-
-        CFuint modeIndex = 0;
-        for (CFuint totalOrder = 0;  totalOrder <= m_order; ++totalOrder)
+        for (CFuint i = p*p; i < (p+1)*(p+1); ++i)
         {
-        // Within each total order, iterate over powers of ksi and eta
-        for (CFuint iOrderKsi = totalOrder; iOrderKsi >= 0; --iOrderKsi)
+          maxModalOrder[modeIndex++] = p;
+        }
+      }
+      cf_assert(modeIndex == totalModes);
+      break;
+    }
+    case CFGeoShape::TRIAG:
+    {
+      const CFuint totalModes = ((order + 1) * (order + 2)) / 2;
+      maxModalOrder.resize(totalModes);
+      CFuint modeIndex = 0;
+      for (CFuint totalOrder = 0; totalOrder <= order; ++totalOrder)
+      {
+        for (CFuint iOrderKsi = totalOrder;; --iOrderKsi)
+        {
+          const CFuint iOrderEta = totalOrder - iOrderKsi;
+          maxModalOrder[modeIndex++] = std::max(iOrderKsi, iOrderEta);
+          if (iOrderKsi == 0) break;
+        }
+      }
+      cf_assert(modeIndex == totalModes);
+      break;
+    }
+    case CFGeoShape::TETRA:
+    {
+      const CFuint totalModes = ((order + 1) * (order + 2) * (order + 3)) / 6;
+      maxModalOrder.resize(totalModes);
+      CFuint modeIndex = 0;
+      for (CFuint totalOrder = 0; totalOrder <= order; ++totalOrder)
+      {
+        for (CFuint iOrderZta = 0; iOrderZta <= totalOrder; ++iOrderZta)
+        {
+          for (CFuint iOrderEta = 0; iOrderEta + iOrderZta <= totalOrder; ++iOrderEta)
           {
-            CFuint iOrderEta = totalOrder - iOrderKsi;
-            maxModalOrder[modeIndex] = std::max(iOrderKsi, iOrderEta);
-            modeIndex+=1;
+            maxModalOrder[modeIndex++] = totalOrder;
+          }
+        }
+      }
+      cf_assert(modeIndex == totalModes);
+      break;
+    }
+    case CFGeoShape::PRISM:
+    {
+      const CFuint totalModes = ((order + 1) * (order + 1) * (order + 2)) / 2;
+      maxModalOrder.resize(totalModes);
+      CFuint modeIndex = 0;
+      for (CFuint totalOrderXY = 0; totalOrderXY <= order; ++totalOrderXY)
+      {
+        for (CFuint iOrderZta = 0; iOrderZta <= order; ++iOrderZta)
+        {
+          for (CFuint iOrderKsi = totalOrderXY;; --iOrderKsi)
+          {
+            maxModalOrder[modeIndex++] = std::max(totalOrderXY, iOrderZta);
             if (iOrderKsi == 0) break;
           }
         }
-        cf_assert(modeIndex == totalModes);
-        break;
       }
-      case CFGeoShape::TETRA:
+      cf_assert(modeIndex == totalModes);
+      break;
+    }
+    case CFGeoShape::HEXA:
+    {
+      const CFuint totalModes = (order + 1) * (order + 1) * (order + 1);
+      maxModalOrder.resize(totalModes);
+      CFuint modeIndex = 0;
+      for (CFuint iOrderKsi = 0; iOrderKsi <= order; ++iOrderKsi)
       {
-        // For tetrahedra: modes are ordered by total order, following TetraFluxReconstructionElementData
-        // Total modes = (P+1)(P+2)(P+3)/6
-        CFuint totalModes = ((m_order + 1)*(m_order + 2)*(m_order + 3))/6;
-        maxModalOrder.resize(totalModes);
-
-        CFuint modeIndex = 0;
-        // Loop over the total order of polynomial terms (sum of iOrderKsi + iOrderEta + iOrderZta)
-        for (CFuint totalOrder = 0; totalOrder <= m_order; ++totalOrder)
+        for (CFuint iOrderEta = 0; iOrderEta <= order; ++iOrderEta)
         {
-          // Loop over the distributions of the total order among ksi, eta, zta
-          // Following the same ordering as in TetraFluxReconstructionElementData::createVandermondeMatrix
-          for (CFuint iOrderZta = 0; iOrderZta <= totalOrder; ++iOrderZta)
+          for (CFuint iOrderZta = 0; iOrderZta <= order; ++iOrderZta)
           {
-            for (CFuint iOrderEta = 0; iOrderEta + iOrderZta <= totalOrder; ++iOrderEta)
-            {
-              CFuint iOrderKsi = totalOrder - iOrderEta - iOrderZta;
-              // The maximum modal order is the total order (sum of all indices)
-              maxModalOrder[modeIndex] = totalOrder;
-              modeIndex += 1;
-            }
+            maxModalOrder[modeIndex++] = std::max({iOrderKsi, iOrderEta, iOrderZta});
           }
         }
-        cf_assert(modeIndex == totalModes);
-        break;
       }
-      case CFGeoShape::PRISM:
-      {
-        CFuint totalModes = ((m_order + 1)*(m_order + 1)*(m_order + 2))/2.;
-        maxModalOrder.resize(totalModes);
-
-        CFuint modeIndex = 0;
-        // Loop over the total order of polynomial terms for ξ and η
-        for (CFuint totalOrderXY = 0; totalOrderXY <= m_order; ++totalOrderXY)
-        {
-          // Loop for the third dimension (Zta)
-          for (CFuint iOrderZta = 0; iOrderZta <= m_order; ++iOrderZta)
-          {
-            // Within each total order, iterate over powers of ksi and eta in reverse for ksi
-            for (CFuint iOrderKsi = totalOrderXY; iOrderKsi >= 0; --iOrderKsi)
-            {
-              CFuint iOrderEta = totalOrderXY - iOrderKsi;
-              maxModalOrder[modeIndex] = std::max(totalOrderXY, iOrderZta);
-              modeIndex+=1;
-              if (iOrderKsi == 0) break;
-            }
-          }
-        }
-        cf_assert(modeIndex == totalModes);
-        break;
-      }      
-      case CFGeoShape::HEXA:
-      {
-        // Calculate the number of modes for hexahedral elements
-        CFuint totalModes = (m_order + 1) * (m_order + 1) * (m_order + 1);
-        maxModalOrder.resize(totalModes);
-
-        CFuint modeIndex = 0;
-        for (CFuint iOrderKsi = 0; iOrderKsi <= m_order; ++iOrderKsi) {
-            for (CFuint iOrderEta = 0; iOrderEta <= m_order; ++iOrderEta) {
-                for (CFuint iOrderZta = 0; iOrderZta <= m_order; ++iOrderZta) {
-                    CFuint maxOrder = std::max({iOrderKsi, iOrderEta, iOrderZta});
-                    maxModalOrder[modeIndex] = maxOrder;
-                    modeIndex += 1;
-                }
-            }
-        }
-        cf_assert(modeIndex == totalModes);
-        break;
-      }
-      default:
-      {
-          throw Common::NotImplementedException(FromHere(), "Maximal modal order calculation not implemented for elements of type " + StringOps::to_str(elemShape) + ".");
-      }
+      cf_assert(modeIndex == totalModes);
+      break;
+    }
+    default:
+      throw Common::NotImplementedException(FromHere(),
+        "BaseOrderBlending::getmaxModalOrder: unsupported element shape " +
+        StringOps::to_str(elemShape));
   }
 
   return maxModalOrder;
@@ -939,230 +611,80 @@ void BaseOrderBlending::setup()
 {
   CFAUTOTRACE;
 
-  // get number of equations and dimensions
   m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
-  m_dim    = PhysicalModelStack::getActive()->getDim ();
+  m_dim    = PhysicalModelStack::getActive()->getDim();
 
-  // get cell builder
   m_cellBuilder = getMethodData().getStdTrsGeoBuilder();
 
-  // get the local FR data
-  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  vector<FluxReconstructionElementData*>& frLocalData = getMethodData().getFRLocalData();
   const CFuint nbrElemTypes = frLocalData.size();
   cf_assert(nbrElemTypes > 0);
-  
-  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
-  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
-  
-  m_order = static_cast<CFuint>(order);
-  
-  // get nbr of sol pnts
+
+  m_order      = static_cast<CFuint>(frLocalData[0]->getPolyOrder());
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
-
-  // get the maximum number of flux points
-  m_maxNbrFlxPnts = 0;
-  
-  // get the elementTypeData
-  SafePtr< vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
-  
-  // this is only necessary for mixed grids and is a bit superfluous for now
-  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
-  {
-    const CFuint nbrFlxPnts = frLocalData[iElemType]->getNbrOfFlxPnts();
-    m_maxNbrFlxPnts = m_maxNbrFlxPnts > nbrFlxPnts ? m_maxNbrFlxPnts : nbrFlxPnts;
-  }
-  
-  // get the coefs for extrapolation of the states to the flx pnts
-  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
-  
-  // initialize extrapolated states
-  for (CFuint iFlx = 0; iFlx < m_maxNbrFlxPnts; ++iFlx)
-  {
-    RealVector temp(m_nbrEqs);
-    m_cellStatesFlxPnt.push_back(temp);
-  }
-  
-  // get the number of cells in the mesh
-  const CFuint nbrCells = (*elemType)[0].getEndIdx();
-  
-  // get datahandle
-  DataHandle< CFreal > prevF = socket_prevAlpha.getDataHandle();
-  DataHandle< CFreal > output = socket_alpha.getDataHandle();
-  DataHandle< CFreal > smoothness = socket_smoothness.getDataHandle();
-  
-  const CFuint nbStates = nbrCells*m_nbrSolPnts;
-
-  // resize socket
-  output.resize(nbStates);
-  prevF.resize(nbStates);
-  smoothness.resize(nbStates);
-
-  // initialize extrapolated states
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    RealVector temp(m_nbrEqs);
-    m_tempStates.push_back(temp);
-  }
-  m_tempSolPntVec.resize(m_nbrSolPnts);
-  m_tempSolPntVec2.resize(m_nbrSolPnts);
-
-  m_vdm = *(frLocalData[0]->getVandermondeMatrix());
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
 
   m_vdmInv = *(frLocalData[0]->getVandermondeMatrixInv());
 
-  // Initialize update variable set and physical data for monitored expression
-  m_obUpdateVarSet = getMethodData().getUpdateVar();
-  SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm();
-  convTerm->resizePhysicalData(m_obPData);
-  
-  m_NeighborIDs.resize(nbrCells);
-
+  m_tempSolPntVec.resize(m_nbrSolPnts);
+  m_tempSolPntVec2.resize(m_nbrSolPnts);
   m_maxModalOrder.resize(m_nbrSolPnts);
   m_maxModalOrder = getmaxModalOrder(elemShape, m_order);
 
-  m_Smax = m_s0 + m_kappa;
+  // Physical data vector for pressure-based expressions.
+  m_obUpdateVarSet = getMethodData().getUpdateVar();
+  SafePtr<BaseTerm> convTerm = PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm();
+  convTerm->resizePhysicalData(m_obPData);
 
+  // Allocate per-state sockets.
+  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  const CFuint nbrCells = (*elemType)[0].getEndIdx();
+  const CFuint nbStates = nbrCells * m_nbrSolPnts;
 
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    RealVector temp(m_nbrEqs);
-    temp = 0.0;
-    m_statesPMinOne.push_back(temp);
-  }
+  socket_alpha.getDataHandle().resize(nbStates);
+  socket_prevAlpha.getDataHandle().resize(nbStates);
+  socket_smoothness.getDataHandle().resize(nbStates);
 
-  RealMatrix temp(m_nbrSolPnts,m_nbrSolPnts);
-  temp = 0.0;
-  if (m_dim == 2)
-  {
-    if (elemShape == CFGeoShape::TRIAG){  
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)/2; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }
-    else{
-      for (CFuint idx = 0; idx < (m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }  
-  }
-  else if (m_dim == 3)
-  {
-    if (elemShape == CFGeoShape::TETRA){ 
-      for (CFuint idx = 0; idx < (m_order)*(m_order+1)*(m_order+2)/6; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }
-    else if (elemShape == CFGeoShape::PRISM){ 
-      for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }
-    else{
-        for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-    }  
-  }
+  // Scratch buffer for Jacobi smoothing passes.
+  m_sweepSnapshot.assign(nbStates, 0.0);
 
-
-  m_transformationMatrix.resize(m_nbrSolPnts,m_nbrSolPnts);
-
-  m_transformationMatrix = (m_vdm)*temp*(m_vdmInv);
-
-
-  if (m_dim == 2)
-  {
-    if (elemShape == CFGeoShape::TRIAG){  
-      m_nbrSolPntsMinOne = (m_order)*(m_order+1)/2; 
-      m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order)/2) : 1 ; 
-    }
-    else{ //QUADS
-      m_nbrSolPntsMinOne = m_order*m_order; 
-      m_nbrSolPntsMinTwo = ((m_order-1)*(m_order-1)); 
-    }  
-  }
-  else if (m_dim == 3)
-  {
-    if (elemShape == CFGeoShape::TETRA){ 
-      m_nbrSolPntsMinOne = (m_order)*(m_order+1)*(m_order+2)/6; 
-      m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order)*(m_order+1)/6) : 1 ; 
-    }
-    else if (elemShape == CFGeoShape::PRISM){ 
-      for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order+1)/2; ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-      m_nbrSolPntsMinOne = (m_order)*(m_order)*(m_order+1)/2; 
-      m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order-1)*(m_order)/2) : 1 ; 
-    }
-    else{
-        for (CFuint idx = 0; idx < (m_order)*(m_order)*(m_order); ++idx)
-      {
-        temp(idx,idx) = 1.0;
-      }
-      m_nbrSolPntsMinOne = (m_order)*(m_order)*(m_order); 
-      m_nbrSolPntsMinTwo = (m_order > 1) ? ((m_order-1)*(m_order-1)*(m_order-1)) : 1 ; 
-    }  
-  }
-
-  ////////
-  m_geoBuilder = getMethodData().getCellBuilder();
-  
-  // get InnerCells TopologicalRegionSet
+  // Pre-compute node-sharing neighbor IDs for each cell.
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  m_NeighborIDs.resize(nbrCells);
 
-  // get the geodata of the geometric entity builder and set the TRS
-  CellToFaceGEBuilder::GeoData& geoData = m_geoBuilder->getDataGE();
-  geoData.trs = cells;
-
-  // Loop on elements to find neighbors via shared nodes
-  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType) 
+  for (CFuint iElemType = 0; iElemType < nbrElemTypes; ++iElemType)
   {
     const CFuint startIdx = (*elemType)[iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[iElemType].getEndIdx();
-  
+
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
       std::set<CFuint> currNodeIDs;
-  
-      // Step 1: Gather node IDs for the current element
       const CFuint nbNodesCurr = cells->getNbNodesInGeo(elemIdx);
       for (CFuint iNode = 0; iNode < nbNodesCurr; ++iNode)
       {
-        CFuint nodeID = cells->getNodeID(elemIdx, iNode);
-        currNodeIDs.insert(nodeID);
+        currNodeIDs.insert(cells->getNodeID(elemIdx, iNode));
       }
-  
-      std::set<CFuint> neighborSet; // avoid duplicates
-  
-      // Step 2: Loop over all other elements in this element type
+
+      std::set<CFuint> neighborSet;
       for (CFuint nIdx = startIdx; nIdx < endIdx; ++nIdx)
       {
         if (nIdx == elemIdx) continue;
-  
+
         const CFuint nbNodesNeighbor = cells->getNbNodesInGeo(nIdx);
         for (CFuint jNode = 0; jNode < nbNodesNeighbor; ++jNode)
         {
-          CFuint neighborNodeID = cells->getNodeID(nIdx, jNode);
-  
-          if (currNodeIDs.find(neighborNodeID) != currNodeIDs.end())
+          if (currNodeIDs.find(cells->getNodeID(nIdx, jNode)) != currNodeIDs.end())
           {
-            neighborSet.insert(nIdx); // shared node found
-            break; // one common node is enough
+            neighborSet.insert(nIdx);
+            break;
           }
         }
       }
-  
-      // Step 3: Store unique neighbor IDs
+
       m_NeighborIDs[elemIdx].assign(neighborSet.begin(), neighborSet.end());
     }
   }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
