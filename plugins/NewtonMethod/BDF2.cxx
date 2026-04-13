@@ -147,14 +147,20 @@ void BDF2::takeStepImpl()
    
     CFLog(VERBOSE, "BDF2::takeStep(): m_data->freezeJacobian() " << m_data->freezeJacobian() << "\n");
     // this will make the solvers compute the jacobian only during the first iteration at each time step
-
-    if (kStride == 0) {
-      (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+    // in JFNK mode (DoComputeJacobian = false), jacobian assembly is always skipped
+    const bool jfnkMode = !m_data->getInitialDoComputeJacobFlag();
+    if (jfnkMode) {
+      m_data->setDoComputeJacobFlag(false);
     }
     else {
-      (m_data->freezeJacobian() && (k > 1) && (k % kStride != 0)) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+      if (kStride == 0) {
+        (m_data->freezeJacobian() && k > 1) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+      }
+      else {
+        (m_data->freezeJacobian() && (k > 1) && (k % kStride != 0)) ? m_data->setDoComputeJacobFlag(false) : m_data->setDoComputeJacobFlag(true);
+      }
     }
-    
+
     // this is needed for cases like jacobian free or in case the jacobian needs to be frozen for k>=1
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(m_data->getDoComputeJacobFlag());
     
@@ -163,7 +169,8 @@ void BDF2::takeStepImpl()
     // compute the steady space residual
     getMethodData()->getCollaborator<SpaceMethod>()->computeSpaceResidual(theta);
     
-    if ( m_data->getDoComputeJacobFlag()) {
+    // update CFL when computing Jacobian, or always in JFNK mode
+    if (m_data->getDoComputeJacobFlag() || jfnkMode) {
       getConvergenceMethodData()->getCFL()->update(cvgst.get());
     }
     
@@ -228,7 +235,7 @@ void BDF2::takeStepImpl()
     
     getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(false);
     getMethodData()->getCollaborator<SpaceMethod>()->computeTimeResidual(xi);
-    getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(true);
+    getMethodData()->getCollaborator<SpaceMethod>()->setComputeJacobianFlag(m_data->getInitialDoComputeJacobFlag());
     subSysStatus->updateCurrentTime();
   }
 
