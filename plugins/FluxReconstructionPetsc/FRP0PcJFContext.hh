@@ -33,7 +33,7 @@ namespace COOLFluiD {
  *                   + averaged nEqs^2 P0 blocks (coarse)
  *
  * P0 blocks are derived from the assembled Jacobian via Galerkin projection.
- * Supports BlockDiag (element-local inversion) and ILU (sparse matrix + inner KSP) modes.
+ * Supports BlockDiag (element-local inversion) and FaceCoupled (sparse matrix + direct LU) modes.
  *
  * @author Rayan Dhib
  */
@@ -43,8 +43,8 @@ public:
   /// Constructor
   FRP0PcJFContext() : pJFC(CFNULL), nEqs(0), nDim(0), nUpdatableCells(0),
     nSolPtsPerCell(0), useElementBlocks(true), smootherOmega(1.0),
-    useP0ILU(false), p0Mat(CFNULL), p0RhsVec(CFNULL), p0SolVec(CFNULL),
-    p0Ksp(CFNULL) {}
+    useP0FaceCoupled(false), p0Mat(CFNULL), p0RhsVec(CFNULL), p0SolVec(CFNULL),
+    p0Ksp(CFNULL), useMultiplicative(false), defectVec(CFNULL) {}
 
   /// For each updatable cell: list of indices into the PETSc updatable state vector
   /// cellToUpStateIdx[iCell][iSol] = updatable state index for sol pt iSol in cell iCell
@@ -84,7 +84,7 @@ public:
   // ---- P0 coarse correction data (both modes) ----
 
   /// Per-cell inverted (nEqs x nEqs) P0 blocks from Galerkin projection
-  /// Used in BlockDiag mode (useP0ILU == false)
+  /// Used in BlockDiag mode (useP0FaceCoupled == false)
   std::vector<RealMatrix> p0InvBlocks;
 
   /// P0 restricted residual buffer, size nCells*nEqs
@@ -93,11 +93,11 @@ public:
   /// P0 correction buffer, size nCells*nEqs
   std::vector<CFreal> p0Correction;
 
-  // ---- P0 ILU coarse solve data (when useP0ILU == true) ----
+  // ---- P0 face-coupled coarse solve data (when useP0FaceCoupled == true) ----
 
-  /// true = use face-coupled P0 sparse matrix with inner ILU-GMRES solve
+  /// true = use face-coupled P0 sparse matrix with direct LU solve
   /// false = use element-diagonal P0 block inversion (default)
-  bool useP0ILU;
+  bool useP0FaceCoupled;
 
   /// Cell-to-cell adjacency: cellNeighbors[iUpdCell] = updatable cell indices of face neighbors
   std::vector<std::vector<CFuint> > cellNeighbors;
@@ -112,8 +112,16 @@ public:
   Vec p0RhsVec;
   Vec p0SolVec;
 
-  /// Inner KSP for P0 coarse solve (GMRES + ILU)
+  /// Inner KSP for P0 coarse solve (direct LU)
   KSP p0Ksp;
+
+  // ---- Multiplicative p-MG data ----
+
+  /// true = multiplicative (defect-based coarse correction), false = additive (default)
+  bool useMultiplicative;
+
+  /// Temporary Vec for defect computation (size = system Vec size)
+  Vec defectVec;
 
 }; // end of class FRP0PcJFContext
 

@@ -545,7 +545,13 @@ void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
   {
     const CFuint nEqs = acc.getNB();
     const CFuint N = nSolPtsPerSide;
-    const CFreal invN = 1.0 / (CFreal)N;
+
+    // Galerkin projection scaling: R = (1/nSolPts)*Σ over ALL sol pts in cell,
+    // consistent with diagonal block projection in FRP0Preconditioner
+    SafePtr<TopologicalRegionSet> cells =
+      MeshDataStack::getActive()->getTrs("InnerCells");
+    const CFreal invNLeft  = 1.0 / (CFreal)cells->getNbStatesInGeo(leftCellIdx);
+    const CFreal invNRight = 1.0 / (CFreal)cells->getNbStatesInGeo(rightCellIdx);
 
     auto keyLR = std::make_pair(leftCellIdx, rightCellIdx);
     auto itLR = m_p0OffDiagBlocks->find(keyLR);
@@ -559,7 +565,7 @@ void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
       for (CFuint j = 0; j < N; ++j)
         for (CFuint ib = 0; ib < nEqs; ++ib)
           for (CFuint jb = 0; jb < nEqs; ++jb)
-            p0LR(ib, jb) += invN * acc.getValue(i, j + N, ib, jb);
+            p0LR(ib, jb) += invNLeft * acc.getValue(i, j + N, ib, jb);
 
     auto keyRL = std::make_pair(rightCellIdx, leftCellIdx);
     auto itRL = m_p0OffDiagBlocks->find(keyRL);
@@ -573,7 +579,7 @@ void FluxReconstructionSolverData::assembleJacobBlockFace(BlockAccumulator& acc,
       for (CFuint j = 0; j < N; ++j)
         for (CFuint ib = 0; ib < nEqs; ++ib)
           for (CFuint jb = 0; jb < nEqs; ++jb)
-            p0RL(ib, jb) += invN * acc.getValue(i + N, j, ib, jb);
+            p0RL(ib, jb) += invNRight * acc.getValue(i + N, j, ib, jb);
   }
 }
 

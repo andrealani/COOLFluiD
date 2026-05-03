@@ -27,17 +27,21 @@ namespace COOLFluiD {
  * Two-level additive p-multigrid shell preconditioner for JFNK in FR solvers.
  *
  * Apply formula:
+ * Additive mode:
  *   Y = omega * B^{-1} * X  +  P * D0^{-1} * R * X
- *       (smoother)            (P0 coarse correction)
  *
- * Two block modes (config option BlockMode):
- *   - ElementBlock: smoother uses full (nSolPts*nEqs)^2 element-diagonal blocks
- *   - PointBlock:   smoother uses per-DOF (nEqs)^2 diagonal sub-blocks
+ * Multiplicative mode (default):
+ *   y = omega * B^{-1} * X                (smoother)
+ *   d = X - A * y                          (defect)
+ *   Y = y + P * D0^{-1} * R * d           (coarse correction on defect)
  *
- * P0 blocks are derived from the assembled Jacobian via Galerkin projection
- * (R * B * P). Two coarse solve modes (config option CoarseSolveType):
- *   - BlockDiag (default): element-local nEqs x nEqs block inversion
- *   - ILU: face-coupled P0 sparse matrix with inner GMRES + ILU(0) solve
+ * Block modes (config BlockMode):
+ *   - ElementBlock: full (nSolPts*nEqs)^2 element-diagonal blocks
+ *   - PointBlock:   per-DOF (nEqs)^2 diagonal sub-blocks
+ *
+ * Coarse solve modes (config CoarseSolveType):
+ *   - FaceCoupled: Galerkin-projected face-coupled P0 sparse matrix, direct LU
+ *   - BlockDiag: element-local nEqs x nEqs block inversion (no face coupling)
  *
  * @author Rayan Dhib
  */
@@ -91,14 +95,11 @@ private:
   /// Flag: compute element blocks directly without PETSc matrix
   bool _directBlocks;
 
-  /// P0 coarse solve type: "ILU" or "BlockDiag"
+  /// P0 coarse solve type: "FaceCoupled" or "BlockDiag"
   std::string _coarseSolveType;
 
-  /// Inner KSP relative tolerance for P0 coarse solve (default 0.1)
-  CFreal _coarseKSPTol;
-
-  /// Inner KSP max iterations for P0 coarse solve (default 5)
-  CFuint _coarseMaxIter;
+  /// Use multiplicative (defect-based) coarse correction (default false)
+  bool _multiplicative;
 
 }; // end of class FRP0Preconditioner
 

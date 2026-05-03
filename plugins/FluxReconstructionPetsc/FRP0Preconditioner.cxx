@@ -60,12 +60,10 @@ void FRP0Preconditioner::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption<bool>("DirectBlocks",
     "Compute element blocks directly without PETSc matrix (default true)");
   options.addConfigOption<std::string>("CoarseSolveType",
-    "P0 coarse solve type: ILU (face-coupled sparse matrix + inner GMRES-ILU) "
+    "P0 coarse solve type: FaceCoupled (Galerkin-projected sparse matrix + direct LU) "
     "or BlockDiag (element-local block inversion, default)");
-  options.addConfigOption<CFreal>("CoarseKSPTol",
-    "Inner KSP relative tolerance for P0 coarse solve (default 0.1)");
-  options.addConfigOption<CFuint>("CoarseMaxIter",
-    "Inner KSP max iterations for P0 coarse solve (default 5)");
+  options.addConfigOption<bool>("Multiplicative",
+    "Use multiplicative (defect-based) coarse correction instead of additive (default false)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,29 +79,28 @@ FRP0Preconditioner::FRP0Preconditioner(const std::string& name) :
   _blockMode("ElementBlock"),
   _directBlocks(true),
   _coarseSolveType("BlockDiag"),
-  _coarseKSPTol(0.1),
-  _coarseMaxIter(5)
+  _multiplicative(false)
 {
   addConfigOptionsTo(this);
   setParameter("SmootherOmega", &_smootherOmega);
   setParameter("BlockMode", &_blockMode);
   setParameter("DirectBlocks", &_directBlocks);
   setParameter("CoarseSolveType", &_coarseSolveType);
-  setParameter("CoarseKSPTol", &_coarseKSPTol);
-  setParameter("CoarseMaxIter", &_coarseMaxIter);
+  setParameter("Multiplicative", &_multiplicative);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 FRP0Preconditioner::~FRP0Preconditioner()
 {
-  if (_pcc.useP0ILU)
+  if (_pcc.useP0FaceCoupled)
   {
     if (_pcc.p0Ksp) { KSPDestroy(&_pcc.p0Ksp); _pcc.p0Ksp = CFNULL; }
     if (_pcc.p0Mat) { MatDestroy(&_pcc.p0Mat); _pcc.p0Mat = CFNULL; }
     if (_pcc.p0RhsVec) { VecDestroy(&_pcc.p0RhsVec); _pcc.p0RhsVec = CFNULL; }
     if (_pcc.p0SolVec) { VecDestroy(&_pcc.p0SolVec); _pcc.p0SolVec = CFNULL; }
   }
+  if (_pcc.defectVec) { VecDestroy(&_pcc.defectVec); _pcc.defectVec = CFNULL; }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -212,11 +209,11 @@ void FRP0Preconditioner::setPreconditioner()
   }
 
   // ---- P0 coarse level setup ----
-  _pcc.useP0ILU = (_coarseSolveType == "ILU");
+  _pcc.useP0FaceCoupled = (_coarseSolveType == "FaceCoupled");
   _pcc.p0Residual.resize(nCells * nEqs, 0.0);
   _pcc.p0Correction.resize(nCells * nEqs, 0.0);
 
-  if (_pcc.useP0ILU)
+  if (_pcc.useP0FaceCoupled)
   {
     // ---- Build cell-to-updatable-cell-index mapping ----
     _pcc.cellToUpdIdx.assign(nbCells, -1);
@@ -310,30 +307,23 @@ void FRP0Preconditioner::setPreconditioner()
     CF_CHKERRCONTINUE(VecCreateSeq(PETSC_COMM_SELF, p0Size, &_pcc.p0RhsVec));
     CF_CHKERRCONTINUE(VecCreateSeq(PETSC_COMM_SELF, p0Size, &_pcc.p0SolVec));
 
-    // ---- Create inner KSP (GMRES + ILU) ----
+    // ---- Create inner KSP (direct LU solve) ----
     CF_CHKERRCONTINUE(KSPCreate(PETSC_COMM_SELF, &_pcc.p0Ksp));
-    CF_CHKERRCONTINUE(KSPSetType(_pcc.p0Ksp, KSPGMRES));
-    CF_CHKERRCONTINUE(KSPSetTolerances(_pcc.p0Ksp,
-      _coarseKSPTol, PETSC_DEFAULT, PETSC_DEFAULT,
-      static_cast<PetscInt>(_coarseMaxIter)));
-    CF_CHKERRCONTINUE(KSPSetNormType(_pcc.p0Ksp, KSP_NORM_UNPRECONDITIONED));
+    CF_CHKERRCONTINUE(KSPSetType(_pcc.p0Ksp, KSPPREONLY));
 
     PC p0pc;
     CF_CHKERRCONTINUE(KSPGetPC(_pcc.p0Ksp, &p0pc));
-    CF_CHKERRCONTINUE(PCSetType(p0pc, PCILU));
-    CF_CHKERRCONTINUE(PCFactorSetLevels(p0pc, 0)); // ILU(0)
+    CF_CHKERRCONTINUE(PCSetType(p0pc, PCLU));
 
     const CFuint p0MatMem = totalP0Nnz * nEqs * nEqs * sizeof(CFreal);
     totalBlockMem += p0MatMem;
 
-    CFLog(INFO, "FRP0Preconditioner: P0 ILU coarse solve enabled"
+    CFLog(INFO, "FRP0Preconditioner: P0 face-coupled coarse solve (direct LU)"
       << ", P0 matrix: " << nCells << "x" << nCells << " blocks of "
       << nEqs << "x" << nEqs
       << ", avg neighbors/cell: "
       << (nCells > 0 ? (CFreal)(totalP0Nnz - nCells) / nCells : 0)
-      << ", P0 matrix memory: " << p0MatMem / (1024.0*1024.0) << " MB"
-      << ", inner KSP: GMRES(" << _coarseMaxIter
-      << ") rtol=" << _coarseKSPTol << "\n");
+      << ", P0 matrix memory: " << p0MatMem / (1024.0*1024.0) << " MB\n");
   }
   else
   {
@@ -354,6 +344,13 @@ void FRP0Preconditioner::setPreconditioner()
     << maxSolPtsPerCell << " sol pts/cell, omega = " << _smootherOmega
     << ", CoarseSolveType = " << _coarseSolveType
     << ", total block memory: " << totalBlockMem / (1024.0*1024.0) << " MB\n");
+
+  // Multiplicative mode: defect Vec allocated lazily in FRP0PcApply (needs matching parallel layout)
+  _pcc.useMultiplicative = _multiplicative;
+  if (_pcc.useMultiplicative)
+  {
+    CFLog(INFO, "FRP0Preconditioner: multiplicative mode enabled\n");
+  }
 
   // Register the shell preconditioner with PETSc
   CF_CHKERRCONTINUE(PCShellSetContext(
@@ -414,9 +411,9 @@ void FRP0Preconditioner::computeBeforeSolving()
       MeshDataStack::getActive()->getTrs("InnerCells");
     const CFuint nbAllCells = cells->getLocalNbGeoEnts();
 
-    // P0 off-diagonal map (if ILU mode)
+    // P0 off-diagonal map (if FaceCoupled mode)
     std::map<std::pair<CFuint,CFuint>, RealMatrix> p0OffDiagMap;
-    if (_pcc.useP0ILU)
+    if (_pcc.useP0FaceCoupled)
     {
       frData->setP0OffDiagBlocks(&p0OffDiagMap);
     }
@@ -456,9 +453,9 @@ void FRP0Preconditioner::computeBeforeSolving()
     }
 
     // Common: clear P0 off-diag pointer, zero P0 matrix, restore backup
-    if (_pcc.useP0ILU) frData->setP0OffDiagBlocks(CFNULL);
+    if (_pcc.useP0FaceCoupled) frData->setP0OffDiagBlocks(CFNULL);
 
-    if (_pcc.useP0ILU)
+    if (_pcc.useP0FaceCoupled)
     {
       CF_CHKERRCONTINUE(MatZeroEntries(_pcc.p0Mat));
     }
@@ -563,7 +560,7 @@ void FRP0Preconditioner::computeBeforeSolving()
       }
 
       // ---- P0 coarse level: store or invert the projected block ----
-      if (_pcc.useP0ILU)
+      if (_pcc.useP0FaceCoupled)
       {
         PetscInt blockRow = static_cast<PetscInt>(updCellIdx);
         CF_CHKERRCONTINUE(MatSetValuesBlocked(_pcc.p0Mat,
@@ -591,7 +588,7 @@ void FRP0Preconditioner::computeBeforeSolving()
     }
 
     // Insert actual off-diagonal blocks from Galerkin-projected face cross-blocks
-    if (_pcc.useP0ILU)
+    if (_pcc.useP0FaceCoupled)
     {
       for (auto it = p0OffDiagMap.begin(); it != p0OffDiagMap.end(); ++it)
       {
@@ -608,8 +605,8 @@ void FRP0Preconditioner::computeBeforeSolving()
       }
     }
 
-    // Assemble P0 sparse matrix for ILU mode
-    if (_pcc.useP0ILU)
+    // Assemble P0 sparse matrix for FaceCoupled mode
+    if (_pcc.useP0FaceCoupled)
     {
       CF_CHKERRCONTINUE(MatAssemblyBegin(_pcc.p0Mat, MAT_FINAL_ASSEMBLY));
       CF_CHKERRCONTINUE(MatAssemblyEnd(_pcc.p0Mat, MAT_FINAL_ASSEMBLY));
@@ -622,7 +619,7 @@ void FRP0Preconditioner::computeBeforeSolving()
 
     // Allocate P0 off-diagonal map for capturing face cross-blocks
     std::map<std::pair<CFuint,CFuint>, RealMatrix> p0OffDiagMap;
-    if (_pcc.useP0ILU)
+    if (_pcc.useP0FaceCoupled)
     {
       frData->setP0OffDiagBlocks(&p0OffDiagMap);
     }
@@ -652,8 +649,8 @@ void FRP0Preconditioner::computeBeforeSolving()
     // Unregister off-diagonal map
     frData->setP0OffDiagBlocks(CFNULL);
 
-    // Zero the P0 sparse matrix for ILU mode
-    if (_pcc.useP0ILU)
+    // Zero the P0 sparse matrix for FaceCoupled mode
+    if (_pcc.useP0FaceCoupled)
     {
       CF_CHKERRCONTINUE(MatZeroEntries(_pcc.p0Mat));
     }
@@ -715,7 +712,7 @@ void FRP0Preconditioner::computeBeforeSolving()
         _inverter->invert(elemBlock, _pcc.invElemBlocks[iCell]);
 
         // P0 coarse level
-        if (_pcc.useP0ILU)
+        if (_pcc.useP0FaceCoupled)
         {
           PetscInt blockRow = static_cast<PetscInt>(iCell);
           CF_CHKERRCONTINUE(MatSetValuesBlocked(_pcc.p0Mat,
@@ -766,7 +763,7 @@ void FRP0Preconditioner::computeBeforeSolving()
             p0Block(e, f) *= invNSol;
 
         // P0 coarse level
-        if (_pcc.useP0ILU)
+        if (_pcc.useP0FaceCoupled)
         {
           PetscInt blockRow = static_cast<PetscInt>(iCell);
           CF_CHKERRCONTINUE(MatSetValuesBlocked(_pcc.p0Mat,
@@ -782,7 +779,7 @@ void FRP0Preconditioner::computeBeforeSolving()
     }
 
     // Insert actual off-diagonal blocks from Galerkin-projected face cross-blocks
-    if (_pcc.useP0ILU)
+    if (_pcc.useP0FaceCoupled)
     {
       for (auto it = p0OffDiagMap.begin(); it != p0OffDiagMap.end(); ++it)
       {
@@ -798,8 +795,8 @@ void FRP0Preconditioner::computeBeforeSolving()
       }
     }
 
-    // Assemble P0 sparse matrix for ILU mode
-    if (_pcc.useP0ILU)
+    // Assemble P0 sparse matrix for FaceCoupled mode
+    if (_pcc.useP0FaceCoupled)
     {
       CF_CHKERRCONTINUE(MatAssemblyBegin(_pcc.p0Mat, MAT_FINAL_ASSEMBLY));
       CF_CHKERRCONTINUE(MatAssemblyEnd(_pcc.p0Mat, MAT_FINAL_ASSEMBLY));
@@ -822,14 +819,20 @@ void FRP0Preconditioner::computeAfterSolving()
 
 PetscErrorCode FRP0PcApply(PC pc, Vec X, Vec Y)
 {
-  // Additive two-level p-multigrid preconditioner:
-  //   Y = omega * B^{-1} * X  +  P * D0^{-1} * R * X
-  //       (smoother)            (P0 coarse correction)
+  // Two-level p-multigrid preconditioner (multiplicative or additive).
   //
-  // B^{-1}: ElementBlock → full element inverse, PointBlock → per-DOF inverse
-  // R:      restriction (uniform averaging to cell mean)
-  // D0^{-1}: inverted nEqs×nEqs P0 block (Galerkin projection of B)
-  // P:      prolongation (constant injection to all DOFs)
+  // Multiplicative (default):
+  //   y = omega * B^{-1} * X           (smoother)
+  //   d = X - A * y                     (defect via MatMFFD)
+  //   Y = y + P * D0^{-1} * R * d      (coarse correction on defect)
+  //
+  // Additive:
+  //   Y = omega * B^{-1} * X + P * D0^{-1} * R * X
+  //
+  // B^{-1}: inverted element-diagonal blocks (ElementBlock or PointBlock)
+  // D0^{-1}: Galerkin-projected P0 operator (BlockDiag or FaceCoupled)
+  // R: restriction (uniform averaging to cell mean)
+  // P: prolongation (constant injection to all DOFs)
 
   PetscFunctionBegin;
 
@@ -909,21 +912,72 @@ PetscErrorCode FRP0PcApply(PC pc, Vec X, Vec Y)
       }
     }
 
-    // Restriction: p0rhs[iCell] = (1/nSolPts) * sum_k x[upIdx[k]]
-    const CFreal weight = 1.0 / (CFreal)cellNSol;
-    for (CFuint e = 0; e < nEqs; ++e)
+    // Restriction: p0rhs[iCell] = (1/nSolPts) * sum_k src[upIdx[k]]
+    // In additive mode, src = x (raw input).
+    // In multiplicative mode, src = defect (computed below after this loop).
+    if (!pcContext->useMultiplicative)
     {
-      CFreal sum = 0.0;
-      for (CFuint k = 0; k < cellNSol; ++k)
-        sum += x[upIdx[k] * nEqs + e];
-      pcContext->p0Residual[iCell * nEqs + e] = weight * sum;
+      const CFreal weight = 1.0 / (CFreal)cellNSol;
+      for (CFuint e = 0; e < nEqs; ++e)
+      {
+        CFreal sum = 0.0;
+        for (CFuint k = 0; k < cellNSol; ++k)
+          sum += x[upIdx[k] * nEqs + e];
+        pcContext->p0Residual[iCell * nEqs + e] = weight * sum;
+      }
     }
   }
 
-  // ---- P0 COARSE SOLVE ----
-  if (pcContext->useP0ILU)
+  // ---- MULTIPLICATIVE DEFECT + RESTRICTION ----
+  if (pcContext->useMultiplicative)
   {
-    // Inner KSP solve: p0Mat * p0Sol = p0Rhs using GMRES + ILU(0)
+    // Release arrays before PETSc Vec operations
+    CF_CHKERRCONTINUE(VecRestoreArrayRead(X, &x));
+    CF_CHKERRCONTINUE(VecRestoreArray(Y, &y));
+
+    // Lazy-allocate defect Vec with same parallel layout as X
+    if (!pcContext->defectVec)
+    {
+      CF_CHKERRCONTINUE(VecDuplicate(X, &pcContext->defectVec));
+    }
+
+    // defect = X - A*Y (what the smoother missed)
+    Mat Amat;
+    CF_CHKERRCONTINUE(PCGetOperators(pc, &Amat, CFNULL));
+    CF_CHKERRCONTINUE(MatMult(Amat, Y, pcContext->defectVec));
+    // defectVec = X - defectVec
+    CF_CHKERRCONTINUE(VecAYPX(pcContext->defectVec, -1.0, X));
+
+    // Re-acquire arrays for restriction
+    const CFreal* defect;
+    CF_CHKERRCONTINUE(VecGetArrayRead(pcContext->defectVec, &defect));
+    CF_CHKERRCONTINUE(VecGetArrayRead(X, &x));
+    CF_CHKERRCONTINUE(VecGetArray(Y, &y));
+
+    // Restrict the defect to P0
+    for (CFuint iCell = 0; iCell < nCells; ++iCell)
+    {
+      const std::vector<CFuint>& upIdx = pcContext->cellToUpStateIdx[iCell];
+      const CFuint cellNSol = upIdx.size();
+      if (cellNSol == 0) continue;
+
+      const CFreal weight = 1.0 / (CFreal)cellNSol;
+      for (CFuint e = 0; e < nEqs; ++e)
+      {
+        CFreal sum = 0.0;
+        for (CFuint k = 0; k < cellNSol; ++k)
+          sum += defect[upIdx[k] * nEqs + e];
+        pcContext->p0Residual[iCell * nEqs + e] = weight * sum;
+      }
+    }
+
+    CF_CHKERRCONTINUE(VecRestoreArrayRead(pcContext->defectVec, &defect));
+  }
+
+  // ---- P0 COARSE SOLVE ----
+  if (pcContext->useP0FaceCoupled)
+  {
+    // Direct LU solve: p0Mat * p0Sol = p0Rhs
 
     // Copy restricted residual into PETSc Vec
     CFreal* p0rhs;
