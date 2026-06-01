@@ -199,6 +199,8 @@ UpdateSolMHD.hh
 UpdateSolMHD.cxx
 StdUpdateSolPP.hh
 StdUpdateSolPP.cxx
+StdUpdateSolPP2.hh
+StdUpdateSolPP2.cxx
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )

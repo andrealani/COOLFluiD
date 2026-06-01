@@ -80,6 +80,8 @@ MHD3DProjectionDiffPrim.cxx
 MHD3DProjectionDiffPrim.hh
 MHD3DProjectionDiffPrimHW.cxx
 MHD3DProjectionDiffPrimHW.hh
+MHD3DProjectionDiffPrimHW2.cxx
+MHD3DProjectionDiffPrimHW2.hh
 MHD3DProjectionPolytropicConsToPrim.cxx
 MHD3DProjectionPolytropicConsToPrim.hh
 MHD3DProjectionConsToPrimInPrim.cxx

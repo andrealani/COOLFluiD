@@ -14,7 +14,7 @@ using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
 using namespace COOLFluiD::Physics::MHD;
 
-//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////// 
 
 namespace COOLFluiD {
 
@@ -22,7 +22,7 @@ namespace COOLFluiD {
 
     namespace FiniteVolume {
 
-//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////// 
 
 MethodStrategyProvider<MHDConsACAHWSourceTerm,
 		       CellCenterFVMData,
@@ -74,8 +74,15 @@ MHDConsACAHWSourceTerm::MHDConsACAHWSourceTerm(const std::string& name) :
   setParameter("wavepressure", &_wave_pressure);  
   _RadiativeLossTerm = 0;
   setParameter("RadiativeLossTerm",&_RadiativeLossTerm);
+  _CHIANTI9 = 0;
+  setParameter("CHIANTI9", &_CHIANTI9);
   _deCompE = 0;
   setParameter("deCompEorNot", &_deCompE);
+  _rotation = 0;
+  setParameter("Rotation", &_rotation);
+  //_TriD = 1.0;
+  //setParameter("TriD_factor", &_TriD);
+
 //  setParameter("zplus",&_zplus);
 //  setParameter("zminus",&_zminus); 
   //_projectionIDs = vector<CFuint>();
@@ -106,8 +113,11 @@ void MHDConsACAHWSourceTerm::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("divQalphaCollisionless","alpha value of heat conductivity in collisionless regime.");
   options.addConfigOption< CFreal >("Resistivity","eta value.");
   options.addConfigOption< CFint >("RadiativeLossTerm","Switch on optically thin approximation for radiation losses.");
+  options.addConfigOption< CFint >("CHIANTI9", "Switch on CHIANTI9 radiation losses.");
   options.addConfigOption< CFint >("deCompEorNot", "Calculate source term caused by decomposed energy equation.");
+  //options.addConfigOption< CFreal >("TriD_factor", "Amount of fraction in Z- direction considered.");
   options.addConfigOption< CFint >("wavepressure", "save approximated wavepressure term.");
+  options.addConfigOption< CFint >("Rotation", "Switch on rotation (Coriolis and centrifugal forces).");
 //  options.addConfigOption< CFint >("zplus", "z plus term from WKB");
 //  options.addConfigOption< CFint >("zminus", "z minus term from WKB");
   
@@ -259,7 +269,10 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
   const CFint Qh_lio_bool = _Qh_lio_activate;
 
   // Qh2 is the petsov heating term. Q = H*|B|. (1e-7/1e-6/1e-4) is to convert from cgs to SI. (*2.2e-4) is to have magnetic field in the units. 
+  //---->> Mark 2025.12.06---------------------------------------------
+  //CFreal Qh2 = r_dimless*Qh4H_const*Bnorm*1e-7 / 1e-6 / 1e-4;
   CFreal Qh2 = Qh4H_const*Bnorm*1e-7 / 1e-6 /1e-4;
+  //------ Mark 2025.12.06<<-------------------------------------------
   // Qh3 is the exponential heating function which is uniform around the Sun.
 //  CFreal Qh3 = 7.28e-5 * std::exp(-(r - RSun)/(40e6)) * ( 1e-7 / 1e-6);
   CFreal Qh3 = 4.9e-5 * std::exp(-(r - RSun)/(0.7*RSun)) * ( 1e-7 / 1e-6);
@@ -330,174 +343,174 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
   //-------------------------------- Radiative Losses -----------------------------------------------------------------------------
 
   // Definition according to Rosner 1978
-/*
-  CFreal Q_rad = 0.0;
 
-  if ((T < pow(10,4.6))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-21.85) * ( 1e-7 / 1e-6); 
-  }
+  CFreal Q_rad = 0.0;  
+  if (_CHIANTI9 == 0){
+	  if ((T < pow(10, 4.6))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -21.85) * (1e-7 / 1e-6);
+	  }
 
-  else if ((T >= pow(10, 4.6)) && (T < pow(10,4.9))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-31.0) * ( 1e-7 / 1e-6) * std::pow(T,2.0);
-  } 
+	  else if ((T >= pow(10, 4.6)) && (T < pow(10, 4.9))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -31.0) * (1e-7 / 1e-6) * std::pow(T, 2.0);
+	  }
 
-  else if ((T >= pow(10, 4.9)) && (T < pow(10,5.4))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-21.2) * ( 1e-7 / 1e-6);
-  }
+	  else if ((T >= pow(10, 4.9)) && (T < pow(10, 5.4))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -21.2) * (1e-7 / 1e-6);
+	  }
 
-  else if ((T >= pow(10, 5.4)) && (T < pow(10,5.75))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-10.4) * ( 1e-7 / 1e-6) * std::pow(T,-2.0);
-  }
+	  else if ((T >= pow(10, 5.4)) && (T < pow(10, 5.75))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -10.4) * (1e-7 / 1e-6) * std::pow(T, -2.0);
+	  }
 
-  else if ((T >= pow(10, 5.75)) && (T < pow(10,6.3))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-21.94) * ( 1e-7 / 1e-6);
-  }
+	  else if ((T >= pow(10, 5.75)) && (T < pow(10, 6.3))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -21.94) * (1e-7 / 1e-6);
+	  }
 
-  else if ((T >= pow(10, 6.3))) {
-    Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*std::pow(10,-17.73) * ( 1e-7 / 1e-6) * std::pow(T,-2.0/3.0);
+	  else if ((T >= pow(10, 6.3))) {
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*std::pow(10, -17.73) * (1e-7 / 1e-6) * std::pow(T, -2.0 / 3.0);
+	  }
   }
-*/
+  else if (_CHIANTI9 == 1){
+	  // Definition according to Dere et al. 2019
+	  std::vector<CFreal> temperature;
+	  std::vector<CFreal> RadCur;
+	  std::vector<CFreal> logRadCur;
+	  CFuint m_sampleTem = 101;
+	  temperature.resize(m_sampleTem, 0.0);
+	  RadCur.resize(m_sampleTem, 0.0);
+	  logRadCur.resize(m_sampleTem, 0.0);
+	  // erg S^{-1} cm^{-3}
+	  logRadCur[0] = -23.00744648;
+	  logRadCur[1] = -22.55439580;
+	  logRadCur[2] = -22.15614458;
+	  logRadCur[3] = -21.83268267;
+	  logRadCur[4] = -21.64589156;
+	  logRadCur[5] = -21.61618463;
+	  logRadCur[6] = -21.68402965;
+	  logRadCur[7] = -21.79048499;
+	  logRadCur[8] = -21.87614836;
+	  logRadCur[9] = -21.91009489;
+	  logRadCur[10] = -21.89962945;
+	  logRadCur[11] = -21.86012091;
+	  logRadCur[12] = -21.79588002;
+	  logRadCur[13] = -21.71669877;
+	  logRadCur[14] = -21.62342304;
+	  logRadCur[15] = -21.52143350;
+	  logRadCur[16] = -21.41793664;
+	  logRadCur[17] = -21.33068312;
+	  logRadCur[18] = -21.27736608;
+	  logRadCur[19] = -21.25181197;
+	  logRadCur[20] = -21.24184538;
+	  logRadCur[21] = -21.25806092;
+	  logRadCur[22] = -21.27901426;
+	  logRadCur[23] = -21.27164622;
+	  logRadCur[24] = -21.24412514;
+	  logRadCur[25] = -21.21467016;
+	  logRadCur[26] = -21.19586057;
+	  logRadCur[27] = -21.18309616;
+	  logRadCur[28] = -21.18708664;
+	  logRadCur[29] = -21.24108811;
+	  logRadCur[30] = -21.35163999;
+	  logRadCur[31] = -21.45099674;
+	  logRadCur[32] = -21.48678240;
+	  logRadCur[33] = -21.47625353;
+	  logRadCur[34] = -21.45222529;
+	  logRadCur[35] = -21.43297363;
+	  logRadCur[36] = -21.42596873;
+	  logRadCur[37] = -21.42021640;
+	  logRadCur[38] = -21.41005040;
+	  logRadCur[39] = -21.40120949;
+	  logRadCur[40] = -21.40450378;
+	  logRadCur[41] = -21.42250820;
+	  logRadCur[42] = -21.44977165;
+	  logRadCur[43] = -21.47755577;
+	  logRadCur[44] = -21.51144928;
+	  logRadCur[45] = -21.55909092;
+	  logRadCur[46] = -21.63451202;
+	  logRadCur[47] = -21.73754891;
+	  logRadCur[48] = -21.85078089;
+	  logRadCur[49] = -21.95467702;
+	  logRadCur[50] = -22.03526908;
+	  logRadCur[51] = -22.08990945;
+	  logRadCur[52] = -22.11804503;
+	  logRadCur[53] = -22.12436006;
+	  logRadCur[54] = -22.11633856;
+	  logRadCur[55] = -22.10072681;
+	  logRadCur[56] = -22.08301995;
+	  logRadCur[57] = -22.06701918;
+	  logRadCur[58] = -22.05650548;
+	  logRadCur[59] = -22.05551733;
+	  logRadCur[60] = -22.06803389;
+	  logRadCur[61] = -22.10072681;
+	  logRadCur[62] = -22.15926677;
+	  logRadCur[63] = -22.24033216;
+	  logRadCur[64] = -22.32882716;
+	  logRadCur[65] = -22.40782324;
+	  logRadCur[66] = -22.47108330;
+	  logRadCur[67] = -22.51855737;
+	  logRadCur[68] = -22.54975089;
+	  logRadCur[69] = -22.57024772;
+	  logRadCur[70] = -22.58004425;
+	  logRadCur[71] = -22.58335949;
+	  logRadCur[72] = -22.58169871;
+	  logRadCur[73] = -22.57511836;
+	  logRadCur[74] = -22.56543110;
+	  logRadCur[75] = -22.55439580;
+	  logRadCur[76] = -22.54060751;
+	  logRadCur[77] = -22.52724355;
+	  logRadCur[78] = -22.51427857;
+	  logRadCur[79] = -22.49894074;
+	  logRadCur[80] = -22.48545225;
+	  logRadCur[81] = -22.47108330;
+	  logRadCur[82] = -22.45593196;
+	  logRadCur[83] = -22.44009337;
+	  logRadCur[84] = -22.42365865;
+	  logRadCur[85] = -22.40671393;
+	  logRadCur[86] = -22.38933984;
+	  logRadCur[87] = -22.37059040;
+	  logRadCur[88] = -22.35163999;
+	  logRadCur[89] = -22.33161408;
+	  logRadCur[90] = -22.31158018;
+	  logRadCur[91] = -22.29073004;
+	  logRadCur[92] = -22.26921772;
+	  logRadCur[93] = -22.24795155;
+	  logRadCur[94] = -22.22621356;
+	  logRadCur[95] = -22.20411998;
+	  logRadCur[96] = -22.18111459;
+	  logRadCur[97] = -22.15864053;
+	  logRadCur[98] = -22.13608262;
+	  logRadCur[99] = -22.11294562;
+	  logRadCur[100] = -22.08937560;
 
-  // Definition according to Dere et al. 2019
-  std::vector<CFreal> temperature;  
-  std::vector<CFreal> RadCur; 
-  std::vector<CFreal> logRadCur; 
-  CFuint m_sampleTem=101;
-  temperature.resize(m_sampleTem, 0.0);
-  RadCur.resize(m_sampleTem, 0.0);
-  logRadCur.resize(m_sampleTem, 0.0);
-  // erg S^{-1} cm^{-3}
-     logRadCur[0]= -23.00744648;
-     logRadCur[1]= -22.55439580;
-     logRadCur[2]= -22.15614458;
-     logRadCur[3]= -21.83268267;
-     logRadCur[4]= -21.64589156;
-     logRadCur[5]= -21.61618463;
-     logRadCur[6]= -21.68402965;
-     logRadCur[7]= -21.79048499;
-     logRadCur[8]= -21.87614836;
-     logRadCur[9]= -21.91009489;
-     logRadCur[10]= -21.89962945;
-     logRadCur[11]= -21.86012091;
-     logRadCur[12]= -21.79588002;
-     logRadCur[13]= -21.71669877;
-     logRadCur[14]= -21.62342304;
-     logRadCur[15]= -21.52143350;
-     logRadCur[16]= -21.41793664;
-     logRadCur[17]= -21.33068312;
-     logRadCur[18]= -21.27736608;
-     logRadCur[19]= -21.25181197;
-     logRadCur[20]= -21.24184538;
-     logRadCur[21]= -21.25806092;
-     logRadCur[22]= -21.27901426;
-     logRadCur[23]= -21.27164622;
-     logRadCur[24]= -21.24412514;
-     logRadCur[25]= -21.21467016;
-     logRadCur[26]= -21.19586057;
-     logRadCur[27]= -21.18309616;
-     logRadCur[28]= -21.18708664;
-     logRadCur[29]= -21.24108811;
-     logRadCur[30]= -21.35163999;
-     logRadCur[31]= -21.45099674;
-     logRadCur[32]= -21.48678240;
-     logRadCur[33]= -21.47625353;
-     logRadCur[34]= -21.45222529;
-     logRadCur[35]= -21.43297363;
-     logRadCur[36]= -21.42596873;
-     logRadCur[37]= -21.42021640;
-     logRadCur[38]= -21.41005040;
-     logRadCur[39]= -21.40120949;
-     logRadCur[40]= -21.40450378;
-     logRadCur[41]= -21.42250820;
-     logRadCur[42]= -21.44977165;
-     logRadCur[43]= -21.47755577;
-     logRadCur[44]= -21.51144928;
-     logRadCur[45]= -21.55909092;
-     logRadCur[46]= -21.63451202;
-     logRadCur[47]= -21.73754891;
-     logRadCur[48]= -21.85078089;
-     logRadCur[49]= -21.95467702;
-     logRadCur[50]= -22.03526908;
-     logRadCur[51]= -22.08990945;
-     logRadCur[52]= -22.11804503;
-     logRadCur[53]= -22.12436006;
-     logRadCur[54]= -22.11633856;
-     logRadCur[55]= -22.10072681;
-     logRadCur[56]= -22.08301995;
-     logRadCur[57]= -22.06701918;
-     logRadCur[58]= -22.05650548;
-     logRadCur[59]= -22.05551733;
-     logRadCur[60]= -22.06803389;
-     logRadCur[61]= -22.10072681;
-     logRadCur[62]= -22.15926677;
-     logRadCur[63]= -22.24033216;
-     logRadCur[64]= -22.32882716;
-     logRadCur[65]= -22.40782324;
-     logRadCur[66]= -22.47108330;
-     logRadCur[67]= -22.51855737;
-     logRadCur[68]= -22.54975089;
-     logRadCur[69]= -22.57024772;
-     logRadCur[70]= -22.58004425;
-     logRadCur[71]= -22.58335949;
-     logRadCur[72]= -22.58169871;
-     logRadCur[73]= -22.57511836;
-     logRadCur[74]= -22.56543110;
-     logRadCur[75]= -22.55439580;
-     logRadCur[76]= -22.54060751;
-     logRadCur[77]= -22.52724355;
-     logRadCur[78]= -22.51427857;
-     logRadCur[79]= -22.49894074;
-     logRadCur[80]= -22.48545225;
-     logRadCur[81]= -22.47108330;
-     logRadCur[82]= -22.45593196;
-     logRadCur[83]= -22.44009337;
-     logRadCur[84]= -22.42365865;
-     logRadCur[85]= -22.40671393;
-     logRadCur[86]= -22.38933984;
-     logRadCur[87]= -22.37059040;
-     logRadCur[88]= -22.35163999;
-     logRadCur[89]= -22.33161408;
-     logRadCur[90]= -22.31158018;
-     logRadCur[91]= -22.29073004;
-     logRadCur[92]= -22.26921772;
-     logRadCur[93]= -22.24795155;
-     logRadCur[94]= -22.22621356;
-     logRadCur[95]= -22.20411998;
-     logRadCur[96]= -22.18111459;
-     logRadCur[97]= -22.15864053;
-     logRadCur[98]= -22.13608262;
-     logRadCur[99]= -22.11294562;
-     logRadCur[100]= -22.08937560;   
+	  for (CFuint i = 0; i < m_sampleTem; ++i){
+		  CFreal Exp_Fac = 4.0 + 0.05*i;
+		  temperature[i] = std::pow(10, Exp_Fac);
+		  RadCur[i] = std::pow(10, logRadCur[i]);
+	  }
 
-  for (CFuint i = 0; i < m_sampleTem; ++i){
-	  CFreal Exp_Fac=4.0+0.05*i;
-      temperature[i]=std::pow(10,Exp_Fac); 
-      RadCur[i]=std::pow(10,logRadCur[i]); 
-  }
-  
-  CFreal Q_rad = 0.0;
-  CFreal RadCur_Cur = 0.0;
-  double Coefi1;
-  double Coefi2;
-  CFreal Temp;
-  if ((T < pow(10,4.0))) {
-    Q_rad = 0.0; 
-  }
-  else if(T > pow(10,9.0)){
-	Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*RadCur[m_sampleTem-1] * ( 1e-7 / 1e-6);  
-  }
-  else{
-	  for (CFuint i = 0; i < m_sampleTem-1; ++i){
-		  if((T-temperature[i])*(temperature[i+1]-T)>=0.){
-			  Temp=temperature[i+1]-temperature[i];
-	          Coefi1=(temperature[i+1]-T)/Temp;
-	          Coefi2=(T-temperature[i])/Temp;
-			  RadCur_Cur=RadCur[i] * Coefi1 + RadCur[i+1]* Coefi2;
-			  Q_rad = std::pow(1e-6*density/(mu_cor*mH),2)*RadCur_Cur * ( 1e-7 / 1e-6);
+	  CFreal RadCur_Cur = 0.0;
+	  double Coefi1;
+	  double Coefi2;
+	  CFreal Temp;
+	  if ((T < pow(10, 4.0))) {
+		  Q_rad = 0.0;
+	  }
+	  else if (T > pow(10, 9.0)){
+		  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*RadCur[m_sampleTem - 1] * (1e-7 / 1e-6);
+	  }
+	  else{
+		  for (CFuint i = 0; i < m_sampleTem - 1; ++i){
+			  if ((T - temperature[i])*(temperature[i + 1] - T) >= 0.){
+				  Temp = temperature[i + 1] - temperature[i];
+				  Coefi1 = (temperature[i + 1] - T) / Temp;
+				  Coefi2 = (T - temperature[i]) / Temp;
+				  RadCur_Cur = RadCur[i] * Coefi1 + RadCur[i + 1] * Coefi2;
+				  Q_rad = std::pow(1e-6*density / (mu_cor*mH), 2)*RadCur_Cur * (1e-7 / 1e-6);
+			  }
 		  }
-	  }  
-  }    
-  // from erg S^{-1} cm^{-3} to J S^{-1} cm^{-3}: *(1e-7/1e-6)
+	  }
+	  // from erg S^{-1} cm^{-3} to J S^{-1} cm^{-3}: *(1e-7/1e-6)
+  }
   // Definition acording to Athay 1986
 
   CFreal Q_rad_athay = 0.0;
@@ -672,7 +685,31 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
         source[3] -= dP_dz*volumes[elementID]; 
         socket_wavepressure.getDataHandle()[elementID] =wave_pressure_approx;
       }
-      
+
+	  // Rotation source terms (Coriolis and centrifugal forces)
+	  if (_rotation == 1) {
+		  // Sidereal rotation rate [rad/s]
+		  const CFreal Omega_phys = 2.97e-6;
+		  // Non-dimensional rotation rate
+		  const CFreal Omega_nd = Omega_phys * RSun / vRef;
+
+		  // Coriolis acceleration: a_cor = -2 * Omega x v
+		  // With Omega along z-axis: Omega x v = (Omega_z * Vy, -Omega_z * Vx, 0)
+		  const CFreal cor_x = -2.0 * Omega_nd * Vy;
+		  const CFreal cor_y = 2.0 * Omega_nd * Vx;
+		  const CFreal cor_z = 0.0;
+
+		  // Centrifugal acceleration: a_cent = -Omega^2 * (x, y, 0)
+		  const CFreal cent_x = -Omega_nd * Omega_nd * x_dimless;
+		  const CFreal cent_y = -Omega_nd * Omega_nd * y_dimless;
+		  const CFreal cent_z = 0.0;
+
+		  // Add to momentum equations (note: source = rho * a for conservative form)
+		  source[1] -= (*currState)[0] * (cor_x + cent_x) * volumes[elementID];
+		  source[2] -= (*currState)[0] * (cor_y + cent_y) * volumes[elementID];
+		  source[3] -= (*currState)[0] * (cor_z + cent_z) * volumes[elementID];
+	  }
+
       source[4] = 0.0;
       source[5] = 0.0;
       source[6] = 0.0;
@@ -685,6 +722,21 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
         source[7] += (*currState)[0]*Vdotg*volumes[elementID];
 	socket_gravity.getDataHandle()[elementID*4+3] = (*currState)[0]*Vdotg; //*volumes[elementID];
       }
+
+	  // Rotation contribution to energy equation
+	  if (_rotation == 1) {
+		  const CFreal Omega_phys = 2.97e-6;
+		  const CFreal Omega_nd = Omega_phys * RSun / vRef;
+
+		  // Centrifugal acceleration
+		  const CFreal cent_x = -Omega_nd * Omega_nd * x_dimless;
+		  const CFreal cent_y = -Omega_nd * Omega_nd * y_dimless;
+		  const CFreal cent_z = 0.0;
+
+		  // Energy source: v dot a_cent (centrifugal work)
+		  const CFreal Vdotrot = Vx * cent_x + Vy * cent_y + Vz * cent_z;
+		  source[7] -= (*currState)[0] * Vdotrot * volumes[elementID];
+	  }
       
       if (_Manchester == 1) {
 
@@ -694,7 +746,12 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
         } else if (Qh3_bool == 1) {
           result_flux = Qh3;
         } else if (Qh4_bool == 1) {
+		 //>>----Mark 2025.11.22 by HP--------------------
           result_flux = Qh4;
+		 //<<----Mark 2025.11.22 by HP--------------------
+		  //CFreal alpha = (1.0 + std::tanh(10.0*(2.0*RSun - r) / RSun)) / 2.0;
+		  //result_flux = Qh4*alpha;
+		  //result_flux = Qh4*alpha + 0.2*Qh3*(1.0 - alpha);
         } else if (Qh_lio_bool == 1) {
           result_flux = H_CH;
         }
@@ -717,32 +774,57 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
 	  //if (deCompE == 1 && r_dimless>1.05){
 	  //_deCompE = 1;
 	  if (_deCompE == 1){
-		  const CFuint BXID = 4;
-		  const CFuint BYID = 5;
-		  const CFuint BZID = 6;
-		  const CFuint gradBXID = elementID*nbEqs + BXID;
-		  const CFuint gradBYID = elementID*nbEqs + BYID;
-		  const CFuint gradBZID = elementID*nbEqs + BZID;
-		  _gradBx[XX] = this->m_ux[gradBXID];
-		  _gradBx[YY] = this->m_uy[gradBXID];
-		  _gradBx[ZZ] = this->m_uz[gradBXID];
-		  _gradBy[XX] = this->m_ux[gradBYID];
-		  _gradBy[YY] = this->m_uy[gradBYID];
-		  _gradBy[ZZ] = this->m_uz[gradBYID];
-		  _gradBz[XX] = this->m_ux[gradBZID];
-		  _gradBz[YY] = this->m_uy[gradBZID];
-		  _gradBz[ZZ] = this->m_uz[gradBZID];
-		  std::vector<CFreal> BdotLamdaB(3, 0.0);
-		  std::vector<CFreal> VdotLamdaB(3, 0.0);
-		  VdotLamdaB[0] = Vx*_gradBx[XX] + Vy*_gradBx[YY] + Vz*_gradBx[ZZ];
-		  VdotLamdaB[1] = Vx*_gradBy[XX] + Vy*_gradBy[YY] + Vz*_gradBy[ZZ];
-		  VdotLamdaB[2] = Vx*_gradBz[XX] + Vy*_gradBz[YY] + Vz*_gradBz[ZZ];
-		  BdotLamdaB[0] = (Bx*_gradBx[XX] + By*_gradBx[YY] + Bz*_gradBx[ZZ]) / B0;
-		  BdotLamdaB[1] = (Bx*_gradBy[XX] + By*_gradBy[YY] + Bz*_gradBy[ZZ]) / B0;
-		  BdotLamdaB[2] = (Bx*_gradBz[XX] + By*_gradBz[YY] + Bz*_gradBz[ZZ]) / B0;
-		  Q_deCompE = Vx*BdotLamdaB[0] + Vy*BdotLamdaB[1] + Vz*BdotLamdaB[2] -
-			  (Bx*VdotLamdaB[0] + By*VdotLamdaB[1] + Bz*VdotLamdaB[2]) / B0;
-		  source[7] += Q_deCompE*volumes[elementID];
+		  //if (_TriD > 0.1){
+			  const CFuint BXID = 4;
+			  const CFuint BYID = 5;
+			  const CFuint BZID = 6;
+			  const CFuint gradBXID = elementID*nbEqs + BXID;
+			  const CFuint gradBYID = elementID*nbEqs + BYID;
+			  const CFuint gradBZID = elementID*nbEqs + BZID;
+			  _gradBx[XX] = this->m_ux[gradBXID];
+			  _gradBx[YY] = this->m_uy[gradBXID];
+			  _gradBx[ZZ] = this->m_uz[gradBXID];
+			  _gradBy[XX] = this->m_ux[gradBYID];
+			  _gradBy[YY] = this->m_uy[gradBYID];
+			  _gradBy[ZZ] = this->m_uz[gradBYID];
+			  _gradBz[XX] = this->m_ux[gradBZID];
+			  _gradBz[YY] = this->m_uy[gradBZID];
+			  _gradBz[ZZ] = this->m_uz[gradBZID];
+			  std::vector<CFreal> BdotLamdaB(3, 0.0);
+			  std::vector<CFreal> VdotLamdaB(3, 0.0);
+			  VdotLamdaB[0] = Vx*_gradBx[XX] + Vy*_gradBx[YY] + Vz*_gradBx[ZZ] ;
+			  VdotLamdaB[1] = Vx*_gradBy[XX] + Vy*_gradBy[YY] + Vz*_gradBy[ZZ] ;
+			  VdotLamdaB[2] = Vx*_gradBz[XX] + Vy*_gradBz[YY] + Vz*_gradBz[ZZ] ;
+			  BdotLamdaB[0] = (Bx*_gradBx[XX] + By*_gradBx[YY] + Bz*_gradBx[ZZ] ) / B0;
+			  BdotLamdaB[1] = (Bx*_gradBy[XX] + By*_gradBy[YY] + Bz*_gradBy[ZZ] ) / B0;
+			  BdotLamdaB[2] = (Bx*_gradBz[XX] + By*_gradBz[YY] + Bz*_gradBz[ZZ] ) / B0;
+			  Q_deCompE = Vx*BdotLamdaB[0] + Vy*BdotLamdaB[1] + Vz*BdotLamdaB[2]  -
+				  (Bx*VdotLamdaB[0] + By*VdotLamdaB[1] + Bz*VdotLamdaB[2] ) / B0;
+			  source[7] += Q_deCompE*volumes[elementID];
+		  //}
+		  /*
+		  else{
+			  const CFuint BXID = 4;
+			  const CFuint BYID = 5;
+			  const CFuint BZID = 6;
+			  const CFuint gradBXID = elementID*nbEqs + BXID;
+			  const CFuint gradBYID = elementID*nbEqs + BYID;
+			  const CFuint gradBZID = elementID*nbEqs + BZID;
+			  _gradBx[XX] = this->m_ux[gradBXID];
+			  _gradBx[YY] = this->m_uy[gradBXID];
+			  _gradBy[XX] = this->m_ux[gradBYID];
+			  _gradBy[YY] = this->m_uy[gradBYID];
+			  std::vector<CFreal> BdotLamdaB(2, 0.0);
+			  std::vector<CFreal> VdotLamdaB(2, 0.0);
+			  VdotLamdaB[0] = Vx*_gradBx[XX] + Vy*_gradBx[YY];
+			  VdotLamdaB[1] = Vx*_gradBy[XX] + Vy*_gradBy[YY];
+			  BdotLamdaB[0] = (Bx*_gradBx[XX] + By*_gradBx[YY]) / B0;
+			  BdotLamdaB[1] = (Bx*_gradBy[XX] + By*_gradBy[YY]) / B0;
+			  Q_deCompE = Vx*BdotLamdaB[0] + Vy*BdotLamdaB[1] -
+				  (Bx*VdotLamdaB[0] + By*VdotLamdaB[1]) / B0;
+			  source[7] += Q_deCompE*volumes[elementID];
+		  }
+		  */
 	  }
 	  //<< energy Source terms caused by decomposed energy equation
 

@@ -104,11 +104,15 @@ private: //data
   CFreal _rhoBC;
   CFreal _VrBC;  
   CFint _rotation;
+  CFint _nonhomBC;
   /// array specifying the IDs for which a special treatment has to be applied
   std::vector<CFuint> _projectionIDs;
   
   /// IDs of the variables from which values are read by file
   std::vector<CFuint> m_varIDs;
+
+  /// missing 
+  bool _PPorNot;
   
 }; // end of class SuperInletProjectionConstrained
 

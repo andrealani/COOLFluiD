@@ -105,6 +105,7 @@ Simulator.SubSystem.Flow.Data.Venktn3DStrict.strictCoeff = 1.0
 #Simulator.SubSystem.Flow.Data.Venktn3DStrict.strictCoeff = 0.5
 #corresponding to variables which don't implement limiter
 Simulator.SubSystem.Flow.Data.Venktn3DStrict.NoLimiterID = 1 2 3 4 5 6
+Simulator.SubSystem.Flow.Data.Venktn3DStrict.Vlocal = 0.0
 
 # HW settings for time evolving runs
 Simulator.SubSystem.Flow.Data.Venktn3DStrict.psiMinEqual1 = true
@@ -400,6 +401,7 @@ Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 Simulator.SubSystem.Flow.Data.LinearVar   = Cons
 #Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAST
 Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAHWST
+Simulator.SubSystem.Flow.Data.MHDConsACAHWST.CHIANTI9 = 1
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.gravity = 1
 #>>Full MHD#
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.PevtsovHeating = 1
@@ -472,6 +474,7 @@ Simulator.SubSystem.Flow.Jet1.pressure_Neumann = 0
 Simulator.SubSystem.Flow.Jet1.JensRhoIni = 0
 Simulator.SubSystem.Flow.Jet1.JensPIni = 0
 Simulator.SubSystem.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
+Simulator.SubSystem.Flow.Jet1.PPorNot = true
 
 # needed for computing Br from file
 Simulator.SubSystem.Flow.Jet1.VarIDs = 0
@@ -487,6 +490,8 @@ Simulator.SubSystem.Flow.Data.DistanceBased.NbClosestPoints = 8
 #Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTwADF = ./MapData/HPfilter04/map_gong_lmax25_2024 0400.dat 101 1 2024 40905 40904
 #Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTwADF = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_2025 0400.dat 663 1 2025 32919 32918
 Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTwADF = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_2025 0400.dat 10 1 2025 32919 32918
+#Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTwADF = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_2025 00.dat 10 60 2025 3291904 3291804
+
 # The list of different magnetogram file names corresponding to different times, such as at 1.t[0] 2.t[-1] 3.t[0] 4.t[1] 5.t[2] 6.t[3] 7.t[4], already in the right format.
 # The name stamp has been autamatically defined in source code "NodalStatesExtrapolator.ci", no need to make modifications here.
 Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = ./MapData/HPfilter04/map_gong_lmax25_20240409050400.dat ./MapData/HPfilter04/map_gong_lmax25_20240409040400.dat \

@@ -33,8 +33,11 @@ void Venktn3DStrict::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< bool >
     ("psiMinEqual1","impose psimin = 1 for certain variables (Haopeng Wang).");
   options.addConfigOption< vector<CFuint> >
-	  ("NoLimiterID", "Used to cancel limiter.");
+    ("NoLimiterID", "Used to cancel limiter.");
+  options.addConfigOption< CFreal >
+    ("Vlocal", "Local velocity to control limiter.");
 }
+      
 //////////////////////////////////////////////////////////////////////////////
 
 Venktn3DStrict::Venktn3DStrict(const std::string& name) :
@@ -51,6 +54,9 @@ Venktn3DStrict::Venktn3DStrict(const std::string& name) :
 
   _NoLimiterID = vector<CFuint>();
   setParameter("NoLimiterID", &_NoLimiterID);
+ 
+  _vLocal = 0.0;
+  setParameter("Vlocal", &_vLocal);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -237,10 +243,22 @@ void Venktn3DStrict::limit(const vector<vector<Node*> >& coord,
     }
   }
   //>> Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
+  const CFreal V_local = std::sqrt((*state)[1] * (*state)[1] + (*state)[2] * (*state)[2] + (*state)[3] * (*state)[3]);
+  //CFreal B_local = std::sqrt((*state)[4] * (*state)[4] + (*state)[5] * (*state)[5] + (*state)[6] * (*state)[6])*2.2e-4;
   if (_NoLimiterID.size() > 0){
-	  for (CFuint iVar = 0; iVar < _NoLimiterID.size(); ++iVar){
-		  limiterValue[_NoLimiterID[iVar]] = 1.0;
-	  }
+    for (CFuint iVar = 0; iVar < _NoLimiterID.size(); ++iVar){
+      if (_vLocal > 0.) {
+	if (((_NoLimiterID[iVar] == 1) || (_NoLimiterID[iVar] == 2) || (_NoLimiterID[iVar] == 3)) && (V_local > _vLocal)){	
+	  limiterValue[_NoLimiterID[iVar]] = limiterValue[_NoLimiterID[iVar]];
+	}
+      }
+      //else if (((_NoLimiterID[iVar] == 4) || (_NoLimiterID[iVar] == 5) || (_NoLimiterID[iVar] == 6)) && (B_local > 6.1e-3)){
+      //	  limiterValue[_NoLimiterID[iVar]] = limiterValue[_NoLimiterID[iVar]];
+      //  }
+      else{
+	limiterValue[_NoLimiterID[iVar]] = 1.0;
+      } 
+    }
   }
   //<< Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables
 }

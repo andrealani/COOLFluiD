@@ -19,7 +19,7 @@ namespace COOLFluiD {
 
     namespace FiniteVolume {
 
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////  
 
 /**
  * This class represents source term for artificial compressibility
@@ -108,6 +108,9 @@ private:
   CFint _RadiativeLossTerm;
   CFint _wave_pressure;
   CFint _deCompE;
+  CFint _CHIANTI9;
+  CFint _rotation;
+  //CFreal _TriD;
 //  CFint _zplus;
 //  CFint _zminus;
 }; // end of class MHDConsACAHWSourceTerm

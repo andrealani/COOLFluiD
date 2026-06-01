@@ -85,6 +85,9 @@ protected:
 
   /// corresponding to variables which don't implement limiter
   std::vector<CFuint> _NoLimiterID;
+
+  /// local velocity to control the limiter
+  CFreal _vLocal;
   
 private:
 

@@ -395,6 +395,7 @@ Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 Simulator.SubSystem.Flow.Data.LinearVar   = Cons
 #Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAST
 Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAHWST
+Simulator.SubSystem.Flow.Data.MHDConsACAHWST.CHIANTI9 = 1
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.gravity = 1
 #>>Full MHD#
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.PevtsovHeating = 1
@@ -470,6 +471,7 @@ Simulator.SubSystem.Flow.Jet1.pressure_Neumann = 0
 Simulator.SubSystem.Flow.Jet1.JensRhoIni = 0
 Simulator.SubSystem.Flow.Jet1.JensPIni = 0
 Simulator.SubSystem.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
+Simulator.SubSystem.Flow.Jet1.PPorNot = true
 
 # needed for computing Br from file
 Simulator.SubSystem.Flow.Jet1.VarIDs = 0

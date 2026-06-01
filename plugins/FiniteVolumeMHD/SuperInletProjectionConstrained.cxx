@@ -18,7 +18,7 @@ namespace COOLFluiD {
 
     namespace FiniteVolume {
 
-//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////// 
 
 MethodCommandProvider<SuperInletProjectionConstrained, CellCenterFVMData, FiniteVolumeModule> 
 superInletProjectionConstrainedFVMCCProvider("SuperInletProjectionConstrainedFVMCC");
@@ -33,6 +33,8 @@ void SuperInletProjectionConstrained::defineConfigOptions(Config::OptionList& op
   options.addConfigOption< CFreal >("rhoBC","density at the boundary");
   options.addConfigOption< CFreal >("VrBC","radial velocity at the boundary");
   options.addConfigOption< CFint >("rotation","rotation, 0 or 1");
+  options.addConfigOption< CFint >("nonhomBC", "nonhomgenious innerboundary density, 0 or 1");
+  options.addConfigOption< bool >("PPorNot", "????, false or true");
 }
       
 //////////////////////////////////////////////////////////////////////////////
@@ -69,6 +71,12 @@ SuperInletProjectionConstrained::SuperInletProjectionConstrained(const std::stri
 
   //_VrBC = vector<CFuint>();
   setParameter("rotation",&_rotation);
+
+  _nonhomBC = 0;
+  setParameter("nonhomBC", &_nonhomBC);
+  
+  _PPorNot = false;
+  setParameter("PPorNot", &_PPorNot);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -218,7 +226,6 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
   const CFreal rhoI_dimless = std::sqrt(xI_dimless*xI_dimless + yI_dimless*yI_dimless);
   const CFreal phiI = std::atan2(yI_dimless,xI_dimless);
 
-
   // Determine the latitude of the ghost cell:
   // Only needed when using the dead-zone
   if (thetaG > -PI && thetaG < -PI*0.5) {
@@ -248,6 +255,11 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
   CFreal pref = 0.03851;
   CFreal vref = 4.8e5;
   CFreal Veps = 2.0e-6;
+  //>> Mark 20260215---------------
+  //RhoVcri = 8.0e8(Km/s/cm^3)*1e9(convert to m/s/m^3)*1.67e-27(kg, mass of proton) / rhoref / vref;
+  CFreal RhoVcri = 1.67e-2;
+  //<< Mark 20260215---------------
+
 
   //===== M A G N E T I C  F I E L D   B O U N D A R Y   C O N D I T I O N ===============
  
@@ -380,14 +392,6 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
   //  VzB=0.0;
   //}
 
-
-
-  (*ghostState)[1] = 2.*VxB -(*innerState)[1]; 
-  (*ghostState)[2] = 2.*VyB -(*innerState)[2]; 
-  (*ghostState)[3] = 2.*VzB -(*innerState)[3]; 
-
-
-
   //vA = B / SQRT(rho mu)
   //vA^2 = B^2 / (rho mu)
   // rho mu = B^2 / vA^2 --> rho = 1/mu B^2 / vA^2
@@ -395,6 +399,46 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
 
   CFreal densityBoundary_dimless = _rhoBC; 
   CFreal PressureBoundary_dimless = _pBC;
+  //---->> Mark 2025.12.06---------------------------------------------
+  ///*
+  if (_nonhomBC == 1){
+	  if (Bmag*Bref < 2.1e-3){
+		  //densityBoundary_dimless = (Bmag*Bref*9.0e-11 + 1.67e-13) / rhoref;
+		  //densityBoundary_dimless = (Bmag*Bref*9.167e-12 + 3.34e-13) / rhoref;
+		  densityBoundary_dimless = (Bmag*Bref*(3.56e-13 - _rhoBC*rhoref) / 2.1e-3 + _rhoBC*rhoref) / rhoref;
+	  }
+	  else if (2.1e-3 <= Bmag*Bref && Bmag*Bref < 6.1e-3){
+		  densityBoundary_dimless = (Bmag*Bref*3.345e-10 - 3.4645e-13) / rhoref;
+	  }
+	  else if (6.1e-3 <= Bmag*Bref){
+		  densityBoundary_dimless = (Bmag*Bref*4.2507e-9 - 2.423527e-11) / rhoref;
+	  }
+  }
+ //*/
+  //>> Mark 20260215---------------
+  //PressureBoundary_dimless = _pBC*densityBoundary_dimless / _rhoBC;
+  //<< Mark 20260215---------------
+
+  //>> Mark 20260215---------------
+  /*
+  CFreal Vr = xBoundary_dimless / rBoundary_dimless*VxB + yBoundary_dimless / rBoundary_dimless*VyB + zBoundary_dimless / rBoundary_dimless*VzB;
+  if (densityBoundary_dimless*Vr < 0.0){
+	  VxB = 0.0;
+	  VyB = 0.0;
+	  VzB = 0.0;
+  }
+  else if (densityBoundary_dimless*Vr > RhoVcri){
+	  VxB = VxB*RhoVcri / densityBoundary_dimless / Vr;
+	  VyB = VyB*RhoVcri / densityBoundary_dimless / Vr;
+	  VzB = VzB*RhoVcri / densityBoundary_dimless / Vr;
+  }
+  */
+  //<< Mark 20260215---------------
+  (*ghostState)[1] = 2.*VxB - (*innerState)[1];
+  (*ghostState)[2] = 2.*VyB - (*innerState)[2];
+  (*ghostState)[3] = 2.*VzB - (*innerState)[3];
+
+  //------ Mark 2025.12.06<<-------------------------------------------
   //---->> Mark 2025.03.28---------------------------------------------
   //CFreal Temperature_ratio = PressureBoundary_dimless / densityBoundary_dimless;
   //------ Mark 2025.03.28<<-------------------------------------------
@@ -405,9 +449,14 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
   smooth_factor = 0.0;
   CFreal dist = (vA - maxvA)/2.0e3;
   smooth_factor = 0.5 + 0.5 * std::tanh(dist * 3.141592654);
-
-  CFreal densityG = smooth_factor * (Bmag*Bref)*(Bmag*Bref) / (maxvA*maxvA) / mu0 + densityBoundary_dimless * rhoref * (1.0-smooth_factor); 
-  (*ghostState)[0] = 2.0*(densityG / rhoref) - (*innerState)[0];
+  if (_PPorNot){
+	  CFreal densityG = smooth_factor * (Bmag*Bref)*(Bmag*Bref) / (maxvA*maxvA) / mu0 + densityBoundary_dimless * rhoref * (1.0 - smooth_factor);
+	  (*ghostState)[0] = 2.0*(densityG / rhoref) - (*innerState)[0];
+  }
+  else{
+	  CFreal densityG_dimless = 2.*densityBoundary_dimless - (*innerState)[0];
+	  (*ghostState)[0] = densityG_dimless;
+  }
 
   //pressurefactor = (densityG/ 1.67e-13) / _rhoBC;
 
@@ -445,9 +494,14 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
   smooth_factor = 0.0;
   dist = (minPlasmaBeta - plasmaBeta)/2.0e-6; //if current beta is 0.019, then dist is positive, smooth factor is close to 1
   smooth_factor = 0.5 + 0.5 * std::tanh(dist * 3.141592654);  //if the current beta is  0.3, then dist is negative and so smooth factor is 0
-
-  CFreal pthG = smooth_factor * pmag * minPlasmaBeta + pth * (1.0-smooth_factor);
-  (*ghostState)[7] = 2.0*(pthG / pref) - (*innerState)[7];
+  if (_PPorNot){
+	  CFreal pthG = smooth_factor * pmag * minPlasmaBeta + pth * (1.0 - smooth_factor);
+	  (*ghostState)[7] = 2.0*(pthG / pref) - (*innerState)[7];
+  }
+  else{
+	  (*ghostState)[7] = 2.*PressureBoundary_dimless - (*innerState)[7];
+  }
+  
 
 
 

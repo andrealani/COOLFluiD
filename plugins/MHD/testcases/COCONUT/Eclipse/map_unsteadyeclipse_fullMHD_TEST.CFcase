@@ -384,6 +384,7 @@ Simulator.SubSystem.Flow.Data.UpdateVar  = Prim
 Simulator.SubSystem.Flow.Data.SolutionVar = Cons
 Simulator.SubSystem.Flow.Data.LinearVar   = Cons
 Simulator.SubSystem.Flow.Data.SourceTerm =  MHDConsACAHWST
+Simulator.SubSystem.Flow.Data.MHDConsACAHWST.CHIANTI9 = 1
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.gravity = 1
 #>>Full MHD#
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.PevtsovHeating = 1
@@ -454,6 +455,7 @@ Simulator.SubSystem.Flow.Jet1.pressure_Neumann = 0
 Simulator.SubSystem.Flow.Jet1.JensRhoIni = 0
 Simulator.SubSystem.Flow.Jet1.JensPIni = 0
 Simulator.SubSystem.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
+Simulator.SubSystem.Flow.Jet1.PPorNot = true
 
 # needed for computing Br from file
 Simulator.SubSystem.Flow.Jet1.VarIDs = 0
@@ -466,6 +468,7 @@ Simulator.SubSystem.Flow.Data.DistanceBased.NbClosestPoints = 8
 #The seven strings correspond to 1."Path of magnetogram data files+prefix of file name" 2."suffix of file name" 3."number of magnetograms+1; n(t_{-1} ... t_{n+1})+1" 
 # 4."Time interval(hours) between 2 adjacent magnetogram" 5."year of the first magnetogram" 6."Month+day+hour of magnetogram at t[0]" 7."Month+day+hour of magnetogram at t[-1]"
 Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTwADF = plugins/MHD/testcases/COCONUT/Eclipse/MapData/map_gong_lmax25_2024 0400.dat 121 1 2024 40905 40904
+#plugins/MHD/testcases/COCONUT/Eclipse/MapData/map_gong_lmax25_2024 00.dat 121 60 2024 4090504 4090404
 
 # The list of different magnetogram file names corresponding to different times, such as at 1.t[0] 2.t[-1] 3.t[0] 4.t[1] 5.t[2] 6.t[3] 7.t[4], already in the right format.
 # The name stamp has been autamatically defiend in source code "NodalStatesExtrapolator.ci", no need to make modifications here.

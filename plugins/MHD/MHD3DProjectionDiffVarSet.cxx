@@ -114,7 +114,7 @@ RealVector& MHD3DProjectionDiffVarSet::getFlux(const RealVector& state,
    if (radius <= 10.0) {
      qFlux = -commFactor*(qFlux_x*normal[XX] + qFlux_y*normal[YY] + qFlux_z*normal[ZZ]); // q cdot n, this is for old conduction 
    } else {
-     qFlux =3.0/2.0*alpha_cond*state[0]*rho0/mu/mH*kB*T0_new*(Vx*normal[XX]+Vy*normal[YY]+Vz*normal[ZZ]);  // AL: sign may be wrong!! 
+     qFlux =3.0/2.0*alpha_cond*state[0]*rho0/mu/mH*kB*T0_new*(Vx*normal[XX]+Vy*normal[YY]+Vz*normal[ZZ]);
    }
 
   
@@ -138,9 +138,10 @@ RealVector& MHD3DProjectionDiffVarSet::getFlux(const RealVector& state,
  //  qFlux =smooth_factor*q_s + (1.0-smooth_factor)*q_p;
    //qFlux =mu*mH/state[0]/rho0/kB* smooth_factor*q_s + (1.0-smooth_factor)*q_p;    
 
-   
-   _flux[7] = -qFlux/q0*getModel().getThermalConductionFactor(); 
-   
+
+
+ _flux[7] = -qFlux/q0; 
+ 
  //std::cout << _flux[7] << endl; // The heat flux qFlux has a negative sign: - kappa nabla T. @Andrea: is this the same minus sign
                          // as in your template here _flux ... = - qFlux; or is this an additional minus sign coming
                          // from the geometry and orientation of the faces???
