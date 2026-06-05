@@ -1,0 +1,1060 @@
+# COOLFluiD Startfile
+
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -13.4622
+
+###############################################################################
+# User defined parameters
+###############################################################################
+# SubSystem Parameters
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/MapCR2296/
+Simulator.Paths.ResultsDir = plugins/MHD/testcases/COCONUT/MapCR2296/results-map-res-steady-fullMHD-zqs2296-lmax25/
+
+Maestro = LoopMaestro
+LoopMaestro.GlobalStopCriteria = GlobalMaxNumberSteps
+LoopMaestro.GlobalMaxNumberSteps.nbSteps = 1
+#LoopMaestro.AppendIter = true
+#LoopMaestro.RestartFromPreviousSolution = true
+
+Simulator.SubSystems = SubSystemA SubSystemB 
+Simulator.SubSystemTypes = StandardSubSystem StandardSubSystem
+
+###############################################################################
+# SubSystemA: polytropic
+###############################################################################
+
+# Boundary condition files, another definition for flow field is around Line 415
+Simulator.SubSystemA.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
+#Simulator.SubSystemA.EM.Data.DistanceBased.FileNameTw = ./MapData/ADAPT2008Lmax25/map_adapt_lmax25_20080803140000.dat 
+#Simulator.SubSystemA.EM.Data.DistanceBased.FileNameTw = ./MapData/ADAPT2021Lmax25/map_adapt_lmax20_20210910060000.dat
+#Simulator.SubSystemA.EM.Data.DistanceBased.FileNameTw = ./MapData/CasesforLuis/lessthan100G/map_gong_lmaxNone_2017-04-04_NLD.dat
+#Simulator.SubSystemA.EM.Data.DistanceBased.FileNameTw = ./MapData/CasesforLuis/lessthan100G/map_hmi_small_lmaxNone_cr2135_NLD.dat
+
+# Boundary condition files for flow field
+Simulator.SubSystemA.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
+#Simulator.SubSystemA.Flow.Data.DistanceBased.FileNameTw = ./MapData/ADAPT2008Lmax25/map_adapt_lmax25_20080803140000.dat
+#Simulator.SubSystemA.Flow.Data.DistanceBased.FileNameTw = ./MapData/ADAPT2021Lmax25/map_adapt_lmax20_20210910060000.dat
+#Simulator.SubSystemA.Flow.Data.DistanceBased.FileNameTw = ./MapData/CasesforLuis/lessthan100G/map_gong_lmaxNone_2017-04-04_NLD.dat
+#Simulator.SubSystemA.Flow.Data.DistanceBased.FileNameTw = ./MapData/CasesforLuis/lessthan100G/map_hmi_small_lmaxNone_cr2135_NLD.dat
+
+# Mesh reader
+# First reader 
+Simulator.SubSystemA.CFmeshFileReader0.Data.FileName = ./BCindependent5.CFmesh #./Mesh/30Rs_lvl6.CFmesh 
+# Restart
+#Simulator.SubSystemA.CFmeshFileReader0.Data.FileName = ./results-map-res/Level6/eclipse/Timeevolving/FullMHD/Lmax20dt2/CORCME-time_Poly0.CFmesh
+
+#Simulator.SubSystemA.CFmeshFileReader0.Data.ScalingFactor = 1.
+Simulator.SubSystemA.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 # ??
+
+# Second reader
+Simulator.SubSystemA.CFmeshFileReader1.Data.FileName = ./BCindependent5.CFmesh #./Mesh/30Rs_lvl6.CFmesh 
+# Restart
+#Simulator.SubSystemA.CFmeshFileReader1.Data.FileName = ./results-map-res/Level6/eclipse/Timeevolving/FullMHD/Lmax20dt2/CORCME-time_0.CFmesh
+
+#Simulator.SubSystemA.CFmeshFileReader1.Data.ScalingFactor = 1. 
+Simulator.SubSystemA.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+# Physical parameters
+Simulator.SubSystemA.MHD3DProjection.ConvTerm.gamma = 1.05
+#quasi-steady 
+Simulator.SubSystemA.Flow.Jet1.rotation = 1
+#Time-dependent
+#Simulator.SubSystemA.Flow.Jet1.rotation = 1 
+
+
+
+# Stop Condition
+# Quasi-steady state
+#Simulator.SubSystemA.StopCondition       = Norm
+#Simulator.SubSystemA.Norm.valueNorm      = -4.0 # -8 #-2.0
+Simulator.SubSystemA.StopCondition          = MaxNumberSteps
+Simulator.SubSystemA.MaxNumberSteps.nbSteps = 100 #500
+# Timedependent
+#Simulator.SubSystemA.StopCondition       = MaxTime
+#Simulator.SubSystemA.MaxTime.maxTime     =  1746.0 #0.003 # in seconds 
+
+# CFL definition
+#Simulator.SubSystemA.FlowIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystemA.FlowIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystemA.FlowIterator.Data.CFL.Function.Def = \
+if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<100,2,if(i<200,32.0,if(i<300,64,if(i<400,128,256))))
+#if(i<500,2.0,if(i<1000,4.0,if(i<1500,8.0,if(i<2000,16.,if(i<2500,32.,min(200.,cfl*1.02^2))))))
+#if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258)))))
+#if(i<50,2.0,if(i<100,4.0,if(i<150,8.0,if(i<200,16.,if(i<250,32.,min(200.,cfl*1.02^2))))))
+
+# Restart option
+Simulator.SubSystemA.Flow.Restart = false
+#Simulator.SubSystemA.Flow.Restart = true #### only for restart
+# Comment when restarting
+Simulator.SubSystemA.Flow.PreProcessCom = ComputeFieldFromPotential
+Simulator.SubSystemA.Flow.PreProcessNames = PreProcess1 # ??
+Simulator.SubSystemA.Flow.PreProcess1.VariableIDs = 4 5 6 # ??
+Simulator.SubSystemA.Flow.PreProcess1.OtherNamespace = EMNamespace
+Simulator.SubSystemA.Flow.PreProcess1.InterRadius = -1. # ??
+Simulator.SubSystemA.Flow.PreProcess1.DeltaSelection = 1000. # ??
+Simulator.SubSystemA.Flow.PreProcess1.ProcessRate = 100000000
+
+# Divergence cleaning method
+#Simulator.SubSystemA.MHD3DProjection.ConvTerm.refSpeed = 1.
+Simulator.SubSystemA.MHD3DProjection.ConvTerm.refSpeed = 3. # 9. #
+
+# Limiter
+Simulator.SubSystemA.Flow.Data.Limiter = Venktn3DStrict
+Simulator.SubSystemA.Flow.Data.Venktn3DStrict.coeffEps = 5.
+Simulator.SubSystemA.Flow.Data.Venktn3DStrict.isMFMHD = true
+# Set to 1.0 by HP on 20240112
+Simulator.SubSystemA.Flow.Data.Venktn3DStrict.strictCoeff = 1.0
+#Simulator.SubSystemA.Flow.Data.Venktn3DStrict.strictCoeff = 0.5
+#corresponding to variables which don't implement limiter
+Simulator.SubSystemA.Flow.Data.Venktn3DStrict.NoLimiterID = 1 2 3 4 5 6
+#Simulator.SubSystemA.Flow.Data.Venktn3DStrict.NoLimiterID = 4 5 6
+
+# HW settings for time evolving runs
+Simulator.SubSystemA.Flow.Data.Venktn3DStrict.psiMinEqual1 = true
+Simulator.SubSystemA.MHD3DProjectionDiff.timeFactor  = 0.402
+Simulator.SubSystemA.FlowIterator.Data.FreezeJacobian = false  # doubt mark 2024.04.25
+Simulator.SubSystemA.FlowIterator.Data.FreezeJacobianStride = 4
+Simulator.SubSystemA.Flow.Data.HLLDecE.UseAlpha = true
+# Decomposed energy equation require "HLLDecE.AddLax=true"
+Simulator.SubSystemA.Flow.Data.HLLDecE.AddLax = true #false
+
+###############################################################################
+# Other parameters 
+# (please do not change anything below this line)
+# (unless you know what you are doing)
+###############################################################################
+###############################################################################
+# Assertion For Debugging
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+
+###############################################################################
+
+# Modules
+Simulator.Modules.Libs = libShapeFunctions libCFmeshFileReader libCFmeshFileWriter libParaViewWriter libTecplotWriter libPoisson libMHD libFiniteVolume libFiniteVolumePoisson libNewtonMethod libFiniteVolumeMHD libGmsh2CFmesh libGambit2CFmesh libForwardEuler libPetscI libNewtonMethodMHD
+
+Simulator.SubSystemA.Namespaces = FlowNamespace EMNamespace
+
+Simulator.SubSystemA.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystemA.FlowMeshData.listTRS = Inlet Outlet
+Simulator.SubSystemA.FlowMeshData.Namespaces = FlowNamespace
+Simulator.SubSystemA.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystemA.FlowNamespace.PhysicalModelType = MHD3DProjection
+Simulator.SubSystemA.FlowNamespace.PhysicalModelName = MHD3DProjection
+
+# Poisson model settings
+Simulator.SubSystemA.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystemA.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystemA.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystemA.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystemA.EMNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSystemA.EMNamespace.PhysicalModelName = Poisson3D
+Simulator.SubSystemA.Poisson3D.refValues    = 1.0
+Simulator.SubSystemA.Poisson3D.refLength    = 1.0
+
+###############################################################################
+# Output
+#Simulator.SubSystemA.OutputFormat        = Tecplot ParaView CFmesh Tecplot ParaView
+#Simulator.SubSystemA.OutputFormatNames   = Tecplot1 ParaView1 CFmesh1 Tecplot2 ParaView2
+Simulator.SubSystemA.OutputFormat        = Tecplot CFmesh Tecplot
+Simulator.SubSystemA.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2
+
+Simulator.SubSystemA.CFmesh1.FileName     = corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+#Simulator.SubSystemA.CFmesh1.FileName     = corona_NoLim_PPDecEBC2cr2135HMIlt100G.CFmesh
+Simulator.SubSystemA.CFmesh1.SaveRate     = 500
+Simulator.SubSystemA.CFmesh1.AppendTime   = false
+Simulator.SubSystemA.CFmesh1.AppendIter   = false
+Simulator.SubSystemA.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystemA.CFmesh1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemA.Tecplot1.FileName    = corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.plt
+#Simulator.SubSystemA.Tecplot1.FileName    = corona_NoLim_PPDecEBC2cr2135HMIlt100G.plt
+# Decomposed energy equation require "PrimE"
+Simulator.SubSystemA.Tecplot1.Data.outputVar = PrimE
+Simulator.SubSystemA.Tecplot1.SaveRate    = 500 #150 #30 #
+# 2024.01.13 by HP
+Simulator.SubSystemA.Tecplot1.Data.SurfaceTRS = Inlet #Outlet
+
+#Simulator.SubSystemA.Tecplot1.AppendTime = true # false # 
+#Simulator.SubSystemA.Tecplot1.AppendIter = false # true # 
+# Quasi-steady state simulation
+Simulator.SubSystemA.Tecplot1.AppendTime = false # true # 
+Simulator.SubSystemA.Tecplot1.AppendIter = true # false # 
+
+Simulator.SubSystemA.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystemA.Tecplot1.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystemA.Tecplot1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemA.ParaView1.FileName    = corona-flow0.vtu
+Simulator.SubSystemA.ParaView1.WriteSol = WriteSolutionNoOverlap
+Simulator.SubSystemA.ParaView1.Data.updateVar = Prim
+Simulator.SubSystemA.ParaView1.SaveRate = 100000000  #10000
+Simulator.SubSystemA.ParaView1.AppendTime = false
+Simulator.SubSystemA.ParaView1.AppendIter = false
+Simulator.SubSystemA.ParaView1.Namespace = FlowNamespace
+Simulator.SubSystemA.ParaView1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemA.Tecplot2.FileName    = corona_poisson.plt
+Simulator.SubSystemA.Tecplot2.Data.outputVar = Cons
+Simulator.SubSystemA.Tecplot2.SaveRate = 100000000  #10000
+Simulator.SubSystemA.Tecplot2.AppendTime = false
+Simulator.SubSystemA.Tecplot2.AppendIter = false
+Simulator.SubSystemA.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystemA.Tecplot2.Data.CollaboratorNames = EM
+Simulator.SubSystemA.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystemA.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystemA.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystemA.Tecplot2.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystemA.ParaView2.FileName    = corona-poisson.vtu
+Simulator.SubSystemA.ParaView2.Data.updateVar = Cons
+Simulator.SubSystemA.ParaView2.SaveRate = 100000000  #10000 # is not saved after iter 0 anyway
+Simulator.SubSystemA.ParaView2.AppendTime = false
+Simulator.SubSystemA.ParaView2.AppendIter = false
+Simulator.SubSystemA.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystemA.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystemA.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystemA.ParaView2.Namespace = EMNamespace
+Simulator.SubSystemA.ParaView2.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Time Marching
+
+Simulator.SubSystemA.StopConditionSubSystemStatus = FlowSubSystemStatus 
+
+###############################################################################
+
+# Linear System
+Simulator.SubSystemA.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystemA.LSSNames = FlowLSS EMLSS
+
+Simulator.SubSystemA.FlowLSS.Data.PCType = PCASM
+Simulator.SubSystemA.FlowLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystemA.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystemA.FlowLSS.Data.MaxIter = 1000 #50 #
+Simulator.SubSystemA.FlowLSS.Data.NbKrylovSpaces = 20  # 10 #15 #80 # 
+Simulator.SubSystemA.FlowLSS.Data.RelativeTolerance = 1e-4 #1e-5 #1e-3 #
+Simulator.SubSystemA.FlowLSS.Namespace = FlowNamespace
+Simulator.SubSystemA.FlowLSS.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemA.EMLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystemA.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystemA.EMLSS.Data.MaxIter = 1000
+Simulator.SubSystemA.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystemA.EMLSS.Data.PCType = PCASM
+Simulator.SubSystemA.EMLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystemA.EMLSS.Namespace = EMNamespace
+Simulator.SubSystemA.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Implicit time integration
+# Qasi-steady
+Simulator.SubSystemA.ConvergenceMethod = NewtonIterator NewtonIterator 
+# Time-evolving
+#Simulator.SubSystemA.ConvergenceMethod = NewtonIterator BDF2
+
+Simulator.SubSystemA.ConvergenceMethodNames = EMIterator FlowIterator # This order decides whether EM comes before Flow
+
+Simulator.SubSystemA.FlowIterator.Namespace = FlowNamespace
+Simulator.SubSystemA.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
+# Qasi-steady
+#Simulator.SubSystemA.FlowIterator.UpdateSol =  StdUpdateSol
+Simulator.SubSystemA.FlowIterator.UpdateSol =  StdUpdateSolPP
+Simulator.SubSystemA.FlowIterator.StdUpdateSolPP.Relaxation= 1.
+# 0.25801090625 and 2.0 for solar maximum, 0.108 and 1.0 for solar minimum, should be consistent with boundary values
+Simulator.SubSystemA.FlowIterator.StdUpdateSolPP.pressureBoundaryValue = 0.25801090625  # 0.108 #1.032043625 #0.5160218125  #
+Simulator.SubSystemA.FlowIterator.StdUpdateSolPP.densityBoundaryValue = 2.0  # 1.0 #8.0 #4.0 #
+# Time-evolving
+#Simulator.SubSystemA.FlowIterator.UpdateSol =  UpdateSolMHD 
+#Simulator.SubSystemA.FlowIterator.UpdateSolMHD.pressureCorrectionValue = 0.0000001 #00000
+
+Simulator.SubSystemA.FlowIterator.Data.L2.MonitoredVarID = 7
+# quasi-steady
+Simulator.SubSystemA.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1 # 20
+#Time-dependent
+#Simulator.SubSystemA.FlowIterator.Data.MaxSteps = 10 #5 # 
+#Simulator.SubSystemA.FlowIterator.Data.Norm = -3.0 #-2.5 #-2.0 # #doubt 2024.04.03
+#Simulator.SubSystemA.FlowIterator.Data.PrintHistory = true
+#Simulator.SubSystemA.FlowIterator.ShowRate = 1
+# or ?
+#Simulator.SubSystemA.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 10 # 20  #doubt 2024.04.03
+#Simulator.SubSystemA.FlowIterator.AbsoluteNormAndMaxIter.AbsNorm = -2.5 # -1. # -4.  #doubt 2024.04.03
+
+Simulator.SubSystemA.EMIterator.Namespace = EMNamespace
+Simulator.SubSystemA.EMIterator.Data.CollaboratorNames = EM EMLSS
+# time-dependent
+#Simulator.SubSystemA.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+#quasi-steady
+Simulator.SubSystemA.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 50
+
+Simulator.SubSystemA.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.
+Simulator.SubSystemA.EMIterator.Data.PrintHistory = true
+# AL: this is needed for controlling how often Poisson is solved!!!
+Simulator.SubSystemA.EMIterator.Data.SolvingRate = 100000000
+Simulator.SubSystemA.EMIterator.ConvRate = 100
+Simulator.SubSystemA.EMIterator.ShowRate = 100
+
+###############################################################################
+
+# Mesh Reader
+
+Simulator.SubSystemA.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystemA.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
+
+Simulator.SubSystemA.CFmeshFileReader0.Namespace = FlowNamespace
+Simulator.SubSystemA.CFmeshFileReader0.Data.CollaboratorNames = Flow
+Simulator.SubSystemA.CFmeshFileReader0.Data.ScalingFactor = 1.
+
+Simulator.SubSystemA.CFmeshFileReader1.Namespace = EMNamespace
+Simulator.SubSystemA.CFmeshFileReader1.Data.CollaboratorNames = EM
+Simulator.SubSystemA.CFmeshFileReader1.Data.ScalingFactor = 1. 
+
+# Space Method
+Simulator.SubSystemA.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystemA.SpaceMethodNames = Flow EM
+
+###############################################################################
+###############################################################################
+# Flow solver
+###############################################################################
+###############################################################################
+
+
+Simulator.SubSystemA.Flow.Namespace = FlowNamespace
+Simulator.SubSystemA.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
+Simulator.SubSystemA.Flow.ComputeRHS = NumJacobMHD
+Simulator.SubSystemA.Flow.NumJacobMHD.SaveRate = 5  #150 #30 # doubt 2024.04.03
+
+# First Order Time stepping
+# Quasi-steady
+Simulator.SubSystemA.Flow.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystemA.Flow.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 1
+
+#Simulator.SubSystemA.Flow.PseudoSteadyTimeRhs.useGlobalDT = true
+
+#Time-dependent
+#Simulator.SubSystemA.Flow.ComputeTimeRHS =  BDF2TimeRhsLimited
+#Simulator.SubSystemA.Flow.BDF2TimeRhsLimited.TimeLimiter = MinMod
+#Simulator.SubSystemA.Flow.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+#Simulator.SubSystemA.Flow.BDF2TimeRhsLimited.zeroDiagValue = 0 0 0 0 0 0 0 0 1
+#Simulator.SubSystemA.FlowSubSystemStatus.TimeStep = 0.5 #0.2488 #0.2 #0.01 #0.0 #41.5 #1.5e1
+
+#Simulator.SubSystemA.FlowSubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystemA.FlowSubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystemA.FlowSubSystemStatus.FunctionDT.Def = if(i<30,1e-4,if(i<60,1e-3,1e-2))
+
+
+### second order: uncomment this
+Simulator.SubSystemA.Flow.SetupCom = LeastSquareP1Setup
+Simulator.SubSystemA.Flow.SetupNames = Setup1
+Simulator.SubSystemA.Flow.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystemA.Flow.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystemA.Flow.UnSetupNames = UnSetup1
+
+## second order: uncomment this
+Simulator.SubSystemA.Flow.Data.PolyRec = LinearLS3D
+Simulator.SubSystemA.Flow.Data.LinearLS3D.limitRes = -4.0
+Simulator.SubSystemA.Flow.Data.LinearLS3D.limitIter = 100000000 #10000
+Simulator.SubSystemA.Flow.Data.LinearLS3D.gradientFactor = 1.0
+Simulator.SubSystemA.Flow.Data.LinearLS3D.StopLimiting = 0
+
+Simulator.SubSystemA.Flow.Data.FluxSplitter = HLLDecE 
+
+#MHD3DProjectionConsLaxFriedTanaka
+#LaxFried
+# Decomposed energy equation require "PrimE"
+Simulator.SubSystemA.Flow.Data.UpdateVar  = PrimE
+Simulator.SubSystemA.Flow.Data.SolutionVar = Cons
+Simulator.SubSystemA.Flow.Data.LinearVar   = Cons
+#Simulator.SubSystemA.Flow.Data.SourceTerm =  MHDConsACAST
+Simulator.SubSystemA.Flow.Data.SourceTerm =  MHDConsACAHWST
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.CHIANTI9 = 1
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.gravity = 1
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.PevtsovHeating = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.PevtsovHeatingFactor = 1.0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.Manchester = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.ManchesterHeatingAmplitude = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.ManchesterSigma = 100.
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.divQ = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.divQConductivity = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.divQalphaCollisionless = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.ViscosityAndResistivity = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.Viscosity = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.Resistivity = 0
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.RadiativeLossTerm = 0
+# Decomposed energy equation require "1"
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.deCompEorNot = 1 # 0
+# added on April 7, 2024
+Simulator.SubSystemA.Flow.Data.MHDConsACAHWST.GravityPercentage= 1.0
+
+# Boundary Conditions
+#Simulator.SubSystemA.Flow.BcComds = SuperInletProjectionFVMCC SuperOutletMHD3DProjectionFVMCC
+#Simulator.SubSystemA.Flow.BcComds = SuperInletProjectionParallelRotationFVMCC SuperOutletMHD3DProjection9FVMCC
+Simulator.SubSystemA.Flow.BcComds = SuperInletProjectionConstrainedFVMCC SuperOutletMHD3DProjection9FVMCC
+Simulator.SubSystemA.Flow.BcNames = Jet1 Jet2
+
+Simulator.SubSystemA.Flow.Jet1.applyTRS = Inlet
+Simulator.SubSystemA.Flow.Jet1.Vars = x y z
+Simulator.SubSystemA.Flow.Jet1.Def = \
+	1. \
+        (x*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        (y*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        (z*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        3*x*z \
+        3*y*z \
+        2*z^2-(x^2+y^2) \
+        (2.0*1.67e-13*kB*1.5e6/(1.27*1.67e-27))/(2.2e-4^2./mu0) \
+        0.	
+
+Simulator.SubSystemA.Flow.Jet1.InitialSolutionIDs = 4 5 6
+Simulator.SubSystemA.Flow.Jet1.inletCoronalBC = 1
+Simulator.SubSystemA.Flow.Jet1.Phi_divB_zero = 1
+Simulator.SubSystemA.Flow.Jet1.Phi_divB_extrapolated = 0
+Simulator.SubSystemA.Flow.Jet1.JensVelocityBC = 0
+Simulator.SubSystemA.Flow.Jet1.BarbarasVelocityBC = 1
+Simulator.SubSystemA.Flow.Jet1.hydrodynamic_limit = 0
+Simulator.SubSystemA.Flow.Jet1.DanasVelocityBC = 0
+Simulator.SubSystemA.Flow.Jet1.DifferentialRotation = 0
+Simulator.SubSystemA.Flow.Jet1.JensBfieldBC = 0
+Simulator.SubSystemA.Flow.Jet1.DanasBfieldBC = 0
+Simulator.SubSystemA.Flow.Jet1.JonLinkersBfieldSuggestion = 1
+Simulator.SubSystemA.Flow.Jet1.pressure_fixed = 1
+Simulator.SubSystemA.Flow.Jet1.pressure_Neumann = 0
+Simulator.SubSystemA.Flow.Jet1.JensRhoIni = 0
+Simulator.SubSystemA.Flow.Jet1.JensPIni = 0
+Simulator.SubSystemA.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
+Simulator.SubSystemA.Flow.Jet1.PPorNot = true
+
+# needed for computing Br from file
+Simulator.SubSystemA.Flow.Jet1.VarIDs = 0
+Simulator.SubSystemA.Flow.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystemA.Flow.Data.DistanceBased.TRSName = Inlet
+Simulator.SubSystemA.Flow.Data.DistanceBased.TemperatureID = 0
+Simulator.SubSystemA.Flow.Data.DistanceBased.NbClosestPoints = 8
+
+Simulator.SubSystemA.Flow.Jet2.applyTRS = Outlet
+Simulator.SubSystemA.Flow.Jet2.refPhi = 0.
+
+# Initial Conditions
+Simulator.SubSystemA.Flow.InitComds = InitStateAddVar
+Simulator.SubSystemA.Flow.InitNames = InField
+Simulator.SubSystemA.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystemA.Flow.InField.InitVars = x y z
+Simulator.SubSystemA.Flow.InField.Vars = x y z r
+Simulator.SubSystemA.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
+
+# AL: this pre-processing command computes the coupling between EM and Flow solvers
+# pre-processing to transfer solution of EM system to Flow by computing B field out of potential
+# and filling corresponding "PreProcess1.VariableIDs" entries in the Flow equations
+
+###############################################################################
+###############################################################################
+# EM solver
+###############################################################################
+###############################################################################
+
+Simulator.SubSystemA.EM.Namespace = EMNamespace
+Simulator.SubSystemA.EM.Data.CollaboratorNames = EMLSS EMIterator
+Simulator.SubSystemA.EM.ComputeRHS = NumJacob
+Simulator.SubSystemA.EM.SetNodalStatesCom = StdSetNodalStates
+Simulator.SubSystemA.EM.StdSetNodalStates.updateGradients = true
+
+Simulator.SubSystemA.EM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystemA.EM.SetupNames = Setup1
+Simulator.SubSystemA.EM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystemA.EM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystemA.EM.UnSetupNames = UnSetup1
+
+Simulator.SubSystemA.EM.Data.FluxSplitter = Null
+
+Simulator.SubSystemA.EM.Data.UpdateVar  = Cons
+Simulator.SubSystemA.EM.Data.SolutionVar = Cons
+Simulator.SubSystemA.EM.Data.DiffusiveVar = Cons
+Simulator.SubSystemA.EM.Data.DiffusiveFlux = PureDiffFlux
+
+Simulator.SubSystemA.EM.Data.DerivativeStrategy = Corrected3D
+
+Simulator.SubSystemA.EM.Data.PolyRec = LinearLS3D
+
+Simulator.SubSystemA.EM.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystemA.EM.Data.DistanceBased.TRSName = Inlet
+Simulator.SubSystemA.EM.Data.DistanceBased.TemperatureID = 0
+Simulator.SubSystemA.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
+
+Simulator.SubSystemA.EM.InitComds = InitState
+Simulator.SubSystemA.EM.InitNames = InField
+Simulator.SubSystemA.EM.InField.applyTRS = InnerFaces
+Simulator.SubSystemA.EM.InField.Vars = x y z
+Simulator.SubSystemA.EM.InField.Def = 0.
+
+Simulator.SubSystemA.EM.BcComds = NeumannBCFromFileFVMCC SuperInletFVMCC
+Simulator.SubSystemA.EM.BcNames = Inlet Outlet
+
+Simulator.SubSystemA.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystemA.EM.Inlet.Vars = x y z
+Simulator.SubSystemA.EM.Inlet.ZeroGradientFlags = 1
+
+Simulator.SubSystemA.EM.Outlet.applyTRS = Outlet
+Simulator.SubSystemA.EM.Outlet.Vars = x y z
+Simulator.SubSystemA.EM.Outlet.Def = 0.0
+
+Simulator.SubSystemA.DataPostProcessing = DataProcessing
+Simulator.SubSystemA.DataPostProcessingNames = EMPostProcessing
+Simulator.SubSystemA.EMPostProcessing.Comds = SphericalDerivatives
+Simulator.SubSystemA.EMPostProcessing.Names = BrThetaPhi
+Simulator.SubSystemA.EMPostProcessing.SkipFirstIteration = false # true
+Simulator.SubSystemA.EMPostProcessing.ProcessRate = 1
+Simulator.SubSystemA.EMPostProcessing.Namespace = EMNamespace
+Simulator.SubSystemA.EMPostProcessing.Data.CollaboratorNames = EM
+
+## Boundary conditions for simulations during March and July in 2024.
+Simulator.SubSystemA.Flow.Jet1.rhoBC = 2.0  #1.0 
+Simulator.SubSystemA.Flow.Jet1.pBC = 0.25801090625  #0.00284615174  #0.08592156224 #0.108
+Simulator.SubSystemA.Flow.InField.Def = \
+if(r<22.000000000,2.0*((1/r)^5),2.*((1/22.0)^5)) \
+1000/480363.085276*(-52.1+106*log(r+0.78))*(x/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(y/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(z/r) \
+1. 2. 3. if(r<22.000000000,0.25801090625*((1/r)^5),0.25801090625*((1/22.0)^5)) 0.
+
+##>>Boundary conditions for simulations around 2019 eclipse 
+#Simulator.SubSystemA.Flow.Jet1.rhoBC = 1.0  #1.0 
+#Simulator.SubSystemA.Flow.Jet1.pBC = 0.108  #0.00284615174  #0.08592156224 #0.108
+#Simulator.SubSystemA.Flow.InField.Def = \
+#if(r<22.000000000,1.0*((1/r)^5),1.*((1/22.0)^5)) \
+#1000/480363.085276*(-52.1+106*log(r+0.78))*(x/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(y/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(z/r) \
+#1. 2. 3. if(r<22.000000000,0.108*((1/r)^5),0.108*((1/22.0)^5)) 0.
+
+###############################################################################
+# SubSystemB: full MHD
+###############################################################################
+
+# Boundary condition files, another definition for flow field is around Line 415
+Simulator.SubSystemB.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
+
+# Boundary condition files for flow field
+Simulator.SubSystemB.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/MapCR2296/MapData/zqsCR2296Lmax25/map_gong_lmax25_20250329190400.dat 
+
+# Mesh reader
+# First reader 
+#Simulator.SubSystemB.CFmeshFileReader0.Data.FileName = ./Mesh/30Rs_lvl6.CFmesh 
+# Restart
+Simulator.SubSystemB.CFmeshFileReader0.Data.FileName = results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+
+#Simulator.SubSystemB.CFmeshFileReader0.Data.ScalingFactor = 1.
+Simulator.SubSystemB.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 # ??
+
+# Second reader
+#Simulator.SubSystemB.CFmeshFileReader1.Data.FileName = ./Mesh/30Rs_lvl6.CFmesh 
+# Restart
+Simulator.SubSystemB.CFmeshFileReader1.Data.FileName = results-map-res-steady-fullMHD-zqs2296-lmax25/corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+
+#Simulator.SubSystemB.CFmeshFileReader1.Data.ScalingFactor = 1. 
+Simulator.SubSystemB.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
+
+# Physical parameters
+#>>Full MHD#
+Simulator.SubSystemB.MHD3DProjectionDiff.ConvTerm.gamma = 1.667
+#<<Full MHD#
+#quasi-steady
+Simulator.SubSystemB.Flow.Jet1.rotation = 1
+#Time-dependent
+#Simulator.SubSystemB.Flow.Jet1.rotation = 1 
+
+# Stop Condition
+#Simulator.SubSystemB.StopCondition          = MaxNumberSteps
+#Simulator.SubSystemB.MaxNumberSteps.nbSteps = 2
+# Quasi-steady state
+#Simulator.SubSystemB.StopCondition       = Norm
+#Simulator.SubSystemB.Norm.valueNorm      = -8.0 #-6.0 #-10.0 #-2.0
+Simulator.SubSystemB.StopCondition          = MaxNumberSteps
+Simulator.SubSystemB.MaxNumberSteps.nbSteps = 100 #1500 #10 #5000
+# Timedependent
+#Simulator.SubSystemB.StopCondition       = MaxTime
+#Simulator.SubSystemB.MaxTime.maxTime     =  1746.0 #0.003 # in seconds 
+
+# CFL definition
+#Simulator.SubSystemB.FlowIterator.Data.CFL.ComputeCFL = Interactive
+Simulator.SubSystemB.FlowIterator.Data.CFL.ComputeCFL = Function
+Simulator.SubSystemB.FlowIterator.Data.CFL.Function.Def = \
+if(i<100,2.0,if(i<200,8.0,if(i<300,32.0,if(i<400,64.0,if(i<500,128.0,128.0)))))
+#if(i<100,2,if(i<200,32.0,if(i<300,64.0,if(i<400,128.0,if(i<500,256.0,512)))))
+#if(i<250,2.,if(i<600,8.,if(i<1200,32.0,if(i<2000,64.0,min(128.,cfl*1.02^2)))))
+#if(i<500,0.1,if(i<1000,0.5,if(i<1500,1.0,if(i<2000,2.0,min(4.,cfl*1.02^2)))))
+#Simulator.SubSystemB.FlowIterator.Data.CFL.Function.Def = \
+#if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#if(i<200,2,if(i<400,4.0,if(i<600,8.0,if(i<800,16.0,if(i<1000,64,258)))))
+#if(i<50,2.0,if(i<100,4.0,if(i<150,8.0,if(i<200,16.,if(i<250,32.,min(200.,cfl*1.02^2))))))
+
+# Restart option
+#Simulator.SubSystemB.Flow.Restart = false
+Simulator.SubSystemB.Flow.Restart = true #### only for restart
+# Comment when restarting
+#Simulator.SubSystemB.Flow.PreProcessCom = ComputeFieldFromPotential
+#Simulator.SubSystemB.Flow.PreProcessNames = PreProcess1 # ??
+#Simulator.SubSystemB.Flow.PreProcess1.VariableIDs = 4 5 6 # ??
+#Simulator.SubSystemB.Flow.PreProcess1.OtherNamespace = EMNamespace
+#Simulator.SubSystemB.Flow.PreProcess1.InterRadius = -1. # ??
+#Simulator.SubSystemB.Flow.PreProcess1.DeltaSelection = 1000. # ??
+#Simulator.SubSystemB.Flow.PreProcess1.ProcessRate = 100000000
+
+# Divergence cleaning method
+Simulator.SubSystemB.MHD3DProjectionDiff.ConvTerm.refSpeed = 3. #18. #9. #1. # 
+
+# Limiter
+Simulator.SubSystemB.Flow.Data.Limiter = Venktn3DStrict
+Simulator.SubSystemB.Flow.Data.Venktn3DStrict.coeffEps = 5. #1.
+Simulator.SubSystemB.Flow.Data.Venktn3DStrict.isMFMHD = true
+# Set to 1.0 by HP on 20240112
+Simulator.SubSystemB.Flow.Data.Venktn3DStrict.strictCoeff = 1.0
+#Simulator.SubSystemB.Flow.Data.Venktn3DStrict.strictCoeff = 0.5
+#corresponding to variables which don't implement limiter
+Simulator.SubSystemB.Flow.Data.Venktn3DStrict.NoLimiterID = 1 2 3 4 5 6
+#Simulator.SubSystemB.Flow.Data.Venktn3DStrict.NoLimiterID = 4 5 6
+
+# HW settings for time evolving runs
+Simulator.SubSystemB.Flow.Data.Venktn3DStrict.psiMinEqual1 = true
+Simulator.SubSystemB.MHD3DProjectionDiff.timeFactor  = 0.402
+Simulator.SubSystemB.FlowIterator.Data.FreezeJacobian = false  # doubt mark 2024.04.25
+Simulator.SubSystemB.FlowIterator.Data.FreezeJacobianStride = 4
+Simulator.SubSystemB.Flow.Data.HLLDecE.UseAlpha = true
+# Decomposed energy equation require "HLLDecE.AddLax=true"
+Simulator.SubSystemB.Flow.Data.HLLDecE.AddLax = true #false
+
+Simulator.SubSystemB.Namespaces = FlowNamespace EMNamespace
+
+Simulator.SubSystemB.FlowNamespace.MeshData = FlowMeshData
+Simulator.SubSystemB.FlowMeshData.listTRS = Inlet Outlet
+Simulator.SubSystemB.FlowMeshData.Namespaces = FlowNamespace
+Simulator.SubSystemB.FlowNamespace.SubSystemStatus = FlowSubSystemStatus
+Simulator.SubSystemB.FlowNamespace.PhysicalModelType = MHD3DProjectionDiff
+Simulator.SubSystemB.FlowNamespace.PhysicalModelName = MHD3DProjectionDiff
+
+# Poisson model settings
+Simulator.SubSystemB.EMNamespace.MeshData = EMMeshData
+Simulator.SubSystemB.EMMeshData.listTRS = Inlet Outlet
+Simulator.SubSystemB.EMMeshData.Namespaces = EMNamespace
+Simulator.SubSystemB.EMNamespace.SubSystemStatus = EMSubSystemStatus
+Simulator.SubSystemB.EMNamespace.PhysicalModelType = Poisson3D
+Simulator.SubSystemB.EMNamespace.PhysicalModelName = Poisson3D
+Simulator.SubSystemB.Poisson3D.refValues    = 1.0
+Simulator.SubSystemB.Poisson3D.refLength    = 1.0
+
+###############################################################################
+# Output
+#Simulator.SubSystemB.OutputFormat        = Tecplot ParaView CFmesh Tecplot ParaView
+#Simulator.SubSystemB.OutputFormatNames   = Tecplot1 ParaView1 CFmesh1 Tecplot2 ParaView2
+Simulator.SubSystemB.OutputFormat        = Tecplot CFmesh Tecplot
+Simulator.SubSystemB.OutputFormatNames   = Tecplot1 CFmesh1 Tecplot2
+
+Simulator.SubSystemB.CFmesh1.FileName     = corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.CFmesh
+#Simulator.SubSystemB.CFmesh1.FileName     = corona_NoLim_PPDecEBC2cr2135HMIlt100G.CFmesh
+Simulator.SubSystemB.CFmesh1.SaveRate     = 500
+Simulator.SubSystemB.CFmesh1.AppendTime   = false
+Simulator.SubSystemB.CFmesh1.AppendIter   = false
+Simulator.SubSystemB.CFmesh1.Namespace = FlowNamespace
+Simulator.SubSystemB.CFmesh1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemB.Tecplot1.FileName    = corona_NoLim_PPDecEBC2_2025zqs0125_DecEHW.plt
+#Simulator.SubSystemB.Tecplot1.FileName    = corona_NoLim_PPDecEBC2cr2135HMIlt100G.plt
+# Decomposed energy equation require "PrimE"
+Simulator.SubSystemB.Tecplot1.Data.outputVar = PrimE
+Simulator.SubSystemB.Tecplot1.SaveRate    = 500 #150 #30 #
+# 2024.01.13 by HP
+Simulator.SubSystemB.Tecplot1.Data.SurfaceTRS = Inlet #Outlet
+
+#Simulator.SubSystemB.Tecplot1.AppendTime = true # false # 
+#Simulator.SubSystemB.Tecplot1.AppendIter = false # true # 
+# Quasi-steady state simulation
+Simulator.SubSystemB.Tecplot1.AppendTime = false # true # 
+Simulator.SubSystemB.Tecplot1.AppendIter = true # false # 
+
+Simulator.SubSystemB.Tecplot1.Namespace = FlowNamespace
+Simulator.SubSystemB.Tecplot1.WriteSol = ParWriteSolutionBlock
+Simulator.SubSystemB.Tecplot1.Data.CollaboratorNames = Flow
+#>>Full MHD#
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCSocketNames = gravity Manchester RadiativeLossTerm wavepressure
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCVariableNames = g@4 heating radloss pw
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1 1 1
+#<<Full MHD#
+
+Simulator.SubSystemB.ParaView1.FileName    = corona-flow0_20170404GONGlt100G.vtu
+#Simulator.SubSystemB.ParaView1.FileName    = corona-flow0cr2135HMIlt100G.vtu
+Simulator.SubSystemB.ParaView1.WriteSol = WriteSolution #WriteSolutionNoOverlap
+Simulator.SubSystemB.ParaView1.Data.updateVar = Prim
+Simulator.SubSystemB.ParaView1.SaveRate = 100 #100000000  #10000
+Simulator.SubSystemB.ParaView1.AppendTime = false
+Simulator.SubSystemB.ParaView1.AppendIter = false
+Simulator.SubSystemB.ParaView1.Namespace = FlowNamespace
+Simulator.SubSystemB.ParaView1.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemB.Tecplot2.FileName    = corona_poisson.plt
+Simulator.SubSystemB.Tecplot2.Data.outputVar = Cons
+Simulator.SubSystemB.Tecplot2.SaveRate = 100000000  #10000
+Simulator.SubSystemB.Tecplot2.AppendTime = false
+Simulator.SubSystemB.Tecplot2.AppendIter = false
+Simulator.SubSystemB.Tecplot2.Namespace = EMNamespace
+Simulator.SubSystemB.Tecplot2.Data.CollaboratorNames = EM
+Simulator.SubSystemB.Tecplot2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystemB.Tecplot2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystemB.Tecplot2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystemB.Tecplot2.WriteSol = ParWriteSolutionBlock
+
+Simulator.SubSystemB.ParaView2.FileName    = corona-poisson.vtu
+Simulator.SubSystemB.ParaView2.Data.updateVar = Cons
+Simulator.SubSystemB.ParaView2.SaveRate = 100000000  #10000 # is not saved after iter 0 anyway
+Simulator.SubSystemB.ParaView2.AppendTime = false
+Simulator.SubSystemB.ParaView2.AppendIter = false
+#>>Full MHD#
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCSocketNames = gravity Manchester RadiativeLossTerm limiter wavepressure #zplus zminus
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCVariableNames = g@4 heating radloss lim0 lim1 lim2 lim3 lim4 lim5 lim6 lim7 lim8 pw #zp zm
+#Simulator.SubSystemB.Tecplot1.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1
+#<<Full MHD#
+Simulator.SubSystemB.ParaView2.Data.DataHandleOutput.CCSocketNames = uR uTheta uPhi uX uY uZ
+Simulator.SubSystemB.ParaView2.Data.DataHandleOutput.CCVariableNames = Br Btheta Bphi Bx By Bz
+Simulator.SubSystemB.ParaView2.Data.DataHandleOutput.CCBlockSize = 1 1 1 1 1 1
+Simulator.SubSystemB.ParaView2.Namespace = EMNamespace
+Simulator.SubSystemB.ParaView2.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Time Marching
+
+Simulator.SubSystemB.StopConditionSubSystemStatus = FlowSubSystemStatus 
+
+###############################################################################
+
+# Linear System
+Simulator.SubSystemB.LinearSystemSolver = PETSC PETSC
+Simulator.SubSystemB.LSSNames = FlowLSS EMLSS
+
+Simulator.SubSystemB.FlowLSS.Data.PCType = PCASM
+Simulator.SubSystemB.FlowLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystemB.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystemB.FlowLSS.Data.MaxIter = 1000 #50 #
+Simulator.SubSystemB.FlowLSS.Data.NbKrylovSpaces = 20  # 10 #15 #80 # 
+Simulator.SubSystemB.FlowLSS.Data.RelativeTolerance = 1e-4 #1e-5 #1e-3 #
+Simulator.SubSystemB.FlowLSS.Namespace = FlowNamespace
+Simulator.SubSystemB.FlowLSS.Data.CollaboratorNames = Flow
+
+Simulator.SubSystemB.EMLSS.Data.KSPType = KSPGMRES
+Simulator.SubSystemB.EMLSS.Data.MatOrderingType = MATORDERING_RCM
+Simulator.SubSystemB.EMLSS.Data.MaxIter = 1000
+Simulator.SubSystemB.EMLSS.Data.RelativeTolerance = 1e-10
+Simulator.SubSystemB.EMLSS.Data.PCType = PCASM
+Simulator.SubSystemB.EMLSS.Data.NbKrylovSpaces = 80
+Simulator.SubSystemB.EMLSS.Namespace = EMNamespace
+Simulator.SubSystemB.EMLSS.Data.CollaboratorNames = EM
+
+###############################################################################
+
+# Implicit time integration
+# Qasi-steady
+Simulator.SubSystemB.ConvergenceMethod = NewtonIterator NewtonIterator 
+# Time-evolving
+#Simulator.SubSystemB.ConvergenceMethod = NewtonIterator BDF2
+
+Simulator.SubSystemB.ConvergenceMethodNames = EMIterator FlowIterator # This order decides whether EM comes before Flow
+
+Simulator.SubSystemB.FlowIterator.Namespace = FlowNamespace
+Simulator.SubSystemB.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
+# Qasi-steady
+#Simulator.SubSystemB.FlowIterator.UpdateSol =  StdUpdateSol
+Simulator.SubSystemB.FlowIterator.UpdateSol =  StdUpdateSolPP
+Simulator.SubSystemB.FlowIterator.StdUpdateSolPP.Relaxation= 1.
+# 0.25801090625 and 2.0 for solar maximum, 0.108 and 1.0 for solar minimum, should be consistent with boundary values
+Simulator.SubSystemB.FlowIterator.StdUpdateSolPP.pressureBoundaryValue = 0.25801090625  # 0.108 #1.032043625 #0.5160218125  #
+Simulator.SubSystemB.FlowIterator.StdUpdateSolPP.densityBoundaryValue = 2.0  # 1.0 #8.0 #4.0 #
+# Time-evolving
+#Simulator.SubSystemB.FlowIterator.UpdateSol =  UpdateSolMHD 
+#Simulator.SubSystemB.FlowIterator.UpdateSolMHD.pressureCorrectionValue = 0.0000001 #00000
+
+Simulator.SubSystemB.FlowIterator.Data.L2.MonitoredVarID = 7
+# quasi-steady
+Simulator.SubSystemB.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1 # 20
+
+Simulator.SubSystemB.EMIterator.Namespace = EMNamespace
+Simulator.SubSystemB.EMIterator.Data.CollaboratorNames = EM EMLSS
+# time-dependent
+#Simulator.SubSystemB.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 5
+#quasi-steady
+Simulator.SubSystemB.EMIterator.AbsoluteNormAndMaxIter.MaxIter = 50
+
+Simulator.SubSystemB.EMIterator.AbsoluteNormAndMaxIter.AbsNorm = -8.
+Simulator.SubSystemB.EMIterator.Data.PrintHistory = true
+# AL: this is needed for controlling how often Poisson is solved!!!
+Simulator.SubSystemB.EMIterator.Data.SolvingRate = 100000000
+Simulator.SubSystemB.EMIterator.ConvRate = 100
+Simulator.SubSystemB.EMIterator.ShowRate = 100
+
+###############################################################################
+
+# Mesh Reader
+
+Simulator.SubSystemB.MeshCreator = CFmeshFileReader CFmeshFileReader
+Simulator.SubSystemB.MeshCreatorNames = CFmeshFileReader0 CFmeshFileReader1
+
+Simulator.SubSystemB.CFmeshFileReader0.Namespace = FlowNamespace
+Simulator.SubSystemB.CFmeshFileReader0.Data.CollaboratorNames = Flow
+Simulator.SubSystemB.CFmeshFileReader0.Data.ScalingFactor = 1.
+
+Simulator.SubSystemB.CFmeshFileReader1.Namespace = EMNamespace
+Simulator.SubSystemB.CFmeshFileReader1.Data.CollaboratorNames = EM
+Simulator.SubSystemB.CFmeshFileReader1.Data.ScalingFactor = 1. 
+
+# Space Method
+Simulator.SubSystemB.SpaceMethod = CellCenterFVM CellCenterFVM
+Simulator.SubSystemB.SpaceMethodNames = Flow EM
+
+###############################################################################
+###############################################################################
+# Flow solver
+###############################################################################
+###############################################################################
+
+
+Simulator.SubSystemB.Flow.Namespace = FlowNamespace
+Simulator.SubSystemB.Flow.Data.CollaboratorNames = FlowLSS FlowIterator
+Simulator.SubSystemB.Flow.ComputeRHS = NumJacobMHD
+Simulator.SubSystemB.Flow.NumJacobMHD.SaveRate = 5  #150 #30 # doubt 2024.04.03
+
+# First Order Time stepping
+# Quasi-steady
+Simulator.SubSystemB.Flow.ComputeTimeRHS = PseudoSteadyTimeRhs
+Simulator.SubSystemB.Flow.PseudoSteadyTimeRhs.zeroDiagValue = 0 0 0 0 0 0 0 0 1
+
+#Simulator.SubSystemB.Flow.PseudoSteadyTimeRhs.useGlobalDT = true
+
+#Time-dependent
+#Simulator.SubSystemB.Flow.ComputeTimeRHS =  BDF2TimeRhsLimited
+#Simulator.SubSystemB.Flow.BDF2TimeRhsLimited.TimeLimiter = MinMod
+#Simulator.SubSystemB.Flow.BDF2TimeRhsLimited.MinMod.SlopeRatio = 3.
+#Simulator.SubSystemB.Flow.BDF2TimeRhsLimited.zeroDiagValue = 0 0 0 0 0 0 0 0 1
+Simulator.SubSystemB.FlowSubSystemStatus.TimeStep = 0.0 #0.5 #0.2488 #0.2 #0.01 #0.0 #41.5 #1.5e1
+
+#Simulator.SubSystemB.FlowSubSystemStatus.ComputeDT = FunctionDT
+#Simulator.SubSystemB.FlowSubSystemStatus.FunctionDT.Vars = i
+#Simulator.SubSystemB.FlowSubSystemStatus.FunctionDT.Def = if(i<30,1e-4,if(i<60,1e-3,1e-2))
+
+
+### second order: uncomment this
+Simulator.SubSystemB.Flow.SetupCom = LeastSquareP1Setup
+Simulator.SubSystemB.Flow.SetupNames = Setup1
+Simulator.SubSystemB.Flow.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystemB.Flow.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystemB.Flow.UnSetupNames = UnSetup1
+
+## second order: uncomment this
+Simulator.SubSystemB.Flow.Data.PolyRec = LinearLS3D
+Simulator.SubSystemB.Flow.Data.LinearLS3D.limitRes = -4.0
+Simulator.SubSystemB.Flow.Data.LinearLS3D.limitIter = 100000000 #10000
+Simulator.SubSystemB.Flow.Data.LinearLS3D.gradientFactor = 1.0
+Simulator.SubSystemB.Flow.Data.LinearLS3D.StopLimiting = 0
+
+Simulator.SubSystemB.Flow.Data.FluxSplitter = HLLDecE
+#>>Full MHD# Mark 2024.05.21 condition lines commented (by Michaela)
+Simulator.SubSystemB.Flow.Data.DiffusiveFlux = NavierStokesMHD
+Simulator.SubSystemB.Flow.Data.DerivativeStrategy = Corrected3D
+# this activates the computation of the radius for transport properties
+Simulator.SubSystemB.Flow.Data.NavierStokesMHD.isRadiusNeeded = true
+# this allows for using an alternative implementation of the thermal conduction 
+# (Prim uses Tinatin¡¯s implementation,PrimHW for Haopeng Wang)
+#Simulator.SubSystemB.Flow.Data.DiffusiveVar = Prim
+Simulator.SubSystemB.Flow.Data.DiffusiveVar = PrimHW
+#<<Full MHD#
+
+#MHD3DProjectionConsLaxFriedTanaka
+#LaxFried
+# Decomposed energy equation require "PrimE"
+Simulator.SubSystemB.Flow.Data.UpdateVar  = PrimE
+Simulator.SubSystemB.Flow.Data.SolutionVar = Cons
+Simulator.SubSystemB.Flow.Data.LinearVar   = Cons
+#Simulator.SubSystemB.Flow.Data.SourceTerm =  MHDConsACAST
+Simulator.SubSystemB.Flow.Data.SourceTerm =  MHDConsACAHWST
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.CHIANTI9 = 1
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.gravity = 1
+#>>Full MHD#
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.PevtsovHeating = 1
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.PevtsovHeatingFactor = 1.0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Manchester = 1
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.ManchesterHeatingAmplitude = 100.
+#<<Full MHD#
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.ManchesterSigma = 100.
+#>>Full MHD#
+#Andrea
+#>>Full MHD# Mark 2024.05.21 try reducing Qh4H_const by say an order of magnitude, and start with a small CFL (by Michaela)
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qh4H_const = 4.0e-5 #it should be 4.0e-5
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qlio_AR = 5. #This is to control active region in Qhlio
+#Tiko
+#Simulator.SubSystemB.Flow.Data.MHDConsACAST.Qh4H_const = 2.e-5 #it should be 4.0e-5
+#Simulator.SubSystemB.Flow.Data.MHDConsACAST.Qlio_AR = 7. #This is to control active region in Qhlio
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.P0_W=0.01
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.alfven_pressure = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.dpdxalfven = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qh2_activate = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qh3_activate = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qh4_activate = 1
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Qh_lio_activate = 0
+#<<Full MHD#
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.divQ = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.divQConductivity = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.divQalphaCollisionless = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.ViscosityAndResistivity = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Viscosity = 0
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.Resistivity = 0
+#>>Full MHD#
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.RadiativeLossTerm = 1
+#<<Full MHD#
+# Decomposed energy equation require "1"
+Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.deCompEorNot = 1 # 0
+# added on April 7, 2024 ?
+#Simulator.SubSystemB.Flow.Data.MHDConsACAHWST.GravityPercentage= 1.0
+
+# Boundary Conditions
+#Simulator.SubSystemB.Flow.BcComds = SuperInletProjectionParallelRotationFVMCC SuperOutletMHD3DProjection9FVMCC
+Simulator.SubSystemB.Flow.BcComds = SuperInletProjectionConstrainedFVMCC SuperOutletMHD3DProjection9FVMCC
+#Simulator.SubSystemB.Flow.BcComds = SuperInletProjectionFVMCC SuperOutletMHD3DProjectionFVMCC
+#Simulator.SubSystemB.Flow.BcComds = SuperInletProjectionParallelRotationFVMCC SuperOutletMHD3DProjectionFVMCC
+Simulator.SubSystemB.Flow.BcNames = Jet1 Jet2
+
+Simulator.SubSystemB.Flow.Jet1.applyTRS = Inlet
+Simulator.SubSystemB.Flow.Jet1.Vars = x y z
+Simulator.SubSystemB.Flow.Jet1.Def = \
+	1. \
+        (x*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        (y*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        (z*(-0.42108+26.794-628.89+6279.7+12899.60846+6026.2007+1445.2))/(2.2e-4/sqrt(mu0*1.67e-13)) \
+        3*x*z \
+        3*y*z \
+        2*z^2-(x^2+y^2) \
+        (2.0*1.67e-13*kB*1.5e6/(1.27*1.67e-27))/(2.2e-4^2./mu0) \
+        0.
+
+Simulator.SubSystemB.Flow.Jet1.InitialSolutionIDs = 4 5 6
+Simulator.SubSystemB.Flow.Jet1.inletCoronalBC = 1
+Simulator.SubSystemB.Flow.Jet1.Phi_divB_zero = 1
+Simulator.SubSystemB.Flow.Jet1.Phi_divB_extrapolated = 0
+Simulator.SubSystemB.Flow.Jet1.JensVelocityBC = 0
+Simulator.SubSystemB.Flow.Jet1.BarbarasVelocityBC = 1
+Simulator.SubSystemB.Flow.Jet1.hydrodynamic_limit = 0
+Simulator.SubSystemB.Flow.Jet1.DanasVelocityBC = 0
+Simulator.SubSystemB.Flow.Jet1.DifferentialRotation = 0
+Simulator.SubSystemB.Flow.Jet1.JensBfieldBC = 0
+Simulator.SubSystemB.Flow.Jet1.DanasBfieldBC = 0
+Simulator.SubSystemB.Flow.Jet1.JonLinkersBfieldSuggestion = 1
+Simulator.SubSystemB.Flow.Jet1.pressure_fixed = 1
+Simulator.SubSystemB.Flow.Jet1.pressure_Neumann = 0
+Simulator.SubSystemB.Flow.Jet1.JensRhoIni = 0
+Simulator.SubSystemB.Flow.Jet1.JensPIni = 0
+Simulator.SubSystemB.Flow.Jet1.VrBC = 1935.07 # in SI (m/s)
+Simulator.SubSystemB.Flow.Jet1.PPorNot = true
+
+# needed for computing Br from file
+Simulator.SubSystemB.Flow.Jet1.VarIDs = 0
+Simulator.SubSystemB.Flow.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystemB.Flow.Data.DistanceBased.TRSName = Inlet
+Simulator.SubSystemB.Flow.Data.DistanceBased.TemperatureID = 0
+Simulator.SubSystemB.Flow.Data.DistanceBased.NbClosestPoints = 8
+
+Simulator.SubSystemB.Flow.Jet2.applyTRS = Outlet
+Simulator.SubSystemB.Flow.Jet2.refPhi = 0.
+
+# Initial Conditions
+Simulator.SubSystemB.Flow.InitComds = InitStateAddVar
+Simulator.SubSystemB.Flow.InitNames = InField
+Simulator.SubSystemB.Flow.InField.applyTRS = InnerFaces
+Simulator.SubSystemB.Flow.InField.InitVars = x y z
+Simulator.SubSystemB.Flow.InField.Vars = x y z r
+Simulator.SubSystemB.Flow.InField.InitDef = sqrt(x^2+y^2+z^2)
+
+# AL: this pre-processing command computes the coupling between EM and Flow solvers
+# pre-processing to transfer solution of EM system to Flow by computing B field out of potential
+# and filling corresponding "PreProcess1.VariableIDs" entries in the Flow equations
+
+###############################################################################
+###############################################################################
+# EM solver
+###############################################################################
+###############################################################################
+
+Simulator.SubSystemB.EM.Namespace = EMNamespace
+Simulator.SubSystemB.EM.Data.CollaboratorNames = EMLSS EMIterator
+Simulator.SubSystemB.EM.ComputeRHS = NumJacob
+Simulator.SubSystemB.EM.SetNodalStatesCom = StdSetNodalStates
+Simulator.SubSystemB.EM.StdSetNodalStates.updateGradients = true
+
+Simulator.SubSystemB.EM.SetupCom = LeastSquareP1Setup
+Simulator.SubSystemB.EM.SetupNames = Setup1
+Simulator.SubSystemB.EM.Setup1.stencil = FaceVertexPlusGhost
+Simulator.SubSystemB.EM.UnSetupCom = LeastSquareP1UnSetup
+Simulator.SubSystemB.EM.UnSetupNames = UnSetup1
+
+Simulator.SubSystemB.EM.Data.FluxSplitter = Null
+
+Simulator.SubSystemB.EM.Data.UpdateVar  = Cons
+Simulator.SubSystemB.EM.Data.SolutionVar = Cons
+Simulator.SubSystemB.EM.Data.DiffusiveVar = Cons
+Simulator.SubSystemB.EM.Data.DiffusiveFlux = PureDiffFlux
+
+Simulator.SubSystemB.EM.Data.DerivativeStrategy = Corrected3D
+
+Simulator.SubSystemB.EM.Data.PolyRec = LinearLS3D
+
+Simulator.SubSystemB.EM.Data.NodalExtrapolation = DistanceBased
+Simulator.SubSystemB.EM.Data.DistanceBased.TRSName = Inlet
+Simulator.SubSystemB.EM.Data.DistanceBased.TemperatureID = 0
+Simulator.SubSystemB.EM.Data.DistanceBased.NbClosestPoints = 8 #1 #2
+
+Simulator.SubSystemB.EM.InitComds = InitState
+Simulator.SubSystemB.EM.InitNames = InField
+Simulator.SubSystemB.EM.InField.applyTRS = InnerFaces
+Simulator.SubSystemB.EM.InField.Vars = x y z
+Simulator.SubSystemB.EM.InField.Def = 0.
+
+Simulator.SubSystemB.EM.BcComds = NeumannBCFromFileFVMCC SuperInletFVMCC
+Simulator.SubSystemB.EM.BcNames = Inlet Outlet
+
+Simulator.SubSystemB.EM.Inlet.applyTRS = Inlet
+Simulator.SubSystemB.EM.Inlet.Vars = x y z
+Simulator.SubSystemB.EM.Inlet.ZeroGradientFlags = 1
+
+Simulator.SubSystemB.EM.Outlet.applyTRS = Outlet
+Simulator.SubSystemB.EM.Outlet.Vars = x y z
+Simulator.SubSystemB.EM.Outlet.Def = 0.0
+
+Simulator.SubSystemB.DataPostProcessing = DataProcessing
+Simulator.SubSystemB.DataPostProcessingNames = EMPostProcessing
+Simulator.SubSystemB.EMPostProcessing.Comds = SphericalDerivatives
+Simulator.SubSystemB.EMPostProcessing.Names = BrThetaPhi
+Simulator.SubSystemB.EMPostProcessing.SkipFirstIteration = false # true
+Simulator.SubSystemB.EMPostProcessing.ProcessRate = 1
+Simulator.SubSystemB.EMPostProcessing.Namespace = EMNamespace
+Simulator.SubSystemB.EMPostProcessing.Data.CollaboratorNames = EM
+
+
+###>>Boundary conditions for simulations during March and July in 2024.
+Simulator.SubSystemB.Flow.Jet1.rhoBC = 2.0  #1.0 #2.0 #20000.  #2.0 #1.0
+Simulator.SubSystemB.Flow.Jet1.pBC = 0.25801090625  #0.00284615174  #0.08592156224 #0.108
+Simulator.SubSystemB.Flow.InField.Def = \
+if(r<22.000000000,2.0*((1/r)^5),2.*((1/22.0)^5)) \
+1000/480363.085276*(-52.1+106*log(r+0.78))*(x/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(y/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(z/r) \
+1. 2. 3. if(r<22.000000000,0.25801090625*((1/r)^5),0.25801090625*((1/22.0)^5)) 0.
+
+##>>Boundary conditions for simulations around 2019 eclipse 
+#Simulator.SubSystemB.Flow.Jet1.rhoBC = 1.0  #1.0 #2.0 #20000.  #2.0 #1.0
+#Simulator.SubSystemB.Flow.Jet1.pBC = 0.108  #0.00284615174  #0.08592156224 #0.108
+#Simulator.SubSystemB.Flow.InField.Def = \
+#if(r<22.000000000,1.0*((1/r)^5),1.*((1/22.0)^5)) \
+#1000/480363.085276*(-52.1+106*log(r+0.78))*(x/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(y/r) 1000/480363.085276*(-52.1+106*log(r+0.78))*(z/r) \
+#1. 2. 3. if(r<22.000000000,0.108*((1/r)^5),0.108*((1/22.0)^5)) 0.
