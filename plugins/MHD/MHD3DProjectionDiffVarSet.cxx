@@ -140,15 +140,15 @@ RealVector& MHD3DProjectionDiffVarSet::getFlux(const RealVector& state,
 
   const CFreal thermalConductionFactor = getModel().getThermalConductionFactor();
   const CFreal eps = 1e-14;
-  if (thermalConductionFactor < eps) {
-    qFlux = 0.;
+  if (thermalConductionFactor < eps) {
+    qFlux = 0.;
   }
   else {
-    _flux[7] = -qFlux/q0*thermalConductionFactor;
+    _flux[7] = -qFlux/q0*thermalConductionFactor;
   }
- 
- //std::cout << _flux[7] << endl; // The heat flux qFlux has a negative sign: - kappa nabla T. @Andrea: is this the same minus sign
-                         // as in your template here _flux ... = - qFlux; or is this an additional minus sign coming
+  
+  //std::cout << _flux[7] << endl; // The heat flux qFlux has a negative sign: - kappa nabla T. @Andrea: is this the same minus sign
+  // as in your template here _flux ... = - qFlux; or is this an additional minus sign coming
                          // from the geometry and orientation of the faces???
   return _flux;
 }
