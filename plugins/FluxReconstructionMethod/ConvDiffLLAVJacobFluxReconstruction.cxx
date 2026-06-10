@@ -2044,7 +2044,6 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
               
             if (m_needToAddSolPnt[pertSolIdx])
             {
-              CFLog(INFO, "dependingKSol:: in the if\n");
               // add part on this side of face
               m_tempFlux = 0.0;
 
@@ -2052,11 +2051,9 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
               for (CFuint kSolPnt = 0; kSolPnt < m_nbrSolDep; ++kSolPnt)
               {
                 const CFuint kSolIdx = (*m_flxSolDep)[flxPntIdxThis][kSolPnt];
-              CFLog(INFO, "kSolIdx::  "<<kSolIdx<<"\n");
                 for (CFuint lSol = 0; lSol < m_nbrSolSolDep; ++lSol)
                 {
-                  const CFuint lSolIdx = (*m_solSolDep)[pertSolIdx][lSol]; 
-                CFLog(INFO, "lSolIdx::  "<<lSolIdx<<"\n");
+                  const CFuint lSolIdx = (*m_solSolDep)[pertSolIdx][lSol];
                   if (lSolIdx == kSolIdx)
                   {
                     dependingKSol = kSolIdx;
@@ -2067,12 +2064,8 @@ void ConvDiffLLAVJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
 
 
               const CFreal divh_halfFaceJacob_l = divh_halfFaceJacob * (*m_solPolyValsAtFlxPnts)[flxPntIdxThis][dependingKSol];
-              CFLog(INFO, "divh_halfFaceJacob_l::  "<<divh_halfFaceJacob_l<<"\n");
               /// llav jacob to state part
               //m_tempFlux += m_llavRiemannFluxJacobian[m_pertSide][pertSolIdx][m_pertVar][iFlxPnt] * divh_halfFaceJacob_l;
-                CFLog(INFO, "m_pertSide::  "<<m_pertSide<<"\n");
-                CFLog(INFO, "dependingKSol::  "<<dependingKSol<<"\n");
-                CFLog(INFO, "pertSolIdx::  "<<pertSolIdx<<"\n");
 
               // (b)
               for (CFuint iDim = 0; iDim < m_dim; ++iDim)
