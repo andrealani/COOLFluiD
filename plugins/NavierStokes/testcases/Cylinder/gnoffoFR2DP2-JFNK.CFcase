@@ -17,7 +17,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.02496
+### Residual = -7.15174
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -110,7 +110,7 @@ Simulator.SubSystem.Tecplot.Data.SurfaceTRS       = Inlet Outlet1 Outlet2 Cylind
 
 ###################################
 Simulator.SubSystem.StopCondition = Norm #
-Simulator.SubSystem.Norm.valueNorm = -6
+Simulator.SubSystem.Norm.valueNorm = -7
 
 #############################################
 ## NewtonIterator with pseudo-steady time  ##
@@ -120,9 +120,9 @@ Simulator.SubSystem.ConvergenceMethod = NewtonIterator
 Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergenceGnoffoJFNKP2.plt
 #Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Interactive
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<500,0.25,min(5.,cfl*1.01^2))))) # 0.8
-Simulator.SubSystem.NewtonIterator.ShowRate        = 20
-Simulator.SubSystem.NewtonIterator.ConvRate        = 20
+Simulator.SubSystem.NewtonIterator.Data.CFL.Function.Def = if(i<10,0.05,if(i<40,0.25,if(i<60,0.25,if(i<100,0.25,min(2.5,cfl*1.05^2))))) # 0.8
+Simulator.SubSystem.NewtonIterator.ShowRate        = 2
+Simulator.SubSystem.NewtonIterator.ConvRate        = 2
 # JFNK: main iteration is Jacobian-free
 Simulator.SubSystem.NewtonIterator.Data.DoComputeJacobian = false
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
@@ -142,7 +142,7 @@ Simulator.SubSystem.NewtonIteratorLSS.SysSolver = ParJFSolveSys
 # p-MG shell preconditioner
 Simulator.SubSystem.NewtonIteratorLSS.Data.PCType = PCSHELL
 Simulator.SubSystem.NewtonIteratorLSS.Data.ShellPreconditioner = FRP0Precond
-Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 20
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate = 2
 Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces = 100
 Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter = 1000
@@ -210,7 +210,7 @@ Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.S0 = -2.0
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.AddUpdateCoeff = true
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.FreezeLimiterIter = 100000000
 Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.MonitoredPhysVar = 1
-Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.ShowRate = 20
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.ShowRate = 2
 
 Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PhysicalityEuler2D
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.CheckInternal = false
@@ -218,7 +218,7 @@ Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.LimCompleteState = tru
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ExpLim = true
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinPressure = 1.0e-5
 Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.MinDensity = 1.0e-5
-Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 20
+Simulator.SubSystem.FluxReconstruction.PhysicalityEuler2D.ShowRate = 2
 
 Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution = GaussLegendre #Equidistant #Lobatto #
 Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution = GaussLegendre #Equidistant #Lobatto #
@@ -264,7 +264,7 @@ Simulator.SubSystem.DataPostProcessing = DataProcessing
 Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
 Simulator.SubSystem.DataProcessing2.Comds = NavierStokesSkinFrictionHeatFluxFR
 Simulator.SubSystem.DataProcessing2.Names = SkinFriction
-Simulator.SubSystem.DataProcessing2.ProcessRate = 1000
+Simulator.SubSystem.DataProcessing2.ProcessRate = 20
 Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS = Cylinder
 Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf = 0.00100335
 Simulator.SubSystem.DataProcessing2.SkinFriction.TInf = 200.0
