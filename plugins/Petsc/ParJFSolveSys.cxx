@@ -55,10 +55,35 @@ seqJFSolveSysProvider("SeqJFSolveSys");
 
 void ParJFSolveSys::defineConfigOptions(Config::OptionList& options)
 {
+  // Rebuilding the preconditioner (e.g. FRP0 block assembly + coarse LU
+  // factorization) is expensive. "Lagging" means reusing the preconditioner
+  // built at an earlier Newton iteration: the linear solver may need a few
+  // more KSP iterations, but each Newton step becomes much cheaper.
+  //
+  // For steady / pseudo-steady cases (MaxSteps = 1, every Newton iteration
+  // is a new pseudo-time step):
+  //   - default: LagFrequency = 1, rebuild at every iteration (no lagging)
+  //   - to lag: set LagAcrossTimeSteps = true and LagFrequency = N (e.g.
+  //     100), so the preconditioner is only rebuilt every N iterations.
+  //     Same idea as the FreezeJacob option of the assembled-Jacobian path.
+  //
+  // For unsteady / time-dependent cases (MaxSteps > 1 Newton iterations per
+  // physical time step):
+  //   - keep LagAcrossTimeSteps = false: a fresh preconditioner is built at
+  //     the start of every time step
+  //   - set LagFrequency = 0: the Newton sub-iterations within the step then
+  //     reuse it instead of rebuilding every time
+  //
+  // In both cases LagKSPGrowthThreshold is the safety net: if a solve needs
+  // more than threshold times the KSP iterations measured right after the
+  // last rebuild, the lagged preconditioner has degraded and is rebuilt
+  // immediately. 0 disables the check.
   options.addConfigOption<CFuint>("LagFrequency",
-    "Rebuild preconditioner every N Newton steps (default 1 = every step)");
+    "Rebuild preconditioner every N Newton steps (default 1 = every step, 0 = only at new time steps / on KSP growth)");
   options.addConfigOption<CFreal>("LagKSPGrowthThreshold",
     "Rebuild when KSP iterations exceed this factor of baseline (default 2.0, 0=disabled)");
+  options.addConfigOption<bool>("LagAcrossTimeSteps",
+    "Allow preconditioner lagging to persist across (pseudo-)time steps; if false, rebuild at every new time step (default false)");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -72,6 +97,8 @@ ParJFSolveSys::ParJFSolveSys(const string& name) :
   setParameter("LagFrequency", &m_lagFrequency);
   m_lagKSPGrowthThreshold = 2.0;
   setParameter("LagKSPGrowthThreshold", &m_lagKSPGrowthThreshold);
+  m_lagAcrossTimeSteps = false;
+  setParameter("LagAcrossTimeSteps", &m_lagAcrossTimeSteps);
   m_lagCounter = 0;
   m_lastKSPIters = 0;
   m_lastRebuildKSP = 0;
@@ -138,9 +165,10 @@ void ParJFSolveSys::execute()
     shouldRebuild = (m_lagCounter % m_lagFrequency == 0);
   if (!shouldRebuild && m_lagKSPGrowthThreshold > 0 && m_lastRebuildKSP > 0)
     shouldRebuild = (m_lastKSPIters > m_lagKSPGrowthThreshold * m_lastRebuildKSP);
-  // Always rebuild on first iteration of a new time step
+  // Rebuild on the first iteration of a new (pseudo-)time step, unless
+  // lagging is explicitly allowed to persist across time steps
   const CFuint currTimeStep = SubSystemStatusStack::getActive()->getNbIter();
-  if (currTimeStep != m_lastRebuildTimeStep) shouldRebuild = true;
+  if (!m_lagAcrossTimeSteps && currTimeStep != m_lastRebuildTimeStep) shouldRebuild = true;
   m_lagCounter++;
 
   if(jfc->differentPreconditionerMatrix) {
@@ -189,7 +217,7 @@ void ParJFSolveSys::execute()
   // --- MatMFFDSetBase: set the linearization point (U, F(U)) ---
   // Pack current states into stateVec for PETSc's MatMFFD
   // Option 1: pass F=NULL, PETSc evaluates F(U) via callback on first MatMult
-  // (1 extra residual eval per Newton step — negligible vs 60+ KSP evals)
+  // (1 extra residual eval per Newton step, negligible vs 60+ KSP evals)
   for (CFuint i = 0; i < vecSize; ++i) {
     const CFint localID = _upLocalIDs[i];
     const CFuint stateIdx = localID / nbEqs;
@@ -248,7 +276,9 @@ void ParJFSolveSys::execute()
   CF_CHKERRCONTINUE(KSPGetResidualNorm(ksp, &kspResNorm));
   KSPConvergedReason reason;
   CF_CHKERRCONTINUE(KSPGetConvergedReason(ksp, &reason));
-  CFLog(INFO, "KSP converged in " << iter << " iterations\n");
+  if (SubSystemStatusStack::getActive()->getNbIter() % getMethodData().getKSPConvergenceShowRate() == 0) {
+    CFLog(INFO, "KSP converged in " << iter << " iterations\n");
+  }
   CFLog(VERBOSE, "KSP residual norm: " << kspResNorm
     << ", reason: " << reason << "\n");
 

@@ -68,12 +68,27 @@ protected: // data
   /// socket for update coefficients
   Framework::DataSocketSink<CFreal> socket_updateCoeff;
 
-  /// Rebuild preconditioner every N Newton steps (1 = every step, default)
+  /// How often to rebuild the preconditioner, counted in Newton iterations
+  /// (NOT time steps): 1 (default) rebuilds at every iteration, i.e. no
+  /// lagging; N rebuilds every N-th iteration; 0 disables this schedule, so
+  /// rebuilds then happen only at the start of a new time step (see
+  /// m_lagAcrossTimeSteps) or when the KSP count grows too much.
+  /// Full explanation in defineConfigOptions() in the .cxx.
   CFuint m_lagFrequency;
 
-  /// Rebuild when KSP iterations exceed this factor times the baseline count
-  /// (0 = disabled, default 2.0)
+  /// Safety net for lagging: rebuild as soon as a solve needs more than
+  /// (this factor) x (the KSP iteration count right after the last rebuild),
+  /// meaning the lagged preconditioner has degraded. 0 disables the check.
+  /// Default 2.0.
   CFreal m_lagKSPGrowthThreshold;
+
+  /// false (default): force a rebuild whenever a new (pseudo-)time step
+  /// starts, the right choice for unsteady/time-accurate runs.
+  /// true: let a lagged preconditioner survive across time steps. Needed
+  /// for lagging in steady/pseudo-steady runs, where every Newton iteration
+  /// counts as a new "time step" and the forced rebuild would otherwise
+  /// override the LagFrequency schedule.
+  bool m_lagAcrossTimeSteps;
 
   /// Call counter: increments every execute() call
   CFuint m_lagCounter;

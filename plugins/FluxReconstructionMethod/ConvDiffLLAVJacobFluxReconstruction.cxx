@@ -283,21 +283,29 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
   CellToFaceGEBuilder::GeoData& geoDataCBR = m_cellBuilders[RIGHT]->getDataGE();
   geoDataCBR.trs = cells;
   
-  // reset epsilon in vertices
-  m_nodeEpsilons = 0.0;
-  
+  // in linear residual mode (JFNK matrix-free evaluations, preconditioner
+  // block assembly) the sensor pass is skipped: the artificial viscosity is
+  // frozen at the base-point values stored in m_nodeEpsilons/m_cellEpsilons
+  const bool linearMode = getMethodData().isLinearResidualMode();
+
   // get current residual
   const CFreal residual = SubSystemStatusStack::getActive()->getResidual();
-  
+
   // get current iteration
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
-  
+
+  if (!linearMode)
+  {
+  // reset epsilon in vertices
+  m_nodeEpsilons = 0.0;
+
   // check if LLAV should be frozen
   m_useMax = residual < m_freezeLimiterRes || iter > m_freezeLimiterIter;
-  
+
   // initialize Smax and eps_total
   m_Smax = -100.0;
   m_totalEps = 0.0;
+  }
   
   ////////////////////COMPUTE EPSILON AND GRADIENTS/////////////////////////
   
@@ -372,6 +380,8 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
 //       // if the states in the cell are parallel updatable, compute the resUpdates (-divFC)
 //       if ((*m_cellStates)[0]->isParUpdatable())
 //       {
+      if (!linearMode)
+      {
 	// compute the states projected on order P-1
 	computeProjStates(m_statesPMinOne);
 
@@ -380,7 +390,8 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
 
 	// store epsilon
 	storeEpsilon();
-//       } 
+      }
+//       }
 
       // add the cell part to the gradients
       computeGradients();
@@ -391,7 +402,7 @@ void ConvDiffLLAVJacobFluxReconstruction::execute()
   }
 
   //// print outputs of LLAV
-  if (m_printLLAV && iter%m_showrate == 0)
+  if (!linearMode && m_printLLAV && iter%m_showrate == 0)
   {
     const std::string nsp = this->getMethodData().getNamespace();
   
