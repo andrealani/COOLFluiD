@@ -1104,7 +1104,7 @@ void WriteSolution::writeToFileStream(std::ofstream& fout)
           if (getMethodData().getAppendAuxData())
             fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                  << ", AUXDATA TRS=\"" << trs->getName() << "\""
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
 #else
                  << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
@@ -1247,7 +1247,7 @@ void WriteSolution::writeBoundarySurface()
   // else Tecplot cannot handle it and you have manually to skip the file
   if (countTRToWrite > 0) {
     path cfgpath = getMethodData().getFilename();
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
     path filepath = cfgpath.parent_path() / ( cfgpath.stem().string() + "-surf" + cfgpath.extension().string() );
 #else
     path filepath = cfgpath.branch_path() / ( basename(cfgpath) + "-surf" + extension(cfgpath) );

@@ -55,7 +55,7 @@ PathAppender::appendParallel(const boost::filesystem::path& fpath) const
     add << "-P" << PE::GetPE().GetRank("Default");
   }
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   return fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
@@ -77,7 +77,7 @@ PathAppender::appendIter(const boost::filesystem::path& fpath) const
     if(SubSystemStatusStack::getActive()->doingSubIterations()) add << "-sub_" << SubSystemStatusStack::getActive()->getSubIter();
   }
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   return fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
@@ -98,7 +98,7 @@ PathAppender::appendGlobalIter(const boost::filesystem::path& fpath) const
     add << "-globaliter_" << iter;
   }
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   return fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
@@ -129,7 +129,7 @@ PathAppender::appendTime(const boost::filesystem::path& fpath) const
     add << "-time_" << time_string ;
   }
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   return fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
@@ -194,8 +194,7 @@ PathAppender::appendCustom(const boost::filesystem::path& fpath, std::string& cu
   ostringstream add;
   add << "-" << custom;
 
-
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   return fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   return fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );

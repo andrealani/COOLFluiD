@@ -160,7 +160,7 @@ void Tecplot2CFmeshConverter::readTecplotFile(CFuint nbZones,
   vector<string> words;
   SelfRegistPtr<FileHandlerInput>* fhandle = 
 	SingleBehaviorFactory<FileHandlerInput>::getInstance().createPtr();
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path meshFile = boost::filesystem::path(filepath).replace_extension(extension);
 #else
   path meshFile = change_extension(filepath, extension);
@@ -489,7 +489,7 @@ void Tecplot2CFmeshConverter::writeTecplot(const boost::filesystem::path& filepa
   CFAUTOTRACE;
 
 //   using namespace boost::filesystem;
-//#ifdef CF_HAVE_BOOST_1_85
+//#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 //   path outFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension()); 
 //#else
 //   path outFile = change_extension(filepath, getOriginExtension());
@@ -1187,7 +1187,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   
   Stopwatch<WallTime> stp;
   stp.start();
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
 #else
   path meshFile = change_extension(filepath, getOriginExtension());
@@ -1283,7 +1283,7 @@ void Tecplot2CFmeshConverter::interpolateTecplotSolution(const boost::filesystem
   fout << "  PRECISION = 9\n";
   fout << "  TECPLOTVERSIONTOWRITE = TECPLOTCURRENT\n";
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path allSurfFile = boost::filesystem::path(filepath).replace_extension("allsurf.plt");
 #else
   path allSurfFile = change_extension(filepath, "allsurf.plt");

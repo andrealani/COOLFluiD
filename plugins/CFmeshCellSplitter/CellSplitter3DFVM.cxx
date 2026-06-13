@@ -117,7 +117,7 @@ void CellSplitter3DFVM::convert(const boost::filesystem::path& fromFilepath,
 
 //   if ( fromFilepath.string() == filepath.string() ) {
 //     boost::filesystem::path new_path (  basename(filepath) + "_splitted" + extension(filepath) );
-//#ifdef CF_HAVE_BOOST_1_85
+//#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 //     boost::filesystem::path new_path2 = filepath.parent_path() / new_path;
 //#else
 //     boost::filesystem::path new_path2 = filepath.branch_path() / new_path;

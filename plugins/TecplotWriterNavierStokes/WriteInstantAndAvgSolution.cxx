@@ -199,7 +199,7 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
 
   // open file for averaged solution
   path fpath = Environment::DirPaths::getInstance().getResultsDir() / m_avgSolFileName;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
     fpath.replace_extension(".plt");
 #else
     fpath = boost::filesystem::change_extension(fpath, std::string(".plt"));
@@ -208,7 +208,7 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
   if (PE::GetPE().IsParallel()) {
     add << "-P" << PE::GetPE().GetRank(getMethodData().getNamespace());
   }
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   fpath = fpath.parent_path() / ( fpath.stem().string() + add.str() + fpath.extension().string() );
 #else
   fpath = fpath.branch_path() / ( basename(fpath) + add.str() + extension(fpath) );
@@ -338,7 +338,7 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
                << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
                << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                << ", AUXDATA TRS=\"" << trs->getName() << "\""
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
                << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
 #else
                << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
@@ -356,7 +356,7 @@ void WriteInstantAndAvgSolution::writeToFileStream(std::ofstream& fout)
                   << ", ET=" << MapGeoEnt::identifyGeoEntTecplot(eType.getNbNodes(),eType.getGeoOrder(),dim)
                   << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                   << ", AUXDATA TRS=\"" << trs->getName() << "\""
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
                   << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
 #else
                   << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""
@@ -526,7 +526,7 @@ void WriteInstantAndAvgSolution::setup()
   m_updateToPrimVar->setup(1);
 
   // remove the extension and assign to filename
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   m_avgSolFileName = boost::filesystem::path(m_avgSolFileNameStr).stem().string();
 #else
   m_avgSolFileName = boost::filesystem::basename(boost::filesystem::path(m_avgSolFileNameStr));

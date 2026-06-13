@@ -311,7 +311,7 @@ boost::filesystem::path EnergyIntegration::constructFilename()
 
   if (isParallel) {
     std::ostringstream fname;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
     fname << boost::filesystem::path(m_nameOutputFileError).stem().string()
           << "-" << PE::GetPE().GetRank("Default")
           << boost::filesystem::path(m_nameOutputFileError).extension().string();

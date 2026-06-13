@@ -11,7 +11,7 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/exception.hpp>
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 #include <boost/filesystem.hpp>
 #else
 #include <boost/filesystem/convenience.hpp>

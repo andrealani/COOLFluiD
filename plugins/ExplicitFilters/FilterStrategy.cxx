@@ -16,7 +16,7 @@
 #include "MathTools/MathChecks.hh"
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/tools/roots.hpp>
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 #define BOOST_TIMER_ENABLE_DEPRECATED
 #endif
 #include <boost/progress.hpp>
@@ -596,7 +596,7 @@ void FilterStrategy::outputTransferFunctionGnuplot(RealVector& k_11, RealVector&
   
   boost::filesystem::path file;
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   std::string base = boost::filesystem::path(getMethodData().getTransferFunctionFileName()).stem().string();
 #else
   std::string base = boost::filesystem::basename(getMethodData().getTransferFunctionFileName());
@@ -652,7 +652,7 @@ void FilterStrategy::outputTransferFunctionTecplot(RealVector** K, CFcomplex** G
     
   boost::filesystem::path file;
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   std::string base = boost::filesystem::path(getMethodData().getTransferFunctionFileName()).stem().string();
 #else
   std::string base = boost::filesystem::basename(getMethodData().getTransferFunctionFileName());

@@ -18,7 +18,7 @@
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Framework/TrsGeoWithNodesBuilder.hh"
 #include "Framework/GeometricEntityPool.hh"
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 #define BOOST_TIMER_ENABLE_DEPRECATED
 #endif
 #include <boost/progress.hpp>

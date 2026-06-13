@@ -283,7 +283,7 @@ void ReconstructionFilter::getFilterGridRatioVSweightingFactor()
 {
   boost::filesystem::path file;
   Common::SelfRegistPtr<Environment::FileHandlerOutput> fhandle;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   std::string base = boost::filesystem::path("FGRvsWeight").stem().string();
 #else
   std::string base = boost::filesystem::basename("FGRvsWeight");

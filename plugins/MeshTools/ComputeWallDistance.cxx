@@ -165,7 +165,7 @@ void ComputeWallDistance::printToFile()
   path file = Environment::DirPaths::getInstance().getResultsDir() / path(_nameOutputFile);
 //   path file = Environment::DirPaths::getInstance().getWorkingDir() / path(_nameOutputFile);
   file = Framework::PathAppender::getInstance().appendParallel( file );
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
    file.replace_extension(".dat");
 #else
    change_extension(file,".dat");

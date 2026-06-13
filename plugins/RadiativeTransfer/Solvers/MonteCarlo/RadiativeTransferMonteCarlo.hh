@@ -18,16 +18,21 @@
 #include "LagrangianSolver/ParallelVector/ParallelVector.hh"
 #include "RadiativeTransfer/Solvers/MonteCarlo/PhotonData.hh"
 
-
 #include <utility>
 #include <time.h>
 #include <cmath>
 #include <algorithm>
-#ifdef CF_HAVE_BOOST_1_85
-#define BOOST_TIMER_ENABLE_DEPRECATED
-#endif
+
+//#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
+//#define BOOST_TIMER_ENABLE_DEPRECATED
+//#endif
+
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
+#include <boost/timer/progress_display.hpp>
+#include <boost/timer/timer.hpp>
+#else
 #include <boost/progress.hpp>
-#include <boost/random.hpp>
+#endif
 
 #include "MathTools/MathChecks.hh"
 #include "MathTools/MathConsts.hh"
@@ -948,8 +953,13 @@ void RadiativeTransferMonteCarlo<PARTICLE_TRACKING>::computePhotons()
 
   }
 
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
+  boost::timer::progress_display* progressBar = NULL;
+  if (m_myProcessRank == 0) progressBar = new boost::timer::progress_display(totalnbPhotons);
+#else
   boost::progress_display* progressBar = NULL;
   if (m_myProcessRank == 0) progressBar = new boost::progress_display(totalnbPhotons);
+#endif
 
   //CFuint toGeneratePhotons = totalnbPhotons;
 

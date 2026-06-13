@@ -152,7 +152,7 @@ void CFmeshWriter::computeFullOutputName()
   
   path fpath = Environment::DirPaths::getInstance().getResultsDir() / m_filename;
   fpath = PathAppender::getInstance().appendAllInfo(fpath, m_appendIter, m_appendTime, false);
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   m_fullOutputName = boost::filesystem::path(fpath).replace_extension(getFormatExtension());
 #else
     m_fullOutputName = boost::filesystem::change_extension(fpath, getFormatExtension());

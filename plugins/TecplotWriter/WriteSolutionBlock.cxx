@@ -247,7 +247,7 @@ void WriteSolutionBlock::writeToFileStream(std::ofstream& fout)
                if (getMethodData().getAppendAuxData())
                  fout << ", AUXDATA CPU=\"" << PE::GetPE().GetRank(nsp) << "\""
                       << ", AUXDATA TRS=\"" << trs->getName() << "\""
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
                       << ", AUXDATA Filename=\"" << getMethodData().getFilename().filename() << "\""
 #else
                       << ", AUXDATA Filename=\"" << getMethodData().getFilename().leaf() << "\""

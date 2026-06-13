@@ -4,7 +4,7 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
 #include <boost/filesystem.hpp>
 #else
 #include <boost/filesystem/convenience.hpp>
@@ -113,7 +113,7 @@ void OutputFormatter::setMethodImpl()
   }
 
   // remove the extension and assign to filename
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   m_filename = boost::filesystem::path(m_filenameStr).stem().string();
 #else
   m_filename = boost::filesystem::basename(boost::filesystem::path(m_filenameStr));
@@ -133,7 +133,7 @@ void OutputFormatter::unsetMethodImpl()
 void OutputFormatter::setOutputFileName(const std::string filename)
 {
   // remove the extension and assign to filename
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   m_filename = boost::filesystem::path(filename).stem().string();
 #else
   m_filename = boost::filesystem::basename(boost::filesystem::path(filename));
@@ -150,7 +150,7 @@ void OutputFormatter::computeFullOutputName()
   
   path fpath = Environment::DirPaths::getInstance().getResultsDir() / m_filename;
   fpath = PathAppender::getInstance().appendAllInfo(fpath, m_appendIter,m_appendTime,m_appendRank);
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   m_fullOutputName = boost::filesystem::path(fpath).replace_extension(getFormatExtension());
 #else
   m_fullOutputName = boost::filesystem::change_extension(fpath, getFormatExtension());

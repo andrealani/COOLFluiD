@@ -254,7 +254,7 @@ void Gmsh2CFmeshConverter::checkFormat(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
 #else
   path meshFile = change_extension(filepath, getOriginExtension());
@@ -485,7 +485,7 @@ void Gmsh2CFmeshConverter::readGmshFileVersion1(const boost::filesystem::path& f
    CFAUTOTRACE;
 
    using namespace boost::filesystem;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
    path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
 #else
    path meshFile = change_extension(filepath, getOriginExtension());
@@ -755,7 +755,7 @@ void Gmsh2CFmeshConverter::readGmshFileVersion2(const boost::filesystem::path& f
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path meshFile = boost::filesystem::path(filepath).replace_extension(getOriginExtension());
 #else
   path meshFile = change_extension(filepath, getOriginExtension());
@@ -1080,7 +1080,7 @@ void Gmsh2CFmeshConverter::readSPInnerCells(const boost::filesystem::path& filep
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
    path fileSP = boost::filesystem::path(filepath).replace_extension(".SP");
 #else
   path fileSP = change_extension(filepath,".SP");
@@ -1130,7 +1130,7 @@ void Gmsh2CFmeshConverter::readSPFile(const boost::filesystem::path& filepath)
   CFAUTOTRACE;
 
   using namespace boost::filesystem;
-#ifdef CF_HAVE_BOOST_1_85
+#if defined CF_HAVE_BOOST_1_85 || defined CF_HAVE_BOOST_1_88
   path fileSP = boost::filesystem::path(filepath).replace_extension(".SP");
 #else
   path fileSP = change_extension(filepath,".SP");
