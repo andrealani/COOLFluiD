@@ -251,13 +251,17 @@ void Venktn3DStrict::limit(const vector<vector<Node*> >& coord,
 	if (((_NoLimiterID[iVar] == 1) || (_NoLimiterID[iVar] == 2) || (_NoLimiterID[iVar] == 3)) && (V_local > _vLocal)){	
 	  limiterValue[_NoLimiterID[iVar]] = limiterValue[_NoLimiterID[iVar]];
 	}
+	
+	//else if (((_NoLimiterID[iVar] == 4) || (_NoLimiterID[iVar] == 5) || (_NoLimiterID[iVar] == 6)) && (B_local > 6.1e-3)){
+	//	  limiterValue[_NoLimiterID[iVar]] = limiterValue[_NoLimiterID[iVar]];
+	//  }
+	else{
+	  limiterValue[_NoLimiterID[iVar]] = 1.0;
+	}
       }
-      //else if (((_NoLimiterID[iVar] == 4) || (_NoLimiterID[iVar] == 5) || (_NoLimiterID[iVar] == 6)) && (B_local > 6.1e-3)){
-      //	  limiterValue[_NoLimiterID[iVar]] = limiterValue[_NoLimiterID[iVar]];
-      //  }
-      else{
+      else {
 	limiterValue[_NoLimiterID[iVar]] = 1.0;
-      } 
+      }
     }
   }
   //<< Mark 2025.07.30 by Hp to cancel limiter for several reconstructed variables

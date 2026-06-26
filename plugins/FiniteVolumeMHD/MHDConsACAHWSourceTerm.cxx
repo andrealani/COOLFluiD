@@ -488,6 +488,7 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
 		  RadCur[i] = std::pow(10, logRadCur[i]);
 	  }
 
+	  CFreal Q_rad = 0.0;
 	  CFreal RadCur_Cur = 0.0;
 	  double Coefi1;
 	  double Coefi2;
