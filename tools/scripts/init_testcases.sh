@@ -18,9 +18,23 @@ if compgen -G "*.xz" > /dev/null; then
    cat corona_720.CFmesh.?? > corona_720.CFmesh
 fi
 cd -
-cd plugins/MHD/testcases/COCONUT/Eclipse/MapData      
+cd plugins/MHD/testcases/COCONUT/Eclipse/MapData
 if compgen -G "*.xz" > /dev/null; then
    unxz map_gong_lmax25*
+fi
+cd -
+cd plugins/MHD/testcases/COCONUT/Eclipse600/Mesh
+if compgen -G "*.xz" > /dev/null; then
+## file was split using:
+## split -b 40m L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh.  
+## this reassembles the original file
+   unxz L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh.*
+   cat L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh.?? > L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh
+fi
+cd -
+cd plugins/MHD/testcases/COCONUT/Eclipse600/MapData/First600
+if compgen -G "*.xz" > /dev/null; then
+   unxz map_gong_lmax50_20240*
 fi
 cd -
 if [ -e plugins/RadiativeTransfer/testcases/SolarCorona/corona_fullMHD.CFmesh.xz ]; then
