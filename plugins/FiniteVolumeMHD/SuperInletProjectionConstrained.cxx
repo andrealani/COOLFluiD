@@ -526,7 +526,7 @@ void SuperInletProjectionConstrained::setGhostState(GeometricEntity *const face)
 void SuperInletProjectionConstrained::preProcess()
 {
   SuperInlet::preProcess();
-  CFLog(INFO, "SuperInletProjectionConstrained::preProcess() => START\n");  
+  CFLog(VERBOSE, "SuperInletProjectionConstrained::preProcess() => START\n");  
   // AL: only for unsteady runs (DT > 0.)  
   if (SubSystemStatusStack::getActive()->getDT() > 0.) {
    if (SubSystemStatusStack::getActive()->getSubIter() == 0) {
@@ -535,7 +535,7 @@ void SuperInletProjectionConstrained::preProcess()
     nse->extrapolateVarsFromFileInTime();
    }
   }
-  CFLog(INFO, "SuperInletProjectionConstrained::preProcess() => END\n");
+  CFLog(VERBOSE, "SuperInletProjectionConstrained::preProcess() => END\n");
 }
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////

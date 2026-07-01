@@ -3,31 +3,31 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -13.5506
-#-13.5459 
+### Residual = -14.2399
 
 ###############################################################################
 # User defined parameters
 ############################################################################### 
 # SubSystem Parameters
-Simulator.Paths.WorkingDir = ./
-Simulator.Paths.ResultsDir = /../../../../../scratch/leuven/385/vsc38512/Timeevolving/map_steady/
-
+Simulator.Paths.WorkingDir = plugins/MHD/testcases/COCONUT/Eclipse600/
+Simulator.Paths.ResultsDir = ./res_map_600/
                                                                                  
 # Boundary condition files for initial EM 
-Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = ../../../../../../COOLFluiD_Genius_Mine/plugins/MHD/testcases/COCONUT/Timeevolving/First600/map_gong_lmax50_20240312221400.dat
+Simulator.SubSystem.EM.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/Eclipse600/MapData/First600/map_gong_lmax50_20240312221400.dat
 
 # Boundary condition files for flow 
-Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = ../../../../../../COOLFluiD_Genius_Mine/plugins/MHD/testcases/COCONUT/Timeevolving/First600/map_gong_lmax50_20240312221400.dat
+Simulator.SubSystem.Flow.Data.DistanceBased.FileNameTw = plugins/MHD/testcases/COCONUT/Eclipse600/MapData/First600/map_gong_lmax50_20240312221400.dat
 
 # Mesh reader
 # First reader 
-Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./30Rs_lvl6_6.CFmesh  # BCindependent7.CFmesh # 30Rs_lvl6.CFmesh #  
+Simulator.SubSystem.CFmeshFileReader0.Data.FileName = ./Mesh/L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh
+#./30Rs_lvl6_6.CFmesh  # BCindependent7.CFmesh # 30Rs_lvl6.CFmesh #  
 #Simulator.SubSystem.CFmeshFileReader0.Data.ScalingFactor = 1.
 Simulator.SubSystem.CFmeshFileReader0.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2 # ??
 
 # Second reader
-Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./30Rs_lvl6_6.CFmesh  # BCindependent7.CFmesh #30Rs_lvl6.CFmesh #
+Simulator.SubSystem.CFmeshFileReader1.Data.FileName = ./Mesh/L6corona_PPDecEBC2_2024zqsLax025NHom.CFmesh
+# ./30Rs_lvl6_6.CFmesh  # BCindependent7.CFmesh #30Rs_lvl6.CFmesh #
 #Simulator.SubSystem.CFmeshFileReader1.Data.ScalingFactor = 1. 
 Simulator.SubSystem.CFmeshFileReader1.ParReadCFmesh.ParCFmeshFileReader.ParMetis.NCommonNodes = 2
 
@@ -38,15 +38,14 @@ Simulator.SubSystem.MHD3DProjection.ConvTerm.gamma = 1.05
 Simulator.SubSystem.Flow.Jet1.rotation = 1
 # set Simulator.SubSystem.Flow.Jet1.nonhomBC = 1 to define nonhomgenious innerboundary density distribution.
 Simulator.SubSystem.Flow.Jet1.nonhomBC = 1 # 0 #
-
-
+Simulator.SubSystem.Flow.Jet1.PPorNot = false #true for backward compatibility 
 
 # Stop Condition
 # Quasi-steady state
 #Simulator.SubSystem.StopCondition       = Norm
 #Simulator.SubSystem.Norm.valueNorm      = -4.0 # -8 #-2.0
 Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 500
+Simulator.SubSystem.MaxNumberSteps.nbSteps = 10 #500
 
 # CFL definition
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
@@ -80,6 +79,7 @@ Simulator.SubSystem.Flow.Data.Venktn3DStrict.strictCoeff = 1.0
 #corresponding to variables which don't implement limiter
 Simulator.SubSystem.Flow.Data.Venktn3DStrict.NoLimiterID = 1 2 3 4 5 6
 #Simulator.SubSystem.Flow.Data.Venktn3DStrict.NoLimiterID = 4 5 6
+Simulator.SubSystem.Flow.Data.Venktn3DStrict.Vlocal = 1.0 # 0.0 for backward compatibility 
 
 # HW settings for time evolving runs
 Simulator.SubSystem.Flow.Data.Venktn3DStrict.psiMinEqual1 = true
@@ -251,11 +251,11 @@ Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
 Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
 # Qasi-steady
 #Simulator.SubSystem.FlowIterator.UpdateSol =  StdUpdateSol
-Simulator.SubSystem.FlowIterator.UpdateSol =  StdUpdateSolPP
-Simulator.SubSystem.FlowIterator.StdUpdateSolPP.Relaxation= 1.
+Simulator.SubSystem.FlowIterator.UpdateSol =  StdUpdateSolPP2
+Simulator.SubSystem.FlowIterator.StdUpdateSolPP2.Relaxation= 1.
 # 0.25801090625 and 2.0 for solar maximum, 0.108 and 1.0 for solar minimum, should be consistent with boundary values
-Simulator.SubSystem.FlowIterator.StdUpdateSolPP.pressureBoundaryValue = 0.25801090625  # 0.108 #1.032043625 #0.5160218125  #
-Simulator.SubSystem.FlowIterator.StdUpdateSolPP.densityBoundaryValue = 2.0  # 1.0 #8.0 #4.0 #
+Simulator.SubSystem.FlowIterator.StdUpdateSolPP2.pressureBoundaryValue = 0.25801090625  # 0.108 #1.032043625 #0.5160218125  #
+Simulator.SubSystem.FlowIterator.StdUpdateSolPP2.densityBoundaryValue = 2.0  # 1.0 #8.0 #4.0 #
 
 Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 7
 # quasi-steady
