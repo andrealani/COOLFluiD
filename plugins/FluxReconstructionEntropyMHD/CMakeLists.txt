@@ -1,0 +1,17 @@
+LIST( APPEND FluxReconstructionEntropyMHD_files
+FluxReconstructionEntropyMHD.hh
+FluxReconstructionEntropyMHD.cxx
+BCSuperInletEntropyMHD.hh
+BCSuperInletEntropyMHD.cxx
+BCSuperOutletEntropyMHD.hh
+BCSuperOutletEntropyMHD.cxx
+EntropyMHDSourceTerm.hh
+EntropyMHDSourceTerm.cxx
+)
+
+LIST ( APPEND FluxReconstructionEntropyMHD_requires_mods EntropyMHD FluxReconstructionMethod )
+LIST ( APPEND FluxReconstructionEntropyMHD_cflibs Framework EntropyMHD FluxReconstructionMethod )
+
+CF_ADD_PLUGIN_LIBRARY ( FluxReconstructionEntropyMHD )
+
+CF_WARN_ORPHAN_FILES()

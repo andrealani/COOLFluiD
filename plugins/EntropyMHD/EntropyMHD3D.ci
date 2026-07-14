@@ -1,0 +1,61 @@
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace EntropyMHD {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EntropyMHD3D<DIM>::EntropyMHD3D(const std::string& name)
+  : Framework::ConvectionPM<EntropyMHDTerm>(name)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+EntropyMHD3D<DIM>::~EntropyMHD3D()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+void EntropyMHD3D<DIM>::configure ( Config::ConfigArgs& args )
+{
+  Framework::ConvectionPM<EntropyMHDTerm>::configure(args);
+
+  // allocate jacobians
+  _jacobians = std::vector<RealMatrix>(getDimension());
+  for (CFuint i = 0; i < getDimension(); ++i) {
+    _jacobians[i].resize(getNbEquations(), getNbEquations());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EntropyMHD3D<DIM>::getDimension() const
+{
+  return DIM;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <int DIM>
+CFuint EntropyMHD3D<DIM>::getNbEquations() const
+{
+  // 9 equations: rho, u, v, w, Bx, By, Bz, sigma, phi (entropy-variable MHD)
+  return 9;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+} // namespace EntropyMHD
+
+} // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////
