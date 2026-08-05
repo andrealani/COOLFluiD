@@ -753,7 +753,7 @@ void FVMCC_ComputeSourceRhsJacobCellExec<SCHEME,PHYSICS,SOURCE,POLYREC,LIMITER,N
   SafePtr<POLYREC> pr = this->getMethodData().getPolyReconstructor().template d_castTo<POLYREC>();
   SafePtr<LIMITER> lm = this->getMethodData().getLimiter().template d_castTo<LIMITER>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICS::PTERM>();
   
 
   

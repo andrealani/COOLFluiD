@@ -944,15 +944,15 @@ void ConvDiffRHSFluxReconstructionCUDA<SCHEME,PHYSICS,PHYSICSNS,ORDER,NB_BLOCK_T
   DataHandle<CFreal> cellVolumes = socket_cellVolumes.getDataHandle();
  
 
-  SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().d_castTo<SCHEME>();
+  SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().template d_castTo<SCHEME>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICS::PTERM>();
 
   SafePtr<typename PHYSICSNS::DTERM> physNS = PhysicalModelStack::getActive()->getImplementor()->
-    getDiffusiveTerm().d_castTo<typename PHYSICSNS::DTERM>();
+    getDiffusiveTerm().template d_castTo<typename PHYSICSNS::DTERM>();
 
   SafePtr<typename PHYSICSNS::PTERM> physNSConv = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICSNS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICSNS::PTERM>();
   
 #ifdef CF_HAVE_CUDA
   typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS, ORDER> FluxScheme;  

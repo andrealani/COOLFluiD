@@ -704,7 +704,7 @@ void FVMCC_ComputeRhsJacobCell<SCHEME,PHYSICS,POLYREC,LIMITER,NB_BLOCK_THREADS>:
   SafePtr<POLYREC> pr = this->getMethodData().getPolyReconstructor().template d_castTo<POLYREC>();
   SafePtr<LIMITER> lm = this->getMethodData().getLimiter().template d_castTo<LIMITER>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICS::PTERM>();
   
   typedef typename SCHEME::template  DeviceFunc<GPU, PHYSICS> FluxScheme;  
   typedef typename POLYREC::template DeviceFunc<PHYSICS> PolyRec;  

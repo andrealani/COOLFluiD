@@ -830,9 +830,9 @@ void ConvRHSFluxReconstructionCUDA<SCHEME,PHYSICS,ORDER,NB_BLOCK_THREADS>::execu
   DataHandle<CFreal> gradients = socket_gradientsCUDA.getDataHandle();
  
 
-  SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().d_castTo<SCHEME>();
+  SafePtr<SCHEME> lf  = getMethodData().getRiemannFlux().template d_castTo<SCHEME>();
   SafePtr<typename PHYSICS::PTERM> phys = PhysicalModelStack::getActive()->getImplementor()->
-    getConvectiveTerm().d_castTo<typename PHYSICS::PTERM>();
+    getConvectiveTerm().template d_castTo<typename PHYSICS::PTERM>();
   
 #ifdef CF_HAVE_CUDA
   typedef typename SCHEME::template DeviceFunc<GPU, PHYSICS, ORDER> FluxScheme;  
