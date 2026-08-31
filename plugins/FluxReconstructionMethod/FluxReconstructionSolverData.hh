@@ -404,6 +404,12 @@ public: // functions
     return (_updateVarStr != _solutionVarStr);
   }
 
+  /// @return the update variable set name
+  std::string getUpdateVarStr() const
+  {
+    return _updateVarStr;
+  }
+
   /// @return m_createVolumesSocketBool
   bool createVolumesSocket()
   {

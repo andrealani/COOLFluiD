@@ -38,6 +38,8 @@ LLAVJacobFluxReconstructionMHD.hh
 LLAVJacobFluxReconstructionMHD.cxx
 PositivityPreservationMHD.hh
 PositivityPreservationMHD.cxx
+PositivityIDPMHD.hh
+PositivityIDPMHD.cxx
 MLPLimiterMHD2D.hh
 MLPLimiterMHD2D.cxx
 MLPLimiterMHD3D.hh

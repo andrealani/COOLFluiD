@@ -99,6 +99,8 @@ LLAVDiffFluxReconstruction.cxx
 LLAVDiffFluxReconstruction.hh
 BasePhysicality.cxx
 BasePhysicality.hh
+BasePositivityIDP.cxx
+BasePositivityIDP.hh
 StdSourceTerm.cxx
 StdSourceTerm.hh
 AnalyticalSourceTerm.cxx
