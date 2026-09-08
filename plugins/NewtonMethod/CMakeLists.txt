@@ -8,6 +8,8 @@ LIST ( APPEND NewtonMethod_files
 NewtonMethod.hh
 SelfAdjustUpdateSol.cxx
 SelfAdjustUpdateSol.hh
+PhysicalityCFLUpdateSol.cxx
+PhysicalityCFLUpdateSol.hh
 StdSetup.hh
 StdSetup.cxx
 StdUnSetup.hh
