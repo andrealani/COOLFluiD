@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -53,6 +54,10 @@ void PhysicalityCFLUpdateSol::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("MaxRejections","Consecutive rejected updates that abort the run.");
   options.addConfigOption< CFuint >("RhoIndex","Position of the density in the physical data.");
   options.addConfigOption< CFuint >("PIndex","Position of the pressure in the physical data.");
+  options.addConfigOption< std::vector<CFuint> >("BoundedVars","State variables whose relative change per update is bounded by BoundedVarsEtaMax (e.g. the temperatures).");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("BoundedVarsEtaMax","Largest relative change allowed for the BoundedVars.");
+  options.addConfigOption< std::vector<CFuint> >("PartialDensityVars","Indices of partial densities in the stored update state. Empty disables their additional checks.");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("PartialDensityEtaMax","Largest fractional increase or decrease of each partial density per accepted Newton update (default 0.1).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -91,6 +96,18 @@ PhysicalityCFLUpdateSol::PhysicalityCFLUpdateSol(const std::string& name) :
 
   m_pIndex = 1;
   setParameter("PIndex",&m_pIndex);
+
+  m_boundedVars = std::vector<CFuint>();
+  setParameter("BoundedVars",&m_boundedVars);
+
+  m_boundedEtaMax = 0.5;
+  setParameter("BoundedVarsEtaMax",&m_boundedEtaMax);
+
+  m_partialDensityVars = std::vector<CFuint>();
+  setParameter("PartialDensityVars",&m_partialDensityVars);
+
+  m_partialDensityEtaMax = 0.1;
+  setParameter("PartialDensityEtaMax",&m_partialDensityEtaMax);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -126,6 +143,22 @@ void PhysicalityCFLUpdateSol::setup()
   SafePtr<BaseTerm> convTerm =
     PhysicalModelStack::getActive()->getImplementor()->getConvectiveTerm();
   convTerm->resizePhysicalData(m_pdata);
+  for (CFuint i = 0; i < m_boundedVars.size(); ++i) {
+    if (m_boundedVars[i] >= PhysicalModelStack::getActive()->getNbEq()) {
+      throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: BoundedVars index outside the state");
+    }
+  }
+  if (!(m_boundedEtaMax > 0.)) {
+    throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: BoundedVarsEtaMax must be > 0");
+  }
+  for (CFuint i = 0; i < m_partialDensityVars.size(); ++i) {
+    if (m_partialDensityVars[i] >= PhysicalModelStack::getActive()->getNbEq()) {
+      throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: PartialDensityVars index outside the state");
+    }
+  }
+  if (!(m_partialDensityEtaMax > 0. && m_partialDensityEtaMax < 1.)) {
+    throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: PartialDensityEtaMax must lie in (0,1)");
+  }
   if (m_rhoIndex >= m_pdata.size() || m_pIndex >= m_pdata.size()) {
     throw BadValueException(FromHere(),
       "PhysicalityCFLUpdateSol: RhoIndex/PIndex outside the physical data of size " +
@@ -169,20 +202,70 @@ void PhysicalityCFLUpdateSol::execute()
 
   // 1. relaxation factor: smallest admissible scale over all states and ranks
   CFreal omega = 1.;
+  CFuint iBind = 0;
   for (CFuint iState = 0; iState < nbStates; ++iState) {
     const State& state = *states[iState];
     if (state.isParUpdatable()) {
-      omega = std::min(omega, computeStateOmega(state, &dU[iState*nbEqs]));
+      const CFreal omegaState = computeStateOmega(state, &dU[iState*nbEqs]);
+      if (omegaState < omega) { omega = omegaState; iBind = iState; }
     }
   }
+  const CFreal omegaLocal = omega;
 #ifdef CF_HAVE_MPI
   if (PE::GetPE().IsParallel()) {
     const std::string nsp = getMethodData().getNamespace();
-    CFreal omegaLocal = omega;
     MPI_Allreduce(&omegaLocal, &omega, 1, MPI_DOUBLE, MPI_MIN,
                   PE::GetPE().GetCommunicator(nsp));
   }
 #endif
+
+  // Say which state is throttling the whole field when it bites hard. The
+  // owning rank packs the information and rank 0 prints it, since only rank 0
+  // writes to stdout by default.
+  if (omega < 0.1) {
+    const CFuint dim = PhysicalModelStack::getActive()->getDim();
+    std::vector<CFreal> info(6 + dim + nbEqs, 0.);
+    if (omegaLocal == omega) {
+      const State& state = *states[iBind];
+      CFreal rho0 = 0., p0 = 0., rho1 = 0., p1 = 0.;
+      computeRhoP(state, rho0, p0);
+      setTrialState(state, &dU[iBind*nbEqs], 1.);
+      // the full step may leave the admissible set, where the physical data cannot be
+      // evaluated (Euler2DPuvt asserts p > 0): report it only when the pre-bounded
+      // entries of the full-step state stay positive, NaN otherwise
+      bool evaluable = true;
+      for (CFuint i = 0; i < m_partialDensityVars.size(); ++i) {
+        if (!((*m_trial)[m_partialDensityVars[i]] > 0.)) { evaluable = false; }
+      }
+      if (evaluable) {
+        computeRhoP(*m_trial, rho1, p1);
+      }
+      else {
+        rho1 = std::numeric_limits<CFreal>::quiet_NaN();
+        p1   = std::numeric_limits<CFreal>::quiet_NaN();
+      }
+      info[0] = 1.; info[1] = rho0; info[2] = rho1; info[3] = p0; info[4] = p1;
+      info[5] = static_cast<CFreal>(iBind);
+      for (CFuint d = 0; d < dim; ++d) { info[6+d] = state.getCoordinates()[d]; }
+      for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { info[6+dim+iEq] = state[iEq]; }
+    }
+#ifdef CF_HAVE_MPI
+    if (PE::GetPE().IsParallel()) {
+      // one rank has info[0] = 1 (ties are harmless), the others zeros
+      const std::string nsp = getMethodData().getNamespace();
+      std::vector<CFreal> infoLocal = info;
+      MPI_Allreduce(&infoLocal[0], &info[0], info.size(), MPI_DOUBLE, MPI_SUM,
+                    PE::GetPE().GetCommunicator(nsp));
+    }
+#endif
+    const CFreal nOwners = std::max(info[0], 1.);
+    CFLog(INFO, "PhysicalityCFLUpdateSol: binding state at (");
+    for (CFuint d = 0; d < dim; ++d) { CFLog(INFO, info[6+d]/nOwners << (d+1 < dim ? ", " : ")")); }
+    CFLog(INFO, ", full step would take rho " << info[1]/nOwners << " -> " << info[2]/nOwners
+          << ", p " << info[3]/nOwners << " -> " << info[4]/nOwners << ", state = [");
+    for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { CFLog(INFO, info[6+dim+iEq]/nOwners << " "); }
+    CFLog(INFO, "]\n");
+  }
 
   // 2. hopeless direction: cut the CFL and redo this iteration
   if (!(omega >= m_omegaMin)) {
@@ -193,6 +276,7 @@ void PhysicalityCFLUpdateSol::execute()
   // 3. accepted: apply omega*Relaxation*dU through the base class so that
   //    the filters, the validation and the updateCoeff reset stay in one place
   m_nbConsecutiveRejections = 0;
+  beforeUpdate();
   if (omega < 1.) {
     const std::vector<CFreal> alpha = m_alpha;
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { m_alpha[iEq] *= omega; }
@@ -202,6 +286,7 @@ void PhysicalityCFLUpdateSol::execute()
   else {
     StdUpdateSol::execute();
   }
+  afterUpdate();
 
   // 4. CFL schedule: grow only after a clean update in an unretried step
   SafePtr<CFL> cfl = getMethodData().getCFL();
@@ -257,6 +342,38 @@ void PhysicalityCFLUpdateSol::rejectUpdate(const CFreal omega)
 
 CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFreal* dU)
 {
+  // Bound each partial density before evaluating trial thermodynamics. A
+  // transfer between species can keep mixture rho and p positive even after
+  // one species crosses zero. The change includes the configured relaxation,
+  // exactly as in StdUpdateSol::execute(). Both growth and depletion count.
+  CFreal omegaDensities = 1.;
+  for (CFuint i = 0; i < m_partialDensityVars.size(); ++i) {
+    const CFuint iEq = m_partialDensityVars[i];
+    const CFreal density = state[iEq];
+    const CFreal change = std::abs(m_alpha[iEq]*dU[iEq]);
+    if (!std::isfinite(density) || density < 0. || !std::isfinite(change)) {
+      return 0.;
+    }
+    const CFreal allowed = m_partialDensityEtaMax*density;
+    if (change > allowed) {
+      omegaDensities = std::min(omegaDensities, allowed/change);
+    }
+  }
+  if (omegaDensities == 0.) { return 0.; }
+
+  // Bounded state variables first: the change is linear in omega, so the
+  // admissible scale is exact. Temperatures are the typical use, since a
+  // Tv step of 1e5 K passes the density and pressure test untouched.
+  CFreal omegaVars = 1.;
+  for (CFuint i = 0; i < m_boundedVars.size(); ++i) {
+    const CFuint iEq = m_boundedVars[i];
+    const CFreal change = std::abs(m_alpha[iEq]*dU[iEq]);
+    const CFreal allowed = m_boundedEtaMax*std::abs(state[iEq]);
+    if (change > allowed) {
+      omegaVars = std::min(omegaVars, (allowed > 0.) ? allowed/change : 0.);
+    }
+  }
+
   CFreal rho0 = 0., p0 = 0.;
   computeRhoP(state, rho0, p0);
   if (!(rho0 > 0.) || !(p0 > 0.)) {
@@ -266,16 +383,16 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
   const CFreal pFloor   = (1. - m_etaMax)*p0;
 
   CFreal rho = 0., p = 0.;
-  setTrialState(state, dU, 1.);
+  setTrialState(state, dU, omegaDensities);
   computeRhoP(*m_trial, rho, p);
   if (rho >= rhoFloor && p >= pFloor) {
-    return 1.;
+    return std::min(omegaDensities, omegaVars);
   }
 
   // The admissible set along the segment is an interval starting at the
   // state: bisect for its end. A non-finite update fails every test and
   // leaves omega at 0.
-  CFreal lo = 0., hi = 1.;
+  CFreal lo = 0., hi = omegaDensities;
   for (CFuint it = 0; it < 30; ++it) {
     const CFreal mid = 0.5*(lo + hi);
     setTrialState(state, dU, mid);
@@ -283,7 +400,7 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
     if (rho >= rhoFloor && p >= pFloor) { lo = mid; }
     else                                { hi = mid; }
   }
-  return lo;
+  return std::min(lo, omegaVars);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -203,6 +203,8 @@ StdUpdateSolPP.hh
 StdUpdateSolPP.cxx
 StdUpdateSolPP2.hh
 StdUpdateSolPP2.cxx
+PhysicalityCFLUpdateSolCorona.hh
+PhysicalityCFLUpdateSolCorona.cxx
 )
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )

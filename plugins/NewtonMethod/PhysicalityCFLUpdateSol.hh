@@ -48,6 +48,18 @@ namespace COOLFluiD {
 /// physics whose physical data carries rho and p. This command owns the CFL
 /// value: run it with Data.CFL.ComputeCFL = Null.
 ///
+/// Optional PartialDensityVars are indices in the stored update state, not
+/// physical data. Their increases and decreases are bounded independently by
+/// PartialDensityEtaMax (default 0.1). This preserves nonnegative partial
+/// densities from an admissible starting state. A zero partial density can
+/// only have a zero update under a strictly relative bound; no floor is added.
+/// An empty index list disables these additional checks.
+///
+/// An accepted step calls beforeUpdate() with the states still unmodified and
+/// afterUpdate() once they are updated. Both do nothing here. A derived class
+/// uses them to add a treatment of its own without touching the step control,
+/// as PhysicalityCFLUpdateSolCorona does for the solar corona.
+///
 /// Limiter: Ceze and Fidkowski, Int. J. Numer. Meth. Engng 102 (2015),
 /// Algorithm 2. CFL gating on the relaxation factor: Ceze and Fidkowski,
 /// AIAA 2013-2686 (exponential progression with under-relaxation).
@@ -77,6 +89,17 @@ public:
   /// Execute Processing actions
   virtual void execute();
 
+protected:
+
+  /// Called on an accepted step, with the states still unmodified.
+  virtual void beforeUpdate() {}
+
+  /// Called on an accepted step, right after the states are updated.
+  virtual void afterUpdate() {}
+
+  /// update variable set (owned by the space method), reset at each execute()
+  Common::SafePtr<Framework::ConvectiveVarSet> m_varSet;
+
 private:
 
   /// Largest omega in [0,1] such that state + omega*Relaxation*dU keeps
@@ -96,9 +119,6 @@ private:
   void rejectUpdate(const CFreal omega);
 
 private:
-
-  /// update variable set (owned by the space method)
-  Common::SafePtr<Framework::ConvectiveVarSet> m_varSet;
 
   /// trial state scratch
   Framework::State* m_trial;
@@ -129,6 +149,18 @@ private:
 
   /// position of the pressure in the physical data
   CFuint m_pIndex;
+
+  /// state variables whose relative change per update is bounded by BoundedVarsEtaMax
+  std::vector<CFuint> m_boundedVars;
+
+  /// largest relative change allowed for the BoundedVars
+  CFreal m_boundedEtaMax;
+
+  /// indices of partial densities in the stored update state
+  std::vector<CFuint> m_partialDensityVars;
+
+  /// largest fractional increase or decrease allowed for each partial density
+  CFreal m_partialDensityEtaMax;
 
   /// consecutive rejected updates so far
   CFuint m_nbConsecutiveRejections;
