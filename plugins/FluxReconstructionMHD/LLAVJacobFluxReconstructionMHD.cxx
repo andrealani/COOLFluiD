@@ -47,8 +47,7 @@ LLAVJacobFluxReconstructionMHD::LLAVJacobFluxReconstructionMHD(const std::string
   LLAVJacobFluxReconstruction(name),
   m_varSet(CFNULL),
   m_pData(),
-  m_pData2(),
-  m_dampCoeff()
+  m_pData2()
   {
   }
 
@@ -78,48 +77,6 @@ void LLAVJacobFluxReconstructionMHD::setFaceData(CFuint faceID)
         m_cellGrads[iSide][iState] = &gradientsAV[stateID];
       }
     }
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void LLAVJacobFluxReconstructionMHD::computeInterfaceFlxCorrection()
-{   
-  // Loop over the flux points to calculate FI
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-  { 
-    const CFreal epsilon = 0.5*(m_epsilonLR[LEFT][iFlxPnt]+m_epsilonLR[RIGHT][iFlxPnt]);
-    
-    // compute the average sol and grad to use the BR2 scheme
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    {
-      *(m_avgGrad[iVar]) = (*(m_cellGradFlxPnt[LEFT][iFlxPnt][iVar]) + *(m_cellGradFlxPnt[RIGHT][iFlxPnt][iVar]))/2.0;
-    }
-    
-    // damping factor
-    const CFreal dampFactor = m_dampCoeff*m_faceInvCharLengths[iFlxPnt];
-
-    // compute averaged (damped) gradients
-    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
-    {
-      // compute damping term
-      const RealVector dGradVarXNormal = ((*m_cellStatesFlxPnt[LEFT][iFlxPnt])[iGrad] - (*m_cellStatesFlxPnt[RIGHT][iFlxPnt])[iGrad])*m_unitNormalFlxPnts[iFlxPnt];
-      *m_avgGrad[iGrad] -= dampFactor*dGradVarXNormal;
-    }
-    
-    m_flxPntRiemannFlux[iFlxPnt] = 0.0;
-    
-    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-    {
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        m_flxPntRiemannFlux[iFlxPnt][iVar] += epsilon*((*(m_avgGrad[iVar]))[iDim])*m_unitNormalFlxPnts[iFlxPnt][iDim];
-      }
-    }
-     
-    // compute FI in the mapped coord frame
-    m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
-    m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
   }
 }
 
@@ -406,9 +363,6 @@ void LLAVJacobFluxReconstructionMHD::setup()
   
   // get the update varset
   m_updateVarSet = getMethodData().getUpdateVar();
-  
-  // get damping coeff
-  m_dampCoeff = getMethodData().getDiffDampCoefficient();
 
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
 

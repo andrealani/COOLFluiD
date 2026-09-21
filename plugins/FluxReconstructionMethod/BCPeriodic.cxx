@@ -1331,10 +1331,7 @@ void BCPeriodic::preProcess()
   geoData.facesTRS = faceTrs;
   geoData.isBoundary = true;
   
-  // boolean telling whether there is a diffusive term
-  const bool hasDiffTerm = getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity();
-    
-    _sendbuf.clear();
+  _sendbuf.clear();
 
   std::vector<CFreal> boundaryState;
     if (nbGeoEnts > 0) {
@@ -1378,41 +1375,37 @@ void BCPeriodic::preProcess()
 //	  CFLog(VERBOSE,"face ID: " << m_face->getID() << "\n");
 //	}
 
-        // if cell is parallel updatable or the gradients need to be computed, compute the needed cell data
-        if ((*m_cellStates)[0]->isParUpdatable() || hasDiffTerm)
-        {  
-	  // set the bnd face data
-	 // setBndFaceData(m_face->getID());//faceID 
-	  
-          // Loop over flux points to extrapolate the states to the flux points
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-  {
-    // reset the extrapolated states
-    *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
-    
-    // get current flx pnt idx
-    const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
-    
-    // extrapolate the states to current flx pnt
-    for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
-    {
-      const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
+        // every face of this rank is packed: the send counts of setup cover all of them
+        // and the partner rank reads the buffer by face position
 
-      *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]));
-      if (m_intCell->getID() == 223) CFLog(VERBOSE, "sol: " << *((*m_cellStates)[solIdx])  << "\n");
-    }
-    
-    for(CFuint e=0; e<NbEqs; e++){
-        boundaryState.push_back((*(m_cellStatesFlxPnt[iFlxPnt]))[e]);
-      }
-    
-    CFLog(VERBOSE, "inner: " << *(m_cellStatesFlxPnt[iFlxPnt])  << "\n");//if (m_intCell->getID() == 223) 
-  }
-  
-    
+        // loop over flux points to extrapolate the states to the flux points
+        for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+        {
+          // reset the extrapolated states
+          *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
 
-  } //if cell is parallel updatable
-        
+          // get current flx pnt idx
+          const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+
+          // solution points this flux point depends on
+          const CFuint nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
+
+          // extrapolate the states to current flx pnt
+          for (CFuint iSol = 0; iSol < nbrSolDep; ++iSol)
+          {
+            const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
+
+            *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]));
+          }
+
+          for (CFuint iEq = 0; iEq < NbEqs; ++iEq)
+          {
+            boundaryState.push_back((*(m_cellStatesFlxPnt[iFlxPnt]))[iEq]);
+          }
+
+          CFLog(VERBOSE, "inner: " << *(m_cellStatesFlxPnt[iFlxPnt])  << "\n");
+        }
+
       m_faceBuilder->releaseGE();
       } //end of loop over faces with this orientation
     } // end of orientation loop

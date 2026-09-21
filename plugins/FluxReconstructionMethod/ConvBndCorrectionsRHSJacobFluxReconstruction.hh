@@ -96,7 +96,7 @@ protected: // functions
   virtual void computePertInterfaceFlxCorrection();
   
   /// compute the total perturbed correction
-  void computePertCorrection(std::vector< RealVector >& corrections);
+  virtual void computePertCorrection(std::vector< RealVector >& corrections);
 
 protected: // data
   

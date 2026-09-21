@@ -38,9 +38,7 @@ DiffBndCorrectionsRHSJacobPoissonFluxReconstructionProvider("DiffBndCorrectionsR
 //////////////////////////////////////////////////////////////////////////////
 
 DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::DiffBndCorrectionsRHSJacobFluxReconstructionPoisson(const std::string& name) :
-  DiffBndCorrectionsRHSJacobFluxReconstruction(name),
-  m_tempStates(),
-  m_tempStatesSol()
+  DiffBndCorrectionsRHSJacobFluxReconstruction(name)
 {
 }
 
@@ -55,12 +53,6 @@ DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::~DiffBndCorrectionsRHSJacob
 void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::setup()
 {
   DiffBndCorrectionsRHSJacobFluxReconstruction::setup();
-  
-  m_tempStates.resize(2);
-
-  m_tempStates[LEFT].resize(m_nbrFaceFlxPnts);
-  m_tempStates[RIGHT].resize(m_nbrFaceFlxPnts);
-  m_tempStatesSol.resize(m_nbrSolPnts);
   
   // get the diffusive varset
   m_diffVarSetPoisson = m_diffusiveVarSet.d_castTo< Physics::Poisson::PoissonDiffVarSet >();
@@ -109,60 +101,6 @@ void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeWaveSpeedUpdate
     waveSpeedUpd += visc*jacobXJacobXIntCoef/m_cellVolume;
   }
 
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm)
-{ 
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    m_tempStates[LEFT][iFlx] = (m_cellStatesFlxPnt[iFlx]->getData());
-    m_tempStates[RIGHT][iFlx] = (m_flxPntGhostSol[iFlx]->getData());
-  }
-  
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[LEFT],gradTerm,m_nbrFaceFlxPnts);
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[RIGHT],ghostGradTerm,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeBndGradTerms2(RealMatrix& gradTerm, RealMatrix& ghostGradTerm)
-{ 
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    m_tempStates[LEFT][iFlx] = (m_cellStatesFlxPnt2[iFlx]->getData());
-    m_tempStates[RIGHT][iFlx] = (m_flxPntGhostSol[iFlx]->getData());
-  }
-  
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[LEFT],gradTerm,m_nbrFaceFlxPnts);
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[RIGHT],ghostGradTerm,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeCellGradTerm(RealMatrix& gradTerm)
-{  
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    m_tempStatesSol[iSol] = ((*m_cellStates)[iSol]->getData());
-  }
-  
-  m_diffVarSetPoisson->setGradientVars(m_tempStatesSol,gradTerm,m_nbrSolPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffBndCorrectionsRHSJacobFluxReconstructionPoisson::computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR)
-{
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    m_tempStates[LEFT][iFlx] = (m_pertCellStatesFlxPnt[LEFT][iFlx]->getData());
-    m_tempStates[RIGHT][iFlx] = (m_pertCellStatesFlxPnt[RIGHT][iFlx]->getData());
-  }
-  
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[LEFT],gradTermL,m_nbrFaceFlxPnts);
-  m_diffVarSetPoisson->setGradientVars(m_tempStates[RIGHT],gradTermR,m_nbrFaceFlxPnts);
 }
 
 //////////////////////////////////////////////////////////////////////////////

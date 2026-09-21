@@ -154,6 +154,11 @@ protected: // data
   // wall distance in current sol point
   RealVector m_currWallDist; 
   
+  // owning copy of a solution point state, used to evaluate mu_t at a vanishing positive k.
+  // It must own its memory: a RealVector copied from a State aliases the solver storage, so
+  // writing k into it would change the solution
+  RealVector m_stateKSmall;
+  
   // boolean telling whether the case is axisymmetric
   bool m_isAxisymmetric;
   

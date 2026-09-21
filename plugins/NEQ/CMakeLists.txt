@@ -65,6 +65,8 @@ Euler2DNEQRhoivtTvToConsInRef.cxx
 Euler2DNEQRhoivtTvToConsInRef.hh
 Euler2DNEQRhoivtTvToConsInRhoivtTv.cxx
 Euler2DNEQRhoivtTvToConsInRhoivtTv.hh
+Euler2DNEQConsToRhoivtTvInRhoivtTv.cxx
+Euler2DNEQConsToRhoivtTvInRhoivtTv.hh
 Euler2DNEQRhoivtTvToPivtTv.cxx
 Euler2DNEQRhoivtTvToPivtTv.hh
 Euler2DNEQRhoivtTvToRoeVinokur.cxx

@@ -44,6 +44,7 @@ void GammaAlpha2DSourceTerm::defineConfigOptions(Config::OptionList& options)
  options.addConfigOption< bool,Config::DynamicOption<> >("AddDGamma","Add destruction terms for gamma and alpha.");
  options.addConfigOption< CFreal >("LimLambda","Limit Lambda pressure term.");
  options.addConfigOption< CFreal >("CEg","CEg term to be used for gamma-alpha.");
+ options.addConfigOption< bool >("GammaEquilibrium","Use the unclamped gamma in the (1-gamma) production prefactor and in the axisymmetric transport, so gamma = 1 is an equilibrium.");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,6 +80,9 @@ GammaAlpha2DSourceTerm::GammaAlpha2DSourceTerm(const std::string& name) :
   
   m_addDGDA = true;
   setParameter("AddDGamma",&m_addDGDA);
+
+  m_gammaEquilibrium = false;
+  setParameter("GammaEquilibrium",&m_gammaEquilibrium);
   
   m_lambdaLim = 0.04;
   setParameter("LimLambda",&m_lambdaLim);
@@ -247,6 +251,9 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal avOmega = std::exp(m_solPhysData[iKPD+1]);
     
     const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.01),0.99);
+    // gamma as it is, used where the (1-gamma) factor has to vanish at gamma = 1; avGa stays
+    // the guarded value for log(1-gamma), which is what the clamp is there for
+    const CFreal gaRaw   = m_gammaEquilibrium ? m_solPhysData[iKPD+2] : avGa;
     //const CFreal avGa    = std::min(std::max(m_solPhysData[iKPD+2],0.0),1.0);
 
     const CFreal rho = navierStokesVarSet->getDensity(*((*m_cellStates)[iSol]));
@@ -441,7 +448,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
     const CFreal beta = sqrt(nsigma)*uInfLocal*rhoInfLocal/muInfLocal;
     
     //const CFreal limGa =  std::min(avGa,0.9999);
-    CFreal prodTerm_Ga = fOnset*2.0*fg*(1.0-avGa)*sqrt(-log(1.0-avGa))*beta*rho*avV;
+    CFreal prodTerm_Ga = fOnset*2.0*fg*(1.0-gaRaw)*sqrt(-log(1.0-avGa))*beta*rho*avV;
     
     // compute dissipation term of gamma
     const CFreal cEg = m_ceg;//20.0;//10.0;//20.0;
@@ -556,7 +563,7 @@ void GammaAlpha2DSourceTerm::addSourceTerm(RealVector& resUpdates)
       resUpdates[m_nbrEqs*iSol + 5] += -rhovr*m_solPhysData[iKPD+1] + m_overRadius*(mu+navierStokesVarSet->getSigmaOmega()*mut)*(*(m_cellGrads[iSol][omegaID]))[YY];
       
       //rho gamma
-      resUpdates[m_nbrEqs*iSol + 6] += -rhovr*avGa + m_overRadius*muGamma*dgammay;
+      resUpdates[m_nbrEqs*iSol + 6] += -rhovr*gaRaw + m_overRadius*muGamma*dgammay;
       
       //rho alpha
       resUpdates[m_nbrEqs*iSol + 7] += -rhovr*avAlpha + m_overRadius*2.0*(mu+mut)*day;

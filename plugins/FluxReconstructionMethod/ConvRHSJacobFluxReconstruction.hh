@@ -105,10 +105,10 @@ protected: // functions
   virtual void computePertInterfaceFlxCorrection();
   
   /// compute the total perturbed correction
-  void computePertCorrection(CFuint sided, RealVector& corrections);
+  virtual void computePertCorrection(CFuint sided, RealVector& corrections);
   
   /// compute the divergence of the perturbed discontinuous flx (-divFD+divhFD)
-  void computePertDivDiscontFlx(RealVector& residuals);
+  virtual void computePertDivDiscontFlx(RealVector& residuals);
 
 protected: // data
 

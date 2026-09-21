@@ -6,6 +6,8 @@ CNEQSourceTerm.cxx
 CNEQSourceTerm.hh
 TNEQSourceTerm.cxx
 TNEQSourceTerm.hh
+PositivityIDPNEQ.cxx
+PositivityIDPNEQ.hh
 )
 
 LIST ( APPEND FluxReconstructionNEQ_cflibs FluxReconstructionMethod NEQ Framework)

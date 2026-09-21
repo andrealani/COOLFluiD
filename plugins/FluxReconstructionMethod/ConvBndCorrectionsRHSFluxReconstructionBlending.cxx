@@ -339,6 +339,8 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::computeFlxPntStates()
     if (m_intCell->getID() == 783) CFLog(VERBOSE, "inner: " << *(m_cellStatesFlxPnt[iFlxPnt])  << "\n");
   }
   
+  // data the boundary condition needs before the ghost states
+  prepareGhostStates();
   // compute ghost states
   m_bcStateComputer->computeGhostStates(m_cellStatesFlxPnt,m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
 
@@ -635,61 +637,6 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::computeWaveSpeedUpdates(CF
     waveSpeedUpdP0 += jacobXIntCoef*m_updateVarSet->getMaxAbsEigenValue(m_pData,m_unitNormalFlxPntsP0[0]);
     if (waveSpeedUpdP0 != waveSpeedUpdP0) CFLog(INFO, "nan pData: " << m_pData << "\n");
 
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ConvBndCorrectionsRHSFluxReconstructionBlending::computeGradientBndFaceCorrections()
-{ 
-  // Loop over solution pnts to reset the grad updates
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-  {
-    // Loop over  variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-    {
-      //set the grad updates to 0 
-      m_gradUpdates[iSolPnt][iEq] = 0.0;
-    }
-  }
-      
-  // compute the face corrections to the gradients
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
-
-    // Loop over  variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-    {
-      const CFreal avgSol = ((*m_cellStatesFlxPnt[iFlx])[iEq]+(*(m_flxPntGhostSol[iFlx]))[iEq])/2.0;
-      m_projectedCorr = (avgSol-(*m_cellStatesFlxPnt[iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx]*m_unitNormalFlxPnts[iFlx];
-
-      // Loop over solution pnts to calculate the grad updates
-      m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
-      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
-      {
-        const CFuint iSolIdx = (*m_flxSolDep)[flxIdx][iSolPnt];
-
-	/// @todo Check if this is also OK for triangles!!
-	m_gradUpdates[iSolIdx][iEq] += m_projectedCorr*m_corrFctDiv[iSolIdx][flxIdx];
-      }
-    }
-  }
-  
-  // get the gradients
-  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
-
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    // get state ID
-    const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
-
-    // update gradients
-    for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
-    {
-      gradients[solID][iGrad] += m_gradUpdates[iSol][iGrad];
-     
-    }
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1000,6 +947,8 @@ void ConvBndCorrectionsRHSFluxReconstructionBlending::setup()
     m_flxPntGhostSolP0[iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
     m_cellStatesFlxPntP0[iFlx]->setSpaceCoordinates(new Node(dummyCoord,false));
   }
+
+  setupGradientData();
 }
 
 //////////////////////////////////////////////////////////////////////////////

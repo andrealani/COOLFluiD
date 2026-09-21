@@ -34,6 +34,7 @@ namespace COOLFluiD {
  * for implicit schemes for MHD
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class LLAVJacobFluxReconstructionMHD : public LLAVJacobFluxReconstruction {
 
@@ -82,18 +83,11 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness(const CFuint side);
-  
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-
 
 protected: //data
   
   /// physical model
   Common::SafePtr< Physics::MHD::MHD3DProjectionVarSet > m_varSet;
-  
-  /// damping coefficient
-  CFreal m_dampCoeff;
   
   private:
 

@@ -72,6 +72,9 @@ private: // data
   Framework::DynamicDataSocketSet<> sockets_norm;
   /// socket for states
   Framework::DataSocketSink<Framework::State*, Framework::GLOBAL> socket_states;
+
+  /// how many non finite residuals have already been reported
+  mutable CFuint m_nbNonFiniteReported;
   /// name of the vector on which to apply the norm
   std::string m_vecnorm_name;
   

@@ -9,6 +9,7 @@
 #include "Framework/BadFormatException.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Common/ShouldNotBeHereException.hh"
+#include "MathTools/MathConsts.hh"
 
 #include "FluxReconstructionMethod/StdSetup.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
@@ -288,7 +289,14 @@ void StdSetup::computeStatesVolumes()
 
         if (jacobDet[iSol] < 0.0)
         {
-          CFLog(INFO, "NEGATIVE JACOBIAN DETERMINANT FOUND: " << jacobDet[iSol] << ", in solID: " << solID << ", in coordinates: " << (*states)[iSol]->getCoordinates() << ", phi = " << std::atan2((*states)[iSol]->getCoordinates()[ZZ],(*states)[iSol]->getCoordinates()[YY])*180/3.141593 << "\n");
+          // the angle print used to index ZZ unconditionally, which is out of
+          // range on a 2D node and turned an inverted mesh into an assert deep
+          // in ArrayT instead of this message.
+          const RealVector& solCoords = (*states)[iSol]->getCoordinates();
+          const CFreal phi = (solCoords.size() > ZZ) ?
+            std::atan2(solCoords[ZZ],solCoords[YY])*180./MathTools::MathConsts::CFrealPi() :
+            std::atan2(solCoords[YY],solCoords[XX])*180./MathTools::MathConsts::CFrealPi();
+          CFLog(INFO, "NEGATIVE JACOBIAN DETERMINANT FOUND: " << jacobDet[iSol] << ", in solID: " << solID << ", in coordinates: " << solCoords << ", phi = " << phi << "\n");
           //const std::string message = "Negative Jacobian determinant (" + StringOps::to_str(jacobDet[iSol]) + ") in cell with ID " + StringOps::to_str(elemIdx);
           //throw BadFormatException (FromHere(),message);
           

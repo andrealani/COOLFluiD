@@ -38,6 +38,7 @@ namespace COOLFluiD {
  * time marching for NS
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvDiffJacobFluxReconstructionNS : public ConvDiffJacobFluxReconstruction {
 

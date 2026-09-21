@@ -26,6 +26,7 @@ namespace COOLFluiD {
  * time marching for MHD
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvDiffJacobFluxReconstructionMHD : public ConvDiffJacobFluxReconstruction {
 
@@ -60,77 +61,16 @@ protected: //functions
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
-  /**
-   * Compute the discontinuous contribution to the corrected gradients
-   */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the correction part of the corrected gradient
-   */
-  virtual void computeGradientFaceCorrections();
-  
-  /// compute the Riemann flux jacobian numerically
-  virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
-  
-  /// compute the Riemann flux to gradient jacobian numerically
-  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
-  
-  /// compute the gradient variables to state jacobians numerically
-  virtual void computeGradVarsToStateJacobianNum();
-  
 protected: // data
-    
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
-  RealMatrix m_tempGradTerm;
-    
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
-  RealMatrix m_tempGradTermL;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
-  RealMatrix m_tempGradTermR;
   
   /// diffusive variable set
   Common::SafePtr< Physics::MHD::MHDProjectionDiffVarSet > m_diffusiveVarSetMHD;
-    
-  /// element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL;
-  
-  /// element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR;
-  
-  /// extra element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL2;
-  
-  /// extra element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR2;
-  
-  /// extra element states of the cell in the correct format
-  std::vector< RealVector* > m_tempStatesCell;
-  
-  /// damping coefficient
-  CFreal m_dampCoeffDiff;
   
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
   
   /// number of species
   CFuint m_nbrSpecies;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element for the jacobian computation
-  RealMatrix m_tempGradTermJacob;
-  
-  /// element states of the left neighbor in the correct format for the jacobian computation
-  std::vector< RealVector* > m_tempStatesJacob;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element for the jacobian computation
-  RealMatrix m_tempGradTermJacob2;
-  
-  /// element states of the left neighbor in the correct format for the jacobian computation
-  std::vector< RealVector* > m_tempStatesJacob2;
   
   /// unperturbed grad vars
   RealVector m_unpertGradVars;

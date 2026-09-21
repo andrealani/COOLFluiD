@@ -8,7 +8,7 @@
 #include "MathTools/RealVector.hh"
 #include "MathTools/RealMatrix.hh"
 
-#include <plato_library_interface_Cpp.h>
+#include <plato_Cpp_library_interface.h>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -491,6 +491,14 @@ public:
   void setSpeciesMolarFractions(const RealVector& xs);
 
   
+  /*!
+   * Returns the species entropies per unit mass [J/(kg*K)]
+   * @param temp the translational temperature [K]
+   * @param pressure the mixture pressure [Pa]
+   * @param si the species entropy vector (output)
+   */
+  void getSpeciesEntropy(CFdouble& temp, CFdouble& pressure, RealVector& si);
+
   /*!
    * Returns the total enthalpies per unit mass of species
    * @param temp the mixture temperature

@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCSubInletEulerVT2D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -149,6 +150,69 @@ void BCSubInletEulerVT2D::computeGhostGradients
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSubInletEulerVT2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                             const std::vector< Framework::State* >& intStates,
+                                             const std::vector< Framework::State* >& ghostStates,
+                                             const std::vector< RealVector >& unitNormals,
+                                             const std::vector< RealVector >& flxPntCoords,
+                                             std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = a with the prescribed velocity and temperature
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+    (*bndGradVars[iState])[1] = m_u;
+    (*bndGradVars[iState])[2] = m_v;
+    (*bndGradVars[iState])[3] = m_T;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerVT2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                           const std::vector< Framework::State* >& ghostStates,
+                                           const std::vector< RealVector >& unitNormals,
+                                           const std::vector< RealVector >& flxPntCoords,
+                                           std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    computeInletPrimState(*intStates[iState],m_bndPrimState);
+    computeNSBoundaryState(*m_eulerVarSet,*intStates[iState],m_bndPrimState,*bndStates[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerVT2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                          std::vector< std::vector< RealVector* > >& bndGrads,
+                                          const std::vector< RealVector* >& bndStates,
+                                          const std::vector< RealVector >& unitNormals,
+                                          const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerVT2D::computeInletPrimState(const Framework::State& intState,
+                                                RealVector& primState)
+{
+  m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
+
+  primState[0] = m_intSolPhysData[EulerTerm::P];
+  primState[1] = m_u;
+  primState[2] = m_v;
+  primState[3] = m_T;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSubInletEulerVT2D::setup()
 {
   CFAUTOTRACE;
@@ -169,6 +233,9 @@ void BCSubInletEulerVT2D::setup()
   // resize the physical data for internal and ghost solution points
   m_eulerVarSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
   m_eulerVarSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+
+  // boundary primitive variables
+  m_bndPrimState.resize(4);
 
   // non-dimensionalize pressure and temperature
   m_u /= m_eulerVarSet->getModel()->getVelRef ();

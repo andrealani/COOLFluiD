@@ -125,6 +125,10 @@ private: // data
   bool m_limPRe;
   bool m_addUpdateCoeff;
   bool m_addDGDA;
+
+  /// use the unclamped gamma wherever it carries the equilibrium at gamma = 1, keeping the
+  /// [0.01,0.99] clamp only where it guards log(1-gamma). Default false = old behaviour
+  bool m_gammaEquilibrium;
   CFreal  m_lambdaLim;
   CFreal  m_ceg;
   

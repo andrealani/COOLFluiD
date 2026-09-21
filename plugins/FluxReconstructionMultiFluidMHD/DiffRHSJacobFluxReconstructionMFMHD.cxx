@@ -77,57 +77,6 @@ void DiffRHSJacobFluxReconstructionMFMHD::computeWaveSpeedUpdates(vector< CFreal
 
 //////////////////////////////////////////////////////////////////////////////
 
-void DiffRHSJacobFluxReconstructionMFMHD::computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm)
-{ 
-  SafePtr< DiffMFMHDVarSet > diffMFMHDVarSet = m_diffusiveVarSet.d_castTo< DiffMFMHDVarSet >();
-
-  vector< RealVector* > tempStates;
-  vector< RealVector* > tempGhostStates;
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    tempStates.push_back(m_cellStatesFlxPnt[0][iFlx]->getData());
-    tempGhostStates.push_back(m_flxPntGhostSol[iFlx]->getData());
-  }
-  
-  diffMFMHDVarSet->setGradientVars(tempStates,gradTerm,m_nbrFaceFlxPnts);
-  diffMFMHDVarSet->setGradientVars(tempGhostStates,ghostGradTerm,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffRHSJacobFluxReconstructionMFMHD::computeCellGradTerm(RealMatrix& gradTerm)
-{ 
-  SafePtr< DiffMFMHDVarSet > diffMFMHDVarSet = m_diffusiveVarSet.d_castTo< DiffMFMHDVarSet >();
-  
-  vector< RealVector* > tempStates;
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-  {
-    tempStates.push_back((*m_cellStates)[iSol]->getData());
-  }
-  
-  diffMFMHDVarSet->setGradientVars(tempStates,gradTerm,m_nbrSolPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void DiffRHSJacobFluxReconstructionMFMHD::computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR)
-{
-  SafePtr< DiffMFMHDVarSet > diffMFMHDVarSet = m_diffusiveVarSet.d_castTo< DiffMFMHDVarSet >();
-
-  vector< vector< RealVector* > > tempStates;
-  tempStates.resize(2);
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
-  {
-    tempStates[LEFT].push_back(m_cellStatesFlxPnt[LEFT][iFlx]->getData());
-    tempStates[RIGHT].push_back(m_cellStatesFlxPnt[RIGHT][iFlx]->getData());
-  }
-  
-  diffMFMHDVarSet->setGradientVars(tempStates[LEFT],gradTermL,m_nbrFaceFlxPnts);
-  diffMFMHDVarSet->setGradientVars(tempStates[RIGHT],gradTermR,m_nbrFaceFlxPnts);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 void DiffRHSJacobFluxReconstructionMFMHD::prepareFluxComputation()
 {
   const bool isPerturb = this->getMethodData().isPerturb();

@@ -25,6 +25,7 @@ namespace COOLFluiD {
  * This class represents a Dirichlet boundary condition with data from an input file
  *
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class BCDirichletFromFile : public BCStateComputer {
 
@@ -75,6 +76,27 @@ public:  // methods
                               const std::vector< RealVector >& normals,
                               const std::vector< RealVector >& coords);
 
+  /**
+   * Sets the boundary values of the gradient variables: the gradient variables
+   * of the prescribed states of computeBndStates.
+   */
+  void computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                          const std::vector< Framework::State* >& intStates,
+                          const std::vector< Framework::State* >& ghostStates,
+                          const std::vector< RealVector >& unitNormals,
+                          const std::vector< RealVector >& flxPntCoords,
+                          std::vector< RealVector* >& bndGradVars);
+
+  /**
+   * Sets the boundary states: the average of the interior and the mirrored
+   * ghost state, that is the state interpolated from the file.
+   */
+  void computeBndStates(const std::vector< Framework::State* >& intStates,
+                        const std::vector< Framework::State* >& ghostStates,
+                        const std::vector< RealVector >& unitNormals,
+                        const std::vector< RealVector >& flxPntCoords,
+                        std::vector< RealVector* >& bndStates);
+
 protected: // data
 
   /// physical model var set
@@ -91,6 +113,15 @@ protected: // data
 
   /// a string to hold the name of the input variables
   std::string m_updateVarStr;
+
+  /// prescribed states in update variables at the flux points
+  std::vector< RealVector > m_prescStates;
+
+  /// pointers to m_prescStates, passed to the diffusive variable set
+  std::vector< RealVector* > m_prescStatePtrs;
+
+  /// gradient variables of the prescribed states
+  RealMatrix m_prescGradVars;
   
   protected: // data
   

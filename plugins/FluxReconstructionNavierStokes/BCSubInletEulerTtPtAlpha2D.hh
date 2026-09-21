@@ -25,6 +25,7 @@ namespace COOLFluiD {
  * This class represents a subsonic inlet boundary condition for the 2D Euler/Navier-Stokes equations
  *
  * @author Kris Van den Abeele
+ * @author Rayan Dhib
  */
 class BCSubInletEulerTtPtAlpha2D : public BCStateComputer {
 
@@ -67,6 +68,47 @@ public:  // methods
                              const std::vector< RealVector >& normals,
                              const std::vector< RealVector >& coords);
 
+  /**
+   * Sets the boundary values of the gradient variables: the (p, u, v, T) of
+   * computeInletPrimState.
+   */
+  void computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                          const std::vector< Framework::State* >& intStates,
+                          const std::vector< Framework::State* >& ghostStates,
+                          const std::vector< RealVector >& unitNormals,
+                          const std::vector< RealVector >& flxPntCoords,
+                          std::vector< RealVector* >& bndGradVars);
+
+  /**
+   * Sets the boundary states from the (p, u, v, T) of computeInletPrimState.
+   */
+  void computeBndStates(const std::vector< Framework::State* >& intStates,
+                        const std::vector< Framework::State* >& ghostStates,
+                        const std::vector< RealVector >& unitNormals,
+                        const std::vector< RealVector >& flxPntCoords,
+                        std::vector< RealVector* >& bndStates);
+
+  /**
+   * Sets the boundary gradients: the compact face gradients, q_b = q.
+   */
+  void computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                       std::vector< std::vector< RealVector* > >& bndGrads,
+                       const std::vector< RealVector* >& bndStates,
+                       const std::vector< RealVector >& unitNormals,
+                       const std::vector< RealVector >& flxPntCoords);
+
+protected: // functions
+
+  /**
+   * Computes the boundary values of (p, u, v, T) from the total temperature and
+   * pressure, the flow angles and the Mach number M of the interior state:
+   *
+   *   c = 1 + 0.5 (gamma-1) M^2,   T = Tt/c,   p = pt/c^(gamma/(gamma-1)),
+   *   |u| = M sqrt(gamma R T),   v = tan(alpha) u
+   */
+  void computeInletPrimState(const Framework::State& intState,
+                             RealVector& primState);
+
 protected: // data
 
   /// physical model (in conservative variables)
@@ -77,6 +119,9 @@ protected: // data
 
   /// variable for physical data of intSol
   RealVector m_intSolPhysData;
+
+  /// boundary values of the primitive variables (p, u, v, T)
+  RealVector m_bndPrimState;
 
   /// total temperature
   CFreal     m_tTotal;

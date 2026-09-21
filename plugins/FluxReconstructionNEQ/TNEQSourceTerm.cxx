@@ -141,10 +141,22 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 // 	  << ", ys = [" << _ys << "], ys.sum() = " << _ys.sum() << "\n");
       
       m_omegaTv = 0.0;
-      m_omegaRad = 0.0; 
-      
-      RealMatrix jacob(m_nbrEqs,m_nbrEqs);
-   
+      m_omegaRad = 0.0;
+
+      // the mass fractions must sum to one, but a perturbed state (finite
+      // difference jacobian, JFNK matvec) or a transient can break that.
+      // renormalise instead of asserting, so those paths stay usable.
+      const CFreal ysSum = m_ys.sum();
+      if (ysSum > 0.0)
+      {
+        if (std::abs(ysSum - 1.0) > 1.0e-3)
+        {
+          CFLog(DEBUG_MIN, "TNEQSourceTerm::addSourceTerm() => renormalising ys, sum = "
+                << ysSum << "\n");
+        }
+        m_ys /= ysSum;
+      }
+
      // compute the conservation equation source term
      // AM: ugly but effective
      // the real solution would be to implement the function
@@ -152,13 +164,14 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
      if (this-> m_library->getName() != "Mutation2OLD" 
 	 && this-> m_library->getName() != "MutationPanesi" 
 	 && this-> m_library->getName() != "Mutationpp") {
+       // getSource fills omega, omegaTv and omegaRad in one go
        this-> m_library->getSource(Tdim, this-> m_tvDim, pdim, rhodim, this-> m_ys,
-				  false, this-> m_omega, m_omegaTv, m_omegaRad, jacob);
+				  false, this-> m_omega, m_omegaTv, m_omegaRad, m_jacobDummy);
       }    
       else {
         // compute the mass production/destruction term
         m_library->getMassProductionTerm(Tdim, this-> m_tvDim, pdim, rhodim, this-> m_ys,
-	  				     false, this-> m_omega, jacob);      
+	  				     false, this-> m_omega, m_jacobDummy);      
       
         // compute energy relaxation and excitation term 
         if (nbEvEqs > 0) {
@@ -166,15 +179,6 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 	  m_library->getSourceTermVT(Tdim, this-> m_tvDim, pdim, rhodim, m_omegaTv, m_omegaRad); 
         }
       }    
-    
-      cf_assert(m_ys.sum() > 0.99 && m_ys.sum() < 1.0001);
-      
-      // compute the mass production/destruction term
-      m_library->getMassProductionTerm(Tdim, m_tvDim,
-				      pdim, rhodim, m_ys,
-				      false,
-				      m_omega,
-				      jacob);
     
       CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => omega = " << m_omega << "\n");
     
@@ -197,9 +201,7 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 	resUpdates[m_nbrEqs*iSol + speciesVarIDs[i]] = m_omega[i]*ovOmegaRef;
       }
     
-      SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = m_eulerVarSet->getModel(); 
-      const CFuint nbSpecies = term->getNbScalarVars(0); 
-      const CFuint nbEvEqs = term->getNbScalarVars(1); 
+      // term, nbSpecies and nbEvEqs come from the enclosing scope
       const CFuint TID = nbSpecies + m_dim;
       const CFuint TED = nbSpecies + m_dim + nbEvEqs;
     

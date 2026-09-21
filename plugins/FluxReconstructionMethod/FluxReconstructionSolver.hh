@@ -34,6 +34,7 @@ namespace COOLFluiD {
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class FluxReconstructionSolver : public Framework::SpaceMethod {
 
@@ -72,6 +73,11 @@ public: // functions
   {
     return m_data.getPtr();
   }
+
+  /// Gets the diffusive boundary command of a TRS, without artificial viscosity
+  /// @param trsName  name of the TRS
+  /// @return SafePtr to the command
+  Common::SafePtr< DiffBndCorrectionsRHSFluxReconstruction > getDiffBndCommand(const std::string& trsName);
   
   /// Sets the LinearSystemSolver for this SpaceMethod to use
   /// @pre pointer to LSS is not constant to allow dynamic casting
@@ -234,6 +240,9 @@ private: // data
   
   /// Boolean flag for using blending approach
   bool m_useBlending;
+
+  /// Boolean flag for using subcell finite-volume blending (takes precedence over m_useBlending)
+  bool m_useSubcellBlending;
   
   /// The string for configuration of the m_timeRHSJacob command
   std::string m_timeRHSJacobStr;

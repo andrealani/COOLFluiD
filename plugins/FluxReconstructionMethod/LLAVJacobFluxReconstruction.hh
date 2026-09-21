@@ -24,6 +24,7 @@ namespace COOLFluiD {
 
 /// Command to add Localized Laplacian Artificial Viscosity near discontinuities for implicit schemes
 /// @author Ray Vandenhoeck
+/// @author Rayan Dhib
     
 class LLAVJacobFluxReconstruction : public DiffRHSJacobFluxReconstruction {
 
@@ -66,6 +67,20 @@ public: // functions
     providesSockets();
     
 protected: //functions
+
+  /**
+   * Set m_jacob before the perturbations of a cell whose faces are all boundary faces.
+   */
+  virtual void prepareIsolatedCellJacobian()
+  {
+    m_jacob = true;
+  }
+
+  /**
+   * Set the artificial viscosity gradient variables of the given states at the
+   * solution points of a cell, one column per solution point.
+   */
+  virtual void computeCellGradVars(const std::vector< Framework::State* >& states, RealMatrix& gradVars);
   
   /**
    * compute the wave speed updates for this face

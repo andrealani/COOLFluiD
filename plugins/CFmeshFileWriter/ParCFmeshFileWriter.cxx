@@ -1131,8 +1131,10 @@ void ParCFmeshFileWriter::writeGeoList(CFuint iTRS, ofstream *const fout)
 	  const CFuint nbNodesInTRGeo  = (*trs)[iType]->getNbNodesInGeo(localElemID);
 	  sendElements[isend++] = nbNodesInTRGeo;
 
-	  // number of states in the current TR geo entity
-	  const CFuint nbStatesInTRGeo = (isFVMCC) ? 1 : (*trs)[iType]->getNbStatesInGeo(localElemID);
+	  // number of states in the current TR geo entity: in cell center FVM only the first one
+	  // (as in the header count above); a boundary face without states (FR P0) keeps 0
+	  const CFuint nbStatesInGeo = (*trs)[iType]->getNbStatesInGeo(localElemID);
+	  const CFuint nbStatesInTRGeo = (isFVMCC && nbStatesInGeo > 0) ? 1 : nbStatesInGeo;
 	  sendElements[isend++] = nbStatesInTRGeo;
 
 	  // TR geo nodes data

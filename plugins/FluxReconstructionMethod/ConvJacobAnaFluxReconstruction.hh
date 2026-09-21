@@ -14,7 +14,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/DiffRHSJacobFluxReconstruction.hh"
+#include "FluxReconstructionMethod/CombinedJacobFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,8 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the convective 
 ///  part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Ray Vandenhoeck
-class ConvJacobAnaFluxReconstruction : public DiffRHSJacobFluxReconstruction {
+/// @author Rayan Dhib
+class ConvJacobAnaFluxReconstruction : public CombinedJacobFluxReconstruction {
 
 public: // functions
 
@@ -100,16 +101,6 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-
-  /**
-   * compute the contribution of the diffusive face term to both Jacobians
-   */
-  void computeBothJacobsDiffFaceTerm();
-
-  /**
-   * compute the contribution of the diffusive face term to one Jacobians
-   */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
   
   /// initialize the data needed for the jacobian
   void initJacobianComputation();
@@ -119,11 +110,25 @@ protected: //functions
   
   /// compute the Riemann flux jacobian numerically
   virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
+
+  /**
+   * Set the derivative of the common face flux with respect to the average face
+   * gradient to zero: the command has no diffusive flux.
+   */
+  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
+
+  /**
+   * Set the diffusive flux to zero: the command has no diffusive flux.
+   */
+  virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
+
+  /// @return false: the command has no physical diffusive flux
+  virtual bool hasPhysicalDiffusionJacobian() const
+  {
+    return false;
+  }
   
 protected: //data
-    
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
     
   /// order of the FR method
   CFuint m_order;
@@ -136,12 +141,6 @@ protected: //data
   
   /// artificial Viscosity
   CFreal m_epsilon;
-  
-  /// artificial Viscosity in the sol pnts
-  std::vector< std::vector< CFreal > > m_solEpsilons;
-  
-  /// artificial Viscosity
-  std::vector< std::vector< CFreal > > m_epsilonLR;
   
   /// reference artificial Viscosity
   CFreal m_epsilon0;
@@ -284,34 +283,14 @@ protected: //data
   /// average gradients in a flux point
   std::vector< RealVector* > m_avgGradAV;
   
-  /// stores the flux jacobian for each side, in each sol pnt, for each variable, for each direction
-  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_fluxJacobian;
-  
-  /// stores the Riemann flux jacobian for each side, in each face flx pnt, for each variable
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxJacobian;
-  
-  /// convective Riemann flux
-  std::vector < RealVector > m_flxPntRiemannFluxDiff;
-  
   /// perturbed convective Riemann Flux
   std::vector < RealVector > m_flxPntRiemannFluxPert;
   
   /// temporary storage for a flux
   RealVector m_tempFlux;
   
-  /// stores the flux jacobian to the gradients for each side, in each sol pnt, for each variable, for each gradient direction for each flux direction
-  std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > m_gradientFluxJacobian;
-  
   /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
   std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_gradientStateJacobian;
-  
-  /// stores the Riemann flux jacobian to the gradients for each face flx pnt, for each variable, for each gradient direction
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxGradJacobian;
-  
-  private:
-
-  /// Physical data temporary vector
-  RealVector m_pData;
 
 }; // class ConvJacobAnaFluxReconstruction
 

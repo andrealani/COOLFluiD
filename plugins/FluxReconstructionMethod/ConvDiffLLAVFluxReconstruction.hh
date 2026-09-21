@@ -27,6 +27,7 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the convective, diffusive 
 /// and artificial viscosity part of the system using a FluxReconstruction solver for an explicit scheme
 /// @author Ray Vandenhoeck
+/// @author Rayan Dhib
 class ConvDiffLLAVFluxReconstruction : public DiffRHSFluxReconstruction {
 
 public: // functions
@@ -392,6 +393,9 @@ protected: //data
   
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
+
+  /// artificial viscosity residual of the boundary faces of a cell
+  RealVector m_avBndRes;
   
   private:
 

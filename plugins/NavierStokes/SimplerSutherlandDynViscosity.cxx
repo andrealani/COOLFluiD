@@ -103,7 +103,9 @@ void SimplerSutherlandDynViscosity::configure ( Config::ConfigArgs& args )
 
 CFreal SimplerSutherlandDynViscosity::compute(const CFreal& pdim, const CFreal& Tdim)
 {
-  return m_ViscRef*std::pow(Tdim,1.5)/( m_TRef + Tdim );
+  // a negative trace temperature during a shock transient must not poison the viscosity
+  const CFreal T = (Tdim > 1.e-10) ? Tdim : 1.e-10;
+  return m_ViscRef*std::pow(T,1.5)/( m_TRef + T );
 }
 
 //////////////////////////////////////////////////////////////////////////////

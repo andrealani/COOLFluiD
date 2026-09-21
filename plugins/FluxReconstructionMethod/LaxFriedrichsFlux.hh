@@ -92,10 +92,11 @@ public:  // methods
   };
   
   /// copy the local configuration options to the device
-  void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco) 
+  void copyConfigOptionsToDevice(DeviceConfigOptions<NOTYPE>* dco)
   {
-    dco->epsilon = m_epsilon;
-  }  
+    // dco points to device memory, a direct host write segfaults
+    CudaEnv::copyHost2Dev(&dco->epsilon, &m_epsilon, 1);
+  }
   
   /// copy the local configuration options to the device
   void copyConfigOptions(DeviceConfigOptions<NOTYPE>* dco) 

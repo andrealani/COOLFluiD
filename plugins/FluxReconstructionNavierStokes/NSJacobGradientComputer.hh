@@ -10,7 +10,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/ConvRHSJacobFluxReconstruction.hh"
-#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,11 +19,12 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Daughterclass of ConvRHSJacobFluxReconstruction, needed to calculate the 
- * gradients for implicit schemes for NS
+ * Convective command for implicit schemes for NS with a diffusive term. The
+ * gradients of the gradient variables are computed by the base command.
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class NSJacobGradientComputer : public ConvRHSJacobFluxReconstruction {
 
@@ -35,50 +35,6 @@ public: // functions
 
   /// Destructor
   virtual ~NSJacobGradientComputer() {}
-  
-  /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
-   */
-  virtual void setup();
-
-protected: //functions
-  
-  /**
-   * Compute the discontinuous contribution to the corrected gradients
-   */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the correction part of the corrected gradient
-   */
-  virtual void computeGradientFaceCorrections();
-  
-protected: //data
-  
-  /// diffusive variable set
-  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
-  
-  /// Vector transformer from update to solution variables
-  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
-  RealMatrix m_tempGradTerm;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
-  RealMatrix m_tempGradTermL;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
-  RealMatrix m_tempGradTermR;
-  
-  /// element states within an element in the correct format
-  std::vector< RealVector* > m_tempStates;
-  
-  /// element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL;
-  
-  /// element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR;
     
 }; // class Solve
 
@@ -90,4 +46,3 @@ protected: //data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_FluxReconstructionMethod_NSJacobGradientComputer_hh
-

@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCSubOutletEuler2D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -132,6 +133,82 @@ void BCSubOutletEuler2D::computeGhostGradients(const std::vector< std::vector< R
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSubOutletEuler2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                            const std::vector< Framework::State* >& intStates,
+                                            const std::vector< Framework::State* >& ghostStates,
+                                            const std::vector< RealVector >& unitNormals,
+                                            const std::vector< RealVector >& flxPntCoords,
+                                            std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = a with the prescribed pressure
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+    (*bndGradVars[iState])[0] = m_pressure;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubOutletEuler2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                          const std::vector< Framework::State* >& ghostStates,
+                                          const std::vector< RealVector >& unitNormals,
+                                          const std::vector< RealVector >& flxPntCoords,
+                                          std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    computeOutletPrimState(*intStates[iState],m_bndPrimState);
+    computeNSBoundaryState(*m_eulerVarSet,*intStates[iState],m_bndPrimState,*bndStates[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubOutletEuler2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                         std::vector< std::vector< RealVector* > >& bndGrads,
+                                         const std::vector< RealVector* >& bndStates,
+                                         const std::vector< RealVector >& unitNormals,
+                                         const std::vector< RealVector >& flxPntCoords)
+{
+  copyGradients(intGrads,bndGrads);
+
+  // q_b = q - (q.n) n
+  const CFuint nbrFlxPnts = intGrads.size();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      removeNormalComponent(*bndGrads[iFlx][iVar],unitNormals[iFlx]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubOutletEuler2D::computeOutletPrimState(const Framework::State& intState,
+                                                RealVector& primState)
+{
+  m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
+
+  primState[0] = m_pressure;
+  primState[3] = m_intSolPhysData[EulerTerm::T];
+
+  for (CFuint iDim = 0; iDim < 2; ++iDim)
+  {
+    primState[1+iDim] = m_intSolPhysData[EulerTerm::VX+iDim];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSubOutletEuler2D::setup()
 {
   CFAUTOTRACE;
@@ -152,6 +229,9 @@ void BCSubOutletEuler2D::setup()
   // resize the physical data for internal and ghost solution points
   m_eulerVarSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
   m_eulerVarSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+
+  // boundary primitive variables
+  m_bndPrimState.resize(4);
 
   // non-dimensionalize pressure and temperature
   m_pressure /= m_eulerVarSet->getModel()->getPressRef();

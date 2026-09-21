@@ -27,6 +27,7 @@ namespace COOLFluiD {
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
@@ -71,10 +72,10 @@ public: // functions
 protected: //functions
 
   /// compute the interface flux
-  void computeInterfaceFlxCorrection();
+  virtual void computeInterfaceFlxCorrection();
   
   /// compute the divergence of the discontinuous flx (-divFD+divhFD)
-  void computeDivDiscontFlx(std::vector< RealVector >& residuals);
+  virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
   /// add the residual updates to the RHS
   void updateRHS();
@@ -88,7 +89,7 @@ protected: //functions
   void updateWaveSpeed();
   
   /// compute the correction -(FI)divh of a neighbouring cell of the face
-  void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
+  virtual void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
   
   /**
    * compute the wave speed updates for this face
@@ -103,18 +104,37 @@ protected: //functions
   /**
    * Set the data for the current cell necessary to calculate the residual update
    */
-  void setCellData();
+  virtual void setCellData();
   
   /**
    * Compute the left and right states in the flx pnts
    */
   void computeFlxPntStates();
   
-  /// compute the volume term contribution to the gradients
+  /**
+   * Compute the volume term contribution to the gradients of the current cell:
+   * the derivative of the polynomial interpolating the gradient variables g(U)
+   * at the solution points, divided by the Jacobian determinant once the face
+   * liftings of this cell are in.
+   */
   virtual void computeGradients();
   
-  /// compute the face correction to the corrected gradients
+  /**
+   * Compute the lifting of the current interior face into the gradients of
+   * both cells. Each side lifts its gradient variables extrapolated to the
+   * flux points to the average of the two sides.
+   */
   virtual void computeGradientFaceCorrections();
+
+  /**
+   * Add the liftings of the current interior face to m_gradUpdates of both
+   * sides, from the variables being differentiated extrapolated to the flux
+   * points of the face.
+   */
+  void addInteriorFaceLiftings(const RealMatrix& gradVarsFlxPntL, const RealMatrix& gradVarsFlxPntR);
+
+  /// allocate the data of the gradient computation
+  void setupGradientData();
 
 protected: //data
   /// socket for gradients
@@ -318,6 +338,24 @@ protected: //data
 
   /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
   CFreal m_mappedFaceNormalDir;
+
+  /// diffusive variable set, provides the gradient variables g(U)
+  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
+
+  /// transformer from update to solution variables
+  Common::SafePtr< Framework::VarSetTransformer > m_updateToSolutionVecTrans;
+
+  /// variables being differentiated at the solution points of the current cell or of both face neighbours
+  std::vector< RealMatrix > m_gradVarsSolPnts;
+
+  /// those variables extrapolated to the flux points of the current face, for both sides
+  std::vector< RealMatrix > m_gradVarsFlxPnt;
+
+  /// those variables extrapolated to one flux point, for both sides
+  std::vector< RealVector > m_flxPntGradVars;
+
+  /// solution point state data of the current cell or of both face neighbours
+  std::vector< std::vector< RealVector* > > m_gradVarStatePtrs;
   
 }; // class Solve
 

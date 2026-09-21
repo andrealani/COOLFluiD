@@ -19,11 +19,13 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Daughterclass of ConvRHSJacobFluxReconstruction, needed to calculate the 
- * gradients for implicit schemes for NS
+ * Convective command for implicit schemes for multi-fluid MHD with a diffusive
+ * term. The gradients of the gradient variables are computed by the base
+ * command.
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class MFMHDJacobGradientComputer : public ConvRHSJacobFluxReconstruction {
 
@@ -34,23 +36,6 @@ public: // functions
 
   /// Destructor
   virtual ~MFMHDJacobGradientComputer() {}
-
-protected: //functions
-  
-  /**
-   * Compute the discontinuous contribution to the corrected gradients
-   */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the correction part of the corrected gradient
-   */
-  virtual void computeGradientFaceCorrections();
-  
-protected: //data
-  
-  /// diffusive variable set
-  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
     
 }; // class Solve
 

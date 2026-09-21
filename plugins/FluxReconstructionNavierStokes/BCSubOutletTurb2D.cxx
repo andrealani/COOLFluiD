@@ -152,6 +152,64 @@ void BCSubOutletTurb2D::computeGhostGradients
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSubOutletTurb2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                                  const std::vector< Framework::State* >& intStates,
+                                                  const std::vector< Framework::State* >& ghostStates,
+                                                  const std::vector< RealVector >& unitNormals,
+                                                  const std::vector< RealVector >& flxPntCoords,
+                                                  std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = a with the prescribed pressure of the ghost state
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+    (*bndGradVars[iState])[0] = (*ghostStates[iState])[0];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubOutletTurb2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                                const std::vector< Framework::State* >& ghostStates,
+                                                const std::vector< RealVector >& unitNormals,
+                                                const std::vector< RealVector >& flxPntCoords,
+                                                std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b is the ghost state
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = *ghostStates[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubOutletTurb2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                               std::vector< std::vector< RealVector* > >& bndGrads,
+                                               const std::vector< RealVector* >& bndStates,
+                                               const std::vector< RealVector >& unitNormals,
+                                               const std::vector< RealVector >& flxPntCoords)
+{
+  copyGradients(intGrads,bndGrads);
+
+  // q_b = q - (q.n) n
+  const CFuint nbrFlxPnts = intGrads.size();
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      removeNormalComponent(*bndGrads[iFlx][iVar],unitNormals[iFlx]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSubOutletTurb2D::setup()
 {
   CFAUTOTRACE;

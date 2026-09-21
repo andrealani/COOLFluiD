@@ -456,7 +456,10 @@ void Euler2DCons::computePhysicalData(const State& state, RealVector& data)
   const CFreal pOvRho = data[EulerTerm::P]*ovRho;
   data[EulerTerm::E] = state[3]*ovRho;
   data[EulerTerm::H] = data[EulerTerm::E] + pOvRho;
-  data[EulerTerm::A] = sqrt(gamma*pOvRho);
+  // a face trace can carry a negative pressure during a shock transient: a zero
+  // sound speed keeps the Riemann flux finite there instead of a NaN
+  const CFreal a2 = gamma*pOvRho;
+  data[EulerTerm::A] = (a2 > 0.) ? sqrt(a2) : 0.;
   data[EulerTerm::T] = pOvRho/getModel()->getR();
   data[EulerTerm::V] = sqrt(V2);
   data[EulerTerm::VX] = u;

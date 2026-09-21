@@ -4,6 +4,9 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
+#include <algorithm>
+
+#include "Common/BadValueException.hh"
 #include "Environment/ObjectProvider.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
@@ -11,6 +14,7 @@
 #include "FluxReconstructionMethod/BasePointDistribution.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
+#include "FluxReconstructionMethod/BCPeriodic.hh"
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
@@ -49,6 +53,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("SpaceRHSJacobCom","Command for the computation of the space discretization contribution to RHS and Jacobian.");
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< bool >("UseBlending","Use blending approach for convective terms.");
+  options.addConfigOption< bool >("UseSubcellBlending","Use subcell finite-volume blending for the convective terms (quads only). Takes precedence over UseBlending.");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
   options.addConfigOption< std::string >("PreProcessCom","Command to preprocess the solution.");
   options.addConfigOption< std::string >("PhysicalityCom","Command to enforce physical soundness of the solution.");
@@ -99,6 +104,9 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
   
   m_useBlending = false;
   setParameter("UseBlending", &m_useBlending);
+
+  m_useSubcellBlending = false;
+  setParameter("UseSubcellBlending", &m_useSubcellBlending);
   
   m_timeRHSJacobStr = "Null";
   setParameter("TimeRHSJacobCom", &m_timeRHSJacobStr);
@@ -208,8 +216,13 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
     args, m_extrapolate,m_extrapolateStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_prepare,m_prepareStr,m_data );
+  // subcell FV blending and cell-wise P0 blending use dedicated convective commands
+  const std::string blendingSuffix = m_useSubcellBlending ? "SubcellBlending" : (m_useBlending ? "Blending" : "");
+  // the suffix means the configured name does not identify the command that
+  // ends up producing the gradients, so say which one was resolved
+  CFLog(INFO,"FluxReconstruction: convective command " << m_convSolveStr + blendingSuffix << "\n");
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
-    args, m_convSolve,m_useBlending ? m_convSolveStr + "Blending" : m_convSolveStr,m_data );
+    args, m_convSolve,m_convSolveStr + blendingSuffix,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_diffSolve,m_diffSolveStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
@@ -309,6 +322,19 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
   // get bcStateComputers
   SafePtr< std::vector< SafePtr< BCStateComputer > > > bcStateComputers = m_data->getBCStateComputers();
   cf_assert(m_bcNameStr.size() == bcStateComputers->size());
+
+  // periodic faces need the partner cell for the compact lifting
+  if (m_data->getDiffusiveVarStr() != "Null" || m_artificialViscStr != "Null")
+  {
+    for (CFuint iBC = 0; iBC < bcStateComputers->size(); ++iBC)
+    {
+      if (dynamic_cast< BCPeriodic* >(&*(*bcStateComputers)[iBC]) != CFNULL)
+      {
+        throw Common::BadValueException(FromHere(),"Periodic boundary condition with a diffusive term or artificial viscosity is not supported; use it for convective terms only.");
+      }
+    }
+  }
+
   if (m_bcNameDiffStr.size() != m_bcNameStr.size())
   {
     CFLog(NOTICE,"Number of Diffusive BCs doesn't match convective BCs: should only happen when there is no diffusive term!\n");
@@ -338,7 +364,8 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       CFLog(INFO,"FluxReconstruction: Creating convective boundary correction command for boundary condition: "
                   << m_bcNameStr[iBc] << "\n");
       
-      std::string convBndCorrectionStr = "ConvBndCorrections" + (m_useBlending ? m_spaceRHSJacobStr + "Blending" : m_spaceRHSJacobStr);
+      const std::string blendingSuffix = m_useSubcellBlending ? "SubcellBlending" : (m_useBlending ? "Blending" : "");
+      std::string convBndCorrectionStr = "ConvBndCorrections" + m_spaceRHSJacobStr + blendingSuffix;
       CFLog(INFO, convBndCorrectionStr << "\n");
 
       try
@@ -351,7 +378,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       catch (Common::NoSuchValueException& e)
       {
         CFLog(INFO, e.what() << "\n");
-        std::string fallbackStr = std::string("ConvBndCorrectionsRHS") + (m_useBlending ? "Blending" : "");
+        std::string fallbackStr = std::string("ConvBndCorrectionsRHS") + blendingSuffix;
         CFLog(INFO, "Choosing " << fallbackStr << " instead ...\n");
 
         configureCommand<FluxReconstructionSolverCom,
@@ -393,6 +420,14 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       catch (Common::NoSuchValueException& e)
       {
         CFLog(INFO, e.what() << "\n");
+
+        // with a diffusive term the generic boundary command would evaluate the
+        // wall flux without the physics hooks of the model, so refuse it
+        if (m_data->getDiffusiveVarStr() != "Null")
+        {
+          throw Common::BadValueException (FromHere(),"FluxReconstructionSolver: the diffusive boundary command DiffBndCorrections" + m_spaceRHSJacobStr + " does not exist, and the generic one is not used with a diffusive term. Check SpaceRHSJacobCom.");
+        }
+
         CFLog(INFO, "Choosing DiffBndCorrectionsRHS instead ...\n");
 
         configureCommand<FluxReconstructionSolverCom,
@@ -651,6 +686,25 @@ std::vector<Common::SafePtr<NumericalStrategy> > FluxReconstructionSolver::getSt
   result.push_back(m_data->getRiemannFlux()        .d_castTo<NumericalStrategy>());
   
   return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+Common::SafePtr< DiffBndCorrectionsRHSFluxReconstruction > FluxReconstructionSolver::getDiffBndCommand(const std::string& trsName)
+{
+  const CFuint nbrBCs = m_bcsDiff.size();
+
+  for (CFuint iBC = 0; iBC < nbrBCs; ++iBC)
+  {
+    const std::vector< std::string > trsNames = m_bcsDiffComs[iBC]->getTrsNames();
+
+    if (std::find(trsNames.begin(),trsNames.end(),trsName) != trsNames.end())
+    {
+      return m_bcsDiff[iBC];
+    }
+  }
+
+  throw Common::BadValueException(FromHere(),"No diffusive boundary command for TRS " + trsName + "; add the TRS to a diffusive boundary condition.");
 }
 
 //////////////////////////////////////////////////////////////////////////////

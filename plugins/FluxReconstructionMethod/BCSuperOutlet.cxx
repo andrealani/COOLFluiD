@@ -116,6 +116,71 @@ void BCSuperOutlet::computeGhostGradients(const std::vector< std::vector< RealVe
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSuperOutlet::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                       const std::vector< Framework::State* >& intStates,
+                                       const std::vector< Framework::State* >& ghostStates,
+                                       const std::vector< RealVector >& unitNormals,
+                                       const std::vector< RealVector >& flxPntCoords,
+                                       std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+  cf_assert(nbrStates <= gradVarsFlxPnt.size());
+  cf_assert(nbrStates <= bndGradVars.size());
+
+  // g_b = a
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSuperOutlet::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                     const std::vector< Framework::State* >& ghostStates,
+                                     const std::vector< RealVector >& unitNormals,
+                                     const std::vector< RealVector >& flxPntCoords,
+                                     std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b = U
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = *intStates[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSuperOutlet::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                    std::vector< std::vector< RealVector* > >& bndGrads,
+                                    const std::vector< RealVector* >& bndStates,
+                                    const std::vector< RealVector >& unitNormals,
+                                    const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+
+  // zero normal gradients
+  if (m_zeroGrad)
+  {
+    const CFuint nbrFlxPnts = intGrads.size();
+
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+    {
+      const CFuint nbrGradVars = intGrads[iFlx].size();
+
+      for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+      {
+        removeNormalComponent(*bndGrads[iFlx][iVar],unitNormals[iFlx]);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSuperOutlet::setup()
 {
   CFAUTOTRACE;

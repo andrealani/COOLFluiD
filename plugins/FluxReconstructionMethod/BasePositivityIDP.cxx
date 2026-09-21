@@ -535,7 +535,14 @@ CFreal BasePositivityIDP::thetaDensity(const CFreal rhoBase,
   // whenever this branch is taken.
   const CFreal denom = rhoBase - rho;
   cf_assert(denom > 0.0);
-  return (rhoBase - epsRho)/denom;
+
+  // The exact theta lands the binding point right on the floor. The corrector
+  // does not reuse that value: it rebuilds the states, re-interpolates the
+  // traces and recomputes rho, so round-off can leave it a ULP below the floor.
+  // The admissibility test then rejects and theta is halved, which costs half
+  // the high order content over a 1e-16 error. Back off by a relative 1e-12 so
+  // the limited value sits just above the floor instead of exactly on it.
+  return (1.0 - 1.0e-12)*(rhoBase - epsRho)/denom;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -552,7 +559,8 @@ CFreal BasePositivityIDP::thetaPressure(const CFreal pBase,
   // under-estimate theta, which is the safe direction.
   const CFreal denom = pBase - p;
   if (denom <= 0.0) return 1.0;
-  return (pBase - epsP)/denom;
+  // same round-off back-off as thetaDensity
+  return (1.0 - 1.0e-12)*(pBase - epsP)/denom;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -944,13 +952,13 @@ void BasePositivityIDP::execute()
       // construction, so its pressure is worth a line only when it is not.
       CFLog(NOTICE, "PositivityIDP: " << totLimited << " cells"
             << ", theta " << totMinTheta
-            << ", min rho " << totMinRho
-            << " p " << totMinP);
+            << ", min rho " << totMinRho);
+      if (m_enablePressure) CFLog(NOTICE, " p " << totMinP);
       if (totSequential > 0) CFLog(NOTICE, ", " << totSequential << " sequential");
       if (totHydroFall  > 0) CFLog(NOTICE, ", " << totHydroFall  << " Hydro->Full");
       if (totBisect     > 0) CFLog(NOTICE, ", " << totBisect     << " corrector bisections");
       if (totToMean     > 0) CFLog(NOTICE, ", " << totToMean     << " fell back to the mean");
-      if (totMinPOut <= 0.0) CFLog(NOTICE, ", min p out " << totMinPOut << " WHICH IS A BUG");
+      if (m_enablePressure && totMinPOut <= 0.0) CFLog(NOTICE, ", min p out " << totMinPOut << " WHICH IS A BUG");
       CFLog(NOTICE, "\n");
     }
   }

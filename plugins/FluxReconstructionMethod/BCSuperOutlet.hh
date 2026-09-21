@@ -19,6 +19,7 @@ namespace COOLFluiD {
  *
  * @author Kris Van den Abeele
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class BCSuperOutlet : public BCStateComputer {
 
@@ -68,6 +69,36 @@ public:  // methods
                              std::vector< std::vector< RealVector* > >& ghostGrads,
                              const std::vector< RealVector >& normals,
                              const std::vector< RealVector >& coords);
+
+  /**
+   * Sets the boundary values of the gradient variables: the gradient variables
+   * extrapolated to the flux points.
+   */
+  void computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                          const std::vector< Framework::State* >& intStates,
+                          const std::vector< Framework::State* >& ghostStates,
+                          const std::vector< RealVector >& unitNormals,
+                          const std::vector< RealVector >& flxPntCoords,
+                          std::vector< RealVector* >& bndGradVars);
+
+  /**
+   * Sets the boundary states: the interior states, U_b = U.
+   */
+  void computeBndStates(const std::vector< Framework::State* >& intStates,
+                        const std::vector< Framework::State* >& ghostStates,
+                        const std::vector< RealVector >& unitNormals,
+                        const std::vector< RealVector >& flxPntCoords,
+                        std::vector< RealVector* >& bndStates);
+
+  /**
+   * Sets the boundary gradients: the compact face gradients, q_b = q, with the
+   * normal component removed when ZeroGrad is true.
+   */
+  void computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                       std::vector< std::vector< RealVector* > >& bndGrads,
+                       const std::vector< RealVector* >& bndStates,
+                       const std::vector< RealVector >& unitNormals,
+                       const std::vector< RealVector >& flxPntCoords);
   
   protected: // data
       

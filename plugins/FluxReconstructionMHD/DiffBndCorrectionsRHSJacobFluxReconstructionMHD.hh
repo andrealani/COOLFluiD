@@ -20,6 +20,7 @@ namespace COOLFluiD {
    * Flux Reconstruction schemes for diffusive terms to the RHS for implicit schemes for MHD
    *
    * @author Ray Vandenhoeck   *
+   * @author Rayan Dhib
    */
 class DiffBndCorrectionsRHSJacobFluxReconstructionMHD : public DiffBndCorrectionsRHSJacobFluxReconstruction {
 
@@ -56,37 +57,11 @@ protected: // functions
    */
   void computeWaveSpeedUpdates(CFreal& waveSpeedUpd);
   
-  /**
-   * compute the terms for the gradient computation for a bnd face
-   */
-  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
-  
-  /**
-   * compute the terms for the gradient computation for a bnd face
-   */
-  virtual void computeBndGradTerms2(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
-  
-  /**
-   * compute the term for the gradient computation for the cell
-   */
-  virtual void computeCellGradTerm(RealMatrix& gradTerm);
-  
-  /**
-   * compute the terms for the gradient computation for a face
-   */
-  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
-  
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
 protected: // data
 
-    // vector for temporary storing the states of flx pnts
-    std::vector< std::vector< RealVector* > > m_tempStates;
-    
-    // vector for temporary storing the states of sol pnts
-    std::vector< RealVector* > m_tempStatesSol;
-    
     /// diffusive variable set
   Common::SafePtr< Physics::MHD::MHDProjectionDiffVarSet > m_diffusiveVarSet;
     

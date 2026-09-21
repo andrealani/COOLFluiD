@@ -11,25 +11,23 @@
 
 #include "FluxReconstructionNavierStokes/ConvDiffJacobFluxReconstructionNS.hh"
 
-#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
-
-
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-    
   namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a command that computes the contribution of the 
- * convective, diffusive to the RHS for a Flux Reconstruction scheme for implicit 
- * time marching for RANS: same as NS, but added wall distance for diffusive
- * flux computations
- * 
+ * This class represents a command that computes the contribution of the
+ * convective and diffusive terms to the RHS and Jacobian for a Flux
+ * Reconstruction scheme for implicit time marching for a turbulence model:
+ * ConvDiffJacobFluxReconstructionNS with the wall distance set on the turbulent
+ * diffusive variable set before every diffusive flux evaluation (rules in
+ * TurbWallDistance.hh).
+ *
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvDiffJacobFluxReconstructionTurb : public ConvDiffJacobFluxReconstructionNS {
 
@@ -40,72 +38,51 @@ public: // functions
 
   /// Destructor
   virtual ~ConvDiffJacobFluxReconstructionTurb() {}
-  
+
   /**
    * Configures the command.
    */
   virtual void configure ( Config::ConfigArgs& args );
-  
+
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
   virtual void setup();
-  
+
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
-  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
       needsSockets();
 
-protected: //functions
-    
-    /**
-   * compute the unperturbed cell diffusive residuals
-   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
-   * @pre setCellsData()
+protected: // functions
+
+  /**
+   * Sets the wall distance of the solution point on the turbulent diffusive
+   * variable set, then prepares the flux computation as the NS command does.
+   * @param stateID local ID of the state of the solution point
    */
-  virtual void computeUnpertCellDiffResiduals(const CFuint side);
-  
-  /// initialize the data needed for the jacobian
-  virtual void initJacobianComputation();
-  
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
-  /// compute the Riemann flux jacobian numerically
-  virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
-  
-  /// compute the Riemann flux to gradient jacobian numerically
-  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
-  
-  /// compute the cell flux jacobian numerically
-  virtual void computeCellFluxJacobianNum(const CFreal resFactor);
-  
-  /// compute the flux to gradient jacobian numerically
-  virtual void computeFluxToGradJacobianNum(const CFreal resFactor);
-  
+  virtual void prepareSolPntFluxComputation(const CFuint stateID);
+
+  /**
+   * Sets the wall distance of a flux point of the current face on the turbulent
+   * diffusive variable set (the average of the two cells' closest solution
+   * points), then prepares the flux computation as the NS command does.
+   * @param iFlx index of the flux point on the face
+   */
+  virtual void prepareFlxPntFluxComputation(const CFuint iFlx);
+
 protected: // data
 
-  /// handle to the wall distance
-  Framework::DataSocketSink<CFreal> socket_wallDistance;
-  
-  /// idx of closest sol to each flx
-  Common::SafePtr< std::vector< CFuint > > m_closestSolToFlxIdx;
-  
-  Common::SafePtr< Physics::KOmega::NavierStokes2DKLogOmega > m_navierStokesVarSetTurb;
-  
-  Common::SafePtr< Physics::KOmega::NavierStokes3DKLogOmega > m_navierStokesVarSetTurb3D;
-  
-  private:
+  /// wall distance of every state
+  Framework::DataSocketSink< CFreal > socket_wallDistance;
 
-  /// Physical data temporary vector
-  RealVector m_pData;
-  /// Physical data temporary vector
-  RealVector m_pData2;
-    
-}; // class Solve
+  /// index of the closest solution point of every flux point of the cell
+  Common::SafePtr< std::vector< CFuint > > m_closestSolToFlxIdx;
+
+}; // class ConvDiffJacobFluxReconstructionTurb
 
 //////////////////////////////////////////////////////////////////////////////
 

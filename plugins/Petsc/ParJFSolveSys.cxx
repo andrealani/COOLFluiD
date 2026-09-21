@@ -277,7 +277,13 @@ void ParJFSolveSys::execute()
   KSPConvergedReason reason;
   CF_CHKERRCONTINUE(KSPGetConvergedReason(ksp, &reason));
   if (SubSystemStatusStack::getActive()->getNbIter() % getMethodData().getKSPConvergenceShowRate() == 0) {
-    CFLog(INFO, "KSP converged in " << iter << " iterations\n");
+    // The printed Newton residual is |dU|, which collapses when a linear
+    // solve fails, so report the true residual |F| = |rhs| next to the
+    // Krylov count and say whether the solve actually converged.
+    PetscReal rhsNorm = 0.;
+    CF_CHKERRCONTINUE(VecNorm(rhsVec.getVec(), NORM_2, &rhsNorm));
+    CFLog(INFO, "JFNK: |F| = " << rhsNorm << ", KSP " << iter << " iterations, "
+          << (reason > 0 ? "converged" : "NOT converged") << " (reason " << static_cast<int>(reason) << ")\n");
   }
   CFLog(VERBOSE, "KSP residual norm: " << kspResNorm
     << ", reason: " << reason << "\n");

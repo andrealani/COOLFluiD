@@ -25,6 +25,7 @@ namespace COOLFluiD {
 
 /// Command to add Localized Laplacian Artificial Viscosity near discontinuities
 /// @author Ray Vandenhoeck
+/// @author Rayan Dhib
     
 class LLAVDiffFluxReconstruction : public LLAVFluxReconstruction {
 
@@ -70,11 +71,33 @@ protected: //functions
    */
   virtual void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
 
-  /// compute the interface flux
+  /**
+   * Compute the common flux at the flux points of the current face: the
+   * physical diffusive flux with the compact gradients of the physical gradient
+   * variables plus the artificial viscosity flux with the compact gradients of
+   * the artificial viscosity variables.
+   */
   virtual void computeInterfaceFlxCorrection();
   
-  /// compute the divergence of the discontinuous flux (-divFD+divhFD)
+  /**
+   * Compute the divergence of the discontinuous flux (-divFD+divhFD) of the
+   * current cell: the physical volume term of DiffRHSFluxReconstruction and
+   * the artificial viscosity volume term and boundary flux of
+   * LLAVFluxReconstruction, with the gradients switched to the artificial
+   * viscosity gradients in between.
+   */
   virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
+
+protected: //data
+
+  /// physical common flux at the flux points of the current face
+  std::vector< RealVector > m_physFlxPntRiemannFlux;
+
+  /// physical divergence of the discontinuous flux at the solution points
+  std::vector< RealVector > m_physDivContFlx;
+
+  /// backup of the pointers to the gradients of the current cell
+  std::vector< std::vector< RealVector >* > m_cellGradsPtrsBackUp;
 
   private:
 

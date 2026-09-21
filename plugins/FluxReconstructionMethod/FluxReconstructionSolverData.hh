@@ -362,6 +362,12 @@ public: // functions
     return m_diffDampCoeff;
   }
   
+  /// Returns eta, the BR2 lifting multiplier of the compact face gradient grad g^D + eta (g^I_f - g^D_f) grad h_f
+  CFreal getBR2Eta()
+  {
+    return m_br2Eta;
+  }
+  
   /// Returns a boolean telling whether to freeze the Jacobian
   bool freezeJacob()
   {
@@ -490,6 +496,12 @@ private:  // data
   
   //// Damping coefficient of diffusive flux scheme
   CFreal m_diffDampCoeff;
+  
+  /// Multiplier of the face lifting in the compact BR2 face gradient
+  CFreal m_br2Eta;
+
+  /// Relative step of the finite difference that builds the assembled Jacobian
+  CFreal m_numJacobTol;
   
   /// The boundary condition state computer strategies
   std::vector< Common::SelfRegistPtr< BCStateComputer > > m_bcs;

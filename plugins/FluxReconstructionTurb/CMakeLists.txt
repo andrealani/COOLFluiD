@@ -25,6 +25,9 @@ DiffBndCorrectionsRHSJacobFluxReconstructionTurb.hh
 DiffBndCorrectionsRHSJacobFluxReconstructionTurb.cxx
 DiffBndCorrectionsRHSFluxReconstructionTurb.hh
 DiffBndCorrectionsRHSFluxReconstructionTurb.cxx
+DiffRHSJacobFluxReconstructionTurb.hh
+DiffRHSJacobFluxReconstructionTurb.cxx
+TurbWallDistance.hh
 )
 
 LIST ( APPEND FluxReconstructionKOmega_cflibs FluxReconstructionMethod FluxReconstructionNavierStokes NavierStokes KOmega )
@@ -55,6 +58,12 @@ GammaAlphaJacobBndGradientComputer.hh
 GammaAlphaJacobBndGradientComputer.cxx
 GammaAlphaBndGradientComputer.hh
 GammaAlphaBndGradientComputer.cxx
+GammaAlphaJacobBndGradientComputerBlending.hh
+GammaAlphaJacobBndGradientComputerBlending.cxx
+GammaAlphaJacobBndGradientComputerSubcellBlending.hh
+GammaAlphaJacobBndGradientComputerSubcellBlending.cxx
+GammaAlphaTransitionCriterion.hh
+GammaAlphaTransitionCriterion.cxx
 )
 
 LIST ( APPEND FluxReconstructionGammaAlpha_cflibs NavierStokes GammaAlpha FluxReconstructionMethod FluxReconstructionNavierStokes FluxReconstructionKOmega FluxReconstructionSA )

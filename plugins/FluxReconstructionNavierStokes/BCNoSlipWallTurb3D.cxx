@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCNoSlipWallTurb3D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -39,6 +40,8 @@ void BCNoSlipWallTurb3D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux (possibly zero), default true.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+  options.addConfigOption< bool >("LegacyGhost","Use the previous ghost state (the wall state) "
+    "instead of the reflected one (interior density, reflected velocity and temperature), default false.");
   options.addConfigOption< CFreal >("WallDist","Characteristic distance of first sol pnt from the wall.");
   options.addConfigOption< CFreal >("OmegaWallFactor","Factor by which to multiply omegaWall each iteration until it is the theoretical value (Default 1.01).");
   options.addConfigOption< CFuint >("ImposeOmegaWallIter","Iteration at which to impose theoretical omegaWall value.");
@@ -69,6 +72,9 @@ BCNoSlipWallTurb3D::BCNoSlipWallTurb3D(const std::string& name) :
    
   m_changeToIsoT = MathTools::MathConsts::CFuintMax();
    setParameter("ChangeToIsoT",&m_changeToIsoT);
+
+  m_legacyGhost = false;
+   setParameter("LegacyGhost",&m_legacyGhost);
    
   m_xWallVelocity = 0.0;
    setParameter("xWallVelocity",&m_xWallVelocity);
@@ -136,7 +142,30 @@ void BCNoSlipWallTurb3D::computeGhostStates(const vector< State* >& intStates,
     // set the physical data starting from the inner state
     m_varSetTurb->computePhysicalData(intState,m_intSolPhysData);
     
-    if (m_heatFlux)
+    if (!m_legacyGhost)
+    {
+      // interior density, velocity reflected about the wall velocity, temperature reflected about the
+      // wall temperature (isothermal wall) or copied (heat-flux wall), pressure from density and temperature
+      const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
+      const CFreal ghostT = m_heatFlux ? innerT : max(2.0*m_wallT - innerT,0.01*m_wallT);
+      const CFreal ghostRho = m_intSolPhysData[EulerTerm::RHO];
+      const CFreal ghostP   = ghostRho*R*ghostT;
+
+      m_ghostSolPhysData[EulerTerm::RHO] = ghostRho;
+      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_xWallVelocity - m_intSolPhysData[EulerTerm::VX];
+      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_yWallVelocity - m_intSolPhysData[EulerTerm::VY];
+      m_ghostSolPhysData[EulerTerm::VZ]  = 2.0*m_zWallVelocity - m_intSolPhysData[EulerTerm::VZ];
+      m_ghostSolPhysData[EulerTerm::V]   = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX] +
+                                              m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY] +
+                                              m_ghostSolPhysData[EulerTerm::VZ]*m_ghostSolPhysData[EulerTerm::VZ]);
+      m_ghostSolPhysData[EulerTerm::P]   = ghostP;
+      m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*ghostP + 0.5*ghostRho*
+                                            m_ghostSolPhysData[EulerTerm::V]*m_ghostSolPhysData[EulerTerm::V])/ghostRho;
+      m_ghostSolPhysData[EulerTerm::A]   = sqrt(gamma*ghostP/ghostRho);
+      m_ghostSolPhysData[EulerTerm::T]   = ghostT;
+      m_ghostSolPhysData[EulerTerm::E]   = m_ghostSolPhysData[EulerTerm::H] - ghostP/ghostRho;
+    }
+    else if (m_heatFlux)
     {
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
@@ -179,6 +208,13 @@ void BCNoSlipWallTurb3D::computeGhostStates(const vector< State* >& intStates,
                                          (m_ghostSolPhysData[EulerTerm::P]/m_ghostSolPhysData[EulerTerm::RHO]);
     }
 
+    // wall values for the wall model of the turbulence variables: the ghost itself with the legacy
+    // ghost, otherwise the interior pressure with the wall (isothermal) or interior (heat flux) temperature
+    const CFreal wallP   = m_legacyGhost ? m_ghostSolPhysData[EulerTerm::P] : m_intSolPhysData[EulerTerm::P];
+    const CFreal wallT   = m_legacyGhost ? m_ghostSolPhysData[EulerTerm::T] :
+                           (m_heatFlux ? m_intSolPhysData[EulerTerm::T] : m_wallT);
+    const CFreal wallRho = m_legacyGhost ? m_ghostSolPhysData[EulerTerm::RHO] : wallP/(R*wallT);
+
     m_ghostSolPhysData[iK] = m_wallK;
     
     // check if it is k-omega and not SA
@@ -190,11 +226,11 @@ void BCNoSlipWallTurb3D::computeGhostStates(const vector< State* >& intStates,
       //avoid too small distances
       //y0 = std::max(y0, 10.e-10);
     
-      const CFreal pdim =  m_ghostSolPhysData[EulerTerm::P] * m_varSetTurb->getModel()->getPressRef();
-      const CFreal Tdim =  m_ghostSolPhysData[EulerTerm::T] * m_varSetTurb->getModel()->getTempRef();
+      const CFreal pdim =  wallP * m_varSetTurb->getModel()->getPressRef();
+      const CFreal Tdim =  wallT * m_varSetTurb->getModel()->getTempRef();
       const CFreal mu = m_diffVarTurb->getModel().getDynViscosityDim(pdim, Tdim)/(m_diffVarTurb->getModel().getReferencePhysicalData())[NSTurbTerm::MU];
     
-      CFreal nu = mu / m_ghostSolPhysData[EulerTerm::RHO];
+      CFreal nu = mu / wallRho;
     
       //this is not the best, but it avoids having to code another BC! because I
       //would have to dynamic cast to the KOmega varset to get the beta1
@@ -320,6 +356,110 @@ void BCNoSlipWallTurb3D::computeGhostGradients
       const CFreal nRetGrad = RetGradI[XX]*normal[XX] + RetGradI[YY]*normal[YY];
       RetGradG = RetGradI - nRetGrad*normal;
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallTurb3D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                                  const std::vector< Framework::State* >& intStates,
+                                                  const std::vector< Framework::State* >& ghostStates,
+                                                  const std::vector< RealVector >& unitNormals,
+                                                  const std::vector< RealVector >& flxPntCoords,
+                                                  std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+  // index of k in a state and in the gradient variables, after p, the velocity and T; not the
+  // index of k in the physical data, which is what getFirstScalarVar returns
+  const CFuint iK = DIM_3D+2;
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+
+  // g_b = a with the wall values: the wall velocity, the wall temperature of an isothermal
+  // wall, and KWall and the wall value of log-omega the ghost state carries
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const RealVector& ghostState = *ghostStates[iState];
+    RealVector& bndGradVarsState = *bndGradVars[iState];
+
+    bndGradVarsState = *gradVarsFlxPnt[iState];
+    bndGradVarsState[1] = m_xWallVelocity;
+    bndGradVarsState[2] = m_yWallVelocity;
+    bndGradVarsState[3] = m_zWallVelocity;
+    if (!m_heatFlux)
+    {
+      bndGradVarsState[DIM_3D+1] = m_wallT;
+    }
+    bndGradVarsState[iK] = ghostState[iK];
+    if (nbTurbVars == 2 || nbTurbVars == 4)
+    {
+      bndGradVarsState[iK+1] = ghostState[iK+1];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallTurb3D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                                const std::vector< Framework::State* >& ghostStates,
+                                                const std::vector< RealVector >& unitNormals,
+                                                const std::vector< RealVector >& flxPntCoords,
+                                                std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b is the wall state: the interior pressure, the wall velocity, the wall temperature of an
+  // isothermal wall or the interior one of a heat-flux wall, and the wall values of the
+  // turbulence variables the ghost state carries
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const RealVector& intState = *intStates[iState];
+    RealVector& bndState = *bndStates[iState];
+
+    bndState = *ghostStates[iState];
+    bndState[0] = intState[0];
+    bndState[1] = m_xWallVelocity;
+    bndState[2] = m_yWallVelocity;
+    bndState[3] = m_zWallVelocity;
+    bndState[DIM_3D+1] = m_heatFlux ? intState[DIM_3D+1] : m_wallT;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallTurb3D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                               std::vector< std::vector< RealVector* > >& bndGrads,
+                                               const std::vector< RealVector* >& bndStates,
+                                               const std::vector< RealVector >& unitNormals,
+                                               const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+
+  // no diffusive flux of gamma and Re_theta through the wall: their normal component is removed
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+  if (nbTurbVars == 4)
+  {
+    // index of k in the gradients, as in computeBndGradVars
+    const CFuint iK = DIM_3D+2;
+    const CFuint nbrFlxPnts = intGrads.size();
+    for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+    {
+      removeNormalComponent(*bndGrads[iFlx][iK+2],unitNormals[iFlx]);
+      removeNormalComponent(*bndGrads[iFlx][iK+3],unitNormals[iFlx]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallTurb3D::constrainBndGrads(const RealVector& bndState,
+                                                 std::vector< RealVector* >& bndGrads,
+                                                 const RealVector& unitNormal,
+                                                 const RealVector& flxPntCoord)
+{
+  if (m_heatFlux)
+  {
+    prescribeNSWallHeatFlux(*m_diffVarTurb,bndState,bndGrads,unitNormal,DIM_3D+1,m_wallQ);
   }
 }
 

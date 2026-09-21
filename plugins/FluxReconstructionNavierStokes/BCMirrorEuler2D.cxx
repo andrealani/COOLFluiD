@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCMirrorEuler2D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -162,6 +163,63 @@ void BCMirrorEuler2D::computeGhostGradients(const std::vector< std::vector< Real
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCMirrorEuler2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                         const std::vector< Framework::State* >& intStates,
+                                         const std::vector< Framework::State* >& ghostStates,
+                                         const std::vector< RealVector >& unitNormals,
+                                         const std::vector< RealVector >& flxPntCoords,
+                                         std::vector< RealVector* >& bndGradVars)
+{
+  setSlipWallBndGradVars(gradVarsFlxPnt,unitNormals,m_velocityIDs,bndGradVars);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCMirrorEuler2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                       const std::vector< Framework::State* >& ghostStates,
+                                       const std::vector< RealVector >& unitNormals,
+                                       const std::vector< RealVector >& flxPntCoords,
+                                       std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    m_eulerVarSet->computePhysicalData(*intStates[iState],m_intSolPhysData);
+
+    // interior pressure and temperature
+    m_bndPrimState[0] = m_intSolPhysData[EulerTerm::P];
+    m_bndPrimState[3] = m_intSolPhysData[EulerTerm::T];
+
+    // tangential velocity u - (u.n) n
+    CFreal normalVel = 0.;
+    for (CFuint iDim = 0; iDim < 2; ++iDim)
+    {
+      normalVel += m_intSolPhysData[EulerTerm::VX+iDim]*unitNormals[iState][iDim];
+    }
+
+    for (CFuint iDim = 0; iDim < 2; ++iDim)
+    {
+      m_bndPrimState[1+iDim] = m_intSolPhysData[EulerTerm::VX+iDim] - normalVel*unitNormals[iState][iDim];
+    }
+
+    computeNSBoundaryState(*m_eulerVarSet,*intStates[iState],m_bndPrimState,*bndStates[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCMirrorEuler2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                      std::vector< std::vector< RealVector* > >& bndGrads,
+                                      const std::vector< RealVector* >& bndStates,
+                                      const std::vector< RealVector >& unitNormals,
+                                      const std::vector< RealVector >& flxPntCoords)
+{
+  setSlipWallBndGrads(intGrads,bndGrads,unitNormals,m_velocityIDs);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCMirrorEuler2D::setup()
 {
   CFAUTOTRACE;
@@ -182,6 +240,14 @@ void BCMirrorEuler2D::setup()
   // resize the physical data for internal and ghost solution points
   m_eulerVarSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
   m_eulerVarSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+
+  // boundary primitive variables
+  m_bndPrimState.resize(4);
+
+  // velocity components in the gradient variables
+  m_velocityIDs.resize(2);
+  m_velocityIDs[0] = 1;
+  m_velocityIDs[1] = 2;
 }
 
 //////////////////////////////////////////////////////////////////////////////

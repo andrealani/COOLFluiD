@@ -121,7 +121,10 @@ protected: // data
   
   /// array to store the production/destruction term
   RealVector m_omega;
-  
+
+  /// scratch matrix handed to the library when no jacobian is asked for.
+  /// kept as a member so it is not reallocated at every solution point.
+  RealMatrix m_jacobDummy;
 
 }; // class CNEQSourceTerm
 

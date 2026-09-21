@@ -165,6 +165,69 @@ void BCSubInletTurbUVT2D::computeGhostGradients
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSubInletTurbUVT2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                                  const std::vector< Framework::State* >& intStates,
+                                                  const std::vector< Framework::State* >& ghostStates,
+                                                  const std::vector< RealVector >& unitNormals,
+                                                  const std::vector< RealVector >& flxPntCoords,
+                                                  std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+  // index of the first turbulence variable in a state and in the gradient variables, after p,
+  // the velocity and T; not its index in the physical data, which getFirstScalarVar returns
+  const CFuint iK = DIM_2D+2;
+  const CFuint nbTurbVars = m_varSetTurb->getModel()->getNbScalarVars(0);
+
+  // g_b = a with the prescribed values of the ghost state: the velocity, the temperature and the turbulence variables
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const RealVector& ghostState = *ghostStates[iState];
+    RealVector& bndGradVarsState = *bndGradVars[iState];
+
+    bndGradVarsState = *gradVarsFlxPnt[iState];
+    for (CFuint iDim = 0; iDim < DIM_2D; ++iDim)
+    {
+      bndGradVarsState[1+iDim] = ghostState[1+iDim];
+    }
+    bndGradVarsState[DIM_2D+1] = ghostState[DIM_2D+1];
+    for (CFuint iTurb = 0; iTurb < nbTurbVars; ++iTurb)
+    {
+      bndGradVarsState[iK+iTurb] = ghostState[iK+iTurb];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletTurbUVT2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                                const std::vector< Framework::State* >& ghostStates,
+                                                const std::vector< RealVector >& unitNormals,
+                                                const std::vector< RealVector >& flxPntCoords,
+                                                std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b is the ghost state
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = *ghostStates[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletTurbUVT2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                               std::vector< std::vector< RealVector* > >& bndGrads,
+                                               const std::vector< RealVector* >& bndStates,
+                                               const std::vector< RealVector >& unitNormals,
+                                               const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSubInletTurbUVT2D::setup()
 {
   CFAUTOTRACE;

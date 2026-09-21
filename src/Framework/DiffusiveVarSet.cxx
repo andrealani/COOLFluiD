@@ -40,6 +40,21 @@ DiffusiveVarSet::~DiffusiveVarSet()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void DiffusiveVarSet::setGradientVars(const std::vector<RealVector*>& states,
+                                      RealMatrix& values,
+                                      const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  for (CFuint iState = 0; iState < stateSize; ++iState) {
+    const RealVector& state = *states[iState];
+    for (CFuint i = 0; i < nbValues; ++i) {
+      values(i,iState) = state[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   } // namespace Framework
 
 } // namespace COOLFluiD

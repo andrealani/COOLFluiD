@@ -14,7 +14,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/DiffRHSJacobFluxReconstruction.hh"
+#include "FluxReconstructionMethod/CombinedJacobFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,8 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the convective, diffusive 
 /// and artificial viscosity part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Ray Vandenhoeck
-class ConvLLAVJacobFluxReconstruction : public DiffRHSJacobFluxReconstruction {
+/// @author Rayan Dhib
+class ConvLLAVJacobFluxReconstruction : public CombinedJacobFluxReconstruction {
 
 public: // functions
 
@@ -100,16 +101,6 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-
-  /**
-   * compute the contribution of the diffusive face term to both Jacobians
-   */
-  void computeBothJacobsDiffFaceTerm();
-
-  /**
-   * compute the contribution of the diffusive face term to one Jacobians
-   */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
   
   /**
    * Compute the projected states on order P-1
@@ -199,11 +190,35 @@ protected: //functions
   
   /// compute the Riemann LLAV Jacobian (to state) analytically
   virtual void computeLLAVRiemannFluxJacobianAna(const CFreal resFactor);
+
+  /// @return false: the command has no physical diffusive flux
+  virtual bool hasPhysicalDiffusionJacobian() const
+  {
+    return false;
+  }
+
+  /// @return true: the artificial viscosity flux is differentiated
+  virtual bool hasArtificialViscosityJacobian() const
+  {
+    return true;
+  }
+
+  /// @return true when the artificial viscosity flux is also applied at the boundary faces
+  virtual bool hasAVBoundaryFlux() const
+  {
+    return !m_LLAVBCZero;
+  }
+
+  /**
+   * Set the artificial viscosity at the solution points of a cell whose faces
+   * are all boundary faces: interpolated from the nodes and stored in the
+   * artificial viscosity socket, or read back from that socket in linear
+   * residual mode.
+   * @pre m_cells[LEFT] and m_states[LEFT] hold the cell
+   */
+  virtual void prepareIsolatedCellAV(const CFuint cellID);
   
 protected: //data
-    
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
     
   /// order of the FR method
   CFuint m_order;
@@ -216,12 +231,6 @@ protected: //data
   
   /// artificial Viscosity
   CFreal m_epsilon;
-  
-  /// artificial Viscosity in the sol pnts
-  std::vector< std::vector< CFreal > > m_solEpsilons;
-  
-  /// artificial Viscosity
-  std::vector< std::vector< CFreal > > m_epsilonLR;
   
   /// reference artificial Viscosity
   CFreal m_epsilon0;
@@ -370,15 +379,6 @@ protected: //data
   /// average gradients in a flux point
   std::vector< RealVector* > m_avgGradAV;
   
-  /// stores the flux jacobian for each side, in each sol pnt, for each variable, for each direction
-  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_fluxJacobian;
-  
-  /// stores the Riemann flux jacobian for each side, in each face flx pnt, for each variable
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxJacobian;
-  
-  /// convective Riemann flux
-  std::vector < RealVector > m_flxPntRiemannFluxDiff;
-  
   /// convective and diffusive Riemann flux (no LLAV)
   std::vector < RealVector > m_flxPntRiemannFluxDiffConv;
   
@@ -388,17 +388,11 @@ protected: //data
   /// temporary storage for a flux
   RealVector m_tempFlux;
   
-  /// stores the flux jacobian to the gradients for each side, in each sol pnt, for each variable, for each gradient direction for each flux direction
-  std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > m_gradientFluxJacobian;
-  
   /// stores the gradient variables jacobian to the states for each side, in each sol pnt, for each depending state variable, for each grad vars variable
   std::vector< std::vector< std::vector< RealVector > > > m_gradVarsToStateJacobian;
   
   /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
   std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_gradientStateJacobian;
-  
-  /// stores the Riemann flux jacobian to the gradients for each face flx pnt, for each variable, for each gradient direction
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxGradJacobian;
   
   /// Continuous diffusive flux at the solution points backup for both neighbor cells
   std::vector< std::vector< std::vector< RealVector > > > m_contFlxBackupDiff;
@@ -447,12 +441,6 @@ protected: //data
   
   // Boolean telling whether to use wall distance cut off of LLAV
   bool m_useWallCutOff;
-  
-  
-  private:
-
-  /// Physical data temporary vector
-  RealVector m_pData;
 
 }; // class ConvLLAVJacobFluxReconstruction
 

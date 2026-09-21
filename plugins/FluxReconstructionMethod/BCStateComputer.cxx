@@ -1,8 +1,12 @@
+#include "Common/NotImplementedException.hh"
+#include "Framework/DiffusiveVarSet.hh"
 #include "Framework/BadFormatException.hh"
 #include "Framework/DomainModel.hh"
 #include "Framework/MethodStrategyProvider.hh"
+#include "MathTools/MathFunctions.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
+#include "Framework/GeometricEntity.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
@@ -34,7 +38,9 @@ BCStateComputer::BCStateComputer(const std::string& name) :
   m_trsNames(),
   m_extraVars(CFNULL),
   m_useDomainModel(),
-  m_transitionCriterion()
+  m_face(CFNULL),
+  m_transitionCriterion(),
+  m_nbrTransitionFlags()
 {
   CFAUTOTRACE;
 
@@ -53,12 +59,240 @@ BCStateComputer::~BCStateComputer()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCStateComputer::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                         const std::vector< Framework::State* >& intStates,
+                                         const std::vector< Framework::State* >& ghostStates,
+                                         const std::vector< RealVector >& unitNormals,
+                                         const std::vector< RealVector >& flxPntCoords,
+                                         std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+  cf_assert(nbrStates <= gradVarsFlxPnt.size());
+  cf_assert(nbrStates <= bndGradVars.size());
+
+  if (nbrStates == 0)
+  {
+    return;
+  }
+
+  const CFuint nbrGradVars = gradVarsFlxPnt[0]->size();
+
+  if (m_gradVarsFace.nbRows() != nbrGradVars || m_gradVarsFace.nbCols() < nbrStates)
+  {
+    m_gradVarsFace.resize(nbrGradVars,nbrStates);
+    m_gradVarsGhost.resize(nbrGradVars,nbrStates);
+  }
+  m_gradVarStatePtrs.resize(nbrStates);
+
+  SafePtr< DiffusiveVarSet > diffVarSet = getMethodData().getDiffusiveVar();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    m_gradVarStatePtrs[iState] = intStates[iState]->getData();
+  }
+  diffVarSet->setGradientVars(m_gradVarStatePtrs,m_gradVarsFace,nbrStates);
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    m_gradVarStatePtrs[iState] = ghostStates[iState]->getData();
+  }
+  diffVarSet->setGradientVars(m_gradVarStatePtrs,m_gradVarsGhost,nbrStates);
+
+  // g_b = a + 0.5*(g(U_ghost) - g(U))
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const RealVector& gradVars = *gradVarsFlxPnt[iState];
+    RealVector& bndGradVarsFlxPnt = *bndGradVars[iState];
+
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      bndGradVarsFlxPnt[iVar] = gradVars[iVar] + 0.5*(m_gradVarsGhost(iVar,iState) - m_gradVarsFace(iVar,iState));
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                       const std::vector< Framework::State* >& ghostStates,
+                                       const std::vector< RealVector >& unitNormals,
+                                       const std::vector< RealVector >& flxPntCoords,
+                                       std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const CFuint sizeState = intStates[iState]->size();
+
+    for (CFuint iEq = 0; iEq < sizeState; ++iEq)
+    {
+      (*bndStates[iState])[iEq] = 0.5*((*(intStates[iState]))[iEq] + (*(ghostStates[iState]))[iEq]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                      std::vector< std::vector< RealVector* > >& bndGrads,
+                                      const std::vector< RealVector* >& bndStates,
+                                      const std::vector< RealVector >& unitNormals,
+                                      const std::vector< RealVector >& flxPntCoords)
+{
+  // the ghost gradients of this boundary condition, written into bndGrads
+  computeGhostGradients(intGrads,bndGrads,unitNormals,flxPntCoords);
+
+  const CFuint nbrFlxPnts = intGrads.size();
+  cf_assert(nbrFlxPnts == bndGrads.size());
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      RealVector& grad = *bndGrads[iFlx][iVar];
+      grad = 0.5*(*intGrads[iFlx][iVar] + grad);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::copyGradients(const std::vector< std::vector< RealVector* > >& intGrads,
+                                    std::vector< std::vector< RealVector* > >& bndGrads)
+{
+  const CFuint nbrFlxPnts = intGrads.size();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      *bndGrads[iFlx][iVar] = *intGrads[iFlx][iVar];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::removeNormalComponent(RealVector& grad, const RealVector& normal)
+{
+  const CFreal normalGrad = MathTools::MathFunctions::innerProd(grad,normal);
+  grad -= normalGrad*normal;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::setSlipWallBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                             const std::vector< RealVector >& unitNormals,
+                                             const std::vector< CFuint >& velocityIDs,
+                                             std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrFlxPnts = gradVarsFlxPnt.size();
+  const CFuint nbrVelocities = velocityIDs.size();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    *bndGradVars[iFlx] = *gradVarsFlxPnt[iFlx];
+
+    // normal velocity u.n
+    CFreal normalVel = 0.;
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      normalVel += (*gradVarsFlxPnt[iFlx])[velocityIDs[iDim]]*unitNormals[iFlx][iDim];
+    }
+
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      (*bndGradVars[iFlx])[velocityIDs[iDim]] -= normalVel*unitNormals[iFlx][iDim];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::setSlipWallBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                          std::vector< std::vector< RealVector* > >& bndGrads,
+                                          const std::vector< RealVector >& unitNormals,
+                                          const std::vector< CFuint >& velocityIDs)
+{
+  copyGradients(intGrads,bndGrads);
+
+  const CFuint nbrFlxPnts = intGrads.size();
+  const CFuint nbrVelocities = velocityIDs.size();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    const RealVector& normal = unitNormals[iFlx];
+
+    // normal derivative of the normal velocity, n.J.n
+    CFreal normalGradUn = 0.;
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      normalGradUn += normal[iDim]*MathTools::MathFunctions::innerProd(*intGrads[iFlx][velocityIDs[iDim]],normal);
+    }
+
+    // every gradient loses its normal component
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      removeNormalComponent(*bndGrads[iFlx][iVar],normal);
+    }
+
+    // the velocity block keeps (n.J.n) n n^T
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      *bndGrads[iFlx][velocityIDs[iDim]] += (normal[iDim]*normalGradUn)*normal;
+    }
+
+    // and loses n (t.grad(u.n)), the tangential gradient of the normal velocity
+    m_tangentialGradUn = 0.;
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      m_tangentialGradUn += normal[iDim]*(*intGrads[iFlx][velocityIDs[iDim]]);
+    }
+    removeNormalComponent(m_tangentialGradUn,normal);
+
+    for (CFuint iDim = 0; iDim < nbrVelocities; ++iDim)
+    {
+      *bndGrads[iFlx][velocityIDs[iDim]] -= normal[iDim]*m_tangentialGradUn;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCStateComputer::configure ( Config::ConfigArgs& args )
 {
   CFAUTOTRACE;
 
   // configure this object by calling the parent class configure()
   FluxReconstructionSolverStrategy::configure(args);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCStateComputer::setTransitionCriterion(const CFuint iFlux, const bool transition)
+{
+  cf_assert(m_face != CFNULL);
+  std::vector< bool >& flags = m_transitionCriterion[m_face->getID()];
+  if (flags.size() != m_nbrTransitionFlags)
+  {
+    flags.assign(m_nbrTransitionFlags,false);
+  }
+  flags[iFlux] = transition;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool BCStateComputer::transitionCriterion(const CFuint iFlux) const
+{
+  cf_assert(m_face != CFNULL);
+  std::map< CFuint, std::vector< bool > >::const_iterator flags = m_transitionCriterion.find(m_face->getID());
+  return (flags == m_transitionCriterion.end()) ? false : flags->second[iFlux];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -87,7 +321,10 @@ void BCStateComputer::setup()
   SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   const CFuint nbrFaceFlxPnts = flxLocalCoords->size();
   
-  m_transitionCriterion.resize(nbrFaceFlxPnts);
+  m_nbrTransitionFlags = nbrFaceFlxPnts;
+
+  // scratch of setSlipWallBndGrads
+  m_tangentialGradUn.resize(PhysicalModelStack::getActive()->getDim());
 }
 
 //////////////////////////////////////////////////////////////////////////////

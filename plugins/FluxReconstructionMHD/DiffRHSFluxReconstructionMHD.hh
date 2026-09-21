@@ -24,6 +24,7 @@ namespace COOLFluiD {
  * diffusive tems to the RHS for a Flux Reconstruction scheme for MHD
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class DiffRHSFluxReconstructionMHD : public DiffRHSFluxReconstruction {
 
@@ -53,9 +54,6 @@ protected: //functions
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
  protected: //data
     
   /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
@@ -72,8 +70,6 @@ protected: //functions
   
   /// element states of the right neighbor in the correct format
   std::vector< RealVector* > m_tempStatesR;
-  
-  CFreal m_dampCoeff;
     
 }; // class Solve
 

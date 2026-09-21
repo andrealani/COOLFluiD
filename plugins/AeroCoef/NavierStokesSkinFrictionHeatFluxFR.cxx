@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "Framework/SubSystemStatus.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 #include "Environment/FileHandlerOutput.hh"
@@ -130,9 +132,20 @@ void NavierStokesSkinFrictionHeatFluxFR::setup()
   m_varNames.push_back("Cfcrit");
   m_varNames.push_back("Cf");
   m_varNames.push_back("muWall"); 
-  m_varNames.push_back("gamma");
+  m_varNames.push_back(hasTransitionLayout() ? "gamma" : "heatFRadiative");
   
   cf_always_assert(this->m_varNames.size() == 10 + dim); 
+
+  // velocity components in the states
+  m_velocityIDs.resize(m_dim);
+  m_velocityIDs[XX] = m_UID;
+  m_velocityIDs[YY] = m_VID;
+  if (m_dim == DIM_3D)
+  {
+    m_velocityIDs[ZZ] = m_WID;
+  }
+
+  m_traction.resize(m_dim);
   
   // check if the radiative heat is stored
   const string qradName = MeshDataStack::getActive()->getPrimaryNamespace() + "m_qradFluxWall";
@@ -153,309 +166,86 @@ void NavierStokesSkinFrictionHeatFluxFR::unsetup()
 
 void NavierStokesSkinFrictionHeatFluxFR::computeWall()
 {
-  CFAUTOTRACE;
-  
-  const CFreal R = m_updateVarSet->getModel()->getR();
-  const CFreal gamma = m_updateVarSet->getModel()->getGamma();
-  const CFreal gammaMinus1 = gamma - 1.;
-
-  // loop over flx pnts
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
-    // compute coordinates of output point
-    const RealVector coord = m_currFace->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);
+    const RealVector& state = *m_cellStatesFlxPnt[iFlx];
 
-    // dereference current state
-    const RealVector& state = *(m_cellStatesFlxPnt[iFlx]);
-
-    // dereference current unit normal
-    const RealVector& normal = m_unitNormalFlxPnts[iFlx];
-    
-    const bool isPerturb = false;
-    const CFuint dummyVarID = 0;
-  
     // this is needed for LTE
-    m_diffVar->setComposition(state, isPerturb, dummyVarID);
+    m_diffVar->setComposition(state,false,0);
 
-    // pressure
     m_rhoWall = m_diffVar->getDensity(state);
-//     const CFreal invRho = 1./m_rhoWall;
-//     CFreal rhoK2 = 0.0;
-//     for (CFuint iDim = 0; iDim < m_dim; ++iDim)
-//     {
-//       rhoK2 += state[iDim+1]*state[iDim+1];
-//     }
-//     rhoK2 *= 0.5*invRho;
-//     const CFreal p = gammaMinus1*(state[m_nbrEqs-1] - rhoK2);
-// 
-//     // temperature
-//     const CFreal T = p*invRho/R;
-// 
-//     // dimensional values
-//     const CFreal TDim   = T   * m_updateVarSet->getModel()->getTempRef();
-//     const CFreal pDim   = p   * m_updateVarSet->getModel()->getPressRef();
-//     const CFreal rhoDim = m_rhoWall * (m_updateVarSet->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
-// 
-//     // pressure coefficient
-//     m_Cp = (pDim - m_pInf) / (0.5*m_rhoInf*m_uInf*m_uInf);
-// 
-//     // compute dynamic viscosity
-//     m_diffVar->setWallDistance(0.); // we are at the wall
-//     m_muWall  = m_diffVar->getDynViscosity(state,m_cellGradFlxPnt[iFlx]);
-// 
-//     // compute the friction at the wall
-//     const CFreal refU = m_updateVarSet->getModel()->getVelRef();
-//     const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-//     const CFreal refMu = (m_diffVar->getModel().getReferencePhysicalData())[NSTerm::MU];
-//     const CFreal refTau = refMu*refU/refLength;
-//     const bool adim = Framework::PhysicalModelStack::getActive()->getImplementor()->isAdimensional();
-// 
-//     // compute shear stress and skin friction tensors
-//     RealMatrix tauTensor(m_dim,m_dim);
-//     RealMatrix skinFrictionTensor(m_dim,m_dim);
-//     RealVector frictionForce(m_dim);
-//     CFreal skinFriction = 0.0;
-//     if (m_dim == DIM_2D)
-//     {
-//       const RealVector& gradU = *(m_cellGradFlxPnt[iFlx][1]);
-//       const RealVector& gradV = *(m_cellGradFlxPnt[iFlx][2]);
-//       const CFreal divU = (2.0/3.0)*(gradU[XX] + gradV[YY]);
-// 
-//       tauTensor(XX,XX) = m_muWall*(2.0*gradU[XX] - divU);
-//       tauTensor(YY,YY) = m_muWall*(2.0*gradV[YY] - divU);
-// 
-//       tauTensor(XX,YY) = tauTensor(YY,XX) = m_muWall*(gradU[YY] + gradV[XX]);
-// 
-//       if(adim)
-//       {
-//         const CFreal machInf = m_updateVarSet->getModel()->getMachInf();
-//         const CFreal Re = m_diffVar->getModel().getReynolds();
-// 
-//         /// @todo check this
-//         skinFrictionTensor = tauTensor/(0.5*machInf*sqrt(gamma)/Re);
-//       }
-//       else
-//       {
-//         skinFrictionTensor = tauTensor/(0.5*m_rhoInf*m_uInf*m_uInf);
-//       }
-// 
-//       // compute the viscous force on this wall face.
-//       frictionForce[XX] = refTau*(tauTensor(XX,XX)*normal[XX] + tauTensor(XX,YY)*normal[YY]);
-//       frictionForce[YY] = refTau*(tauTensor(YY,XX)*normal[XX] + tauTensor(YY,YY)*normal[YY]);
-// 
-//       // compute adimensional skin friction
-//       RealVector skinFrictionVector(2);
-//       skinFrictionVector[XX] = skinFrictionTensor(XX,XX)*normal[XX] + skinFrictionTensor(XX,YY)*normal[YY];
-//       skinFrictionVector[YY] = skinFrictionTensor(YY,XX)*normal[XX] + skinFrictionTensor(YY,YY)*normal[YY];
-//       if (m_flowDir[XX]*normal[YY] - m_flowDir[YY]*normal[XX] > 0.0)
-//       {
-//         // sign is reversed to obtain the force on the body
-//         skinFriction = - skinFrictionVector[XX]*normal[YY] + skinFrictionVector[YY]*normal[XX];
-//       }
-//       else
-//       {
-//         // sign is reversed to obtain the force on the body
-//         skinFriction = skinFrictionVector[XX]*normal[YY] - skinFrictionVector[YY]*normal[XX];
-//       }
-//     }
-//     else
-//     {
-//       cf_assert(m_dim == DIM_3D);
-// 
-//       const RealVector& gradU = *(m_cellGradFlxPnt[iFlx][1]);
-//       const RealVector& gradV = *(m_cellGradFlxPnt[iFlx][2]);
-//       const RealVector& gradW = *(m_cellGradFlxPnt[iFlx][3]);
-//       const CFreal divU = (2.0/3.0)*(gradU[XX] + gradV[YY] + gradW[ZZ]);
-// 
-//       tauTensor(XX,XX) = m_muWall*(2.0*gradU[XX] - divU);
-//       tauTensor(YY,YY) = m_muWall*(2.0*gradV[YY] - divU);
-//       tauTensor(ZZ,ZZ) = m_muWall*(2.0*gradW[ZZ] - divU);
-// 
-//       tauTensor(XX,YY) = tauTensor(YY,XX) = m_muWall*(gradU[YY] + gradV[XX]);
-//       tauTensor(XX,ZZ) = tauTensor(ZZ,XX) = m_muWall*(gradU[ZZ] + gradW[XX]);
-//       tauTensor(YY,ZZ) = tauTensor(ZZ,YY) = m_muWall*(gradV[ZZ] + gradW[YY]);
-// 
-//       if(adim)
-//       {
-//         const CFreal machInf = m_updateVarSet->getModel()->getMachInf();
-//         const CFreal Re = m_diffVar->getModel().getReynolds();
-// 
-//         skinFrictionTensor = tauTensor/(0.5*machInf*sqrt(gamma)/Re);
-//       }
-//       else
-//       {
-//         skinFrictionTensor = tauTensor/(0.5*m_rhoInf*m_uInf*m_uInf);
-//       }
-// 
-//       //Compute the viscous force on this wall face.
-//       frictionForce[XX] = refTau*(tauTensor(XX,XX)*normal[XX] + tauTensor(XX,YY)*normal[YY] + tauTensor(XX,ZZ)*normal[ZZ]);
-//       frictionForce[YY] = refTau*(tauTensor(YY,XX)*normal[XX] + tauTensor(YY,YY)*normal[YY] + tauTensor(YY,ZZ)*normal[ZZ]);
-//       frictionForce[ZZ] = refTau*(tauTensor(ZZ,XX)*normal[XX] + tauTensor(ZZ,YY)*normal[YY] + tauTensor(ZZ,ZZ)*normal[ZZ]);
-// 
-//       // compute adimensional skin friction
-//       RealVector skinFrictionVector(3);
-//       skinFrictionVector[XX] = skinFrictionTensor(XX,XX)*normal[XX] + skinFrictionTensor(XX,YY)*normal[YY] + skinFrictionTensor(XX,ZZ)*normal[ZZ];
-//       skinFrictionVector[YY] = skinFrictionTensor(YY,XX)*normal[XX] + skinFrictionTensor(YY,YY)*normal[YY] + skinFrictionTensor(YY,ZZ)*normal[ZZ];
-//       skinFrictionVector[ZZ] = skinFrictionTensor(YY,XX)*normal[XX] + skinFrictionTensor(YY,YY)*normal[YY] + skinFrictionTensor(ZZ,ZZ)*normal[ZZ];
-//       skinFriction = skinFrictionVector.norm2();// like this, the sign of this coefficient is always positive. How to keep the sign?
-//     }
-// 
-//     // heat flux
-//     const CFreal heatFluxDim = m_diffVar->getHeatFlux(state,m_cellGradFlxPnt[iFlx],normal); // check dimensionality
-// 
-//     // stanton number
-//     const CFreal stanton = 0.0;
-//    const CFreal stanton = heatFluxDim/(m_rhoInf*pow(m_uInf,3.0));
 
-    // Compute the friction at the wall
+    // friction at the wall
     computeTauWall(iFlx);
 
     updateWriteData(iFlx);
 
-    // Do some extra computation on the face if needed
+    // extra computation on the face if needed
     computeExtraValues();
-
-//    // Compute y+ value
-//    if(socket_wallDistance.isConnected())  {
-//      computeYplus();
-//    }
   }
 }
-    
+
 //////////////////////////////////////////////////////////////////////////////
-    
+
+bool NavierStokesSkinFrictionHeatFluxFR::hasTransitionLayout() const
+{
+  const std::string updateVarStr = m_frData->getUpdateVarStr();
+  const std::string convectiveName = PhysicalModelStack::getActive()->getConvectiveName();
+
+  return updateVarStr == "Puvt" && (convectiveName.find("GReKLogO") != std::string::npos || convectiveName.find("GReKO") != std::string::npos);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal NavierStokesSkinFrictionHeatFluxFR::computeStantonNumber(CFreal heatFlux, CFreal temperature, CFuint flxIdx)
+{
+  switch (m_stantonNumID)
+  {
+    case 0:
+      return heatFlux/(m_rhoInf*std::pow(m_uInf,3.));
+    case 1:
+      return heatFlux/((m_updateVarSet->getModel()->getCp()*(m_TInf-temperature)+0.5*m_uInf*m_uInf)*m_rhoInf*m_uInf);
+    case 2:
+      return heatFlux/(m_updateVarSet->getModel()->getCp()*m_rhoWall*m_uInf);
+    default:
+      return heatFlux/(m_updateVarSet->getModel()->getCp()*(m_TInf-temperature)*m_rhoInf*m_uInf);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void NavierStokesSkinFrictionHeatFluxFR::computeTauWall(CFuint flxIdx)
 {
-  // const CFreal Uref = m_updateVarSet->getModel()->getVelRef();
-  //const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-  //const CFreal mu_ref = m_diffVar->getModel().getDynViscosityDim
-  //(m_updateVarSet->getModel()->getPressRef(), m_updateVarSet->getModel()->getTempRef());
-  
-  m_muWall = m_diffVar->getDynViscosity(*(m_cellStatesFlxPnt[flxIdx]), m_cellGradFlxPnt[flxIdx]);
-  
-  // this will not work adimensional
-  // const CFreal tauRef = 1.0; // mu_ref*Uref/refLength;
-  const CFreal gamma = m_updateVarSet->getModel()->getGamma();
-  const bool adim = Framework::PhysicalModelStack::getActive()->getImplementor()->isAdimensional();
-  const CFuint dim = PhysicalModelStack::getActive()->getDim();
-  
-  m_tau = 0.0;
-  m_Cf = 0.0;
-  
-  if (dim == DIM_2D) {
-    
-    m_tau = m_muWall*
-      (m_unitNormalFlxPnts[flxIdx][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][m_UID]),m_unitNormalFlxPnts[flxIdx]) -
-       m_unitNormalFlxPnts[flxIdx][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][m_VID]),m_unitNormalFlxPnts[flxIdx]));
-    
-    if(adim){
-      //check this
-      const CFreal mInf = m_updateVarSet->getModel()->getMachInf();
-      const CFreal Re = m_diffVar->getModel().getReynolds();
-      m_Cf = m_tau / (0.5*mInf*sqrt(gamma)*Re);
-    }
-    else{
-      // friction coefficient 
-      m_Cf = m_tau / (0.5*m_rhoInf*m_uInf*m_uInf);
-    } 
-    
-    if (m_cellStatesFlxPnt[flxIdx]->size() == 8)
-    {
-      m_yPlus = (*(m_cellStatesFlxPnt[flxIdx]))[7]*sqrt(m_muWall*m_rhoWall)/(0.5*m_rhoInf*m_uInf*m_uInf);
-    }
-    
-    m_frictionForces[XX] =  m_Cf*m_unitNormalFlxPnts[flxIdx][YY];
-    m_frictionForces[YY] = -m_Cf*m_unitNormalFlxPnts[flxIdx][XX];
+  m_muWall = m_diffVar->getDynViscosity(*m_cellStatesFlxPnt[flxIdx],m_cellGradFlxPnt[flxIdx]);
+
+  const RealVector& normal = m_bndFaceDiffData.unitNormals[flxIdx];
+  const RealVector& diffFlux = m_bndFaceDiffData.diffFluxes[flxIdx];
+
+  const bool adim = PhysicalModelStack::getActive()->getImplementor()->isAdimensional();
+  const CFreal scale = adim ? m_updateVarSet->getModel()->getPressRef() :
+    1./PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+  const CFreal dynamicPressure = 0.5*m_rhoInf*m_uInf*m_uInf;
+
+  // tangential viscous traction on the fluid, tau_t = (I - n n^T) F_mom
+  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  {
+    m_traction[iDim] = scale*diffFlux[m_velocityIDs[iDim]];
   }
-  else{
-    cf_assert(dim == DIM_3D);
-    
-    CFreal divU = (2.0/3.0)*((*(m_cellGradFlxPnt[flxIdx][m_UID]))[0] + (*(m_cellGradFlxPnt[flxIdx][m_VID]))[1] + (*(m_cellGradFlxPnt[flxIdx][m_WID]))[2]) ;
-    
-    m_tau3D(XX,XX) = m_muWall*(2.0*(*(m_cellGradFlxPnt[flxIdx][m_UID]))[XX] - divU) ;
-    m_tau3D(YY,YY) = m_muWall*(2.0*(*(m_cellGradFlxPnt[flxIdx][m_VID]))[YY] - divU) ;
-    m_tau3D(ZZ,ZZ) = m_muWall*(2.0*(*(m_cellGradFlxPnt[flxIdx][m_WID]))[ZZ] - divU) ;
-    
-    m_tau3D(XX,YY) = m_tau3D(YY,XX) = m_muWall*((*(m_cellGradFlxPnt[flxIdx][m_UID]))[YY] + (*(m_cellGradFlxPnt[flxIdx][m_VID]))[XX]) ;
-    m_tau3D(XX,ZZ) = m_tau3D(ZZ,XX) = m_muWall*((*(m_cellGradFlxPnt[flxIdx][m_UID]))[ZZ] + (*(m_cellGradFlxPnt[flxIdx][m_WID]))[XX]) ;
-    m_tau3D(YY,ZZ) = m_tau3D(ZZ,YY) = m_muWall*((*(m_cellGradFlxPnt[flxIdx][m_VID]))[ZZ] + (*(m_cellGradFlxPnt[flxIdx][m_WID]))[YY]) ;
-      
-    if(adim){
-      // check this
-      const CFreal mInf = m_updateVarSet->getModel()->getMachInf();
-      const CFreal Re = m_diffVar->getModel().getReynolds();
-      m_Cf3D = m_tau3D / (0.5*mInf*sqrt(gamma)*Re);
-    }
-    else{
-      CFreal rhoInf = m_pInf / (m_updateVarSet->getModel()->getR() * m_TInf);
-      m_Cf3D = m_tau3D / (0.5*rhoInf*m_uInf*m_uInf);
-    }
-    
-//    m_tau = m_muWall*
-//      (m_unitNormalFlxPnts[flxIdx][YY]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][m_UID]),m_unitNormalFlxPnts[flxIdx]) -
-//       m_unitNormalFlxPnts[flxIdx][XX]*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][m_VID]),m_unitNormalFlxPnts[flxIdx]));
-    
-    if (fabs(m_unitNormalFlxPnts[flxIdx][ZZ]) <= fabs(m_unitNormalFlxPnts[flxIdx][XX]))
-    {
-      const CFreal nx1 = m_unitNormalFlxPnts[flxIdx][YY];
-      const CFreal ny1 = -m_unitNormalFlxPnts[flxIdx][XX];
-      const CFreal nsize1 = sqrt(nx1*nx1+ny1*ny1);
-        
-      const CFreal tauT1 = m_muWall*(nx1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) +
-                           ny1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]))/nsize1;
-      
-      const CFreal nx2 = m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ];
-      const CFreal ny2 = m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][ZZ];
-      const CFreal nz2 = -(m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][XX]+m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY]);
-      const CFreal nsize2 = sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
-      
-      const CFreal tauT2 = m_muWall*(nx2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]) +
-                           ny2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) + 
-                           nz2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]))/nsize2;
-      m_tau = sqrt(tauT1*tauT1+tauT2*tauT2);
-    }
-    else
-    {
-      const CFreal ny1 = -m_unitNormalFlxPnts[flxIdx][ZZ];
-      const CFreal nz1 = m_unitNormalFlxPnts[flxIdx][YY];
-      const CFreal nsize1 = sqrt(ny1*ny1+nz1*nz1);
-      
-      const CFreal tauT1 = m_muWall*(ny1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) +
-                           nz1*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]))/nsize1;
-      
-      const CFreal nx2 = m_unitNormalFlxPnts[flxIdx][YY]*m_unitNormalFlxPnts[flxIdx][YY]+m_unitNormalFlxPnts[flxIdx][ZZ]*m_unitNormalFlxPnts[flxIdx][ZZ];
-      const CFreal ny2 = -m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][YY];
-      const CFreal nz2 = -m_unitNormalFlxPnts[flxIdx][XX]*m_unitNormalFlxPnts[flxIdx][ZZ];
-      const CFreal nsize2 = sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
-      
-      const CFreal tauT2 = m_muWall*(ny2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][2]),m_unitNormalFlxPnts[flxIdx]) +
-                           nz2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][3]),m_unitNormalFlxPnts[flxIdx]) + 
-                           nx2*MathFunctions::innerProd(*(m_cellGradFlxPnt[flxIdx][1]),m_unitNormalFlxPnts[flxIdx]))/nsize2;
-      m_tau = sqrt(tauT1*tauT1+tauT2*tauT2);
-    }
-    
-    if(adim){
-      //check this
-      const CFreal mInf = m_updateVarSet->getModel()->getMachInf();
-      const CFreal Re = m_diffVar->getModel().getReynolds();
-      m_Cf = m_tau / (0.5*mInf*sqrt(gamma)*Re);
-    }
-    else{
-      // friction coefficient 
-      m_Cf = m_tau / (0.5*m_rhoInf*m_uInf*m_uInf);
-    } 
-    
-    //Compute the viscous force coefficients on this wall face.
-    m_frictionForces = m_Cf3D * m_unitNormalFlxPnts[flxIdx];
-    
-    if (m_cellStatesFlxPnt[flxIdx]->size() == 9)
-    {
-      m_yPlus = (*(m_cellStatesFlxPnt[flxIdx]))[8]*sqrt(m_muWall*m_rhoWall)/(0.5*m_rhoInf*m_uInf*m_uInf);
-    }
+  m_traction -= MathFunctions::innerProd(m_traction,normal)*normal;
+
+  // friction force coefficients on the body, Cf = -tau_t/(q_inf refArea)
+  m_frictionForces = -m_traction/(dynamicPressure*m_refArea);
+  m_frictionForcesFlxPnts[flxIdx] = m_frictionForces;
+
+  // 2D: component of the force on the body along (-ny, nx); 3D: magnitude
+  m_tau = m_dim == DIM_2D ? m_traction[XX]*normal[YY]-m_traction[YY]*normal[XX] : m_traction.norm2();
+  m_Cf = m_tau/dynamicPressure;
+
+  m_yPlus = 0.;
+  if (hasTransitionLayout())
+  {
+    m_yPlus = (*m_cellStatesFlxPnt[flxIdx])[m_dim+5]*sqrt(m_muWall*m_rhoWall)/dynamicPressure;
   }
-  
-  // forces coefficients must be still divided by the wet surface
-  m_frictionForces /= m_refArea;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -479,6 +269,7 @@ void NavierStokesSkinFrictionHeatFluxFR::prepareOutputFileWall()
     ofstream& fout = fhandle->open(file);
     
     fout << "TITLE = Unstructured Surface Quantities" << "\n";
+    fout << "# n points out of fluid; heatF positive into wall; Cf/forces act on body (2D Cf tangent=(-ny,nx)). Physical diffusive flux only (no convective or LLAV flux).\n";
     fout << "VARIABLES = "; 
     for (CFuint i = 0; i < this->m_varNames.size(); ++i) {
       fout << this->m_varNames[i] << " ";
@@ -513,6 +304,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateOutputFileWall()
 	SelfRegistPtr<Environment::FileHandlerOutput> fhandle =
 	  Environment::SingleBehaviorFactory<Environment::FileHandlerOutput>::getInstance().create();
 	ofstream& fout = fhandle->open(file, ios::app);
+        fout << std::setprecision(17);
 	
 	Common::SafePtr<GeometricEntityPool<FaceToCellGEBuilder> >
 	  geoBuilder = m_faceBuilder;
@@ -547,14 +339,20 @@ void NavierStokesSkinFrictionHeatFluxFR::updateOutputFileWall()
 	  if ((*m_cellStates)[0]->isParUpdatable()) 
 	  {
 	    // loop over flx pnts
-            for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+            for (CFuint iFlx = 0; iFlx < getNbrFaceFlxPnts(m_currFace->getID()); ++iFlx)
             {
-              // compute coordinates of output point
-              m_coord = m_currFace->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);
+              // compute coordinates of output point, with the flux points of the face type in 3D
+              Common::SafePtr< std::vector< RealVector > > flxLocalCoords = m_flxLocalCoords;
+              if (m_dim == 3)
+              {
+                const CFuint faceType = m_currFace->getShape() == CFGeoShape::TRIAG ? 0 : 1;
+                flxLocalCoords = &(*m_frData->getFRLocalData()[0]->getFaceFlxPntsLocalCoordsPerType())[faceType];
+              }
+              m_coord = m_currFace->computeCoordFromMappedCoord((*flxLocalCoords)[iFlx]);
 	      
 	      fout << m_coord << " ";
 	      
-	      const CFuint index = m_mapTrsFaceToID.find(m_currFace->getID()*m_nbrFaceFlxPnts+iFlx);
+	      const CFuint index = m_mapTrsFaceToID.find(m_currFace->getID()*m_nbrFaceFlxPntsMax+iFlx);
 	      const CFuint nbVars = m_valuesMat.nbRows(); 
 	      for (CFuint iVar = 0; iVar < nbVars; ++iVar) 
 	      {
@@ -590,8 +388,11 @@ void NavierStokesSkinFrictionHeatFluxFR::updateOutputFileWall()
 void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
 {  
   const CFreal refLength = PhysicalModelStack::getActive()->getImplementor()->getRefLength();
-  const CFreal heatFluxRef = m_updateVarSet->getModel()->getTempRef()/refLength;
-  const CFuint index = m_mapTrsFaceToID.find(m_currFace->getID()*m_nbrFaceFlxPnts+flxIdx);
+  const bool adim = PhysicalModelStack::getActive()->getImplementor()->isAdimensional();
+  const CFreal velocityRef = m_updateVarSet->getModel()->getVelRef();
+  const CFreal heatFluxRef = adim ?
+    m_updateVarSet->getModel()->getReferencePhysicalData()[EulerTerm::RHO]*velocityRef*velocityRef*velocityRef : 1./refLength;
+  const CFuint index = m_mapTrsFaceToID.find(m_currFace->getID()*m_nbrFaceFlxPntsMax+flxIdx);
   
   // compute the radiative heat flux
   m_heatFluxRad = 0.;
@@ -602,48 +403,33 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     m_heatFluxRad = m_qradFluxWall[index]*heatFluxRef;
   } 
   
-  const CFreal heatFlux = m_diffVar->getHeatFlux( *(m_cellStatesFlxPnt[flxIdx]), m_cellGradFlxPnt[flxIdx], m_unitNormalFlxPnts[flxIdx])*heatFluxRef + m_heatFluxRad;
-  //CFLog(INFO, "state: " << *(m_cellStatesFlxPnt[flxIdx]) << ", Tgrad: " << (*(m_cellGradFlxPnt[flxIdx][3])) << ", ref: " << heatFluxRef << "\n");
-  
-  if (m_cellStatesFlxPnt[flxIdx]->size() == 8)
+  // heat flux into the wall, heatF = u_b.F_mom - F_E, with F_E the diffusive
+  // energy flux (conduction, species and modal enthalpy, viscous work)
+  m_updateVarSet->computePhysicalData(*m_cellStatesFlxPnt[flxIdx],m_dataState);
+  const RealVector& diffFlux = m_bndFaceDiffData.diffFluxes[flxIdx];
+
+  CFreal viscousWork = 0.;
+  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
   {
-    m_heatFluxRad = (*(m_cellStatesFlxPnt[flxIdx]))[6];
+    viscousWork += m_dataState[EulerTerm::VX+iDim]*diffFlux[m_velocityIDs[iDim]];
   }
-  else if (m_cellStatesFlxPnt[flxIdx]->size() == 9)
-  {
-    m_heatFluxRad = (*(m_cellStatesFlxPnt[flxIdx]))[7];
-  }
-  
+
+  const CFreal heatFlux = (viscousWork-diffFlux[m_TID])*heatFluxRef + m_heatFluxRad;
+
+  // last output column: gamma of the transition model or the radiative heat flux
+  const CFreal extraOutput = hasTransitionLayout() ? (*m_cellStatesFlxPnt[flxIdx])[m_dim+4] : m_heatFluxRad;
+
   CFreal pDim = 0.;
   CFreal rhoDim = 0.;
   CFreal TDim = 0.;
 
   computeDimensionalPressDensTemp(pDim, rhoDim, TDim, flxIdx);
   
-  const CFreal rhoInf = m_pInf / (m_updateVarSet->getModel()->getRdim() * m_TInf);
-  //const CFreal rhoInf = 1.0;
-  
-  CFreal stantonNumber = 0.0;
-  switch(m_stantonNumID) {
-  case(0):
-    stantonNumber = heatFlux/(rhoInf*pow(m_uInf,3.0));
-    break;
-  case(1):
-    stantonNumber = heatFlux / ((m_updateVarSet->getModel()->getCp()*(m_TInf - TDim) + 
-				 0.5* m_uInf*m_uInf )*rhoInf*m_uInf);
-    break;
-  case(2):
-    stantonNumber = heatFlux / (m_updateVarSet->getModel()->getCp()*m_rhoWall*m_uInf);
-    break;
-  default:
-    //stantonNumber = heatFlux/(rhoInf*pow(m_uInf,3.0));
-    stantonNumber = heatFlux/(m_updateVarSet->getModel()->getCp()*(m_TInf - TDim)*rhoInf*m_uInf);
-    break;
-  }
-  
+  const CFreal stantonNumber = computeStantonNumber(heatFlux,TDim,flxIdx);
+
   CFreal Cp = (pDim - m_pInf);
 
-  Cp /= (0.5*rhoInf*m_uInf*m_uInf);
+  Cp /= (0.5*m_rhoInf*m_uInf*m_uInf);
   
   // fill in the 2D-array with all the data to be output 
   if (PhysicalModelStack::getActive()->getDim() == DIM_2D){
@@ -656,7 +442,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     updateValuesMatAndResidual(6, index, this->m_yPlus);
     updateValuesMatAndResidual(7, index, this->m_Cf);
     updateValuesMatAndResidual(8, index, m_muWall);
-    updateValuesMatAndResidual(9, index, m_heatFluxRad);
+    updateValuesMatAndResidual(9, index, extraOutput);
   }
   else{
     updateValuesMatAndResidual(0, index, pDim);    
@@ -668,7 +454,7 @@ void NavierStokesSkinFrictionHeatFluxFR::updateWriteData(CFuint flxIdx)
     updateValuesMatAndResidual(6, index, this->m_yPlus);
     updateValuesMatAndResidual(7, index, this->m_Cf);
     updateValuesMatAndResidual(8, index, m_muWall);
-    updateValuesMatAndResidual(9, index, m_heatFluxRad);
+    updateValuesMatAndResidual(9, index, extraOutput);
   }
 }
 

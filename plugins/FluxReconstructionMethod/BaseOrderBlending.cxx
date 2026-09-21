@@ -50,6 +50,8 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   m_maxModalOrder(),
   m_NeighborIDs(),
   m_s(0.0),
+  m_alphaRelaxation(1.0),
+  m_alphaInitialized(false),
   m_order(0),
   m_nbrSolPnts(0),
   m_nbrEqs(0),
@@ -78,6 +80,8 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   m_alphaMax = 1.0;
   setParameter("AlphaMax", &m_alphaMax);
 
+  setParameter("RelaxationFactor", &m_alphaRelaxation);
+
   // Decay factor for neighbor alpha during Jacobi smoothing.
   m_neighborWeight = 0.5;
   setParameter("NeighborWeight", &m_neighborWeight);
@@ -102,6 +106,11 @@ BaseOrderBlending::~BaseOrderBlending()
 void BaseOrderBlending::configure(Config::ConfigArgs& args)
 {
   FluxReconstructionSolverCom::configure(args);
+  if (!(m_alphaRelaxation > 0.0 && m_alphaRelaxation <= 1.0))
+  {
+    throw BadValueException(FromHere(),
+      "OrderBlending RelaxationFactor must be in (0, 1].");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -117,9 +126,13 @@ void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
     "'rho', 'p', 'rho*p', 'p/rho', 'rho/p', 'velocity_magnitude'. "
     "Physics subclasses may add more (e.g. 'B2' in OrderBlendingMHD).");
   options.addConfigOption< CFreal >("AlphaMin",
-    "Dead-band threshold: alpha < AlphaMin snaps to 0, alpha > 1-AlphaMin snaps to 1.");
+    "Lower dead-band threshold: alpha < AlphaMin snaps to 0.");
   options.addConfigOption< CFreal >("AlphaMax",
     "Maximum blending coefficient cap.");
+  options.addConfigOption< CFreal >("RelaxationFactor",
+    "Fraction of the new sensor field applied after spatial spreading: "
+    "alpha = previous + factor*(requested - previous). Default 1.0 "
+    "applies the full new field without temporal relaxation. The first evaluation initializes alpha directly.");
   options.addConfigOption< CFreal >("NeighborWeight",
     "Decay factor applied to neighbor alpha during Jacobi smoothing. "
     "0 disables spreading.");
@@ -128,7 +141,7 @@ void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
     "Total spreading passes = NbSweeps + 1.");
   options.addConfigOption< CFuint, Config::DynamicOption<> >("freezeFilterIter",
     "Iteration number at which alpha is frozen (reuses prevAlpha). "
-    "Very large = never freeze.");
+    "The first evaluation always initializes alpha. Very large = never freeze.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -163,8 +176,9 @@ void BaseOrderBlending::execute()
 
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
 
-  // Freeze path: reuse prevAlpha without recomputing anything.
-  if (iter >= m_freezeFilterIter)
+  // Initialize once even if freezing was requested at iteration zero.
+  // Subsequent frozen evaluations reuse the previously applied field.
+  if (m_alphaInitialized && iter >= m_freezeFilterIter)
   {
     for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
     {
@@ -175,13 +189,10 @@ void BaseOrderBlending::execute()
         geoData.idx = elemIdx;
         m_cell = m_cellBuilder->buildGE();
         m_cellStates = m_cell->getStates();
-        if ((*m_cellStates)[0]->isParUpdatable())
+        const CFreal frozen = prevAlpha[(*m_cellStates)[0]->getLocalID()];
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          const CFreal frozen = prevAlpha[(*m_cellStates)[0]->getLocalID()];
-          for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-          {
-            output[(*m_cellStates)[iSol]->getLocalID()] = frozen;
-          }
+          output[(*m_cellStates)[iSol]->getLocalID()] = frozen;
         }
         m_cellBuilder->releaseGE();
       }
@@ -193,7 +204,9 @@ void BaseOrderBlending::execute()
 
   //
   // Phase 1: per-cell physics compute. No neighbor interaction.
-  // Writes raw physics-based alpha to socket_alpha.
+  // Writes raw physics-based alpha to socket_alpha. All local cells are
+  // processed, including the non-updatable overlap cells of a parallel run,
+  // whose states are already synchronised at this point.
   //
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
@@ -207,15 +220,12 @@ void BaseOrderBlending::execute()
       m_cell = m_cellBuilder->buildGE();
       m_cellStates = m_cell->getStates();
 
-      if ((*m_cellStates)[0]->isParUpdatable())
-      {
-        computeSmoothness();
+      computeSmoothness();
 
-        const CFreal alpha = applyAlphaLimits(computeBlendingCoefficient(m_s));
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-        {
-          output[(*m_cellStates)[iSol]->getLocalID()] = alpha;
-        }
+      const CFreal alpha = applyAlphaLimits(computeBlendingCoefficient(m_s));
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        output[(*m_cellStates)[iSol]->getLocalID()] = alpha;
       }
 
       m_cellBuilder->releaseGE();
@@ -234,7 +244,9 @@ void BaseOrderBlending::execute()
   }
 
   //
-  // Phase 3: snapshot final alpha into prevAlpha for the freeze mechanism.
+  // Phase 3: relax toward the requested field after all spatial spreading.
+  // On the first evaluation there is no previous field, so use the request
+  // directly. Do not apply the dead-band again after temporal relaxation.
   //
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
@@ -245,15 +257,70 @@ void BaseOrderBlending::execute()
       geoData.idx = elemIdx;
       m_cell = m_cellBuilder->buildGE();
       m_cellStates = m_cell->getStates();
-      if ((*m_cellStates)[0]->isParUpdatable())
+      const CFuint firstID = (*m_cellStates)[0]->getLocalID();
+      CFreal finalAlpha = output[firstID];
+      if (m_alphaInitialized && m_alphaRelaxation < 1.0)
       {
-        const CFreal finalAlpha = output[(*m_cellStates)[0]->getLocalID()];
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-        {
-          prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
-        }
+        finalAlpha = prevAlpha[firstID] +
+          m_alphaRelaxation * (finalAlpha - prevAlpha[firstID]);
+      }
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        output[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
+        prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
       }
       m_cellBuilder->releaseGE();
+    }
+  }
+
+  m_alphaInitialized = true;
+
+  // Say how much blending is actually being applied. Without this there is no
+  // way to tell a sensor that never fires from one that is doing its job.
+  // Counted over the updatable cells of every rank, so the numbers are global
+  // and do not depend on which part of the mesh rank 0 happens to own.
+  {
+    CFreal aMax = 0., aSum = 0.;
+    CFuint nAct = 0, nTot = 0;
+    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+    {
+      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
+      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+      {
+        geoData.idx = elemIdx;
+        m_cell = m_cellBuilder->buildGE();
+        m_cellStates = m_cell->getStates();
+        if ((*m_cellStates)[0]->isParUpdatable())
+        {
+          const CFreal a = output[(*m_cellStates)[0]->getLocalID()];
+          aMax = std::max(aMax, a);
+          aSum += a;
+          if (a > m_alphaMin) ++nAct;
+          ++nTot;
+        }
+        m_cellBuilder->releaseGE();
+      }
+    }
+
+    const std::string nsp = getMethodData().getNamespace();
+#ifdef CF_HAVE_MPI
+    if (PE::GetPE().IsParallel())
+    {
+      MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+      CFreal aMaxL = aMax, aSumL = aSum;
+      CFuint nActL = nAct, nTotL = nTot;
+      MPI_Allreduce(&aMaxL, &aMax, 1, MPI_DOUBLE,   MPI_MAX, comm);
+      MPI_Allreduce(&aSumL, &aSum, 1, MPI_DOUBLE,   MPI_SUM, comm);
+      MPI_Allreduce(&nActL, &nAct, 1, MPI_UNSIGNED, MPI_SUM, comm);
+      MPI_Allreduce(&nTotL, &nTot, 1, MPI_UNSIGNED, MPI_SUM, comm);
+    }
+#endif
+    if (nTot > 0 && PE::GetPE().GetRank(nsp) == 0)
+    {
+      CFLog(INFO, "OrderBlending: alpha max " << aMax
+            << ", mean " << aSum/nTot
+            << ", " << nAct << "/" << nTot << " cells above AlphaMin\n");
     }
   }
 
@@ -295,11 +362,8 @@ void BaseOrderBlending::applyJacobiSmoothingPass()
         geoData.idx = m_NeighborIDs[elemIdx][i];
         m_cell = m_cellBuilder->buildGE();
         m_cellStates = m_cell->getStates();
-        if ((*m_cellStates)[0]->isParUpdatable())
-        {
-          const CFreal alphaN = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
-          alphaNeighborMax = std::max(alphaNeighborMax, alphaN);
-        }
+        const CFreal alphaN = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
+        alphaNeighborMax = std::max(alphaNeighborMax, alphaN);
         m_cellBuilder->releaseGE();
       }
 
@@ -309,16 +373,13 @@ void BaseOrderBlending::applyJacobiSmoothingPass()
       m_cell = m_cellBuilder->buildGE();
       m_cellStates = m_cell->getStates();
 
-      if ((*m_cellStates)[0]->isParUpdatable())
-      {
-        const CFreal alphaSelf = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
-        const CFreal alphaNew  = applyAlphaLimits(
-          std::max(alphaSelf, m_neighborWeight * alphaNeighborMax));
+      const CFreal alphaSelf = m_sweepSnapshot[(*m_cellStates)[0]->getLocalID()];
+      const CFreal alphaNew  = applyAlphaLimits(
+        std::max(alphaSelf, m_neighborWeight * alphaNeighborMax));
 
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-        {
-          output[(*m_cellStates)[iSol]->getLocalID()] = alphaNew;
-        }
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        output[(*m_cellStates)[iSol]->getLocalID()] = alphaNew;
       }
 
       m_cellBuilder->releaseGE();
@@ -356,10 +417,8 @@ CFreal BaseOrderBlending::applyAlphaLimits(CFreal alpha) const
   {
     alpha = 0.0;
   }
-  else if (alpha > 1.0 - m_alphaMin)
-  {
-    alpha = 1.0;
-  }
+  // The sinusoidal sensor already reaches one continuously. An early snap
+  // to one would introduce a finite jump into the state-dependent residual.
   return std::min(alpha, m_alphaMax);
 }
 
@@ -511,6 +570,8 @@ RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape,
   {
     case CFGeoShape::QUAD:
     {
+      // QuadFluxReconstructionElementData stores the modes grouped by shell:
+      // the modes of order p occupy the range [p^2, (p+1)^2).
       const CFuint totalModes = (order + 1) * (order + 1);
       maxModalOrder.resize(totalModes);
       CFuint modeIndex = 0;
@@ -580,17 +641,19 @@ RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape,
     }
     case CFGeoShape::HEXA:
     {
+      // HexaFluxReconstructionElementData stores the modes grouped by shell:
+      // it walks (iKsi, iEta, iZta) but writes each mode at column
+      // max(iKsi,iEta,iZta)^3 + counter, so the modes of order p occupy the
+      // contiguous range [p^3, (p+1)^3). Walking the triple loop in its own
+      // order instead would mislabel the modes from P2 upward.
       const CFuint totalModes = (order + 1) * (order + 1) * (order + 1);
       maxModalOrder.resize(totalModes);
       CFuint modeIndex = 0;
-      for (CFuint iOrderKsi = 0; iOrderKsi <= order; ++iOrderKsi)
+      for (CFuint p = 0; p <= order; ++p)
       {
-        for (CFuint iOrderEta = 0; iOrderEta <= order; ++iOrderEta)
+        for (CFuint i = p*p*p; i < (p+1)*(p+1)*(p+1); ++i)
         {
-          for (CFuint iOrderZta = 0; iOrderZta <= order; ++iOrderZta)
-          {
-            maxModalOrder[modeIndex++] = std::max({iOrderKsi, iOrderEta, iOrderZta});
-          }
+          maxModalOrder[modeIndex++] = p;
         }
       }
       cf_assert(modeIndex == totalModes);
@@ -610,6 +673,8 @@ RealVector BaseOrderBlending::getmaxModalOrder(const CFGeoShape::Type elemShape,
 void BaseOrderBlending::setup()
 {
   CFAUTOTRACE;
+
+  m_alphaInitialized = false;
 
   m_nbrEqs = PhysicalModelStack::getActive()->getNbEq();
   m_dim    = PhysicalModelStack::getActive()->getDim();

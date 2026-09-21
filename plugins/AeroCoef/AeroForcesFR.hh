@@ -10,6 +10,7 @@
 #include "Framework/DynamicDataSocketSet.hh"
 #include "Framework/DataSocketSink.hh"
 #include "Framework/FaceTrsGeoBuilder.hh"
+#include "FluxReconstructionMethod/BndFaceDiffData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -38,6 +39,7 @@ namespace COOLFluiD {
  * This class computes the Wall values and aerodynamic coefficients for the FR method
  *
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  *
  */
 class AeroForcesFR : public Framework::DataProcessingCom {
@@ -152,6 +154,12 @@ protected:
    * 
    */
   virtual void computeWallStatesGrads();
+
+  /**
+   * Gets the number of flux points of a face
+   * @param faceID  local ID of the face
+   */
+  CFuint getNbrFaceFlxPnts(const CFuint faceID);
   
 private:
 
@@ -186,6 +194,15 @@ protected:
   
   // pointer to the data of the cell centered FVM method
   Common::SafePtr<FluxReconstructionMethod::FluxReconstructionSolverData> m_frData;
+
+  /// data of the diffusive boundary flux at the flux points of the current face
+  FluxReconstructionMethod::BndFaceDiffData m_bndFaceDiffData;
+
+  /// friction force coefficients at the flux points of the current face
+  std::vector< RealVector > m_frictionForcesFlxPnts;
+
+  /// maximum number of flux points of a face
+  CFuint m_nbrFaceFlxPntsMax;
   
   // mapping between faceIDs and global index
   Common::CFMap<CFuint, CFuint> m_mapTrsFaceToID;

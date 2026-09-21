@@ -92,9 +92,6 @@ protected: //functions
    * Compute the smoothness indicator
    */
   virtual void computeSmoothness();
-  
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
 
 protected: //data
   
@@ -118,9 +115,6 @@ protected: //data
   
   /// element states of the right neighbor in the correct format
   std::vector< RealVector* > m_tempStatesR;
-  
-  /// damping coefficient
-  CFreal m_dampCoeff;
   
   private:
 

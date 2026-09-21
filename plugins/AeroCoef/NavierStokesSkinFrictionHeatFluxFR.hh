@@ -28,6 +28,7 @@ namespace COOLFluiD {
  * simulations with FluxReconstruction
  *
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  *
  */
 class NavierStokesSkinFrictionHeatFluxFR : public AeroForcesFR {
@@ -68,7 +69,28 @@ public:
   virtual void unsetup();
 
 protected:
-  
+
+  /**
+   * Computes the Stanton number of the heat flux into the wall, with the
+   * definition of StantonNumberID:
+   *   0: St = q/(rho_inf u_inf^3)
+   *   1: St = q/((cp (T_inf - T_w) + 0.5 u_inf^2) rho_inf u_inf)
+   *   2: St = q/(cp rho_w u_inf)
+   *   otherwise: St = q/(cp (T_inf - T_w) rho_inf u_inf)
+   * @param heatFlux     heat flux into the wall q
+   * @param temperature  wall temperature T_w
+   * @param flxIdx       index of the flux point
+   */
+  virtual CFreal computeStantonNumber(CFreal heatFlux, CFreal temperature, CFuint flxIdx);
+
+  /**
+   * Tells whether the states hold the transition model variables, (p, u, v[, w], T)
+   * followed by k, omega, gamma and Re_theta: Puvt update variables and a
+   * GReKO or GReKLogO convective model. The last wall output column is then
+   * gamma, otherwise the radiative heat flux.
+   */
+  virtual bool hasTransitionLayout() const;
+
   /**
    * Open the Output File and Write the header
    */
@@ -149,6 +171,12 @@ protected:
   
   // ID to identify the stanton number formula to use
   CFuint m_stantonNumID;
+
+  /// indices of the velocity components in the states
+  std::vector< CFuint > m_velocityIDs;
+
+  /// viscous traction at the current flux point
+  RealVector m_traction;
   
 }; // end of class NavierStokesSkinFrictionHeatFluxFR
 

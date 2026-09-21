@@ -67,6 +67,9 @@ BCNoSlipWallHeatFluxMF3D::BCNoSlipWallHeatFluxMF3D(const std::string& name) :
 
   m_changeToIsoT = MathTools::MathConsts::CFuintMax();
    setParameter("ChangeToIsoT",&m_changeToIsoT);
+
+  m_legacyGhost = false;
+   setParameter("LegacyGhost",&m_legacyGhost);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -85,6 +88,8 @@ void BCNoSlipWallHeatFluxMF3D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal/*std::vector<CFreal>*/ >("q","wall heat flux");
   options.addConfigOption< bool >("HeatFlux","bool to tell if the wall has constant heat flux, default true.");
   options.addConfigOption< CFuint >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+  options.addConfigOption< bool >("LegacyGhost","Use the previous ghost state (normal velocity mirror) instead of "
+    "the reflected one (interior densities, reversed velocities, reflected temperatures), default false.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -167,7 +172,25 @@ void BCNoSlipWallHeatFluxMF3D::computeGhostStates(const vector< State* >& intSta
      const CFuint endEM = 8;
  
     
-    if (m_heatFlux)
+    if (!m_legacyGhost)
+    {
+      // interior densities, velocities reversed, temperatures reflected about the wall temperature
+      // (isothermal wall) or copied (heat-flux wall); 3D layout as in BCMirrorWall3D
+      const CFuint dim = 3;
+      for (CFuint i = 0 ; i < nbSpecies; i++)
+      {
+        (m_ghostSolPhysData)[endEM + i] = (m_intSolPhysData)[endEM + i];
+        for (CFuint iDim = 0; iDim < dim; ++iDim)
+        {
+          (m_ghostSolPhysData)[endEM + nbSpecies + dim*i + iDim] = -(m_intSolPhysData)[endEM + nbSpecies + dim*i + iDim];
+        }
+        const CFreal innerT = (m_intSolPhysData)[endEM + nbSpecies + dim*nbSpecies + i];
+        (m_ghostSolPhysData)[endEM + nbSpecies + dim*nbSpecies + i] =
+          m_heatFlux ? innerT : max(2.*_wallTemp[i] - innerT,0.01*_wallTemp[i]);
+      }
+      m_varSet->computeStateFromPhysicalData(m_ghostSolPhysData,ghostState);
+    }
+    else if (m_heatFlux)
     {
   
      //set the densities

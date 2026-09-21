@@ -38,6 +38,7 @@ namespace COOLFluiD {
  * time marching for NS
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvDiffLLAVJacobFluxReconstructionNS : public ConvDiffLLAVJacobFluxReconstruction {
 
@@ -73,6 +74,11 @@ protected: //functions
    * compute the terms for the gradient computation for a bnd face
    */
   virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
+
+  /**
+   * compute the terms for the gradient computation for one side of a face
+   */
+  virtual void computeFlxPntGradTerm(const CFuint side, RealMatrix& gradTerm);
   
   /**
    * compute the term for the gradient computation for the cell

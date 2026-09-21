@@ -1,3 +1,9 @@
+// Copyright (C) 2019 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #ifndef COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha_hh
 #define COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha_hh
 
@@ -8,17 +14,21 @@
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-    namespace FluxReconstructionMethod {
+  namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a command that computes contribution of the boundary faces for the
-   * Flux Reconstruction schemes for diffusive terms to the RHS for implicit schemes for GammaAlpha
+   * This class represents a command that computes the contribution of the
+   * boundary faces of the diffusive terms to the RHS and Jacobian for the
+   * Gamma-Alpha transition model. It is the turbulence command
+   * DiffBndCorrectionsRHSJacobFluxReconstructionTurb under its own name: the
+   * transition flag the Gamma-Alpha wall boundary condition reads is set once
+   * per face in the gradient stage (GammaAlphaJacobBndGradientComputer) and
+   * kept on the boundary condition.
    *
    * @author Ray Vandenhoeck
-   *
+   * @author Rayan Dhib
    */
 class DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha : public DiffBndCorrectionsRHSJacobFluxReconstructionTurb {
 
@@ -33,34 +43,12 @@ public:
    * Default destructor
    */
   virtual ~DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha();
-  
-  /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
-   */
-  virtual void setup();
-  
-  /**
-   * unset up private data and data of the aggregated classes
-   * in this command before processing phase
-   */
-  virtual void unsetup();
-  
-  /// compute the states, gradients and ghost states, gradients in the flx pnts
-  virtual void computeFlxPntStates();
 
-protected: // functions
-
-  
-protected: // data
-
-    
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstructionGammaAlpha
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace FluxReconstructionMethod
-
+    } // namespace FluxReconstructionMethod
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////

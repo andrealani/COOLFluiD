@@ -25,6 +25,7 @@ namespace COOLFluiD {
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class DiffRHSJacobFluxReconstructionMFMHD : public DiffRHSJacobFluxReconstruction {
 
@@ -44,21 +45,6 @@ protected: //functions
    *      setFaceTermData() and set the geometrical data of the face
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
-  
-  /**
-   * compute the terms for the gradient computation for a bnd face
-   */
-  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
-  
-  /**
-   * compute the term for the gradient computation for the cell
-   */
-  virtual void computeCellGradTerm(RealMatrix& gradTerm);
-  
-  /**
-   * compute the terms for the gradient computation for a face
-   */
-  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
   
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();

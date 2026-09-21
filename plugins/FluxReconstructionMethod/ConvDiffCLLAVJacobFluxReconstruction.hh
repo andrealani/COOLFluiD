@@ -27,6 +27,7 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the convective, diffusive 
 /// and artificial viscosity part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Ray Vandenhoeck
+/// @author Rayan Dhib
 class ConvDiffCLLAVJacobFluxReconstruction : public ConvDiffLLAVJacobFluxReconstruction {
 
 public: // functions
@@ -68,16 +69,6 @@ protected: //functions
    * Set the data for the current face necessary to calculate FI
    */
   virtual void setFaceData(CFuint faceID);
-
-  /**
-   * compute the contribution of the diffusive face term to both Jacobians
-   */
-  void computeBothJacobsDiffFaceTerm();
-
-  /**
-   * compute the contribution of the diffusive face term to one Jacobians
-   */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
   
   /// compute the AV to state Jacobian
   virtual void computeEpsToStateJacobianAna() = 0;
@@ -97,6 +88,15 @@ protected: //functions
   * Store the computed artificial viscosity
   */
   virtual void storeEpsilon();
+
+  /**
+   * Set the artificial viscosity at the solution points of a cell whose faces
+   * are all boundary faces: the corrected viscosity of the solution points as
+   * stored in the artificial viscosity socket, or, in linear residual mode,
+   * read back from that socket; then redistributed over the solution points.
+   * @pre m_cells[LEFT] and m_states[LEFT] hold the cell
+   */
+  virtual void prepareIsolatedCellAV(const CFuint cellID);
   
 protected: //data
     

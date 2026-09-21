@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCNoSlipWallHeatFluxNS2D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -59,6 +60,9 @@ BCNoSlipWallHeatFluxNS2D::BCNoSlipWallHeatFluxNS2D(const std::string& name) :
    
    m_strongT= false;
    setParameter("StrongT",&m_strongT);
+
+  m_legacyGhost = false;
+   setParameter("LegacyGhost",&m_legacyGhost);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -79,6 +83,8 @@ void BCNoSlipWallHeatFluxNS2D::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFreal,Config::DynamicOption<> >("U","wall x-velocity");
   options.addConfigOption< CFreal,Config::DynamicOption<> >("V","wall y-velocity");
   options.addConfigOption< bool,Config::DynamicOption<> >("StrongT","bool to tell wether the stong ghost T should be used, default false.");
+  options.addConfigOption< bool >("LegacyGhost","Use the previous ghost state (the wall state on an isothermal wall) "
+    "instead of the reflected one (interior density, reflected velocity and temperature), default false.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -126,7 +132,28 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostStates(const vector< State* >& intSta
     // set the physical data starting from the inner state
     m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
 
-    if (m_heatFlux)
+    if (!m_legacyGhost)
+    {
+      // interior density, velocity reflected about the wall velocity, temperature reflected about the
+      // wall temperature (isothermal wall) or copied (heat-flux wall), pressure from density and temperature
+      const CFreal R = m_eulerVarSet->getModel()->getR();
+      const CFreal innerT = m_intSolPhysData[EulerTerm::P]/(R*m_intSolPhysData[EulerTerm::RHO]);
+      const CFreal ghostT = m_heatFlux ? innerT : max(2.0*m_wallT - innerT,0.01*m_wallT);
+      const CFreal ghostRho = m_intSolPhysData[EulerTerm::RHO];
+      const CFreal ghostP   = ghostRho*R*ghostT;
+
+      m_ghostSolPhysData[EulerTerm::RHO] = ghostRho;
+      m_ghostSolPhysData[EulerTerm::VX]  = 2.0*m_wallU - m_intSolPhysData[EulerTerm::VX];
+      m_ghostSolPhysData[EulerTerm::VY]  = 2.0*m_wallV - m_intSolPhysData[EulerTerm::VY];
+      m_ghostSolPhysData[EulerTerm::V]   = sqrt(m_ghostSolPhysData[EulerTerm::VX]*m_ghostSolPhysData[EulerTerm::VX] +
+                                              m_ghostSolPhysData[EulerTerm::VY]*m_ghostSolPhysData[EulerTerm::VY]);
+      m_ghostSolPhysData[EulerTerm::P]   = ghostP;
+      m_ghostSolPhysData[EulerTerm::H]   = (gammaDivGammaMinus1*ghostP + 0.5*ghostRho*
+                                            m_ghostSolPhysData[EulerTerm::V]*m_ghostSolPhysData[EulerTerm::V])/ghostRho;
+      m_ghostSolPhysData[EulerTerm::A]   = sqrt(gamma*ghostP/ghostRho);
+      m_ghostSolPhysData[EulerTerm::T]   = ghostT;
+    }
+    else if (m_heatFlux)
     {
       // set the physical data for the ghost state
       m_ghostSolPhysData[EulerTerm::RHO] = m_intSolPhysData[EulerTerm::RHO];
@@ -280,6 +307,80 @@ void BCNoSlipWallHeatFluxNS2D::computeGhostGradients(const std::vector< std::vec
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCNoSlipWallHeatFluxNS2D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                                  const std::vector< Framework::State* >& intStates,
+                                                  const std::vector< Framework::State* >& ghostStates,
+                                                  const std::vector< RealVector >& unitNormals,
+                                                  const std::vector< RealVector >& flxPntCoords,
+                                                  std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = a with the wall velocity and, for an isothermal wall, the wall temperature
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+    (*bndGradVars[iState])[1] = m_wallU;
+    (*bndGradVars[iState])[2] = m_wallV;
+
+    if (!m_heatFlux)
+    {
+      (*bndGradVars[iState])[3] = m_wallT;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallHeatFluxNS2D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                                const std::vector< Framework::State* >& ghostStates,
+                                                const std::vector< RealVector >& unitNormals,
+                                                const std::vector< RealVector >& flxPntCoords,
+                                                std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    m_eulerVarSet->computePhysicalData(*intStates[iState],m_intSolPhysData);
+
+    // interior pressure, wall velocity, wall or interior temperature
+    m_bndPrimState[0] = m_intSolPhysData[EulerTerm::P];
+    m_bndPrimState[3] = m_heatFlux ? m_intSolPhysData[EulerTerm::T] : m_wallT;
+    m_bndPrimState[1] = m_wallU;
+    m_bndPrimState[2] = m_wallV;
+
+    computeNSBoundaryState(*m_eulerVarSet,*intStates[iState],m_bndPrimState,*bndStates[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallHeatFluxNS2D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                               std::vector< std::vector< RealVector* > >& bndGrads,
+                                               const std::vector< RealVector* >& bndStates,
+                                               const std::vector< RealVector >& unitNormals,
+                                               const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallHeatFluxNS2D::constrainBndGrads(const RealVector& bndState,
+                                                 std::vector< RealVector* >& bndGrads,
+                                                 const RealVector& unitNormal,
+                                                 const RealVector& flxPntCoord)
+{
+  if (m_heatFlux)
+  {
+    prescribeNSWallHeatFlux(*m_diffusiveVarSet,bndState,bndGrads,unitNormal,3,m_wallQ);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCNoSlipWallHeatFluxNS2D::setup()
 {
   CFAUTOTRACE;
@@ -300,6 +401,12 @@ void BCNoSlipWallHeatFluxNS2D::setup()
   // resize the physical data for internal and ghost solution points
   m_eulerVarSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
   m_eulerVarSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+
+  // boundary primitive variables
+  m_bndPrimState.resize(4);
+
+  // diffusive variable set, for the prescribed heat flux
+  m_diffusiveVarSet = getMethodData().getDiffusiveVar().d_castTo< NavierStokesVarSet >();
 }
 
 //////////////////////////////////////////////////////////////////////////////

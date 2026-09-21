@@ -42,6 +42,7 @@ namespace COOLFluiD {
  * for implicit schemes for MFMHD
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class LLAVJacobFluxReconstructionMFMHD : public LLAVJacobFluxReconstruction {
 
@@ -85,18 +86,11 @@ protected: //functions
    * Set the data for the current face necessary to calculate FI
    */
   virtual void setFaceData(CFuint faceID);
-  
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-
 
 protected: //data
   
   /// physical model var set
   Common::SafePtr<Physics::MultiFluidMHD::MultiFluidMHDVarSet<Physics::Maxwell::Maxwell2DProjectionVarSet> > m_varSet;
-  
-  /// damping coefficient
-  CFreal m_dampCoeff;
   
   private:
 

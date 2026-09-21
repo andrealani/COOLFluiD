@@ -132,8 +132,11 @@ protected: // machinery
   /// Scale the evaluation point states in place about the cell mean
   void scaleEvalStates(CFreal theta, ScaleMode mode);
 
-  /// Write conservative solution point values back to the stored update states
-  void writeBackStates();
+  /// Write conservative solution point values back to the stored update states.
+  /// Virtual so a physics whose scaled components are shared between the
+  /// conservative and update sets can write those back directly and skip the
+  /// cons -> update mapping entirely.
+  virtual void writeBackStates();
 
   /// Check whether all evaluation points of consEval satisfy the constraints
   bool allAdmissible(const std::vector< RealVector >& consEval,

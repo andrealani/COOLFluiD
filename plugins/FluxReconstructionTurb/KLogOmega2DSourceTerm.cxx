@@ -480,15 +480,60 @@ void KLogOmega2DSourceTerm::computeProductionTerm(const CFuint iState,
   const CFreal sigmaOmega2 = navierStokesVarSet->getSigmaOmega2();
   
   const CFreal overOmega = 1./avOmega;
-  OmegaProdTerm  = (navierStokesVarSet->getGammaCoef()*rho/MUT) * KProdTerm * overOmega;
-  
+
   const CFuint kID = (*((*m_cellStates)[iState])).size() - 2;
   const CFuint omegaID = kID + 1;
-  
+
+  // gamma*rho/mu_t*P_k/omega and its bound 10*|D_k|*gamma*rho/(mu_t*omega): P_k, D_k and mu_t all
+  // scale with max(k,0), so at k <= 0 both are 0/0. That NaN reached the max(0,.) at the end, which
+  // returned 0 and dropped the cross-diffusion and (mu + sigma_omega*mu_t)*|grad(log omega)|^2 terms
+  // with it, so the log(omega) source jumped when k changed sign. At k <= 0 their limits for k -> 0+
+  // are used instead, with k/mu_t taken from mu_t at a vanishing positive k
+  CFreal omegaProdBound = 0.;
+  if (MUT > 0.)
+  {
+    OmegaProdTerm  = (navierStokesVarSet->getGammaCoef()*rho/MUT) * KProdTerm * overOmega;
+    omegaProdBound = 10.*fabs(m_destructionTerm_k)*overOmega*(navierStokesVarSet->getGammaCoef()*rho/MUT);
+  }
+  else
+  {
+    const CFreal kSmall = 1.0e-12;
+    m_stateKSmall = *((*m_cellStates)[iState]->getData());
+    m_stateKSmall[kID] = kSmall;
+    const CFreal mutKSmall = navierStokesVarSet->getTurbDynViscosityFromGradientVars(m_stateKSmall, m_cellGrads[iState]);
+    const CFreal kOverMut = (mutKSmall > 0.) ? kSmall/mutKSmall : 0.;
+
+    // P_k/mu_t: the mu_t part of P_k without mu_t, the k part times k/mu_t. Keep the three
+    // branches in step with the P_k branches above. kOverMut falls back to 0 if mu_t is still 0
+    // at k = 1e-12, which only happens if the var set zeroes mu_t for a reason other than k
+    // (SST does that at wall distance 0, so at a solution point sitting on the wall); the k part
+    // and the bound are then dropped, where the old code gave an infinity
+    CFreal prodOverMut = 0.;
+    if (!m_isSSTV)
+    {
+      prodOverMut = coeffTauMu*((4./3.)*((dux-dvy)*(dux-dvy)+(dux*dvy)-(dux+dvy-m_vOverRadius)*m_vOverRadius)
+                                +(duy+dvx)*(duy+dvx))
+                    - (2./3.)*rho*kOverMut*(dux+dvy+m_vOverRadius);
+    }
+    else if (m_neglectSSTVTerm)
+    {
+      prodOverMut = coeffTauMu*(duy-dvx)*(duy-dvx);
+    }
+    else
+    {
+      prodOverMut = coeffTauMu*(duy-dvx)*(duy-dvx) - (2./3.)*rho*kOverMut*(dux+dvy+m_vOverRadius);
+    }
+
+    const CFreal gammaRho = navierStokesVarSet->getGammaCoef()*rho;
+    OmegaProdTerm  = gammaRho*prodOverMut*overOmega;
+    // |D_k| = rho*omega*betaStar*k, computeDestructionTerm being called with DcoFactor = 1
+    omegaProdBound = 10.*rho*navierStokesVarSet->getBetaStar(*((*m_cellStates)[iState]))*kOverMut*gammaRho;
+  }
+
   if (m_limitP)
   {
     KProdTerm     = std::min(10.*fabs(m_destructionTerm_k), KProdTerm);
-    OmegaProdTerm = std::min(10.*fabs(m_destructionTerm_k)*overOmega*(navierStokesVarSet->getGammaCoef()*rho/MUT), OmegaProdTerm);
+    OmegaProdTerm = std::min(omegaProdBound, OmegaProdTerm);
   }
   
   ///This is used in (BSL,SST), not for normal kOmeg
@@ -724,6 +769,8 @@ void KLogOmega2DSourceTerm::setup()
   m_eulerVarSet->getModel()->resizePhysicalData(m_solPhysData);
   
   m_currWallDist.resize(m_nbrSolPnts);
+  
+  m_stateKSmall.resize(m_nbrEqs);
   
   m_diffVarSet = getMethodData().getDiffusiveVar();
   

@@ -5,6 +5,7 @@
 
 #include "Framework/DataSocketSink.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
+#include "FluxReconstructionMethod/BndFaceDiffData.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
@@ -23,6 +24,7 @@ namespace COOLFluiD {
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
+   * @author Rayan Dhib
    *
    */
 class DiffBndCorrectionsRHSFluxReconstruction : public FluxReconstructionSolverCom {
@@ -74,6 +76,18 @@ public:
     m_bcStateComputer = bcStateComputer;
   }
 
+  /**
+   * Computes the data of the diffusive boundary flux at the flux points of a
+   * boundary face built by the caller, with the boundary condition and the
+   * diffusive flux of this command. The RHS is not updated.
+   * @param face    the boundary face
+   * @param orient  orientation of the face
+   * @param data    the data of the diffusive boundary flux
+   */
+  void computeBndFaceDiffData(Framework::GeometricEntity* face,
+                              const CFuint orient,
+                              BndFaceDiffData& data);
+
 protected: // functions
 
   /**
@@ -81,10 +95,28 @@ protected: // functions
    */
   virtual void executeOnTrs();
 
-  /// compute the states, gradients and ghost states, gradients in the flx pnts
+  /// compute the states and ghost states in the flx pnts
   virtual void computeFlxPntStates();
+
+  /**
+   * Computes the compact BR2 gradient of the current boundary face at its flux
+   * points, in m_cellGradFlxPnt: the volume term of the gradient variables of
+   * the interior cell plus eta, the BR2 multiplier, times the correction of
+   * this face alone, from the gradient variables extrapolated to the flux
+   * points to the boundary values of the boundary condition. m_cellGrads is
+   * not changed.
+   * @pre computeFlxPntStates() and setIntCellMetrics()
+   */
+  void computeCompactBR2BndFaceGradient();
+
+  /// set the cell metrics of the interior cell needed by the compact face gradient
+  void setIntCellMetrics();
   
-  /// compute the interface flux
+  /**
+   * Compute the diffusive flux at the flux points of the current boundary face,
+   * at the boundary state U_b and with the boundary gradients q_b that the
+   * boundary condition returns from the compact face gradient.
+   */
   virtual void computeInterfaceFlxCorrection();
   
   /// compute the total correction
@@ -102,6 +134,18 @@ protected: // functions
   /// prepare the computation of the diffusive flux
   virtual void prepareFluxComputation()
   {
+  }
+
+  /**
+   * Prepares the evaluation of the diffusive flux at a flux point of the current
+   * boundary face, for the physics that need point data beyond the state and the
+   * gradient (the wall distance of the turbulence models).
+   * @param iFlx index of the flux point on the face
+   * Default: prepareFluxComputation().
+   */
+  virtual void prepareFlxPntFluxComputation(const CFuint iFlx)
+  {
+    prepareFluxComputation();
   }
   
   virtual void computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux);
@@ -250,6 +294,12 @@ protected: // data
   
   /// average solution in a flux point
   RealVector m_avgSol;
+
+  /// storage of m_bndStateFlux
+  std::vector< RealVector > m_bndStateFluxStore;
+
+  /// boundary states the diffusive flux is evaluated at
+  std::vector< RealVector* > m_bndStateFlux;
   
   /// average gradients in a flux point
   std::vector< RealVector* > m_avgGrad;
@@ -274,6 +324,65 @@ protected: // data
   
   /// FR order
   CFuint m_order;
+
+  /// multiplier of the face lifting in the compact BR2 face gradient
+  CFreal m_br2Eta;
+
+  /// number of additional face normal directions for Triag (, tetra and prism)
+  CFuint m_ndimplus;
+
+  /// list of dimensions in which the flux will be evaluated in each sol pnt
+  std::vector< std::vector< CFuint > > m_dimList;
+
+  /// mapped coordinate plane normals at the solution points of the interior cell
+  std::vector< std::vector< RealVector > > m_cellFluxProjVects;
+
+  /// solution point Jacobian determinants of the interior cell
+  std::valarray< CFreal > m_solJacobDet;
+
+  /// coefs to compute the derivative of the states in the sol pnts
+  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
+
+  /// dependencies of solution pnts on sol pnts
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solSolDep;
+
+  /// nbr of sol pnts a sol pnt influences
+  CFuint m_nbrSolSolDep;
+
+  /// correction projected on a normal
+  RealVector m_projectedCorr;
+
+  /// gradient variables at the solution points of the interior cell
+  RealMatrix m_gradVarsSolPnts;
+
+  /// solution point state data passed to the diffusive variable set
+  std::vector< RealVector* > m_gradVarStatePtrs;
+
+  /// compact BR2 gradient of the current boundary face at the solution points [iSol][iEq]
+  std::vector< std::vector< RealVector > > m_compactGradsSolPnts;
+
+  /// storage of m_flxPntGradVars
+  std::vector< RealVector > m_flxPntGradVarsStore;
+
+  /// gradient variables extrapolated to the flux points of the current boundary face
+  std::vector< RealVector* > m_flxPntGradVars;
+
+  /// storage of m_bndGradVars
+  std::vector< RealVector > m_bndGradVarsStore;
+
+  /// boundary values of the gradient variables at the flux points
+  std::vector< RealVector* > m_bndGradVars;
+
+  /// boundary gradients of the diffusive boundary flux at the flux points [iFlx][iEq]
+  std::vector< std::vector< RealVector* > > m_bndGradFlxPnt;
+
+private: // functions
+
+  /**
+   * Resizes the members of data to the current number of flux points.
+   * @param data  the data of the diffusive boundary flux
+   */
+  void resizeBndFaceDiffData(BndFaceDiffData& data);
 
 }; // end of class DiffBndCorrectionsRHSFluxReconstruction
 

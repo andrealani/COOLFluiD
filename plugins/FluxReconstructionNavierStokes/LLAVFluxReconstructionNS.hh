@@ -41,6 +41,7 @@ namespace COOLFluiD {
  * for NS
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class LLAVFluxReconstructionNS : public LLAVFluxReconstruction {
 

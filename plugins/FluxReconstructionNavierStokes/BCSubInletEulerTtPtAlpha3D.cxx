@@ -5,6 +5,7 @@
 
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionNavierStokes/BCSubInletEulerTtPtAlpha3D.hh"
+#include "FluxReconstructionNavierStokes/NSBoundaryState.hh"
 
 #include "Common/NotImplementedException.hh"
 
@@ -174,6 +175,75 @@ void BCSubInletEulerTtPtAlpha3D::computeGhostGradients
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCSubInletEulerTtPtAlpha3D::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                                    const std::vector< Framework::State* >& intStates,
+                                                    const std::vector< Framework::State* >& ghostStates,
+                                                    const std::vector< RealVector >& unitNormals,
+                                                    const std::vector< RealVector >& flxPntCoords,
+                                                    std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = (p, velocity, T) of the inlet
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    computeInletPrimState(*intStates[iState],*bndGradVars[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerTtPtAlpha3D::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                                  const std::vector< Framework::State* >& ghostStates,
+                                                  const std::vector< RealVector >& unitNormals,
+                                                  const std::vector< RealVector >& flxPntCoords,
+                                                  std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    computeInletPrimState(*intStates[iState],m_bndPrimState);
+    computeNSBoundaryState(*m_eulerVarSet,*intStates[iState],m_bndPrimState,*bndStates[iState]);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerTtPtAlpha3D::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                                 std::vector< std::vector< RealVector* > >& bndGrads,
+                                                 const std::vector< RealVector* >& bndStates,
+                                                 const std::vector< RealVector >& unitNormals,
+                                                 const std::vector< RealVector >& flxPntCoords)
+{
+  // q_b = q
+  copyGradients(intGrads,bndGrads);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCSubInletEulerTtPtAlpha3D::computeInletPrimState(const Framework::State& intState,
+                                                       RealVector& primState)
+{
+  m_eulerVarSet->computePhysicalData(intState,m_intSolPhysData);
+
+  // static temperature and pressure from the total ones
+  const CFreal gamma = m_eulerVarSet->getModel()->getGamma();
+  const CFreal mach = m_intSolPhysData[EulerTerm::V]/m_intSolPhysData[EulerTerm::A];
+  const CFreal coeff = 1. + 0.5*(gamma-1.)*mach*mach;
+  primState[0] = m_pTotal/std::pow(coeff,gamma/(gamma-1.));
+  primState[4] = m_tTotal/coeff;
+
+  // velocity from the Mach number and the flow angles
+  const CFreal tanAlphaXY = tan(m_alphaXY);
+  const CFreal tanAlphaXZ = tan(m_alphaXZ);
+  primState[1] = mach*std::sqrt(gamma*m_eulerVarSet->getModel()->getR()*primState[4]/(1.+tanAlphaXY*tanAlphaXY+tanAlphaXZ*tanAlphaXZ));
+  primState[2] = tanAlphaXY*primState[1];
+  primState[3] = tanAlphaXZ*primState[1];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCSubInletEulerTtPtAlpha3D::setup()
 {
   CFAUTOTRACE;
@@ -194,6 +264,9 @@ void BCSubInletEulerTtPtAlpha3D::setup()
   // resize the physical data for internal and ghost solution points
   m_eulerVarSet->getModel()->resizePhysicalData(m_ghostSolPhysData);
   m_eulerVarSet->getModel()->resizePhysicalData(m_intSolPhysData  );
+
+  // boundary primitive variables
+  m_bndPrimState.resize(5);
 
   // non-dimensionalize pressure and temperature
   m_tTotal /= m_eulerVarSet->getModel()->getTempRef ();

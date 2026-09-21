@@ -1,7 +1,7 @@
 #include "PlatoI/PlatoLibrary.hh"
 #include "PlatoI/Plato.hh"
-#include <plato_constants_Cpp.h>
-#include <plato_fortran_Cpp.h>
+#include <plato_Cpp_constants.h>
+#include <plato_Cpp_fortran.h>
 #include "Common/CFLog.hh"
 #include "Environment/ObjectProvider.hh"
 #include "Common/BadValueException.hh"
@@ -229,7 +229,11 @@ void PlatoLibrary::setLibrarySequentially()
   get_qi(&_qi[0]);
   
   /*Molecular IDs*/
-  get_mol_ids(&_molIDs[0]);
+  std::vector<unsigned int> tmpMolIDs(_NS);
+  get_mol_ids(&tmpMolIDs[0]);
+  for (CFint i = 0; i < _NS; ++i) {
+    _molIDs[i] = tmpMolIDs[i];
+  }
 
   /*Subtract 1 to be consistent with C/C++ arrays*/
   for (CFint i = 0; i < _nMol; ++i) {
@@ -243,7 +247,7 @@ void PlatoLibrary::setLibrarySequentially()
   _hasElectrons = (get_nb_e() == 1) ? true : false;
 
   /*Set tolerance on mole fractions (for transport properties)*/
-  set_Xtol(&_Xtol);
+  set_X_tol(&_Xtol);
   
   // add here xc di set composition loop fino a get components 
   for (CFint i=0; i<get_nb_comp();++i){
@@ -252,7 +256,7 @@ void PlatoLibrary::setLibrarySequentially()
 
   double press = 100000;
   double temp = 350;
-  CFint flag =0;
+  int flag = 0;
   get_eq_composition_mole(&press, &temp, &_Xc[0], &_Xi[0], &flag);
 
   CFout << "_Ri is in [J/(kg*K)] and molar mass (_mmi) is in [kg/mol]" << "\n";
@@ -594,10 +598,10 @@ void PlatoLibrary::gammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, CFdoub
  */
 void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, CFdouble& rho, CFdouble& gamma, CFdouble& soundSpeed, RealVector* tVec)
 {
-  /*Temperature vector*/
+  /*Temperature vector (if tVec is null, assume Tv = T for CNEQ)*/
   _tvec[0] = temp;
   for (CFint i = 1; i < _nTemp; ++i) {
-    _tvec[i] = (*tVec)[i - 1];
+    _tvec[i] = (tVec != CFNULL) ? (*tVec)[i - 1] : temp;
   }
   //CFout <<"here 3\n"; // Vatsalya : only this works for TTv
   /*Partial densities*/
@@ -605,8 +609,10 @@ void PlatoLibrary::frozenGammaAndSoundSpeed(CFdouble& temp, CFdouble& pressure, 
     _rhoi[i] = rho*_Yi[i];
   }
 
-  /*Get frozen specific heat ratio and speed of sound*/  
-  get_frozen_gamma_sound_speed(&pressure, &rho, &_rhoi[0], &_tvec[0], &gamma, &soundSpeed);
+  /*Get frozen specific heat ratio and speed of sound*/
+  /* Fortran signature: (p, rho, Th, yi, gammaf, cf) - temperature 3rd, mass fractions 4th.
+     Note: the C header plato_Cpp_fortran.h has args 3&4 swapped (yi, temp) - header is WRONG. */
+  get_frozen_gamma_sound_speed(&pressure, &rho, &_tvec[0], &_Yi[0], &gamma, &soundSpeed);
 
  
   /*
@@ -870,12 +876,9 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
   /*Set mass fractions (species)*/
   for (CFint is = 0; is < _NS; ++is) {
     _Yi[is] = ys[is];
-    /*Fix application*/
+    /*Fix application: clamp mass fractions to [0, 1]*/
     if (_Yi[is] < 0.0) _Yi[is] = 0.0;
-   // std::cout << is << "\n";
-   // std::cout << ys << "\n";
-   // std::cout <<_Yi;
-       cf_assert(_Yi[is] < 1.1); //new
+    if (_Yi[is] > 1.0) _Yi[is] = 1.0; //Vatsalya: original had cf_assert(_Yi<1.1) that crashed at CFL=10 during FD Jacobian perturbation where perturbed species can exceed 1.0; softened to clamp
       
   }
   //CFout<<"******computed here/////////// \n"; // we go here in TCNEQ
@@ -953,7 +956,8 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
   /*Compute source term and the related Jacobian with respect to natural variables*/
   if (flagJac) {
 
-    //get_source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+    int nDim = static_cast<int>(_nDim);
+    get_source_jac(&nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]); //Vatsalya: original plato_get_source_jac() was a C++ stub calling exit(1); created bind(C) Fortran wrapper in kinetics_source_jac.F90
 
     /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
     for (CFint i = 0; i < _nEqs; ++i) {
@@ -962,10 +966,11 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
       }
     }
 
-  /*Compute source term only*/  
+  /*Compute source term only*/
   } else {
 
-    get_source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]); 
+    int nDim = static_cast<int>(_nDim);
+    get_source(&nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
 
   }
 
@@ -978,14 +983,14 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*! 
- * This function returns the mass production and energy transfer terms given the density, the mass fractions and 
- * the temperature  
+/*!
+ * This function returns the mass production and energy transfer terms given the density, the mass fractions and
+ * the temperature
  */
 void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressure, CFdouble& rho,
 			     const RealVector& ys, bool flagJac, RealVector& omega,
-			     RealVector& omegav, CFdouble& omegaRad, RealMatrix& jacobian)   
-  
+			     RealVector& omegav, CFdouble& omegaRad, RealMatrix& jacobian)
+
 {
   /*Partial densities*/
   for (CFint i = 0; i < _NS; ++i) {
@@ -998,10 +1003,11 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
     _tvec[i] = tVec[i - 1];
   }
 
-  /*Compute source term and the related Jacobian with respect to natural variables*/ 
+  /*Compute source term and the related Jacobian with respect to natural variables*/
   if (flagJac) {
 
-    //get_source_jac(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]);
+    int nDim = static_cast<int>(_nDim);
+    get_source_jac(&nDim, &_rhoi[0], &_tvec[0], &_prodterm[0], &_jprodterm[0]); //Vatsalya: original plato_get_source_jac() was a C++ stub calling exit(1); created bind(C) Fortran wrapper in kinetics_source_jac.F90
 
     /*Transpose matrix (Fortran stores arrays by columns, C/C++ by rows)*/
     for (CFint i = 0; i < _nEqs; ++i) {
@@ -1010,10 +1016,11 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
       }
     }
 
-  /*Compute source term only*/ 
+  /*Compute source term only*/
   } else {
 
-    get_source(&_nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
+    int nDim = static_cast<int>(_nDim);
+    get_source(&nDim, &_rhoi[0], &_tvec[0], &_prodterm[0]);
 
   }
 
@@ -1107,13 +1114,23 @@ void PlatoLibrary::getGammaO(CFreal& m_GO)
 }
 				  
 //////////////////////////////////////////////////////////////////////////////
-
 void PlatoLibrary::setSpeciesMolarFractions(const RealVector& xs)
  {
    CFLog(ERROR,  "PLATO interface STOP:: setSpeciesMolarFractions\n");
    throw NotImplementedException(FromHere(),"PlatoLibrary::setSpeciesMolarFractions()");
  }
       
+//////////////////////////////////////////////////////////////////////////////
+/*!
+ * This function returns the species entropies per unit mass [J/(kg*K)]
+ * given the translational temperature and pressure.
+ */
+//Vatsalya: new-PLATO species_entropy was gated behind #ifdef PLATO_HAVE_NASA_POLY (unavailable for partition-function models); implemented Sackur-Tetrode formula using PLATO partition functions in thermo_prop_entropy.F90
+void PlatoLibrary::getSpeciesEntropy(CFdouble& temp, CFdouble& pressure, RealVector& si)
+{
+  get_species_entropy(&temp, pressure, &si[0]);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*!
  * This function returns the species total, vibrational and electronic enthalpies given the temperatures.
@@ -1135,8 +1152,20 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
   /* Thermo-chemical non-equilibrium case*/
   if (_nTemp > 1) {
 
+     // species_tot_vib_el_enthalpy() calls safe_exit() and aborts whenever PLATO is built
+     // with PLATO_HAVE_NASA_POLY (see plato-main_munafo/src/thermo/thermo_prop_enthalpy.F90);
+     // species_enthalpy_modes() is the NASA-safe decomposition and is valid in both modes.
+     RealVector hiTr(_NS);
+     RealVector hiRot(_NS);
+     RealVector hiF(_NS);
+     RealVector hiInt(_NS);
+
+     species_enthalpy_modes(&_tvec[0], &hiTr[0], &hiRot[0], &_hiVib[0], &_hiEl[0], &hiF[0], &hiInt[0]);
+
      /*Total enthalpies*/
-     species_tot_vib_el_enthalpy(&_tvec[0], &hsTot[0], &_hiVib[0], &_hiEl[0]);
+     for (CFint i = 0; i < _NS; ++i) {
+       hsTot[i] = hiTr[i] + hiF[i] + hiInt[i];
+     }
 
      /*Vibrational energies*/
      for (CFint i = 0; i < _nMol; ++i) {
@@ -1220,4 +1249,3 @@ void PlatoLibrary::getSourceEE(CFdouble& temperature,
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
-

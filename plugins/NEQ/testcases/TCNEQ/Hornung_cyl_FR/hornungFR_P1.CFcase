@@ -1,0 +1,278 @@
+################################################################################
+#
+# This COOLFluiD CFcase file tests:
+#
+# FR, VCJH, NavierStokes2DNEQ with PLATO, implicit Newton on an assembled
+# finite difference Jacobian, curved quads, Lax-Friedrichs scheme, isothermal
+# noncatalytic no-slip wall, Dirichlet and SuperOutlet BCs, IDP positivity
+# limiter, P1 with subcell order blending
+#
+# Hornung cylinder, front half of a 12.75 mm cylinder in dissociating nitrogen
+# (PLATO nitrogen2_nasa, two temperatures, two species). Freestream
+# rho_N = 0.0001952 kg/m3, rho_N2 = 0.004956 kg/m3, u = 5590 m/s along -x,
+# T = Tv = 1833 K, isothermal wall at 1000 K. The mesh resolves the boundary
+# layer: first cell 1e-6 R = 12.75 nm.
+#
+# State order: [rho_N, rho_N2, u, v, T, Tv]
+#
+# Restarts from hornung_P1_init.CFmesh, the converged P0 solution sampled at
+# the P1 solution points by upgrade_P0_to_P1.CFcase.
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -6.0038
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.ErrorOnUnusedConfig  = false
+CFEnv.RegistSignalHandlers = false
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter \
+                         libNavierStokes libNEQ libPlatoI \
+                         libFluxReconstructionMethod libFluxReconstructionNavierStokes \
+                         libFluxReconstructionNEQ \
+                         libPetscI libNewtonMethod libAeroCoefFR libAeroCoefFRNEQ #libCGNSWriter
+
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung_cyl_FR
+Simulator.Paths.ResultsDir = plugins/NEQ/testcases/TCNEQ/Hornung_cyl_FR
+
+Simulator.SubSystems     = SubSystem
+Simulator.SubSystemTypes = StandardSubSystem
+
+###################################
+# Physical model
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
+Simulator.SubSystem.NavierStokes2DNEQ.refValues = 0.0001952 0.004956 5590. 5590. 1833. 1833.
+
+Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary    = Plato
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName  = nitrogen2_nasa
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = nitrogen2
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.transfName   = TTv
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO_Install/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol         = 1.e-10
+
+Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies      = 2
+Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs     = 3
+Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+
+###################################
+# Mesh
+
+Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
+Simulator.SubSystem.MeshCreator     = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = hornung_P1_init.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+# the order blending sweeps over neighbours, so the overlap must be at least
+# NbSweeps + 1 layers deep for the blending coefficient to be rank independent
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 3
+
+###################################
+# Initialization
+
+# the solution comes from the restart file; Null still needs one init name
+Simulator.SubSystem.FluxReconstruction.InitComds = Null
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+###################################
+# Output
+
+Simulator.SubSystem.OutputFormat = CFmesh Tecplot #CGNS
+
+Simulator.SubSystem.CFmesh.FileName   = hornung_P1.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 250
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol   = ParWriteSolution
+
+Simulator.SubSystem.Tecplot.FileName       = hornung_P1.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = RhoivtTv
+Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate       = 250
+Simulator.SubSystem.Tecplot.AppendTime     = false
+Simulator.SubSystem.Tecplot.AppendIter     = false
+
+# High-order CGNS output, one file for all ranks. To enable it, uncomment
+# libCGNSWriter in Simulator.Modules.Libs, CGNS in OutputFormat above, and the
+# block below. libCGNSWriter is only built when CGNS is found at configure time.
+#Simulator.SubSystem.CGNS.FileName   = hornung_P1.cgns
+#Simulator.SubSystem.CGNS.WriteSol   = ParCGNSHighOrderWriter
+#Simulator.SubSystem.CGNS.SaveRate   = 250
+#Simulator.SubSystem.CGNS.AppendTime = false
+#Simulator.SubSystem.CGNS.AppendIter = false
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = alpha smoothness outputPP
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = alpha smoothness IDP
+###################################
+# Stop condition: the norm is the one of the monitored variable, T
+
+Simulator.SubSystem.StopCondition = AbsoluteNormAndMaxIter
+Simulator.SubSystem.AbsoluteNormAndMaxIter.MaxIter = 10000
+Simulator.SubSystem.AbsoluteNormAndMaxIter.AbsNorm = -6.0
+
+###################################
+# Newton iterator: the update is scaled so that no solution point changes
+# rho, p or the temperatures by more than their EtaMax, and the CFL follows
+# that scaling
+
+Simulator.SubSystem.ConvergenceMethod = NewtonIterator
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_P1.plt
+Simulator.SubSystem.NewtonIterator.ShowRate = 10
+Simulator.SubSystem.NewtonIterator.ConvRate = 10
+Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 4
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
+
+# PhysicalityCFLUpdateSol owns the CFL, so ComputeCFL must be Null
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value      = 0.5
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Null
+
+Simulator.SubSystem.NewtonIterator.UpdateSol = PhysicalityCFLUpdateSol
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.EtaMax        = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.OmegaMin      = 0.01
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLGrowth     = 1.025
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLBackoff    = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLMax        = 10000.
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.MaxRejections = 10
+# the mixture density and pressure are guarded by EtaMax above; T and Tv need
+# their own bound, without it Tv once ran to 5e5 K inside the thermal layer
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.BoundedVars        = 4 5
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.BoundedVarsEtaMax  = 0.5
+# cap increases and decreases of each partial density independently
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.PartialDensityVars   = 0 1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.PartialDensityEtaMax = 0.1
+
+# floor on T and Tv: the CFL controller guards the mixture rho and p, not the
+# temperatures
+Simulator.SubSystem.NewtonIterator.Data.FilterState = Max
+Simulator.SubSystem.NewtonIterator.Data.Max.maskIDs   = 0 0 0 0 1 1
+Simulator.SubSystem.NewtonIterator.Data.Max.minValues = 0.0 0.0 0.0 0.0 100.0 100.0
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType            = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType           = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType   = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter           = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-6
+Simulator.SubSystem.NewtonIteratorLSS.Data.NbKrylovSpaces    = 50
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate       = 100
+
+###################################
+# Flux reconstruction
+
+Simulator.SubSystem.SpaceMethod = FluxReconstruction
+Simulator.SubSystem.FluxReconstruction.Builder          = StdBuilder
+Simulator.SubSystem.FluxReconstruction.SetupCom         = SetupExtra
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom     = ConvRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom     = DiffRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom  = PseudoSteadyTimeRHS
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom   = Null
+Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom   = Null
+
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar    = RhoivtTv
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar    = Roe
+Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar = RhoivtTv
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux  = LaxFriedrichsFlux
+
+Simulator.SubSystem.FluxReconstruction.Data.ComputeVolumeForEachState  = true
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution  = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution      = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor               = 0.0
+
+# compact BR2 lifting of the gradient variable traces, and the matching Jacobian
+Simulator.SubSystem.FluxReconstruction.Data.BR2Eta      = 5.0
+Simulator.SubSystem.FluxReconstruction.Data.NumJacobTol = 1e-8
+
+# chemistry and V-T relaxation, with a numerical source Jacobian
+Simulator.SubSystem.FluxReconstruction.SrcTermNames = TNEQSourceTerm
+Simulator.SubSystem.FluxReconstruction.SrcTermComds = TNEQSourceTerm
+Simulator.SubSystem.FluxReconstruction.TNEQSourceTerm.AddJacob = true
+
+# keeps every partial density and both temperatures positive
+Simulator.SubSystem.FluxReconstruction.PhysicalityCom = PositivityIDPNEQ
+
+###################################
+# Shock capturing: subcell order blending on p
+#
+# UseSubcellBlending makes the solver append the SubcellBlending suffix, so
+# ConvSolveCom above resolves to ConvRHSJacobNSSubcellBlending. Quads only.
+
+Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = false
+Simulator.SubSystem.FluxReconstruction.UseSubcellBlending          = true
+Simulator.SubSystem.FluxReconstruction.PreProcessCom               = OrderBlending
+# blend the face Riemann flux as well, weighted by max(alpha_L, alpha_R), so a
+# fully blended cell runs a pure subcell P0 scheme (the default, set explicitly)
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.FaceFluxBlending = true
+
+# p, not rho: the rho sensor reads state[0], which for RhoivtTv is the atomic
+# nitrogen partial density, so it would sense chemistry instead of compression.
+Simulator.SubSystem.FluxReconstruction.OrderBlending.ModalMonitoredExpression = p
+# the threshold is s0 = -S0*log10(order+1), so a LOWER S0 blends LESS
+Simulator.SubSystem.FluxReconstruction.OrderBlending.S0               = 4.
+Simulator.SubSystem.FluxReconstruction.OrderBlending.Kappa            = 1.5
+Simulator.SubSystem.FluxReconstruction.OrderBlending.AlphaMin         = 0.005
+Simulator.SubSystem.FluxReconstruction.OrderBlending.AlphaMax         = 1.0
+Simulator.SubSystem.FluxReconstruction.OrderBlending.NeighborWeight   = 0.5
+Simulator.SubSystem.FluxReconstruction.OrderBlending.NbSweeps         = 1
+# below 1 the blending coefficient is relaxed; at 1 it and the solution can lock
+# into an oscillation that stalls the residual
+Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.75
+
+###################################
+# Boundary conditions
+
+Simulator.SubSystem.FluxReconstruction.BcNames      = SWalls SInlet SOutlet
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = NoSlipWallrvt Dirichlet SuperOutlet
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = SWalls        SInlet    SOutlet
+
+Simulator.SubSystem.FluxReconstruction.SWalls.applyTRS  = Wall
+Simulator.SubSystem.FluxReconstruction.SInlet.applyTRS  = Inlet
+Simulator.SubSystem.FluxReconstruction.SOutlet.applyTRS = Outlet
+
+Simulator.SubSystem.FluxReconstruction.BcNamesDiff          = SWallsDiff SInletDiff SOutletDiff
+Simulator.SubSystem.FluxReconstruction.SWallsDiff.applyTRS  = Wall
+Simulator.SubSystem.FluxReconstruction.SInletDiff.applyTRS  = Inlet
+Simulator.SubSystem.FluxReconstruction.SOutletDiff.applyTRS = Outlet
+
+Simulator.SubSystem.FluxReconstruction.Data.SWalls.T = 1000.
+# isothermal from the first iteration. Counter-intuitively this is the gentle
+# option: the ghost jump is T_freestream - T_wall = 833 K now, where switching
+# later means jumping from a wall gas already at several thousand K.
+Simulator.SubSystem.FluxReconstruction.Data.SWalls.ChangeToIsoT = 0
+Simulator.SubSystem.FluxReconstruction.Data.SWalls.NonCatalytic = true
+
+Simulator.SubSystem.FluxReconstruction.Data.SInlet.Vars = x y
+Simulator.SubSystem.FluxReconstruction.Data.SInlet.Def  = 0.0001952 0.004956 -5590. 0. 1833. 1833.
+
+###################################
+# Wall heat flux and Stanton number
+#
+# heatF is dimensional [W/m2], positive into the wall, evaluated from the
+# interior state and its gradient extrapolated to the wall, not from the
+# numerical wall flux of the solver.
+
+Simulator.SubSystem.DataPostProcessing      = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessingWall
+Simulator.SubSystem.DataProcessingWall.Comds       = NavierStokesSkinFrictionHeatFRNEQ
+Simulator.SubSystem.DataProcessingWall.Names       = WallQuantities
+Simulator.SubSystem.DataProcessingWall.ProcessRate = 250
+Simulator.SubSystem.DataProcessingWall.WallQuantities.applyTRS = Wall
+Simulator.SubSystem.DataProcessingWall.WallQuantities.rhoInf   = 0.0051512
+Simulator.SubSystem.DataProcessingWall.WallQuantities.TInf     = 1833.0
+Simulator.SubSystem.DataProcessingWall.WallQuantities.uInf     = 5590.0
+Simulator.SubSystem.DataProcessingWall.WallQuantities.pInf     = 2908.6552447846216
+Simulator.SubSystem.DataProcessingWall.WallQuantities.UID      = 2
+Simulator.SubSystem.DataProcessingWall.WallQuantities.VID      = 3
+Simulator.SubSystem.DataProcessingWall.WallQuantities.TID      = 4
+# StantonNumberID 1 divides by rhoInf*uInf*(TotalEnthalpyInf - hWall), so the
+# chemical formation and internal mode enthalpies are included
+Simulator.SubSystem.DataProcessingWall.WallQuantities.StantonNumberID  = 1
+Simulator.SubSystem.DataProcessingWall.WallQuantities.TotalEnthalpyInf = 18711641.15894457
+Simulator.SubSystem.DataProcessingWall.WallQuantities.AppendIter       = false
+Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileWall   = wall_P1.plt
+Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileAero   = aeroCoef_P1.plt

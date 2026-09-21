@@ -1,6 +1,7 @@
 LIST( APPEND FluxReconstructionNavierStokes_files
 BCMirrorEuler2D.cxx
 BCMirrorEuler2D.hh
+NSBoundaryState.hh
 BCMirrorEuler3D.cxx
 BCMirrorEuler3D.hh
 BCSubInletEulerTtPtAlpha2D.cxx
@@ -56,6 +57,8 @@ LLAVDiffFluxReconstructionNS.cxx
 LLAVDiffFluxReconstructionNS.hh
 PhysicalityEuler2D.cxx
 PhysicalityEuler2D.hh
+PositivityIDPNS.cxx
+PositivityIDPNS.hh
 PhysicalityEuler3D.cxx
 PhysicalityEuler3D.hh
 Euler2DAxiSourceTerm.cxx
@@ -66,8 +69,18 @@ NSBndGradientComputer.cxx
 NSBndGradientComputer.hh
 NSJacobGradientComputer.cxx
 NSJacobGradientComputer.hh
+NSJacobGradientComputerBlending.cxx
+NSJacobGradientComputerBlending.hh
+NSGradientComputerSubcellBlending.cxx
+NSGradientComputerSubcellBlending.hh
+NSJacobGradientComputerSubcellBlending.cxx
+NSJacobGradientComputerSubcellBlending.hh
+NSJacobBndGradientComputerSubcellBlending.cxx
+NSJacobBndGradientComputerSubcellBlending.hh
 NSJacobBndGradientComputer.cxx
 NSJacobBndGradientComputer.hh
+NSJacobBndGradientComputerBlending.cxx
+NSJacobBndGradientComputerBlending.hh
 ConvDiffLLAVJacobFluxReconstructionNS.hh
 ConvDiffLLAVJacobFluxReconstructionNS.cxx
 ConvDiffCLLAVJacobFluxReconstructionNS.hh

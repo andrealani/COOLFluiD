@@ -78,6 +78,11 @@ protected: // data
 
   /// boolean telling if the wall has constant heat flux
   bool m_heatFlux;
+
+  /// use the previous ghost state instead of the reflected one: the reflected ghost keeps the
+  /// interior densities, reverses the velocities and reflects the temperatures about the wall
+  /// temperature (isothermal wall) or copies them (heat-flux wall)
+  bool m_legacyGhost;
   
   bool m_needsSpatCoord;
 

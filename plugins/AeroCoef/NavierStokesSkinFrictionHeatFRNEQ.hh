@@ -19,6 +19,7 @@ namespace COOLFluiD {
  * @see CellCenterFVM
  *
  * @author Andrea Lani
+ * @author Rayan Dhib
  *
  */
 
@@ -48,7 +49,24 @@ public:
   virtual void setup();
 
 protected:
-  
+
+  /**
+   * Computes the Stanton number of the heat flux into the wall:
+   *   StantonNumberID 0: St = q/(rho_inf u_inf^3)
+   *   StantonNumberID 1: St = q/(rho_inf u_inf (H_inf - h_w)),
+   * with H_inf = TotalEnthalpyInf and h_w the static enthalpy at the wall
+   * @param heatFlux     heat flux into the wall q
+   * @param temperature  wall temperature
+   * @param flxIdx       index of the flux point
+   */
+  CFreal computeStantonNumber(CFreal heatFlux, CFreal temperature, CFuint flxIdx);
+
+  /// Tells whether the states hold transition model variables: never for NEQ
+  bool hasTransitionLayout() const
+  {
+    return false;
+  }
+
   /**
    * Compute dimensional pressure, density and temperature
    */
@@ -58,6 +76,9 @@ protected:
   
   // temporary vibrational temperature
   RealVector _tempVib;
+
+  /// freestream total enthalpy [J/kg], with chemistry and internal modes
+  CFreal m_totalEnthalpyInf;
   
 }; // end of class NavierStokesSkinFrictionHeatFRNEQ
 

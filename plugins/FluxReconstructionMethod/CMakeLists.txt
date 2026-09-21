@@ -39,6 +39,12 @@ ConvRHSFluxReconstructionBlending.cxx
 ConvRHSFluxReconstructionBlending.hh
 ConvRHSJacobFluxReconstructionBlending.cxx
 ConvRHSJacobFluxReconstructionBlending.hh
+ConvRHSFluxReconstructionSubcellBlending.cxx
+ConvRHSFluxReconstructionSubcellBlending.hh
+ConvRHSJacobFluxReconstructionSubcellBlending.cxx
+ConvRHSJacobFluxReconstructionSubcellBlending.hh
+SubcellBlendingQuadData.cxx
+SubcellBlendingQuadData.hh
 ConvLLAVJacobFluxReconstruction.cxx
 ConvLLAVJacobFluxReconstruction.hh
 DiffRHSFluxReconstruction.cxx
@@ -59,6 +65,7 @@ ReconstructStatesFluxReconstruction.cxx
 ReconstructStatesFluxReconstruction.hh
 BCStateComputer.cxx
 BCStateComputer.hh
+BndFaceDiffData.hh
 RiemannFlux.hh
 RiemannFlux.cxx
 RoeFlux.cxx
@@ -119,10 +126,16 @@ ConvBndCorrectionsRHSFluxReconstructionBlending.cxx
 ConvBndCorrectionsRHSFluxReconstructionBlending.hh
 ConvBndCorrectionsRHSJacobFluxReconstructionBlending.cxx
 ConvBndCorrectionsRHSJacobFluxReconstructionBlending.hh
+ConvBndCorrectionsRHSFluxReconstructionSubcellBlending.cxx
+ConvBndCorrectionsRHSFluxReconstructionSubcellBlending.hh
+ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending.cxx
+ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending.hh
 ConvDiffLLAVJacobFluxReconstruction.cxx
 ConvDiffLLAVJacobFluxReconstruction.hh
 ConvDiffCLLAVJacobFluxReconstruction.cxx
 ConvDiffCLLAVJacobFluxReconstruction.hh
+CombinedJacobFluxReconstruction.cxx
+CombinedJacobFluxReconstruction.hh
 ConvDiffJacobFluxReconstruction.cxx
 ConvDiffJacobFluxReconstruction.hh
 ConvDiffLLAVFluxReconstruction.cxx
@@ -464,6 +477,7 @@ KernelData.hh
 BDF2TimeRHSJacob.hh
 BDF2TimeRHSJacob.cxx
 CellData.hh
+GradientVariables.hh
 ComputeStencil.hh
 ComputeStencil.cxx
 FluxData.hh

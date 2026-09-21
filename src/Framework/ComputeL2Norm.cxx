@@ -14,6 +14,7 @@
 #include "Framework/DataHandle.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/Framework.hh"
+#include <cmath>
 #include "Framework/ComputeL2Norm.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -44,7 +45,8 @@ ComputeNorm(name),
 m_gr(*this),
 sockets_norm(),
 socket_states("states"),
-m_vecnorm_name()
+m_vecnorm_name(),
+m_nbNonFiniteReported(0)
 {
   addConfigOptionsTo(this);
   m_vecnorm_name = "rhs";
@@ -112,6 +114,23 @@ CFreal ComputeL2Norm::GR_GetLocalValue () const
       }
       
       const CFreal tmp = vecnorm(i, iVar, nbEqs);
+
+      // A non finite residual otherwise disappears into the norm and comes back
+      // out as the -CFrealMax sentinel below, which reads like convergence and
+      // even satisfies an absolute norm stop condition. Say where it came from.
+      if (!std::isfinite(tmp))
+      {
+        if (m_nbNonFiniteReported < 5)
+        {
+          CFLog(WARN, "ComputeL2Norm: NON FINITE RESIDUAL " << tmp
+                << " in equation " << iVar
+                << ", state " << i
+                << " at " << states[i]->getCoordinates()
+                << ", state = " << *states[i] << "\n");
+          ++m_nbNonFiniteReported;
+        }
+      }
+
       value += tmp*tmp; 
     }
   } 
@@ -135,6 +154,10 @@ RealVector ComputeL2Norm::compute ()
     }
     else
     {
+      CFLog(WARN, "ComputeL2Norm: invalid norm for equation " << m_var_itr
+            << ", globalValue = " << globalValue
+            << (std::isnan(globalValue) ? " (NaN)" : (globalValue == 0. ? " (exactly zero)" : " (negative)"))
+            << "\n");
       m_residuals[m_var_itr] = -MathTools::MathConsts::CFrealMax();
     }
   }

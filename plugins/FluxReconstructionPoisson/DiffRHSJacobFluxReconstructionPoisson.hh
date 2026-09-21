@@ -32,6 +32,7 @@ namespace COOLFluiD {
  * time marching for Poisson with numerical Jacobian
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class DiffRHSJacobFluxReconstructionPoisson : public DiffRHSJacobFluxReconstruction {
 
@@ -53,9 +54,6 @@ public: // functions
   /// @return a vector of SafePtr with the DataSockets
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
-  
-  /// Execute processing actions
-  virtual void execute();
 
 protected: //functions
 
@@ -66,33 +64,27 @@ protected: //functions
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
-  /**
-   * compute the terms for the gradient computation for a bnd face
-   */
-  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
-  
-  /**
-   * compute the term for the gradient computation for the cell
-   */
-  virtual void computeCellGradTerm(RealMatrix& gradTerm);
-  
-  /**
-   * compute the terms for the gradient computation for a face
-   */
-  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
-  
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
   /**
-   * compute the unperturbed cell diffusive residuals
-   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
-   * @pre setCellsData()
+   * Compute the unperturbed diffusive residual of the cell on one side of the
+   * current face with the base command, then store the magnetic field of that
+   * cell in the B sockets.
+   * @param side side of the cell, LEFT or RIGHT
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
+
+  /**
+   * Store the magnetic field B = grad(phi) at the solution points of the cell on
+   * one side of the current face, with phi the potential and grad(phi) its
+   * corrected gradient, in the sockets Bx, By, Bz and, with (x,y,z) the
+   * coordinates of the solution point, r = sqrt(x^2+y^2+z^2) and
+   * rXY = sqrt(x^2+y^2), in the sockets Br = (x*Bx + y*By + z*Bz)/r,
+   * Btheta = -y*Bx + x*By and Bphi = (z*x*Bx + z*y*By)/rXY - rXY*Bz.
+   * @param side side of the cell, LEFT or RIGHT
+   */
+  void computeMagneticField(const CFuint side);
   
 protected: // data
     
@@ -110,9 +102,6 @@ protected: // data
   
   /// element states of the right neighbor in the correct format
   std::vector< RealVector* > m_tempStatesR;
-  
-  /// damping coefficient
-  CFreal m_dampCoeff;
   
   /// storage for Bx
   Framework::DataSocketSource<CFreal> socket_Bx;

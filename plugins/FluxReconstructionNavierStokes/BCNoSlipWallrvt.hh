@@ -30,8 +30,15 @@ namespace COOLFluiD {
 /**
  * This class represents a no-slip wall boundary condition for the 2D Euler/Navier-Stokes equations with rvt variables
  *
+ * Ghost state, with u_i the interior state at the wall flux point (the trace of the cell polynomial):
+ * velocity reversed, each temperature reflected about the wall temperature on an isothermal wall
+ * (T_g = 2 T_wall - T_i, at least 0.01 T_wall) or copied before ChangeToIsoT, species densities copied
+ * (partial pressures scaled by T_g / T_i when the state carries them), the electron entry and Te copied.
+ * LegacyGhost = true restores the previous ghost (wall temperature, densities scaled by T_i / T_g).
+ *
  * @author Ray Vandenhoeck
  * @author Firas Ben Ameur
+ * @author Rayan Dhib
  */
 class BCNoSlipWallrvt : public BCStateComputer {
 
@@ -74,6 +81,41 @@ public:  // methods
                              const std::vector< RealVector >& normals,
                              const std::vector< RealVector >& coords);
 
+  /**
+   * Sets the boundary values of the gradient variables: zero velocity, the wall
+   * temperatures that the wall sets and, for the species and the adiabatic
+   * temperatures, the gradient variables extrapolated to the flux points.
+   */
+  void computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                          const std::vector< Framework::State* >& intStates,
+                          const std::vector< Framework::State* >& ghostStates,
+                          const std::vector< RealVector >& unitNormals,
+                          const std::vector< RealVector >& flxPntCoords,
+                          std::vector< RealVector* >& bndGradVars);
+
+  /**
+   * Sets the boundary states: the wall temperatures that the wall sets, the
+   * partial densities they give from the interior partial pressures, and the
+   * average of the interior and ghost states for the velocity and the adiabatic
+   * temperatures.
+   */
+  void computeBndStates(const std::vector< Framework::State* >& intStates,
+                        const std::vector< Framework::State* >& ghostStates,
+                        const std::vector< RealVector >& unitNormals,
+                        const std::vector< RealVector >& flxPntCoords,
+                        std::vector< RealVector* >& bndStates);
+
+  /**
+   * Sets the boundary gradients: the compact face gradients, without the normal
+   * components of T and Tv before ChangeToIsoT and without the normal components
+   * of the mass fractions when NonCatalytic is true.
+   */
+  void computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                       std::vector< std::vector< RealVector* > >& bndGrads,
+                       const std::vector< RealVector* >& bndStates,
+                       const std::vector< RealVector >& unitNormals,
+                       const std::vector< RealVector >& flxPntCoords);
+
 protected: // data
 
   /// physical model (in conservative variables)
@@ -96,6 +138,9 @@ protected: // data
   
   /// number of species
   CFuint m_nbSpecies;
+
+  /// how many non finite ghost states have already been reported
+  CFuint m_nbBadGhostReported;
   
   /// number of vibrational temperatures
   CFuint m_nbTv;
@@ -120,6 +165,12 @@ protected: // data
 
   /// iteration after which is changed to an isothermal wall BC
   CFuint m_changeToIsoT;
+
+  /// use the previous ghost state instead of the reflected one
+  bool m_legacyGhost;
+
+  /// no species diffusion flux through the wall
+  bool m_nonCatalytic;
 
 }; // class BCNoSlipWallrvt
 

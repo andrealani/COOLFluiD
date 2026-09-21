@@ -1,46 +1,43 @@
+// Copyright (C) 2019 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #include "Framework/MethodCommandProvider.hh"
 
-#include "Framework/MeshData.hh"
-#include "Framework/BaseTerm.hh"
-
-#include "MathTools/MathFunctions.hh"
-
 #include "FluxReconstructionTurb/DiffBndCorrectionsRHSFluxReconstructionTurb.hh"
+#include "FluxReconstructionTurb/TurbWallDistance.hh"
 #include "FluxReconstructionNavierStokes/FluxReconstructionNavierStokes.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
-#include "NavierStokes/NavierStokesVarSet.hh"
-
-#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
-
 
 //////////////////////////////////////////////////////////////////////////////
 
 using namespace std;
-using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Common;
+using namespace COOLFluiD::Framework;
 using namespace COOLFluiD::Physics::NavierStokes;
-using namespace COOLFluiD::MathTools;
-using namespace COOLFluiD::Physics::KOmega;
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
 
-    namespace FluxReconstructionMethod {
+  namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
 
-MethodCommandProvider< DiffBndCorrectionsRHSFluxReconstructionTurb, 
-		       FluxReconstructionSolverData, 
+MethodCommandProvider< DiffBndCorrectionsRHSFluxReconstructionTurb,
+		       FluxReconstructionSolverData,
 		       FluxReconstructionNavierStokesModule >
-DiffBndCorrectionsRHSTurbFluxReconstructionProvider("DiffBndCorrectionsRHSTurb");
+diffBndCorrectionsRHSTurbFluxReconstructionProvider("DiffBndCorrectionsRHSTurb");
 
 //////////////////////////////////////////////////////////////////////////////
 
 DiffBndCorrectionsRHSFluxReconstructionTurb::DiffBndCorrectionsRHSFluxReconstructionTurb(const std::string& name) :
   DiffBndCorrectionsRHSFluxReconstructionNS(name),
   socket_wallDistance("wallDistance"),
-  m_closestSolToFlxIdx(CFNULL)
+  m_closestSolToFlxIdx(CFNULL),
+  m_navierStokesVarSet(CFNULL)
 {
 }
 
@@ -54,33 +51,32 @@ DiffBndCorrectionsRHSFluxReconstructionTurb::~DiffBndCorrectionsRHSFluxReconstru
 
 void DiffBndCorrectionsRHSFluxReconstructionTurb::setup()
 {
+  CFAUTOTRACE;
+
+  // setup parent class
   DiffBndCorrectionsRHSFluxReconstructionNS::setup();
-  
+
   // get the local FR data
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   cf_assert(frLocalData.size() > 0);
   // for now, there should be only one type of element
   cf_assert(frLocalData.size() == 1);
-  
-  // get closest sol indices
+
   m_closestSolToFlxIdx = frLocalData[0]->getClosestSolToFlxIdx();
-  
-  if (m_dim == 2)
-  {
-    m_navierStokesVarSetTurb = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
-  }
-  else
-  {  
-    m_navierStokesVarSetTurb3D = m_diffusiveVarSet.d_castTo< NavierStokes3DKLogOmega >();
-  }
+
+  m_navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokesVarSet >();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void DiffBndCorrectionsRHSFluxReconstructionTurb::unsetup()
 {
+  CFAUTOTRACE;
+
+  // unsetup parent class
   DiffBndCorrectionsRHSFluxReconstructionNS::unsetup();
 }
+
 //////////////////////////////////////////////////////////////////////////////
 
 std::vector< Common::SafePtr< BaseDataSocketSink > >
@@ -93,52 +89,17 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
   return result;
 }
 
-
 //////////////////////////////////////////////////////////////////////////////
 
-void DiffBndCorrectionsRHSFluxReconstructionTurb::computeInterfaceFlxCorrection()
-{ 
-  // Get the wall distance
+void DiffBndCorrectionsRHSFluxReconstructionTurb::prepareFlxPntFluxComputation(const CFuint iFlx)
+{
   DataHandle< CFreal > wallDist = socket_wallDistance.getDataHandle();
-  
-  //SafePtr< NavierStokes2DKLogOmega > navierStokesVarSet = m_diffusiveVarSet.d_castTo< NavierStokes2DKLogOmega >();
-  
-  // compute the riemann flux in the flx pnts
-  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
-  {
-    // local flux point indices in the left and right cell
-    const CFuint flxPntIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
-    
-    const CFuint closestSolIdx = (*m_closestSolToFlxIdx)[flxPntIdx];
-    
-    const CFuint stateID = (*m_cellStates)[closestSolIdx]->getLocalID();
-    
-    // Set the wall distance before computing the turbulent viscosity
-    if (m_dim == 2)
-    {
-      m_navierStokesVarSetTurb->setWallDistance(wallDist[stateID]);
-    }
-    else
-    {
-      m_navierStokesVarSetTurb3D->setWallDistance(wallDist[stateID]); 
-    }
-      
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    {
-      *(m_avgGrad[iVar]) = (*(m_flxPntGhostGrads[iFlxPnt][iVar]) + *(m_cellGradFlxPnt[iFlxPnt][iVar]))/2.0;
 
-      m_avgSol[iVar] = ((*(m_flxPntGhostSol[iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[iFlxPnt]))[iVar])/2.0; 
-    }
-    // prepare the flux computation
-    prepareFluxComputation();
+  // the interior cell, at its solution point closest to the flux point
+  m_navierStokesVarSet->setWallDistance(wallDistanceAtFlxPnt(wallDist,*m_cellStates,*m_closestSolToFlxIdx,
+                                                             (*m_faceFlxPntConn)[m_orient][iFlx]));
 
-    // compute FI
-    //m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
-    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
-  
-    // compute FI in the local frame
-    m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
-  }
+  prepareFluxComputation();
 }
 
 //////////////////////////////////////////////////////////////////////////////

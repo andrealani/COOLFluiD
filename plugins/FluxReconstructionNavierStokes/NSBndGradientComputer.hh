@@ -10,7 +10,6 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstruction.hh"
-#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -20,11 +19,12 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Daughterclass of ConvBndCorrectionsRHSFluxReconstruction, needed to 
- * calculate the bnd gradients for NS
+ * Convective boundary command for NS with a diffusive term. The boundary
+ * liftings of the gradients are computed by the base command.
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class NSBndGradientComputer : public ConvBndCorrectionsRHSFluxReconstruction {
 
@@ -35,38 +35,25 @@ public: // functions
 
   /// Destructor
   virtual ~NSBndGradientComputer() {}
-  
+
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
   virtual void setup();
 
-protected: //functions
-  
-  /**
-   * Compute the correction part of the corrected gradient for the bnd face
-   */
-  virtual void computeGradientBndFaceCorrections();
-  
 protected: //data
   
-  /// diffusive variable set
-  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
-  
-  /// Vector transformer from update to solution variables
-  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T)
+  /// scratch for derived commands: gradient variables at the flux points
   RealMatrix m_tempGradTerm;
   
-  /// matrix to store the ghost state terms needed for the gradients (p, u, v, T)
+  /// scratch for derived commands: gradient variables of the ghost states
   RealMatrix m_tempGradTermGhost;
   
-  /// element states within an element in the correct format
+  /// scratch for derived commands: flux point state data
   std::vector< RealVector* > m_tempStates;
   
-  /// element ghost states in the correct format
+  /// scratch for derived commands: ghost state data
   std::vector< RealVector* > m_tempStatesGhost;
     
 }; // class Solve
@@ -79,4 +66,3 @@ protected: //data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_FluxReconstructionMethod_NSBndGradientComputer_hh
-

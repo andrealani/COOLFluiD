@@ -197,6 +197,72 @@ void BCNeumannFromFile::computeGhostGradients(const std::vector< std::vector< Re
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCNeumannFromFile::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                           const std::vector< Framework::State* >& intStates,
+                                           const std::vector< Framework::State* >& ghostStates,
+                                           const std::vector< RealVector >& unitNormals,
+                                           const std::vector< RealVector >& flxPntCoords,
+                                           std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // g_b = a
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndGradVars[iState] = *gradVarsFlxPnt[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNeumannFromFile::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                         const std::vector< Framework::State* >& ghostStates,
+                                         const std::vector< RealVector >& unitNormals,
+                                         const std::vector< RealVector >& flxPntCoords,
+                                         std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b = U
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = *intStates[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNeumannFromFile::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                        std::vector< std::vector< RealVector* > >& bndGrads,
+                                        const std::vector< RealVector* >& bndStates,
+                                        const std::vector< RealVector >& unitNormals,
+                                        const std::vector< RealVector >& flxPntCoords)
+{
+  copyGradients(intGrads,bndGrads);
+
+  // local ID of the face in the TRS, from its global ID
+  const CFuint faceLocalID = m_globalToLocalTRSFaceID.find(m_face->getID());
+
+  const CFuint nbrFlxPnts = intGrads.size();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    // normal gradient read from the file
+    const CFreal bndNormalGrad = (m_addMinus ? -1. : 1.)*m_flxPntTws[faceLocalID*nbrFlxPnts+iFlx];
+
+    const CFuint nbrGradVars = intGrads[iFlx].size();
+
+    // q_b = q - (q.n) n + beta n
+    for (CFuint iVar = 0; iVar < nbrGradVars; ++iVar)
+    {
+      removeNormalComponent(*bndGrads[iFlx][iVar],unitNormals[iFlx]);
+      *bndGrads[iFlx][iVar] += bndNormalGrad*unitNormals[iFlx];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCNeumannFromFile::setup()
 {
   CFAUTOTRACE;

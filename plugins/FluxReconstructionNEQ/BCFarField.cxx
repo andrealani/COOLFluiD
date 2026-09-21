@@ -199,6 +199,11 @@ void BCFarField::computeGhostGradients(const std::vector< std::vector< RealVecto
 
 void BCFarField::setup()
 {
+  if (getMethodData().getDiffusiveVarStr() != "Null")
+  {
+    throw Common::BadValueException(FromHere(),"BCFarField has no diffusive boundary rules; use an explicit inlet or outlet boundary condition with a diffusive term.");
+  }
+
   BCStateComputer::setup();
 
   // no flux point coordinates required
@@ -547,4 +552,3 @@ void BCFarField::unsetup()
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
-

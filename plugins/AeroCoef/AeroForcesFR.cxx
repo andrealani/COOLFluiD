@@ -11,6 +11,7 @@
 #include "AeroCoef/AeroForcesFR.hh"
 #include "NavierStokes/EulerVarSet.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolver.hh"
+#include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -315,7 +316,16 @@ void AeroForcesFR::setup()
   // compute flux point coordinates
   m_flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
   m_nbrFaceFlxPnts = m_flxLocalCoords->size();
-  
+
+  // maximum number of flux points of a face (prism: triangular and quadrilateral faces)
+  const std::vector< std::vector< CFuint > >& faceFlxPntConn = *frLocalData[0]->getFaceFlxPntConn();
+  for (CFuint iFace = 0; iFace < faceFlxPntConn.size(); ++iFace)
+  {
+    m_nbrFaceFlxPnts = std::max(m_nbrFaceFlxPnts,static_cast< CFuint >(faceFlxPntConn[iFace].size()));
+  }
+
+  m_nbrFaceFlxPntsMax = m_nbrFaceFlxPnts;
+
   // number of sol points
   m_nbrSolPnts = frLocalData[0]->getNbrOfSolPnts();
    
@@ -356,6 +366,13 @@ void AeroForcesFR::setup()
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     m_cellStatesFlxPnt[iFlx]->setLocalID(iFlx);
+  }
+
+  // friction force coefficients at the flux points
+  m_frictionForcesFlxPnts.resize(m_nbrFaceFlxPntsMax);
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPntsMax; ++iFlx)
+  {
+    m_frictionForcesFlxPnts[iFlx].resize(m_dim);
   }
 }
 
@@ -655,8 +672,44 @@ void AeroForcesFR::executeOnTrs()
 
 //////////////////////////////////////////////////////////////////////////////
 
+CFuint AeroForcesFR::getNbrFaceFlxPnts(const CFuint faceID)
+{
+  return socket_faceJacobVecSizeFaceFlxPnts.getDataHandle()[faceID].size();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void AeroForcesFR::computeWallStatesGrads()
 {
+  // with a diffusive term: boundary states and gradients of the diffusive boundary command
+  if (m_frData->getDiffusiveVarStr() != "Null")
+  {
+    SafePtr< FluxReconstructionSolver > frSolver = getMethodData().getCollaborator< SpaceMethod >().d_castTo< FluxReconstructionSolver >();
+    frSolver->getDiffBndCommand(getCurrentTRS()->getName())->computeBndFaceDiffData(m_currFace,m_orient,m_bndFaceDiffData);
+
+    m_nbrFaceFlxPnts = m_bndFaceDiffData.bndStates.size();
+
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    {
+      m_frictionForcesFlxPnts[iFlx] = 0.;
+    }
+
+    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    {
+      *m_cellStatesFlxPnt[iFlx] = m_bndFaceDiffData.bndStates[iFlx];
+      m_unitNormalFlxPnts[iFlx] = m_bndFaceDiffData.unitNormals[iFlx];
+      m_faceJacobVecAbsSizeFlxPnts[iFlx] = m_bndFaceDiffData.faceJacobVecAbsSizes[iFlx];
+      m_faceJacobVecSizeFlxPnts[iFlx] = m_bndFaceDiffData.faceJacobVecAbsSizes[iFlx]*(*m_faceMappedCoordDir)[m_orient];
+
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        *m_cellGradFlxPnt[iFlx][iEq] = m_bndFaceDiffData.bndGrads[iFlx][iEq];
+      }
+    }
+
+    return;
+  }
+
   CFAUTOTRACE;
   
   // get the gradients datahandle
@@ -807,11 +860,17 @@ void AeroForcesFR::computeAero()
     //   m_v12 = m_currFace->getState(1)->getCoordinates() - m_currFace->getState(0)->getCoordinates();
     //   const CFreal distanceToForce = m_vCross0102.norm2()/m_v12.norm2();
 
-    // pressure is pointing inward with respect to the body, so it is opposite
-    // with respect to the normal (pointing inside the domain)
-
-    // \Delta\vec{F} = (-p \delta_{ij} \cdot \vec{n} + \sigma_{ij} \cdot \vec{n}) \Delta S
-    m_xyzForce  = (-m_Cp/m_refArea)*m_unitNormalFlxPnts[iFlx] + m_frictionForces;
+    if (!m_bndFaceDiffData.diffFluxes.empty())
+    {
+      // force on the body, n out of the fluid: dF = (Cp n/refArea + Cf) w |J|
+      m_xyzForce = (m_Cp/m_refArea)*m_unitNormalFlxPnts[iFlx] + m_frictionForcesFlxPnts[iFlx];
+      m_xyzForce *= m_bndFaceDiffData.faceIntegrationCoefs[iFlx]*m_bndFaceDiffData.faceJacobVecAbsSizes[iFlx];
+    }
+    else
+    {
+      // force on the body, n into the fluid: dF = -Cp n/refArea + Cf
+      m_xyzForce = (-m_Cp/m_refArea)*m_unitNormalFlxPnts[iFlx] + m_frictionForces;
+    }
     m_aeroForce = m_rotMat*m_xyzForce; // [D C L]^T = {rotation matrix} * [X Y Z]^T
 
     // vector between center of gravity and centre of the face where the force is applied
@@ -843,7 +902,7 @@ void AeroForcesFR::computeAero()
 
 void AeroForcesFR::unsetup()
 {
-  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  for (CFuint iFlx = 0; iFlx < m_cellStatesFlxPnt.size(); ++iFlx)
   {
     deletePtr(m_cellStatesFlxPnt[iFlx]);
     for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
@@ -903,7 +962,7 @@ void AeroForcesFR::prepareOutputFileAero()
     fout << "TITLE = Aerodynamics Coefficients" << "\n";
     
     if (PhysicalModelStack::getActive()->getDim() == DIM_2D) {
-      fout << "VARIABLES = Iter PhysTime Alpha Beta CD CC Cx Cy CL CM" << "\n";
+      fout << "VARIABLES = Iter PhysTime Alpha Beta CD CC CL Cx Cy CM" << "\n";
     }
     else {
       fout << "VARIABLES = Iter PhysTime Alpha Beta CD CC CL Cx Cy Cz CMx CMy CMz" << "\n";
@@ -966,7 +1025,7 @@ void AeroForcesFR::updateOutputFileAero()
       Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive(); 
       
       //Writing the integrated output values
-      fout << SubSystemStatusStack::getActive()->getNbIter() << " "
+      fout << std::setprecision(17) << SubSystemStatusStack::getActive()->getNbIter() << " "
 	   << SubSystemStatusStack::getActive()->getCurrentTimeDim() << " "
 	   << m_alphadeg << " "
 	   << m_betadeg  << " "
@@ -995,9 +1054,9 @@ void AeroForcesFR::computeSurfaceResiduals()
   
   for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) 
   {
-    for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+    for (CFuint iFlx = 0; iFlx < getNbrFaceFlxPnts(currTrs->getLocalGeoID(iFace)); ++iFlx)
     {
-      const CFuint index = m_mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace)*m_nbrFaceFlxPnts+iFlx);
+      const CFuint index = m_mapTrsFaceToID.find(currTrs->getLocalGeoID(iFace)*m_nbrFaceFlxPntsMax+iFlx);
       for (CFuint varID = 0; varID < m_valuesMatL2.size(); ++varID) 
       {
         m_valuesMatL2[varID] += m_valuesMatRes(varID, index)*m_valuesMatRes(varID, index);
@@ -1096,11 +1155,13 @@ void AeroForcesFR::initSurfaceResiduals()
     
     if (totalNbFaces > 0) 
     {
-      const CFuint totalNbFlxPnts = totalNbFaces*m_nbrFaceFlxPnts;
+      const CFuint totalNbFlxPnts = totalNbFaces*m_nbrFaceFlxPntsMax;
 
       m_mapTrsFaceToID.reserve(totalNbFlxPnts);
       m_valuesMat.resize(nbVariables, totalNbFlxPnts);
       m_valuesMatRes.resize(nbVariables, totalNbFlxPnts);
+      m_valuesMat = 0.;
+      m_valuesMatRes = 0.;
       
       CFuint index = 0;  
       for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS) 
@@ -1109,10 +1170,10 @@ void AeroForcesFR::initSurfaceResiduals()
 	const CFuint nbTrsFaces = trs->getLocalNbGeoEnts();
 	for (CFuint iFace = 0; iFace < nbTrsFaces; ++iFace) 
 	{
-	  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+	  for (CFuint iFlx = 0; iFlx < getNbrFaceFlxPnts(trs->getLocalGeoID(iFace)); ++iFlx)
 	  {
 	    // CFLog(INFO, "faceID = " << trs->getLocalGeoID(iFace) << ", index = " << index << "\n");
-	    const CFuint flxPntIdx = (trs->getLocalGeoID(iFace))*m_nbrFaceFlxPnts+iFlx;
+	    const CFuint flxPntIdx = (trs->getLocalGeoID(iFace))*m_nbrFaceFlxPntsMax+iFlx;
 
 	    m_mapTrsFaceToID.insert(flxPntIdx, index++);
 	  }

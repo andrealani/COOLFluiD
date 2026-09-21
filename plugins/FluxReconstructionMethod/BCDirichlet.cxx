@@ -1,5 +1,6 @@
 #include "Framework/MethodStrategyProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
+#include "Framework/DiffusiveVarSet.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCDirichlet.hh"
@@ -128,6 +129,90 @@ void BCDirichlet::computeGhostGradients(const std::vector< std::vector< RealVect
     {
       *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar];
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCDirichlet::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                     const std::vector< Framework::State* >& intStates,
+                                     const std::vector< Framework::State* >& ghostStates,
+                                     const std::vector< RealVector >& unitNormals,
+                                     const std::vector< RealVector >& flxPntCoords,
+                                     std::vector< RealVector* >& bndGradVars)
+{
+  // Current time
+  Common::SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  CFreal time = subSysStatus->getCurrentTimeDim();
+
+  const CFuint nbrStates = intStates.size();
+  cf_assert(nbrStates <= bndGradVars.size());
+
+  if (nbrStates == 0)
+  {
+    return;
+  }
+
+  const CFuint nbrEqs = gradVarsFlxPnt[0]->size();
+
+  if (m_prescStates.size() < nbrStates)
+  {
+    m_prescStates.resize(nbrStates);
+    m_prescStatePtrs.resize(nbrStates);
+    for (CFuint iState = 0; iState < nbrStates; ++iState)
+    {
+      m_prescStates[iState].resize(nbrEqs);
+      m_prescStatePtrs[iState] = &m_prescStates[iState];
+    }
+  }
+  if (m_prescGradVars.nbRows() != nbrEqs || m_prescGradVars.nbCols() < nbrStates)
+  {
+    m_prescGradVars.resize(nbrEqs,nbrStates);
+  }
+
+  // prescribed states at the flux points
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    for (CFuint iDim = 0; iDim < flxPntCoords[iState].size(); ++iDim)
+    {
+      m_spaceTime[iDim] = flxPntCoords[iState][iDim];
+    }
+    m_spaceTime[flxPntCoords[iState].size()] = time;
+    m_vFunction.evaluate(m_spaceTime, *m_inputState);
+
+    // transform to update variables
+    m_dimState = m_inputToUpdateVar->transform(m_inputState);
+
+    // adimensionalize the variables if needed and store
+    m_varSet->setAdimensionalValues(*m_dimState,m_prescStates[iState]);
+  }
+
+  // g_b = g(U_prescribed)
+  getMethodData().getDiffusiveVar()->setGradientVars(m_prescStatePtrs,m_prescGradVars,nbrStates);
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    for (CFuint iEq = 0; iEq < nbrEqs; ++iEq)
+    {
+      (*bndGradVars[iState])[iEq] = m_prescGradVars(iEq,iState);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCDirichlet::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                   const std::vector< Framework::State* >& ghostStates,
+                                   const std::vector< RealVector >& unitNormals,
+                                   const std::vector< RealVector >& flxPntCoords,
+                                   std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b = 0.5*(U + U_ghost), with U_ghost = 2*U_prescribed - U
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = 0.5*(*intStates[iState] + *ghostStates[iState]);
   }
 }
 

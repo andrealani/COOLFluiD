@@ -20,10 +20,12 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Daughterclass of ConvRHSJacobFluxReconstruction, needed to calculate the 
- * gradients for implicit schemes for Poisson
+ * Convective command for implicit schemes for Poisson. The Poisson equation has
+ * no convective flux, so this command only computes the gradients of the
+ * gradient variables with the functions of the base command.
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class PoissonJacobGradientComputer : public ConvRHSJacobFluxReconstruction {
 
@@ -36,51 +38,12 @@ public: // functions
   virtual ~PoissonJacobGradientComputer() {}
   
   /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
+   * Compute the gradients: the face corrections for every interior face and the
+   * volume term for every cell. No interface flux, residual, wave speed or
+   * Jacobian contribution is computed, since the Poisson equation has no
+   * convective flux.
    */
-  virtual void setup();
-  
-  /// Execute processing actions
   virtual void execute();
-
-protected: //functions
-  
-  /**
-   * Compute the discontinuous contribution to the corrected gradients
-   */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the correction part of the corrected gradient
-   */
-  virtual void computeGradientFaceCorrections();
-  
-protected: //data
-  
-  /// diffusive variable set
-  Common::SafePtr<Physics::Poisson::PoissonDiffVarSet> m_diffVarSetPoisson;
-  
-  /// Vector transformer from update to solution variables
-  Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) inside element
-  RealMatrix m_tempGradTerm;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
-  RealMatrix m_tempGradTermL;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
-  RealMatrix m_tempGradTermR;
-  
-  /// element states within an element in the correct format
-  std::vector< RealVector* > m_tempStates;
-  
-  /// element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL;
-  
-  /// element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR;
     
 }; // class Solve
 

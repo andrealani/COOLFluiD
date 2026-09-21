@@ -145,6 +145,21 @@ public:
     value = _originalValue;
   }
 
+  /// Set the relative size of the finite difference step that builds the
+  /// assembled Jacobian. The step itself is tol*max(|value|,refValue), so on a
+  /// variable whose local value is far below its reference, such as the velocity
+  /// at a no slip wall, tol alone controls how large the perturbation really is.
+  void setTolerance(const CFreal tol)
+  {
+    _tol = tol;
+  }
+
+  /// Current relative step size
+  CFreal getTolerance() const
+  {
+    return _tol;
+  }
+
   /// Set the reference values
   void setRefValues(RealVector& refValues)
   {

@@ -16,7 +16,12 @@ IF ( NOT CF_SKIP_PLATO )
   ADD_TRIAL_INCLUDE_PATH( ${PLATO_HOME}/include/PLATO )
   ADD_TRIAL_INCLUDE_PATH( $ENV{PLATO_HOME}/include/PLATO )
 
-  FIND_PATH(PLATO_INCLUDE_DIR plato_constants_C.h ${TRIAL_INCLUDE_PATHS} NO_DEFAULT_PATH)
+  # support both the legacy and the current PLATO header naming
+  FIND_PATH(PLATO_INCLUDE_DIR
+    NAMES plato_C_constants.h plato_constants_C.h
+    PATHS ${TRIAL_INCLUDE_PATHS}
+    NO_DEFAULT_PATH
+  )
 
   ADD_TRIAL_LIBRARY_PATH( ${PLATO_LIBRARYDIR} )
   ADD_TRIAL_LIBRARY_PATH( ${PLATO_HOME}/lib ${PLATO_HOME}/lib64 )

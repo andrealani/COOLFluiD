@@ -1,27 +1,33 @@
+// Copyright (C) 2019 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #ifndef COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSJacobFluxReconstructionTurb_hh
 #define COOLFluiD_FluxReconstructionMethod_DiffBndCorrectionsRHSJacobFluxReconstructionTurb_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
 #include "FluxReconstructionNavierStokes/DiffBndCorrectionsRHSJacobFluxReconstructionNS.hh"
-
-#include "KOmega/NavierStokesKLogOmegaVarSetTypes.hh"
-
+#include "NavierStokes/NavierStokesVarSet.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-
-    namespace FluxReconstructionMethod {
+  namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * This class represents a command that computes contribution of the boundary faces for the
-   * Flux Reconstruction schemes for diffusive terms to the RHS for implicit schemes for Turb
+   * This class represents a command that computes the contribution of the
+   * boundary faces of the diffusive terms to the RHS and Jacobian for a
+   * turbulence model: DiffBndCorrectionsRHSJacobFluxReconstructionNS with the
+   * wall distance set on the turbulent diffusive variable set before every
+   * boundary flux evaluation (rules in TurbWallDistance.hh).
    *
    * @author Ray Vandenhoeck
-   *
+   * @author Rayan Dhib
    */
 class DiffBndCorrectionsRHSJacobFluxReconstructionTurb : public DiffBndCorrectionsRHSJacobFluxReconstructionNS {
 
@@ -36,51 +42,52 @@ public:
    * Default destructor
    */
   virtual ~DiffBndCorrectionsRHSJacobFluxReconstructionTurb();
-  
+
   /**
    * Set up private data and data of the aggregated classes
    * in this command before processing phase
    */
   virtual void setup();
-  
+
   /**
    * unset up private data and data of the aggregated classes
    * in this command before processing phase
    */
   virtual void unsetup();
-  
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
+
   /**
    * Returns the DataSocket's that this command needs as sinks
    * @return a vector of SafePtr with the DataSockets
    */
-  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
       needsSockets();
 
 protected: // functions
 
-  
-protected: // data
-    
-    /// handle to the wall distance
-  Framework::DataSocketSink<CFreal> socket_wallDistance;
-  
-  /// idx of closest sol to each flx
-  Common::SafePtr< std::vector< CFuint > > m_closestSolToFlxIdx;
-  
-  Common::SafePtr< Physics::KOmega::NavierStokes2DKLogOmega > m_navierStokesVarSetTurb;
-  
-  Common::SafePtr< Physics::KOmega::NavierStokes3DKLogOmega > m_navierStokesVarSetTurb3D;
+  /**
+   * Sets the wall distance of a flux point of the current boundary face on the
+   * turbulent diffusive variable set (the interior cell at its closest solution
+   * point), then prepares the flux computation as the NS command does.
+   * @param iFlx index of the flux point on the face
+   */
+  virtual void prepareFlxPntFluxComputation(const CFuint iFlx);
 
-    
+protected: // data
+
+  /// wall distance of every state
+  Framework::DataSocketSink< CFreal > socket_wallDistance;
+
+  /// index of the closest solution point of every flux point of the cell
+  Common::SafePtr< std::vector< CFuint > > m_closestSolToFlxIdx;
+
+  /// the diffusive variable set as a Navier-Stokes variable set
+  Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_navierStokesVarSet;
+
 }; // end of class DiffBndCorrectionsRHSJacobFluxReconstructionTurb
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace FluxReconstructionMethod
-
+    } // namespace FluxReconstructionMethod
 } // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////

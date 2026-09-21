@@ -194,8 +194,9 @@ void ComputeWallDistanceVectorFRMPI::execute()
 	  const CFuint nbNodesInTrs = nodesInTrs->size();
 	  cf_assert(nbNodesInTrs > 0);
 	  nodeSize = nbNodesInTrs*dim;
-	  // connectivity size overestimated to allow for memory preallocation in 3D
-	  connSize = (dim == DIM_2D) ? nbLocalTrsFaces*3 : nbLocalTrsFaces*8;
+	  // connectivity size overestimated to allow for memory preallocation: 3 nodes for a
+	  // quadratic edge in 2D, 9 for a quadratic quad face in 3D
+	  connSize = (dim == DIM_2D) ? nbLocalTrsFaces*3 : nbLocalTrsFaces*9;
 
 	  // unidimensional node coordinates storage (each node is unique)
 	  // coordinate x,y(,z) of the TRS nodes
@@ -253,7 +254,8 @@ void ComputeWallDistanceVectorFRMPI::execute()
 	  cf_assert(trsData.faceCenters.size() == trsData.faceCenters.capacity());
 
 	  sizes[0] = nodeSize; 
-	  sizes[1] = connSize;
+	  // what gets broadcast is what was actually packed, not the overestimate
+	  sizes[1] = (int) trsData.trsNodeConn.size();
 	  sizes[2] = nbLocalTrsFaces;
 	  sizes[3] = sizes[4] = nbLocalTrsFaces*dim;
 	  // face normal is needed for computing projection
@@ -501,7 +503,13 @@ void ComputeWallDistanceVectorFRMPI::computeWallDistance3D(std::vector<CFreal>& 
 	updateDistance = true;
       }
 
-      nodeCount0 += (dim == DIM_3D) ? 4 : 2; // this is consistent with definition of "connSize"
+      // step to the first node of the next face: the connectivity holds one entry per node of
+      // the face, plus the "-1" that the 3D packing appends to faces with less than 4 nodes.
+      // A fixed 2 (2D) or 4 (3D) only matches linear faces, and from the second face on it
+      // reads a node of an earlier face for a Q2 edge (3 nodes), a Q2 triangle (6) or a Q2
+      // quad (9)
+      const CFuint nbNodesInFace = data.trsNbNodesInFace[iFace];
+      nodeCount0 += (dim == DIM_3D && nbNodesInFace < 4) ? nbNodesInFace + 1 : nbNodesInFace;
     }
 
     if (updateDistance) 

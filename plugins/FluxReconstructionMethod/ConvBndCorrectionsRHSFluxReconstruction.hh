@@ -23,6 +23,7 @@ namespace COOLFluiD {
    *
    * @author Ray Vandenhoeck
    * @author Alexander Papen
+   * @author Rayan Dhib
    *
    */
 class ConvBndCorrectionsRHSFluxReconstruction : public FluxReconstructionSolverCom {
@@ -84,18 +85,44 @@ protected: // functions
   
   /// compute the states and ghost states in the flx pnts
   virtual void computeFlxPntStates();
+
+  /**
+   * Sets the data the boundary condition needs before its ghost states are
+   * computed, from the states extrapolated to the flux points of the current
+   * face (m_cellStatesFlxPnt). Called once per face by computeFlxPntStates(),
+   * before computeGhostStates. Default: nothing.
+   */
+  virtual void prepareGhostStates()
+  {
+  }
   
   /// compute the interface flux
   virtual void computeInterfaceFlxCorrection();
-  
+
   /// compute the total correction
-  void computeCorrection(std::vector< RealVector >& corrections);
+  virtual void computeCorrection(std::vector< RealVector >& corrections);
 
   /// add the residual updates to the RHS
   void updateRHS();
 
-  /// compute the bnd face corrections to the gradients
+  /**
+   * Compute the lifting of the current boundary face into the gradients of the
+   * interior cell: the gradient variables extrapolated to the flux points are
+   * lifted to the boundary value g_b the boundary condition returns.
+   */
   virtual void computeGradientBndFaceCorrections();
+
+  /**
+   * Add the liftings of the current boundary face to m_gradUpdates, from the
+   * variables being differentiated extrapolated to the flux points. When
+   * otherIsBndValue is true, otherGradVars holds the boundary values they are
+   * lifted to; otherwise it holds the values of the ghost states and they are
+   * lifted to the average.
+   */
+  void addBoundaryFaceLiftings(const RealMatrix& gradVarsFlxPnt, const RealMatrix& otherGradVars, const bool otherIsBndValue);
+
+  /// allocate the data of the gradient computation
+  void setupGradientData();
   
   /// add the updates to the wave speed
   void updateWaveSpeed();
@@ -250,6 +277,36 @@ protected: // data
   
   /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
   CFreal m_mappedFaceNormalDir;
+
+  /// diffusive variable set, provides the gradient variables g(U)
+  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
+
+  /// transformer from update to solution variables
+  Common::SafePtr< Framework::VarSetTransformer > m_updateToSolutionVecTrans;
+
+  /// gradient variables at the solution points of the interior cell
+  RealMatrix m_gradVarsSolPnts;
+
+  /// solution point state data of the interior cell
+  std::vector< RealVector* > m_gradVarStatePtrs;
+
+  /// storage of the gradient variables extrapolated to the flux points
+  std::vector< RealVector > m_flxPntGradVarsStore;
+
+  /// gradient variables extrapolated to the flux points
+  std::vector< RealVector* > m_flxPntGradVars;
+
+  /// storage of the boundary values of the gradient variables at the flux points
+  std::vector< RealVector > m_bndGradVarsStore;
+
+  /// boundary values of the gradient variables at the flux points
+  std::vector< RealVector* > m_bndGradVars;
+
+  /// variables being differentiated extrapolated to the flux points, nbrEqs x nbrFaceFlxPnts
+  RealMatrix m_gradVarsFlxPnt;
+
+  /// boundary values or values of the ghost states of the variables being differentiated, nbrEqs x nbrFaceFlxPnts
+  RealMatrix m_otherGradVarsFlxPnt;
 
   private:
 

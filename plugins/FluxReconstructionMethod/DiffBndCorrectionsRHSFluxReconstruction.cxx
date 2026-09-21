@@ -8,6 +8,7 @@
 #include "FluxReconstructionMethod/DiffBndCorrectionsRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/GradientVariables.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -83,7 +84,24 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_nbrSolDep(),
   m_faceJacobVecs(),
   m_mappedFaceNormalDir(),
-  m_order()
+  m_order(),
+  m_br2Eta(),
+  m_ndimplus(),
+  m_dimList(),
+  m_cellFluxProjVects(),
+  m_solJacobDet(),
+  m_solPolyDerivAtSolPnts(CFNULL),
+  m_solSolDep(CFNULL),
+  m_nbrSolSolDep(),
+  m_projectedCorr(),
+  m_gradVarsSolPnts(),
+  m_gradVarStatePtrs(),
+  m_compactGradsSolPnts(),
+  m_flxPntGradVarsStore(),
+  m_flxPntGradVars(),
+  m_bndGradVarsStore(),
+  m_bndGradVars(),
+  m_bndGradFlxPnt()
 {
 }
 
@@ -194,8 +212,12 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 	// set the bnd face data
 	setBndFaceData(m_face->getID());//faceID
 
-	// compute the states, gradients and ghost states, gradients in the flx pnts
+	// compute the states and ghost states in the flx pnts
 	computeFlxPntStates();
+
+	// the compact BR2 face gradient of this boundary face
+	setIntCellMetrics();
+	computeCompactBR2BndFaceGradient();
 
 	// compute FI
         computeInterfaceFlxCorrection();
@@ -247,23 +269,112 @@ void DiffBndCorrectionsRHSFluxReconstruction::executeOnTrs()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void DiffBndCorrectionsRHSFluxReconstruction::computeBndFaceDiffData(GeometricEntity* face,
+                                                                     const CFuint orient,
+                                                                     BndFaceDiffData& data)
+{
+  m_face = face;
+  m_orient = orient;
+  m_intCell = face->getNeighborGeo(0);
+  m_cellStates = m_intCell->getStates();
+  m_cellVolume = std::abs(m_intCell->computeVolume());
+
+  // flux points of this face
+  m_nbrFaceFlxPnts = (*m_faceFlxPntConn)[m_orient].size();
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_flxPntsLocalCoords[iFlx] = (*m_allCellFlxPnts)[(*m_faceFlxPntConn)[m_orient][iFlx]];
+  }
+
+  // diffusive boundary flux of this face, as in executeOnTrs
+  setBndFaceData(face->getID());
+  computeFlxPntStates();
+  setIntCellMetrics();
+  computeCompactBR2BndFaceGradient();
+  computeInterfaceFlxCorrection();
+
+  resizeBndFaceDiffData(data);
+
+  // face type for the integration coefficients of a 3D face
+  const CFuint faceType = face->getShape() == CFGeoShape::TRIAG ? 0 : 1;
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    data.intStates[iFlx] = *m_cellStatesFlxPnt[iFlx];
+    data.ghostStates[iFlx] = *m_flxPntGhostSol[iFlx];
+    data.bndStates[iFlx] = *m_bndStateFlux[iFlx];
+    data.gradVarsFlxPnt[iFlx] = *m_flxPntGradVars[iFlx];
+    data.bndGradVars[iFlx] = *m_bndGradVars[iFlx];
+    data.diffFluxes[iFlx] = m_flxPntRiemannFlux[iFlx];
+    data.unitNormals[iFlx] = m_unitNormalFlxPnts[iFlx];
+    data.coords[iFlx] = m_flxPntCoords[iFlx];
+    data.faceJacobVecAbsSizes[iFlx] = m_faceJacobVecAbsSizeFlxPnts[iFlx];
+
+    if (m_dim == 3)
+    {
+      data.faceIntegrationCoefs[iFlx] = (*m_faceIntegrationCoefsPerType)[faceType][iFlx];
+    }
+    else
+    {
+      data.faceIntegrationCoefs[iFlx] = (*m_faceIntegrationCoefs)[iFlx];
+    }
+
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      data.bndGrads[iFlx][iEq] = *m_bndGradFlxPnt[iFlx][iEq];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSFluxReconstruction::resizeBndFaceDiffData(BndFaceDiffData& data)
+{
+  data.intStates.resize(m_nbrFaceFlxPnts);
+  data.ghostStates.resize(m_nbrFaceFlxPnts);
+  data.bndStates.resize(m_nbrFaceFlxPnts);
+  data.gradVarsFlxPnt.resize(m_nbrFaceFlxPnts);
+  data.bndGradVars.resize(m_nbrFaceFlxPnts);
+  data.bndGrads.resize(m_nbrFaceFlxPnts);
+  data.diffFluxes.resize(m_nbrFaceFlxPnts);
+  data.unitNormals.resize(m_nbrFaceFlxPnts);
+  data.coords.resize(m_nbrFaceFlxPnts);
+  data.faceJacobVecAbsSizes.resize(m_nbrFaceFlxPnts);
+  data.faceIntegrationCoefs.resize(m_nbrFaceFlxPnts);
+
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    data.intStates[iFlx].resize(m_nbrEqs);
+    data.ghostStates[iFlx].resize(m_nbrEqs);
+    data.bndStates[iFlx].resize(m_nbrEqs);
+    data.gradVarsFlxPnt[iFlx].resize(m_nbrEqs);
+    data.bndGradVars[iFlx].resize(m_nbrEqs);
+    data.diffFluxes[iFlx].resize(m_nbrEqs);
+    data.unitNormals[iFlx].resize(m_dim);
+    data.coords[iFlx].resize(m_dim);
+    data.bndGrads[iFlx].resize(m_nbrEqs);
+
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      data.bndGrads[iFlx][iEq].resize(m_dim);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void DiffBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
 {
-  // Loop over flux points to extrapolate the states and gradients to the flux points
+  // Loop over flux points to extrapolate the states to the flux points
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
     // reset the states in flx pnts
     *(m_cellStatesFlxPnt[iFlxPnt]) = 0.0;
-    
-    // reset the grads in flx pnts
-    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-    {
-      *(m_cellGradFlxPnt[iFlxPnt][iVar]) = 0.0;
-    }
-  
+
     // index of current flx pnt
     const CFuint currFlxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
-    
+
     // Loop over sol points to add the contributions to each sol pnt
     m_nbrSolDep = ((*m_flxSolDep)[currFlxIdx]).size();
     for (CFuint iSol = 0; iSol < m_nbrSolDep; ++iSol)
@@ -271,41 +382,136 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeFlxPntStates()
       const CFuint solIdx = (*m_flxSolDep)[currFlxIdx][iSol];
 
       *(m_cellStatesFlxPnt[iFlxPnt]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*(*((*m_cellStates)[solIdx]));
-      
-      for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
-      {
-        *(m_cellGradFlxPnt[iFlxPnt][iVar]) += (*m_solPolyValsAtFlxPnts)[currFlxIdx][solIdx]*((*(m_cellGrads[solIdx]))[iVar]);
-      }
     }
   }
-  
+
   // compute ghost states
   m_bcStateComputer->computeGhostStates(m_cellStatesFlxPnt,m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
-   
-  // compute ghost gradients
-  m_bcStateComputer->computeGhostGradients(m_cellGradFlxPnt,m_flxPntGhostGrads,m_unitNormalFlxPnts,m_flxPntCoords);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSFluxReconstruction::setIntCellMetrics()
+{
+  // mapped coordinate plane normals in the solution points
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
+  {
+    m_cellFluxProjVects[iDim] = m_intCell->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
+  }
+
+  // solution point Jacobian determinants
+  m_solJacobDet = m_intCell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffBndCorrectionsRHSFluxReconstruction::computeCompactBR2BndFaceGradient()
+{
+  // gradient variables at the solution points of the interior cell
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_gradVarStatePtrs[iSol] = (*m_cellStates)[iSol]->getData();
+  }
+
+  m_diffusiveVarSet->setGradientVars(m_gradVarStatePtrs,m_gradVarsSolPnts,m_nbrSolPnts);
+
+  // extrapolated to the flux points of this boundary face
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
+
+    extrapolateGradVarsToFlxPnt(m_gradVarsSolPnts,(*m_flxSolDep)[flxIdx],(*m_solPolyValsAtFlxPnts)[flxIdx],m_nbrEqs,*m_flxPntGradVars[iFlx]);
+  }
+
+  // the value the boundary condition lifts the extrapolated gradient variables to
+  m_bcStateComputer->computeBndGradVars(m_flxPntGradVars,m_cellStatesFlxPnt,m_flxPntGhostSol,
+                                        m_unitNormalFlxPnts,m_flxPntCoords,m_bndGradVars);
+
+  // reset
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_compactGradsSolPnts[iSol][iEq] = 0.0;
+    }
+  }
+
+  // volume term of the gradient of the gradient variables
+  addGradVarsVolumeTerm(m_gradVarsSolPnts,m_cellFluxProjVects,*m_solSolDep,*m_solPolyDerivAtSolPnts,m_nbrSolSolDep,
+                       m_nbrSolPnts,m_nbrEqs,m_dim,m_projectedCorr,m_compactGradsSolPnts);
+
+  // eta times the lifting of this face: jump = g_b - a
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlx];
+
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdx]).size();
+
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      const CFreal gradVarsJump = (*m_bndGradVars[iFlx])[iEq] - (*m_flxPntGradVars[iFlx])[iEq];
+      const CFreal etaGradVarsJump = m_br2Eta*gradVarsJump;
+
+      addGradVarsLifting(etaGradVarsJump,m_faceJacobVecSizeFlxPnts[iFlx],m_unitNormalFlxPnts[iFlx],
+                        (*m_flxSolDep)[flxIdx],m_nbrSolDep,m_corrFctDiv,flxIdx,iEq,m_projectedCorr,m_compactGradsSolPnts);
+    }
+  }
+
+  // division by the Jacobian determinant
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    const CFreal invJacobDet = 1.0/m_solJacobDet[iSol];
+
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_compactGradsSolPnts[iSol][iEq] *= invJacobDet;
+    }
+  }
+
+  // extrapolate to the flux points of this face
+  extrapolateGradsToFlxPnts(m_compactGradsSolPnts,(*m_faceFlxPntConn)[m_orient],m_nbrFaceFlxPnts,
+                        *m_flxSolDep,*m_solPolyValsAtFlxPnts,m_nbrEqs,m_cellGradFlxPnt);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
-{ 
-  // compute the riemann flux in the flx pnts
+{
+  // the boundary states the diffusive flux and the transport properties are evaluated at
+  m_bcStateComputer->computeBndStates(m_cellStatesFlxPnt,m_flxPntGhostSol,
+                                      m_unitNormalFlxPnts,m_flxPntCoords,m_bndStateFlux);
+
+  // the boundary gradients: the compact face gradients with the rules of the
+  // boundary condition on the normal derivatives
+  m_bcStateComputer->computeBndGrads(m_cellGradFlxPnt,m_bndGradFlxPnt,m_bndStateFlux,
+                                     m_unitNormalFlxPnts,m_flxPntCoords);
+
+  // compute the diffusive flux in the flx pnts
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
     for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
     {
-      *(m_avgGrad[iVar]) = (*(m_flxPntGhostGrads[iFlxPnt][iVar]) + *(m_cellGradFlxPnt[iFlxPnt][iVar]))/2.0;
+      *(m_avgGrad[iVar]) = *(m_bndGradFlxPnt[iFlxPnt][iVar]);
 
-      m_avgSol[iVar] = ((*(m_flxPntGhostSol[iFlxPnt]))[iVar] + (*(m_cellStatesFlxPnt[iFlxPnt]))[iVar])/2.0; 
+      m_avgSol[iVar] = (*m_bndStateFlux[iFlxPnt])[iVar];
     }
+
     // prepare the flux computation
-    prepareFluxComputation();
+    prepareFlxPntFluxComputation(iFlxPnt);
+
+    // rules of the boundary condition that need the transport properties
+    m_bcStateComputer->constrainBndGrads(m_avgSol,m_avgGrad,
+                                         m_unitNormalFlxPnts[iFlxPnt],m_flxPntCoords[iFlxPnt]);
+
+    // store the final boundary gradients
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      *m_bndGradFlxPnt[iFlxPnt][iVar] = *m_avgGrad[iVar];
+    }
 
     // compute FI
-    //m_flxPntRiemannFlux[iFlxPnt] = m_diffusiveVarSet->getFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0);
     computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
-  
+
     // compute FI in the local frame
     m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
   }
@@ -511,17 +717,14 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   // setup parent class
   FluxReconstructionSolverCom::setup();
   
-  // boolean telling whether there is a diffusive term
-  const bool hasDiffTerm = getMethodData().hasDiffTerm();
-  
   // get cell builder
   m_faceBuilder = getMethodData().getFaceBuilder();
   
-  if (hasDiffTerm)
-  {
-    // get the diffusive varset
-    m_diffusiveVarSet = getMethodData().getDiffusiveVar();
-  }
+  // get the diffusive varset, the Null one gives the states themselves
+  m_diffusiveVarSet = getMethodData().getDiffusiveVar();
+
+  // multiplier of the face lifting in the compact BR2 face gradient
+  m_br2Eta = getMethodData().getBR2Eta();
   
   // get the Riemann flux
   m_riemannFluxComputer = getMethodData().getRiemannFlux();
@@ -551,6 +754,16 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
     {
       m_mappedFaceNormalDir= 1.;
     }
+
+  //Setting ndimplus, needed for Triag (and tetra, prism)
+  if (elemShape == CFGeoShape::TRIAG || elemShape == CFGeoShape::TETRA || elemShape == CFGeoShape::PRISM)
+  {
+    m_ndimplus=1;
+  }
+  else
+  {
+    m_ndimplus=0;
+  }
 
      if (elemShape == CFGeoShape::PRISM)  // (Max number of face flx pnts)
     {
@@ -597,6 +810,13 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
 
   m_nbrSolDep = ((*m_flxSolDep)[0]).size();
 
+  // get the coefs for derivation of the states in the sol pnts
+  m_solPolyDerivAtSolPnts = frLocalData[0]->getCoefSolPolyDerivInSolPnts();
+
+  m_solSolDep = frLocalData[0]->getSolPntSolDependency();
+
+  m_nbrSolSolDep = ((*m_solSolDep)[0]).size();
+
   // create internal and ghost states
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
@@ -637,6 +857,13 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   m_cellGradFlxPnt.resize(m_nbrFaceFlxPnts);
   m_flxPntGhostGrads.resize(m_nbrFaceFlxPnts);
   m_avgSol.resize(m_nbrEqs);
+  m_bndStateFluxStore.resize(m_nbrFaceFlxPnts);
+  m_bndStateFlux.resize(m_nbrFaceFlxPnts);
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_bndStateFluxStore[iFlx].resize(m_nbrEqs);
+    m_bndStateFlux[iFlx] = &m_bndStateFluxStore[iFlx];
+  }
   m_avgGrad.resize(m_nbrEqs);
   m_corrFctDiv.resize(m_nbrSolPnts);
   m_faceJacobVecs.resize(m_nbrFaceFlxPnts);
@@ -669,6 +896,51 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
 
   // compute the divergence of the correction function
   m_corrFctComputer->computeDivCorrectionFunction(frLocalData[0],m_corrFctDiv);
+
+  // data of the compact BR2 boundary face gradient
+  m_dimList.resize(m_dim+m_ndimplus);
+  m_cellFluxProjVects.resize(m_dim+m_ndimplus);
+  for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
+  {
+    m_dimList[iDim].resize(m_nbrSolPnts);
+    m_cellFluxProjVects[iDim].resize(m_nbrSolPnts);
+    for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+    {
+      m_dimList[iDim][iSolPnt] = iDim;
+      m_cellFluxProjVects[iDim][iSolPnt].resize(m_dim);
+    }
+  }
+  m_solJacobDet.resize(m_nbrSolPnts);
+  m_projectedCorr.resize(m_dim);
+  m_gradVarsSolPnts.resize(m_nbrEqs,m_nbrSolPnts);
+  m_gradVarStatePtrs.resize(m_nbrSolPnts);
+
+  m_compactGradsSolPnts.resize(m_nbrSolPnts);
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_compactGradsSolPnts[iSol].resize(m_nbrEqs);
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_compactGradsSolPnts[iSol][iEq].resize(m_dim);
+    }
+  }
+
+  m_flxPntGradVarsStore.resize(m_nbrFaceFlxPnts);
+  m_bndGradVarsStore.resize(m_nbrFaceFlxPnts);
+  m_flxPntGradVars.resize(m_nbrFaceFlxPnts);
+  m_bndGradVars.resize(m_nbrFaceFlxPnts);
+  m_bndGradFlxPnt.resize(m_nbrFaceFlxPnts);
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_flxPntGradVarsStore[iFlx].resize(m_nbrEqs);
+    m_bndGradVarsStore[iFlx].resize(m_nbrEqs);
+    m_flxPntGradVars[iFlx] = &m_flxPntGradVarsStore[iFlx];
+    m_bndGradVars[iFlx] = &m_bndGradVarsStore[iFlx];
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      m_bndGradFlxPnt[iFlx].push_back(new RealVector(m_dim));
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -689,6 +961,15 @@ void DiffBndCorrectionsRHSFluxReconstruction::unsetup()
     m_cellGradFlxPnt[iFlx].clear();
     m_flxPntGhostGrads[iFlx].clear();
   }
+  for (CFuint iFlx = 0; iFlx < m_bndGradFlxPnt.size(); ++iFlx)
+  {
+    for (CFuint iGrad = 0; iGrad < m_bndGradFlxPnt[iFlx].size(); ++iGrad)
+    {
+      deletePtr(m_bndGradFlxPnt[iFlx][iGrad]);
+    }
+    m_bndGradFlxPnt[iFlx].clear();
+  }
+  m_bndGradFlxPnt.clear();
   for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
   {
     deletePtr(m_avgGrad[iVar]); 

@@ -28,6 +28,10 @@ namespace COOLFluiD {
  *
  * Produces sockets: alpha, prevAlpha, smoothness.
  *
+ * Alpha is computed for every local cell, including the non-updatable overlap
+ * cells of a parallel run, so that face-based blending reads a valid alpha
+ * on both sides of a partition boundary.
+ *
  * Physics-agnostic base class. Handles monitored expressions that can be
  * extracted from any state/physical data: rho, p, rho*p, p/rho, rho/p,
  * velocity_magnitude. Physics-specific expressions (e.g. B2 for MHD) are
@@ -89,7 +93,7 @@ protected: // data
   /// Blending coefficient per solution point, consumed by the blending RHS classes.
   Framework::DataSocketSource< CFreal > socket_alpha;
 
-  /// Previous-iteration alpha, used for the freeze mechanism.
+  /// Previously applied alpha, used for temporal relaxation and freezing.
   Framework::DataSocketSource< CFreal > socket_prevAlpha;
 
   /// Per-solution-point smoothness indicator (for visualization / diagnostics).
@@ -140,7 +144,7 @@ protected: // data
   /// Transition half-width around s0 for the sinusoidal ramp.
   CFreal m_kappa;
 
-  /// Minimum blending coefficient (dead-band at 0 and 1).
+  /// Lower dead-band threshold: coefficients below this value become zero.
   CFreal m_alphaMin;
 
   /// Maximum blending coefficient cap.
@@ -155,6 +159,12 @@ protected: // data
 
   /// Iteration number at which alpha is frozen (reuses prevAlpha).
   CFuint m_freezeFilterIter;
+
+  /// Fraction of the newly computed sensor field applied after initialization; default 1 (no temporal relaxation).
+  CFreal m_alphaRelaxation;
+
+  /// True once prevAlpha holds an applied field for this setup/restart.
+  bool m_alphaInitialized;
 
   /// FR polynomial order.
   CFuint m_order;

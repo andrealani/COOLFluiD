@@ -16,6 +16,8 @@
 #include "FluxReconstructionMethod/ConvRHSFluxReconstructionBlending.hh"
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
+#include "FluxReconstructionMethod/GradientVariables.hh"
+#include "Framework/DiffusiveVarSet.hh"
 
 #include "FluxReconstructionMethod/QuadFluxReconstructionElementData.hh"
 #include "FluxReconstructionMethod/HexaFluxReconstructionElementData.hh"
@@ -908,45 +910,33 @@ void ConvRHSFluxReconstructionBlending::computeCorrection(CFuint side, vector< R
 
 void ConvRHSFluxReconstructionBlending::computeGradientFaceCorrections()
 {
-  // Loop over solution pnts to reset the grad updates
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  // gradient variables at the solution points of both cells and extrapolated to the flux points of the face
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    // Loop over  variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-    {
-      //set the grad updates to 0
-      m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
-      m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
-    }
+    m_gradVarStatePtrs[LEFT][iSol] = (*m_states[LEFT])[iSol]->getData();
+    m_gradVarStatePtrs[RIGHT][iSol] = (*m_states[RIGHT])[iSol]->getData();
   }
-      
-  // compute the face corrections to the gradients
+
+  m_diffusiveVarSet->setGradientVars(m_gradVarStatePtrs[LEFT],m_gradVarsSolPnts[LEFT],m_nbrSolPnts);
+  m_diffusiveVarSet->setGradientVars(m_gradVarStatePtrs[RIGHT],m_gradVarsSolPnts[RIGHT],m_nbrSolPnts);
+
   for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
   {
     const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
     const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
 
-    // Loop over  variables
+    extrapolateGradVarsToFlxPnt(m_gradVarsSolPnts[LEFT],(*m_flxSolDep)[flxIdxL],(*m_solPolyValsAtFlxPnts)[flxIdxL],m_nbrEqs,m_flxPntGradVars[LEFT]);
+    extrapolateGradVarsToFlxPnt(m_gradVarsSolPnts[RIGHT],(*m_flxSolDep)[flxIdxR],(*m_solPolyValsAtFlxPnts)[flxIdxR],m_nbrEqs,m_flxPntGradVars[RIGHT]);
+
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
-      const CFreal avgSol = ((*m_cellStatesFlxPnt[LEFT][iFlx])[iEq]+(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])/2.0;
-      m_projectedCorrL = (avgSol-(*m_cellStatesFlxPnt[LEFT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][LEFT]*m_unitNormalFlxPnts[iFlx];
-      m_projectedCorrR = (avgSol-(*m_cellStatesFlxPnt[RIGHT][iFlx])[iEq])*m_faceJacobVecSizeFlxPnts[iFlx][RIGHT]*m_unitNormalFlxPnts[iFlx];
-
-      // Loop over solution pnts to calculate the grad updates
-      m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
-      for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolDep; ++iSolPnt)
-      {
-        const CFuint iSolIdxL = (*m_flxSolDep)[flxIdxL][iSolPnt];
-        const CFuint iSolIdxR = (*m_flxSolDep)[flxIdxR][iSolPnt];
-
-    /// @todo Check if this is also OK for triangles!!
-    m_gradUpdates[LEFT][iSolIdxL][iEq] += m_projectedCorrL*m_corrFctDiv[iSolIdxL][flxIdxL];
-    m_gradUpdates[RIGHT][iSolIdxR][iEq] += m_projectedCorrR*m_corrFctDiv[iSolIdxR][flxIdxR];
-      }
+      m_gradVarsFlxPnt[LEFT](iEq,iFlx) = m_flxPntGradVars[LEFT][iEq];
+      m_gradVarsFlxPnt[RIGHT](iEq,iFlx) = m_flxPntGradVars[RIGHT][iEq];
     }
   }
-  
+
+  addInteriorFaceLiftings(m_gradVarsFlxPnt[LEFT],m_gradVarsFlxPnt[RIGHT]);
+
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 
@@ -964,6 +954,86 @@ void ConvRHSFluxReconstructionBlending::computeGradientFaceCorrections()
       }
     }
   }
+
+  // artificial viscosity gradients: the conservative variables at the solution points of both cells,
+  // extrapolated to the flux points of the face
+  const bool hasAVGradientVars = setAVGradientVars(*m_states[LEFT],m_nbrSolPnts,getMethodData().hasArtificialViscosity(),
+                                                   getMethodData().getUpdateVarStr(),m_updateToSolutionVecTrans,m_nbrEqs,m_gradVarsSolPnts[LEFT]);
+
+  if (hasAVGradientVars)
+  {
+    setAVGradientVars(*m_states[RIGHT],m_nbrSolPnts,true,getMethodData().getUpdateVarStr(),m_updateToSolutionVecTrans,m_nbrEqs,m_gradVarsSolPnts[RIGHT]);
+
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+      {
+        const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][iSide][iFlx];
+
+        extrapolateGradVarsToFlxPnt(m_gradVarsSolPnts[iSide],(*m_flxSolDep)[flxIdx],(*m_solPolyValsAtFlxPnts)[flxIdx],m_nbrEqs,m_flxPntGradVars[iSide]);
+
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          m_gradVarsFlxPnt[iSide](iEq,iFlx) = m_flxPntGradVars[iSide][iEq];
+        }
+      }
+    }
+
+    addInteriorFaceLiftings(m_gradVarsFlxPnt[LEFT],m_gradVarsFlxPnt[RIGHT]);
+
+    // get the gradientsAV
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
+    {
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        // get state ID
+        const CFuint solID = (*m_states[iSide])[iSol]->getLocalID();
+
+        // update gradientsAV
+        for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+        {
+          gradientsAV[solID][iGrad] += m_gradUpdates[iSide][iSol][iGrad];
+        }
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSFluxReconstructionBlending::addInteriorFaceLiftings(const RealMatrix& gradVarsFlxPntL, const RealMatrix& gradVarsFlxPntR)
+{
+  // Loop over solution pnts to reset the grad updates
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  {
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_gradUpdates[LEFT][iSolPnt][iEq] = 0.0;
+      m_gradUpdates[RIGHT][iSolPnt][iEq] = 0.0;
+    }
+  }
+
+  // each side lifts its extrapolated gradient variables to the average of the two sides
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT][iFlx];
+    const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
+
+    m_nbrSolDep = ((*m_flxSolDep)[flxIdxL]).size();
+
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      const CFreal gradVarsL = gradVarsFlxPntL(iEq,iFlx);
+      const CFreal gradVarsR = gradVarsFlxPntR(iEq,iFlx);
+
+      addGradVarsLifting(interiorGradVarsJump(gradVarsL,gradVarsR),m_faceJacobVecSizeFlxPnts[iFlx][LEFT],m_unitNormalFlxPnts[iFlx],
+                        (*m_flxSolDep)[flxIdxL],m_nbrSolDep,m_corrFctDiv,flxIdxL,iEq,m_projectedCorrL,m_gradUpdates[LEFT]);
+      addGradVarsLifting(interiorGradVarsJump(gradVarsR,gradVarsL),m_faceJacobVecSizeFlxPnts[iFlx][RIGHT],m_unitNormalFlxPnts[iFlx],
+                        (*m_flxSolDep)[flxIdxR],m_nbrSolDep,m_corrFctDiv,flxIdxR,iEq,m_projectedCorrR,m_gradUpdates[RIGHT]);
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -972,44 +1042,25 @@ void ConvRHSFluxReconstructionBlending::computeGradients()
 {
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
+    m_gradVarStatePtrs[0][iSol] = (*m_cellStates)[iSol]->getData();
+
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
       //set the grad updates to 0
       m_gradUpdates[0][iSol][iEq] = 0.0;
     }
   }
-  
-  // Loop over solution pnts to calculate the grad updates
-  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
-  {
-    // Loop over  variables
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
-    {
-      // Loop over gradient directions
-      for (CFuint iDir = 0; iDir < m_dim; ++iDir)
-      {
-    // project the state on a normal and reuse a RealVector variable of the class to store
-    m_projectedCorrL = ((*(*m_cellStates)[iSolPnt])[iEq]) * (m_cellFluxProjVects[iDir][iSolPnt]);
-    
-        // Loop over solution pnts to count factor of all sol pnt polys
-        for (CFuint jSolPnt = 0; jSolPnt < m_nbrSolSolDep; ++jSolPnt)
-        {
-          const CFuint jSolIdx = (*m_solSolDep)[iSolPnt][jSolPnt];
-          // compute the grad updates
-          m_gradUpdates[0][jSolIdx][iEq] += (*m_solPolyDerivAtSolPnts)[jSolIdx][iDir][iSolPnt]*m_projectedCorrL;
-    }
-      }
-    }
-  }
+
+  m_diffusiveVarSet->setGradientVars(m_gradVarStatePtrs[0],m_gradVarsSolPnts[0],m_nbrSolPnts);
+
+  addGradVarsVolumeTerm(m_gradVarsSolPnts[0],m_cellFluxProjVects,*m_solSolDep,*m_solPolyDerivAtSolPnts,m_nbrSolSolDep,
+                       m_nbrSolPnts,m_nbrEqs,m_dim,m_projectedCorrL,m_gradUpdates[0]);
   
   // get the gradients
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
   
   // get the volumes
   DataHandle<CFreal> volumes = socket_volumes.getDataHandle();
-
-//  // get jacobian determinants at solution points
-//  m_jacobDet = m_cell->computeGeometricShapeFunctionJacobianDeterminant(*m_solPntsLocalCoords);
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -1025,6 +1076,65 @@ void ConvRHSFluxReconstructionBlending::computeGradients()
       gradients[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
       gradients[solID][iGrad] *= invJacobDet;
     }
+  }
+
+  // the artificial viscosity gradients differentiate the states themselves
+  if (setAVGradientVars(*m_cellStates,m_nbrSolPnts,getMethodData().hasArtificialViscosity(),
+                                         getMethodData().getUpdateVarStr(),m_updateToSolutionVecTrans,m_nbrEqs,m_gradVarsSolPnts[0]))
+  {
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        m_gradUpdates[0][iSol][iEq] = 0.0;
+      }
+    }
+
+    addGradVarsVolumeTerm(m_gradVarsSolPnts[0],m_cellFluxProjVects,*m_solSolDep,*m_solPolyDerivAtSolPnts,m_nbrSolSolDep,
+                         m_nbrSolPnts,m_nbrEqs,m_dim,m_projectedCorrL,m_gradUpdates[0]);
+
+    // get the gradientsAV
+    DataHandle< vector< RealVector > > gradientsAV = socket_gradientsAV.getDataHandle();
+
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      // get state ID
+      const CFuint solID = (*m_cellStates)[iSol]->getLocalID();
+
+      // inverse Jacobian determinant
+      const CFreal invJacobDet = 1.0/volumes[solID];
+
+      // update gradientsAV
+      for (CFuint iGrad = 0; iGrad < m_nbrEqs; ++iGrad)
+      {
+        gradientsAV[solID][iGrad] += m_gradUpdates[0][iSol][iGrad];
+        gradientsAV[solID][iGrad] *= invJacobDet;
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSFluxReconstructionBlending::setupGradientData()
+{
+  // the Null diffusive variable set gives the states themselves
+  m_diffusiveVarSet = getMethodData().getDiffusiveVar();
+
+  m_updateToSolutionVecTrans = getMethodData().getUpdateToSolutionVecTrans();
+  m_updateToSolutionVecTrans->setup(2);
+
+  m_gradVarsSolPnts.resize(2);
+  m_gradVarsFlxPnt.resize(2);
+  m_flxPntGradVars.resize(2);
+  m_gradVarStatePtrs.resize(2);
+
+  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  {
+    m_gradVarsSolPnts[iSide].resize(m_nbrEqs,m_nbrSolPnts);
+    m_gradVarsFlxPnt[iSide].resize(m_nbrEqs,m_nbrFaceFlxPnts);
+    m_flxPntGradVars[iSide].resize(m_nbrEqs);
+    m_gradVarStatePtrs[iSide].resize(m_nbrSolPnts);
   }
 }
 
@@ -1487,6 +1597,7 @@ void ConvRHSFluxReconstructionBlending::setup()
     (*m_cellStatesP0)[0]->setSpaceCoordinates( new Node(dummyCoord,false) );
 
 
+  setupGradientData();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -19,6 +19,7 @@ namespace COOLFluiD {
  *
  * @author Ray Vandenhoeck
  * @author Firas Ben Ameur
+ * @author Rayan Dhib
  */
 class BCMirrorVelocity : public BCStateComputer {
 
@@ -57,6 +58,37 @@ public:  // methods
                              std::vector< std::vector< RealVector* > >& ghostGrads,
                              const std::vector< RealVector >& normals,
                              const std::vector< RealVector >& coords);
+
+  /**
+   * Sets the boundary values of the gradient variables: the gradient variables
+   * extrapolated to the flux points without the normal velocity.
+   */
+  void computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                          const std::vector< Framework::State* >& intStates,
+                          const std::vector< Framework::State* >& ghostStates,
+                          const std::vector< RealVector >& unitNormals,
+                          const std::vector< RealVector >& flxPntCoords,
+                          std::vector< RealVector* >& bndGradVars);
+
+  /**
+   * Sets the boundary states: the ghost states, U_b = U_ghost. The ghost state
+   * already carries the projected wall velocity.
+   */
+  void computeBndStates(const std::vector< Framework::State* >& intStates,
+                        const std::vector< Framework::State* >& ghostStates,
+                        const std::vector< RealVector >& unitNormals,
+                        const std::vector< RealVector >& flxPntCoords,
+                        std::vector< RealVector* >& bndStates);
+
+  /**
+   * Sets the boundary gradients with the slip wall rule of
+   * BCStateComputer::setSlipWallBndGrads.
+   */
+  void computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                       std::vector< std::vector< RealVector* > >& bndGrads,
+                       const std::vector< RealVector* >& bndStates,
+                       const std::vector< RealVector >& unitNormals,
+                       const std::vector< RealVector >& flxPntCoords);
 
 protected:
   /// array of flags telling if a variable is a velocity component

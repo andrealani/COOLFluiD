@@ -1,4 +1,5 @@
 #include "Framework/MethodStrategyProvider.hh"
+#include "Framework/DiffusiveVarSet.hh"
 #include "Framework/NamespaceSwitcher.hh"
 #include "Environment/SingleBehaviorFactory.hh"
 
@@ -134,6 +135,71 @@ void BCDirichletFromFile::computeGhostGradients(const std::vector< std::vector< 
     {
       *ghostGrads[iState][iGradVar] = *intGrads[iState][iGradVar];
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCDirichletFromFile::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                             const std::vector< Framework::State* >& intStates,
+                                             const std::vector< Framework::State* >& ghostStates,
+                                             const std::vector< RealVector >& unitNormals,
+                                             const std::vector< RealVector >& flxPntCoords,
+                                             std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+
+  if (nbrStates == 0)
+  {
+    return;
+  }
+
+  const CFuint nbrEqs = intStates[0]->size();
+
+  if (m_prescStates.size() < nbrStates)
+  {
+    m_prescStates.resize(nbrStates);
+    m_prescStatePtrs.resize(nbrStates);
+    for (CFuint iState = 0; iState < nbrStates; ++iState)
+    {
+      m_prescStates[iState].resize(nbrEqs);
+      m_prescStatePtrs[iState] = &m_prescStates[iState];
+    }
+  }
+  if (m_prescGradVars.nbRows() != nbrEqs || m_prescGradVars.nbCols() < nbrStates)
+  {
+    m_prescGradVars.resize(nbrEqs,nbrStates);
+  }
+
+  // prescribed states at the flux points
+  computeBndStates(intStates,ghostStates,unitNormals,flxPntCoords,m_prescStatePtrs);
+
+  // g_b = g(U_prescribed)
+  getMethodData().getDiffusiveVar()->setGradientVars(m_prescStatePtrs,m_prescGradVars,nbrStates);
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    for (CFuint iEq = 0; iEq < nbrEqs; ++iEq)
+    {
+      (*bndGradVars[iState])[iEq] = m_prescGradVars(iEq,iState);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCDirichletFromFile::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                           const std::vector< Framework::State* >& ghostStates,
+                                           const std::vector< RealVector >& unitNormals,
+                                           const std::vector< RealVector >& flxPntCoords,
+                                           std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // U_b = 0.5*(U + U_ghost), with U_ghost = 2*U_file - U
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = 0.5*(*intStates[iState] + *ghostStates[iState]);
   }
 }
 

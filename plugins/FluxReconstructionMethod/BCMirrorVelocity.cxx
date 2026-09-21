@@ -49,11 +49,11 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
 {
   const CFuint dim = PhysicalModelStack::getActive()->getDim();
   
-  CFreal vn = 0.;
-  CFreal area2 = 0.;
   
   cf_assert(m_velocityIDs.size() == dim);
   for (CFuint iState = 0; iState < intStates.size() ; ++iState){
+   CFreal vn = 0.;
+   CFreal area2 = 0.;
    for (CFuint i = 0; i < m_velocityIDs.size(); ++i) { 
      const CFreal nxComp = normals[iState][i];
      vn += nxComp*(*intStates[iState])[m_velocityIDs[i]];
@@ -169,6 +169,46 @@ void BCMirrorVelocity::computeGhostGradients
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCMirrorVelocity::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                          const std::vector< Framework::State* >& intStates,
+                                          const std::vector< Framework::State* >& ghostStates,
+                                          const std::vector< RealVector >& unitNormals,
+                                          const std::vector< RealVector >& flxPntCoords,
+                                          std::vector< RealVector* >& bndGradVars)
+{
+  setSlipWallBndGradVars(gradVarsFlxPnt,unitNormals,m_velocityIDs,bndGradVars);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCMirrorVelocity::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                        const std::vector< Framework::State* >& ghostStates,
+                                        const std::vector< RealVector >& unitNormals,
+                                        const std::vector< RealVector >& flxPntCoords,
+                                        std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+
+  // the ghost state already carries the projected wall velocity
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    *bndStates[iState] = *ghostStates[iState];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCMirrorVelocity::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                       std::vector< std::vector< RealVector* > >& bndGrads,
+                                       const std::vector< RealVector* >& bndStates,
+                                       const std::vector< RealVector >& unitNormals,
+                                       const std::vector< RealVector >& flxPntCoords)
+{
+  setSlipWallBndGrads(intGrads,bndGrads,unitNormals,m_velocityIDs);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCMirrorVelocity::setup()
 {
   CFAUTOTRACE;
@@ -221,4 +261,3 @@ void BCMirrorVelocity::unsetup()
   }  // namespace FluxReconstructionMethod
 
 }  // namespace COOLFluiD
-

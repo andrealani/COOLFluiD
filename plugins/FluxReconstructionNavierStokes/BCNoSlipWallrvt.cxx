@@ -1,3 +1,4 @@
+#include <cmath>
 #include "Framework/MethodStrategyProvider.hh"
 
 #include "NavierStokes/Euler2DVarSet.hh"
@@ -9,6 +10,8 @@
 #include "Common/NotImplementedException.hh"
 
 #include "Framework/PhysicalChemicalLibrary.hh"
+
+#include "MathTools/MathFunctions.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -56,6 +59,14 @@ BCNoSlipWallrvt::BCNoSlipWallrvt(const std::string& name) :
 
   m_changeToIsoT = 0; //MathTools::MathConsts::CFuintMax();
   setParameter("ChangeToIsoT",&m_changeToIsoT);
+
+  m_legacyGhost = false;
+  setParameter("LegacyGhost",&m_legacyGhost);
+
+  m_nonCatalytic = false;
+  setParameter("NonCatalytic",&m_nonCatalytic);
+
+  m_nbBadGhostReported = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -71,6 +82,9 @@ void BCNoSlipWallrvt::defineConfigOptions(Config::OptionList& options)
 {
   options.addConfigOption< CFreal,Config::DynamicOption<> >("T","wall static temperature");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("ChangeToIsoT","Iteration after which to switch to an isothermal BC.");
+  options.addConfigOption< bool >("LegacyGhost","Use the previous ghost state (wall temperature, densities "
+    "scaled by T_in / T_ghost) instead of the reflected one (reflected temperatures, copied densities), default false.");
+  options.addConfigOption< bool >("NonCatalytic","No species diffusion flux through the wall: the normal gradients of the species mass fractions are removed from the diffusive wall flux, which also removes the species enthalpy they carry in the energy fluxes (default false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -147,11 +161,23 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
       m_innerTTvib[i] = (*(intStates[iState]))[iTemp];
       if (iter >= m_changeToIsoT)
       {
-        (*(ghostStates[iState]))[iTemp] = m_wallT; //2.*m_wallT - m_innerTTvib[i];
-        if (m_ghostTTvib[i] < 10.0) 
+        if (m_legacyGhost)
         {
-          CFLog(VERBOSE, "negative ghost T: " << m_ghostTTvib[i] << ", inner T:" << m_innerTTvib[i] << "\n");
-          (*(ghostStates[iState]))[iTemp] = 10.0;
+          (*(ghostStates[iState]))[iTemp] = m_wallT; //2.*m_wallT - m_innerTTvib[i];
+          // Guard the value just set, not m_ghostTTvib: that still holds the
+          // previous flux point, and on the very first call it is unset, which
+          // put a 10 K ghost (100x densities) on the first wall flux point and
+          // fed a 1e5 residual into the corner cell every restart.
+          if ((*(ghostStates[iState]))[iTemp] < 10.0)
+          {
+            CFLog(VERBOSE, "negative ghost T: " << (*(ghostStates[iState]))[iTemp] << ", inner T:" << m_innerTTvib[i] << "\n");
+            (*(ghostStates[iState]))[iTemp] = 10.0;
+          }
+        }
+        else
+        {
+          // temperature reflected about the wall temperature
+          (*(ghostStates[iState]))[iTemp] = max(2.*m_wallT - m_innerTTvib[i],0.01*m_wallT);
         }
       }
       else
@@ -166,6 +192,10 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 // 	  << " " << innerState[this->m_tempID] << " " << 2.*this->m_wallTemp-innerState[this->m_tempID] << "]\n");
     
     const CFreal ratioT = (*(intStates[iState]))[m_tempID]/m_ghostTTvib[0];
+    // the reflected ghost keeps the interior densities (scale 1), which for partial pressures means
+    // scaling them by T_ghost / T_in; the legacy ghost keeps the pressure instead
+    const CFreal densityScale  = m_legacyGhost ? ratioT : 1.0;
+    const CFreal pressureScale = m_legacyGhost ? 1.0 : 1.0/ratioT;
     const CFuint sizeState = intStates[iState]->size();
 //     cf_assert(this->m_isVelocityComp.size() == sizeState);
     const CFuint nbTe = m_library->getNbTe();
@@ -186,12 +216,13 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 		(*(ghostStates[iState]))[0] = (*(intStates[iState]))[0];
 	      }
 	      else {
-		(*(ghostStates[iState]))[i] = (*(intStates[iState]))[i]*ratioT;
+		(*(ghostStates[iState]))[i] = (*(intStates[iState]))[i]*densityScale;
 	      }
 	    }
 	    else {
-	      // partial pressure are constant through the boundary
-	      (*(ghostStates[iState]))[i] = (*(intStates[iState]))[i];
+	      // partial pressures: constant through the boundary with the legacy ghost, scaled with the
+	      // temperature with the reflected one (interior density)
+	      (*(ghostStates[iState]))[i] = (*(intStates[iState]))[i]*pressureScale;
 	    }
 	  }
 	  
@@ -221,6 +252,38 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 	    }
 	  }
 	}
+      }
+
+      // The isothermal branch builds the ghost partial densities by scaling
+      // with T_in/T_ghost, so a bad inner temperature or a stale ghost
+      // temperature turns into a non finite ghost state that only shows up much
+      // later as a NaN in the residual. Say it here instead.
+      bool ghostBad = false;
+      bool innerBad = false;
+      for (CFuint i = 0; i < sizeState; ++i) {
+        if (!std::isfinite((*(ghostStates[iState]))[i])) ghostBad = true;
+        if (!std::isfinite((*(intStates[iState]))[i]))   innerBad = true;
+      }
+      if ((ghostBad || innerBad) && m_nbBadGhostReported < 5) {
+        CFLog(ERROR, "BCNoSlipWallrvt: NON FINITE " << (innerBad ? "INNER" : "GHOST")
+              << " state at iter " << iter
+              << ", boundary point " << iState
+              << ", coords " << coords[iState]
+              << "\n  inner = " << *intStates[iState]
+              << "\n  ghost = " << *ghostStates[iState]
+              << "\n  ratioT = " << ratioT
+              << ", T_wall = " << m_wallT
+              << ", ghostTTvib[0] = " << m_ghostTTvib[0] << "\n");
+        ++m_nbBadGhostReported;
+      }
+      // also catch the precursor: a ratioT that has gone wild while everything
+      // is still finite
+      if (std::isfinite(ratioT) && std::abs(ratioT) > 1.e3 && m_nbBadGhostReported < 5) {
+        CFLog(ERROR, "BCNoSlipWallrvt: EXTREME ratioT = " << ratioT
+              << " at iter " << iter << ", point " << iState
+              << ", T_in = " << (*(intStates[iState]))[m_tempID]
+              << ", T_ghost = " << m_ghostTTvib[0] << "\n");
+        ++m_nbBadGhostReported;
       }
     }
   
@@ -269,6 +332,177 @@ void BCNoSlipWallrvt::computeGhostGradients(const std::vector< std::vector< Real
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BCNoSlipWallrvt::computeBndGradVars(const std::vector< RealVector* >& gradVarsFlxPnt,
+                                         const std::vector< Framework::State* >& intStates,
+                                         const std::vector< Framework::State* >& ghostStates,
+                                         const std::vector< RealVector >& unitNormals,
+                                         const std::vector< RealVector >& flxPntCoords,
+                                         std::vector< RealVector* >& bndGradVars)
+{
+  const CFuint nbrStates = intStates.size();
+  cf_assert(nbrStates <= gradVarsFlxPnt.size());
+  cf_assert(nbrStates <= bndGradVars.size());
+
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  const CFuint nbTe = m_library->getNbTe();
+
+  // temperature the wall imposes: T_wall, with the 10 K floor the ghost state applies to it
+  const CFreal wallT = (m_wallT < 10.0) ? 10.0 : m_wallT;
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const RealVector& gradVars = *gradVarsFlxPnt[iState];
+    RealVector& bndGradVarsFlxPnt = *bndGradVars[iState];
+
+    const CFuint sizeState = intStates[iState]->size();
+
+    for (CFuint iEq = 0; iEq < sizeState; ++iEq)
+    {
+      if (m_isVelocityComp[iEq])
+      {
+        // zero wall velocity
+        bndGradVarsFlxPnt[iEq] = 0.0;
+      }
+      else if (iEq >= m_tempID)
+      {
+        const CFuint TvID = iEq - m_tempID;
+
+        if (iEq < sizeState - nbTe && TvID < m_ghostTTvib.size() && iter >= m_changeToIsoT)
+        {
+          // temperature set by the wall
+          bndGradVarsFlxPnt[iEq] = wallT;
+        }
+        else
+        {
+          // adiabatic temperature: g_b = a
+          bndGradVarsFlxPnt[iEq] = gradVars[iEq];
+        }
+      }
+      else
+      {
+        // species: the ghost state keeps the interior mass fractions, g_b = a
+        bndGradVarsFlxPnt[iEq] = gradVars[iEq];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallrvt::computeBndStates(const std::vector< Framework::State* >& intStates,
+                                       const std::vector< Framework::State* >& ghostStates,
+                                       const std::vector< RealVector >& unitNormals,
+                                       const std::vector< RealVector >& flxPntCoords,
+                                       std::vector< RealVector* >& bndStates)
+{
+  const CFuint nbrStates = intStates.size();
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+  const CFuint nbTe = m_library->getNbTe();
+
+  // temperature the wall imposes: T_wall, with the 10 K floor the ghost state applies to it
+  const CFreal wallT = (m_wallT < 10.0) ? 10.0 : m_wallT;
+
+  for (CFuint iState = 0; iState < nbrStates; ++iState)
+  {
+    const CFuint sizeState = intStates[iState]->size();
+    const RealVector& intState = *intStates[iState];
+    RealVector& bndState = *bndStates[iState];
+
+    // temperature of the boundary state, the interior one before ChangeToIsoT, and the ratio
+    // that takes the interior partial pressures to it
+    const CFreal bndT = (iter >= m_changeToIsoT) ? wallT : intState[m_tempID];
+    const CFreal ratioT = intState[m_tempID]/bndT;
+
+    for (CFuint iEq = 0; iEq < sizeState; ++iEq)
+    {
+      if (m_isVelocityComp[iEq])
+      {
+        // average of the interior and the mirrored ghost velocity, that is zero
+        bndState[iEq] = 0.5*(intState[iEq] + (*(ghostStates[iState]))[iEq]);
+      }
+      else if (iEq >= m_tempID)
+      {
+        const CFuint TvID = iEq - m_tempID;
+
+        if (iEq < sizeState - nbTe && TvID < m_ghostTTvib.size() && iter >= m_changeToIsoT)
+        {
+          // temperature set by the wall
+          bndState[iEq] = wallT;
+        }
+        else
+        {
+          // adiabatic temperature: the ghost copies the interior value
+          bndState[iEq] = 0.5*(intState[iEq] + (*(ghostStates[iState]))[iEq]);
+        }
+      }
+      else if (iEq < m_nbSpecies)
+      {
+        if (m_stateHasPartialDensities)
+        {
+          // rho_s at the boundary temperature with the interior partial pressure; the free
+          // electron density is kept when its temperature is free
+          bndState[iEq] = (nbTe == 1 && iEq == 0) ? intState[iEq] : intState[iEq]*ratioT;
+        }
+        else
+        {
+          // partial pressures are constant through the boundary
+          bndState[iEq] = intState[iEq];
+        }
+      }
+      else
+      {
+        // constant extrapolation, as the ghost state does
+        bndState[iEq] = intState[iEq];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCNoSlipWallrvt::computeBndGrads(const std::vector< std::vector< RealVector* > >& intGrads,
+                                      std::vector< std::vector< RealVector* > >& bndGrads,
+                                      const std::vector< RealVector* >& bndStates,
+                                      const std::vector< RealVector >& unitNormals,
+                                      const std::vector< RealVector >& flxPntCoords)
+{
+  const CFuint nbrFlxPnts = intGrads.size();
+  cf_assert(nbrFlxPnts == bndGrads.size());
+
+  const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
+
+  for (CFuint iFlx = 0; iFlx < nbrFlxPnts; ++iFlx)
+  {
+    // q_b = q
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      *bndGrads[iFlx][iEq] = *intGrads[iFlx][iEq];
+    }
+
+    // before ChangeToIsoT: zero normal gradient of T and Tv
+    if (iter < m_changeToIsoT)
+    {
+      for (CFuint iEq = m_tempID; iEq < m_nbrEqs; ++iEq)
+      {
+        removeNormalComponent(*bndGrads[iFlx][iEq],unitNormals[iFlx]);
+      }
+    }
+
+    // noncatalytic wall: zero normal gradient of the mass fractions, so zero
+    // species diffusion fluxes and zero species enthalpy transport in the
+    // energy fluxes
+    if (m_nonCatalytic)
+    {
+      for (CFuint iSpecies = 0; iSpecies < m_nbSpecies; ++iSpecies)
+      {
+        removeNormalComponent(*bndGrads[iFlx][iSpecies],unitNormals[iFlx]);
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BCNoSlipWallrvt::setup()
 {
   CFAUTOTRACE;
@@ -301,6 +535,8 @@ void BCNoSlipWallrvt::setup()
   m_nbTv = m_eulerVarSet->getNbScalarVars(1) - m_library->getNbTe();
   m_ghostTTvib.resize(m_nbTv + 1); // roto-translational + vibrational temperatures
   m_innerTTvib.resize(m_nbTv + 1); // roto-translational + vibrational temperatures
+  m_ghostTTvib = m_wallT;
+  m_innerTTvib = m_wallT;
 
   cf_assert(m_ghostTTvib.size() > 0);
   cf_assert(m_innerTTvib.size() > 0);
@@ -332,4 +568,3 @@ void BCNoSlipWallrvt::setup()
   }  // namespace FluxReconstructionMethod
 
 }  // namespace COOLFluiD
-

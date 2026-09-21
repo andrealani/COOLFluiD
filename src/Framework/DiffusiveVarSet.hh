@@ -96,6 +96,13 @@ public:
     _fluxVec = 0.;
   }
 
+  /// Set the variables whose gradients the diffusive flux needs (for instance
+  /// p, u, v, T) at the given states, one column of values per state.
+  /// The default takes the gradients of the states themselves.
+  virtual void setGradientVars(const std::vector<RealVector*>& states,
+                               RealMatrix& values,
+                               const CFuint stateSize);
+
   /// Compute physical data associated to the given states
   virtual void computeStatesData(const std::vector<State*>& states,
 				 const CFuint nbStatesInVec)

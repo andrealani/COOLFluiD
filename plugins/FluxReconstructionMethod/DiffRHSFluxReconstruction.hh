@@ -22,9 +22,38 @@ namespace COOLFluiD {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/// This is a standard command to assemble the (diffusive part of the) system using a FluxReconstruction solver
+/// This is a standard command to assemble the (diffusive part of the) system using a FluxReconstruction solver.
+///
+/// The gradients follow the compact BR2 scheme, written like the fluxes. For
+/// one cell, g = g(U) are the gradient variables of the diffusive variable
+/// set, g^D the polynomial through their values at the solution points, g^D_f
+/// its value extrapolated to the flux points of face f, g^I_f the interface
+/// value of face f (the average of the two sides at an interior face, the
+/// boundary value of the boundary condition at a boundary face) and h_f the
+/// correction function of face f, as F^D, F^D_f, F^I_f and h_f for the flux.
+/// The gradient the cell flux uses is corrected with every face of the cell,
+///
+///   q = grad g^D + sum_f (g^I_f - g^D_f) grad h_f
+///
+/// with grad h_f the unit normal of the face, scaled by the face Jacobian,
+/// times div h_f. The interface flux uses, per side, the compact gradient of
+/// that face alone, scaled by eta and taken at the flux points of the face,
+///
+///   q_f = grad g^D + eta (g^I_f - g^D_f) grad h_f
+///
+/// so the face flux depends on the two cells of the face only. The interface
+/// diffusive flux of face f is the diffusive flux of the variable set at the
+/// average of the two extrapolated states and at the average of the two
+/// sides' q_f, with no penalty term; the volume flux of the cell uses q. eta is
+/// the BR2 lifting multiplier (option BR2Eta, 5 by default): it sets how
+/// strongly the jump of the face enters the gradient the interface flux sees,
+/// and the usual BR2 condition wants it larger than the number of faces of the
+/// element. Both gradients are built in mapped coordinates and divided by the
+/// Jacobian determinant.
+///
 /// @author Alexander Papen
 /// @author Ray Vandenhoeck
+/// @author Rayan Dhib
 class DiffRHSFluxReconstruction : public FluxReconstructionSolverCom {
 
 public: // functions
@@ -67,9 +96,111 @@ public: // functions
     
 protected: //functions
 
-  /// compute the interface flux
+  /**
+   * Compute the common diffusive flux at the flux points of the current face:
+   * the diffusive flux of the average extrapolated state and the average of
+   * the two compact BR2 face gradients.
+   */
   virtual void computeInterfaceFlxCorrection();
-  
+
+  /**
+   * Fill the per-side cell metrics of the current face (solution point Jacobian
+   * determinants and mapped coordinate plane normals) for both neighbouring
+   * cells, from m_cells.
+   */
+  virtual void prepareFaceCellMetrics();
+
+  /**
+   * Set the gradient variables of the given states at the solution points of a
+   * cell, one column per solution point.
+   */
+  virtual void computeCellGradVars(const std::vector< Framework::State* >& states, RealMatrix& gradVars);
+
+  /**
+   * Compute the compact BR2 gradient q_f of the current face for both cells and
+   * extrapolate it to the flux points of the face. Per side it is the volume
+   * term grad g^D of that cell plus eta times the correction
+   * (g^I_f - g^D_f) grad h_f of this face, with g^I_f the average of the two
+   * sides, divided by the Jacobian determinant and extrapolated to the flux
+   * points. The correction of this face is the only one in it, so the result
+   * depends on the two cells of the face alone. m_cellGrads is not changed.
+   * @pre prepareFaceCellMetrics()
+   * @param gradVarsSolPntsL gradient variables at the solution points of the left cell, nbrEqs x nbrSolPnts
+   * @param gradVarsSolPntsR gradient variables at the solution points of the right cell, nbrEqs x nbrSolPnts
+   * @param gradVarsFlxPntL gradient variables of the left cell extrapolated to the face flux points, nbrEqs x nbrFaceFlxPnts
+   * @param gradVarsFlxPntR gradient variables of the right cell extrapolated to the face flux points, nbrEqs x nbrFaceFlxPnts
+   * @param faceGrads output [side][iFlx][iEq], or CFNULL to write into m_cellGradFlxPnt
+   */
+  void computeCompactBR2FaceGradients(const RealMatrix& gradVarsSolPntsL, const RealMatrix& gradVarsSolPntsR,
+                                      const RealMatrix& gradVarsFlxPntL, const RealMatrix& gradVarsFlxPntR,
+                                      std::vector< std::vector< std::vector< RealVector* > > >* faceGrads = CFNULL);
+
+  /**
+   * Add the correction (g^I_f - g^D_f) grad h_f of the current interior face to
+   * the gradients of both cells, with g^I_f the average of the two sides and g
+   * the physical gradient variables or, for the artificial viscosity, the
+   * conservative variables.
+   * @param artificialViscosity true to add them to the artificial viscosity gradients
+   */
+  void addGradientFaceCorrections(const bool artificialViscosity = false);
+
+  /**
+   * Add the volume term grad g^D of the current cell m_cell to its gradients and
+   * divide the result by the Jacobian determinant at the solution points.
+   * @param artificialViscosity true for the artificial viscosity gradients
+   */
+  void addGradientVolumeTerm(const bool artificialViscosity = false);
+
+  /**
+   * Set the variables of the artificial viscosity gradients of the given
+   * states, one column per state: the conservative variables.
+   * @param nbrStates number of states to transform
+   */
+  void setAVGradientVars(const std::vector< Framework::State* >& states, const CFuint nbrStates, RealMatrix& values);
+
+  /**
+   * Compute the compact BR2 gradient of the artificial viscosity variables of
+   * the current face for both cells.
+   * @param faceGrads output [side][iFlx][iEq], or CFNULL to write into m_cellGradFlxPnt
+   */
+  void computeCompactBR2FaceGradientsAV(std::vector< std::vector< std::vector< RealVector* > > >* faceGrads = CFNULL);
+
+  /**
+   * Compute the compact BR2 gradient of the artificial viscosity variables at
+   * the flux points of one boundary face of a cell: the volume term grad g^D
+   * and eta times the correction of this face, with the interface value
+   * g^I_f = 0.5*(g^D_f + g(U_ghost)), the average of the extrapolated values
+   * and the values of the ghost states.
+   * @param iFace local index of the face in the cell
+   * @param unitNormals unit normals at the flux points of the face
+   * @param flxPntCoords coordinates of the flux points of the face
+   * @param faceGrads output [iFlx][iEq]
+   */
+  void computeCompactBR2BndFaceGradientAV(Framework::GeometricEntity& cell,
+                                          Framework::GeometricEntity& face,
+                                          const CFuint iFace,
+                                          Common::SafePtr< BCStateComputer > bc,
+                                          const std::vector< RealVector >& unitNormals,
+                                          const std::vector< RealVector >& flxPntCoords,
+                                          std::vector< std::vector< RealVector* > >& faceGrads);
+
+  /**
+   * Compute the artificial viscosity residual of the boundary faces of a cell:
+   * at every boundary flux point the common flux eps q_f.n, with eps the
+   * artificial viscosity extrapolated to the flux point, q_f the compact BR2
+   * gradient of the face and n the unit normal, lifted into the cell with the
+   * correction functions.
+   * @param isFaceOnBoundary tells for every face of the cell whether it is a boundary face
+   * @param faceBCIdx index of the boundary condition of every face of the cell
+   * @param epsilons artificial viscosity at the solution points of the cell
+   * @param residual output, size nbrSolPnts*nbrEqs
+   */
+  void computeBndFacesAVResidual(Framework::GeometricEntity& cell,
+                                 const std::vector< bool >& isFaceOnBoundary,
+                                 const std::vector< CFuint >& faceBCIdx,
+                                 const std::vector< CFreal >& epsilons,
+                                 RealVector& residual);
+
   /// compute the divergence of the discontinuous flux (-divFD+divhFD)
   virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
   
@@ -114,6 +245,29 @@ protected: //functions
   /// prepare the computation of the diffusive flux
   virtual void prepareFluxComputation()
   {
+  }
+
+  /**
+   * Prepares the evaluation of the diffusive flux at a solution point, for the
+   * physics that need point data beyond the state and the gradient (the wall
+   * distance of the turbulence models).
+   * @param stateID local ID of the state of the solution point
+   * Default: prepareFluxComputation().
+   */
+  virtual void prepareSolPntFluxComputation(const CFuint stateID)
+  {
+    prepareFluxComputation();
+  }
+
+  /**
+   * Prepares the evaluation of the diffusive flux at a flux point of the current
+   * face, see prepareSolPntFluxComputation().
+   * @param iFlx index of the flux point on the face
+   * Default: prepareFluxComputation().
+   */
+  virtual void prepareFlxPntFluxComputation(const CFuint iFlx)
+  {
+    prepareFluxComputation();
   }
 
 protected: //data
@@ -348,6 +502,72 @@ protected: //data
   bool m_addRiemannToGradCrossCellJacob;
   
   bool m_addFluxToGradCrossCellJacob;
+
+  /// multiplier of the face lifting in the compact BR2 face gradient
+  CFreal m_br2Eta;
+
+  /// solution point Jacobian determinants of both cells of the current face
+  std::vector< std::valarray<CFreal> > m_solJacobDet;
+
+  /// mapped coordinate plane normals at the solution points of both cells of the current face
+  std::vector< std::vector< std::vector< RealVector > > > m_neighbCellFluxProjVects;
+
+  /// tells whether prepareFaceCellMetrics() filled the per-side cell metrics of the current face
+  bool m_faceCellMetricsPrepared;
+
+  /// compact BR2 face gradient at the solution points of both cells of the current face, [side][iSol][iEq]
+  std::vector< std::vector< std::vector< RealVector > > > m_compactGradsSolPnts;
+
+  /// correction projected on a normal, size dim
+  RealVector m_projectedCorr;
+
+  /// gradient variables at the solution points of both cells of the current face, [side](iEq,iSol)
+  std::vector< RealMatrix > m_gradVarsSolPnts;
+
+  /// gradient variables extrapolated to the flux points of the current face, [side](iEq,iFlx)
+  std::vector< RealMatrix > m_gradVarsFlxPnt;
+
+  /// gradient variables extrapolated to one flux point
+  RealVector m_flxPntGradVars;
+
+  /// solution point state data passed to the diffusive variable set
+  std::vector< RealVector* > m_gradVarStatePtrs;
+
+  /// states extrapolated to the flux points of a boundary face, for the artificial viscosity boundary gradient
+  std::vector< Framework::State* > m_bndIntStates;
+
+  /// ghost states at the flux points of that boundary face
+  std::vector< Framework::State* > m_bndGhostStates;
+
+  /// the first nbrFaceFlxPnts states of m_bndIntStates, for every number of face flux points
+  std::vector< std::vector< Framework::State* > > m_bndIntStatesFlxPnt;
+
+  /// the first nbrFaceFlxPnts states of m_bndGhostStates, for every number of face flux points
+  std::vector< std::vector< Framework::State* > > m_bndGhostStatesFlxPnt;
+
+  /// unit normals at the flux points of a boundary face, for every number of face flux points
+  std::vector< std::vector< RealVector > > m_bndUnitNormalFlxPnts;
+
+  /// coordinates of the flux points of a boundary face, for every number of face flux points
+  std::vector< std::vector< RealVector > > m_bndFlxPntCoords;
+
+  /// gradient variables of the ghost states, (iEq,iFlx)
+  RealMatrix m_bndGhostGradVars;
+
+  /// mapped coordinate plane normals at the solution points of the cell of a boundary face, [iDim][iSol]
+  std::vector< std::vector< RealVector > > m_bndCellFluxProjVects;
+
+  /// Jacobian determinants at the solution points of the cell of a boundary face
+  std::valarray< CFreal > m_bndSolJacobDet;
+
+  /// artificial viscosity compact gradient at the flux points of a boundary face, [iFlx][iEq]
+  std::vector< std::vector< RealVector > > m_bndFaceGradsAV;
+
+  /// pointers to m_bndFaceGradsAV, [iFlx][iEq]
+  std::vector< std::vector< RealVector* > > m_bndFaceGradPtrsAV;
+
+  /// artificial viscosity common flux at a boundary flux point
+  RealVector m_bndFlxPntFluxAV;
   
   private:
 

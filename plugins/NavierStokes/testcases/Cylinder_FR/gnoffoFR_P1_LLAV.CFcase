@@ -1,0 +1,242 @@
+################################################################################
+#
+# This COOLFluiD CFcase file tests:
+#
+# FR, VCJH, NS2D, implicit Newton, curved quads, Lax-Friedrichs scheme,
+# isothermal no-slip wall, Dirichlet and SuperOutlet BCs, P1,
+# LLAV artificial viscosity
+#
+# Gnoffo cylinder: Ching, Lv, Ihme, JCP 376 (2019), Table 2. M 17.605,
+# rho_inf 0.00100335 kg/m3, U_inf 4991.04 m/s along -x, T_inf 200 K,
+# isothermal wall at 500 K, cylinder radius 1 m.
+#
+# Restarts from gnoffo_P0.CFmesh, which the P0 case writes.
+#
+################################################################################
+#
+# Comments begin with "#"
+# Meta Comments begin with triple "#"
+#
+### Residual = -8.00444
+
+CFEnv.ExceptionLogLevel    = 1000
+CFEnv.DoAssertions         = true
+CFEnv.AssertionDumps       = true
+CFEnv.AssertionThrows      = true
+CFEnv.AssertThrows         = true
+CFEnv.AssertDumps          = true
+CFEnv.ExceptionDumps       = true
+CFEnv.ExceptionOutputs     = true
+CFEnv.RegistSignalHandlers = false
+CFEnv.OnlyCPU0Writes       = false
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter libNavierStokes libFluxReconstructionMethod libFluxReconstructionNavierStokes libPetscI libAeroCoefFR libNewtonMethod libGmsh2CFmesh #libCGNSWriter
+
+Simulator.Paths.WorkingDir = plugins/NavierStokes/testcases/Cylinder_FR
+Simulator.Paths.ResultsDir = plugins/NavierStokes/testcases/Cylinder_FR
+
+##################################################################
+## SubSysMesh raises the restart solution to the FR order        ##
+##################################################################
+
+Simulator.SubSystems     = SubSysMesh SubSystem
+Simulator.SubSystemTypes = OnlyMeshSubSystem StandardSubSystem
+
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.Ranks      = 0:0
+Simulator.SubSysMesh.MeshNamespace.MeshData          = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus   = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2D
+Simulator.SubSysMesh.NavierStokes2D.refValues = 0.00100335 5.00776 5.00776 12640.969
+Simulator.SubSysMesh.NavierStokes2D.refLength = 1.0
+Simulator.SubSysMesh.MeshMeshData.listTRS    = Inlet Outlet1 Outlet2 Cylinder
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat     = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName  = gnoffo_P1_LLAV_start.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol  = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffo_P0.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace     = MeshNamespace
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P1
+Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace
+
+##################################
+## SubSystem runs the FR solver ##
+##################################
+
+Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2D
+Simulator.SubSystem.NavierStokes2D.refValues  = 0.00100335 5.00776 5.00776 12640.969
+Simulator.SubSystem.NavierStokes2D.refLength  = 1.0
+
+Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
+Simulator.SubSystem.MeshCreator     = CFmeshFileReader
+Simulator.SubSystem.CFmeshFileReader.Data.FileName          = gnoffo_P1_LLAV_start.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
+
+# the solution comes from the restart file; Null still needs one init name
+Simulator.SubSystem.FluxReconstruction.InitComds = Null
+Simulator.SubSystem.FluxReconstruction.InitNames = InField
+
+###################################
+# Output
+
+Simulator.SubSystem.OutputFormat = CFmesh Tecplot #CGNS
+
+Simulator.SubSystem.CFmesh.FileName   = gnoffo_P1_LLAV.CFmesh
+Simulator.SubSystem.CFmesh.SaveRate   = 250
+Simulator.SubSystem.CFmesh.AppendTime = false
+Simulator.SubSystem.CFmesh.AppendIter = false
+Simulator.SubSystem.CFmesh.WriteSol   = ParWriteSolution
+
+Simulator.SubSystem.Tecplot.FileName    = gnoffo_P1_LLAV.plt
+Simulator.SubSystem.Tecplot.Data.updateVar = Cons
+Simulator.SubSystem.Tecplot.WriteSol    = WriteSolutionHighOrder
+Simulator.SubSystem.Tecplot.SaveRate    = 250
+Simulator.SubSystem.Tecplot.AppendTime  = false
+Simulator.SubSystem.Tecplot.AppendIter  = false
+
+# High-order CGNS output, one file for all ranks. To enable it, uncomment
+# libCGNSWriter in Simulator.Modules.Libs, CGNS in OutputFormat above, and the
+# block below. libCGNSWriter is only built when CGNS is found at configure time.
+#Simulator.SubSystem.CGNS.FileName   = gnoffo_P1_LLAV.cgns
+#Simulator.SubSystem.CGNS.WriteSol   = ParCGNSHighOrderWriter
+#Simulator.SubSystem.CGNS.SaveRate   = 250
+#Simulator.SubSystem.CGNS.AppendTime = false
+#Simulator.SubSystem.CGNS.AppendIter = false
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = artVisc monPhysVar smoothness
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = artVisc monPhysVar smoothness
+
+###################################
+# Stop condition
+
+Simulator.SubSystem.StopCondition = AbsoluteNormAndMaxIter
+Simulator.SubSystem.AbsoluteNormAndMaxIter.MaxIter = 3000
+Simulator.SubSystem.AbsoluteNormAndMaxIter.AbsNorm = -8
+
+###################################
+# Newton iterator: the update is scaled so that no solution point changes
+# rho or p by more than EtaMax, and the CFL follows that scaling
+
+Simulator.SubSystem.ConvergenceMethod              = NewtonIterator
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_P1_LLAV.plt
+Simulator.SubSystem.NewtonIterator.ShowRate        = 10
+Simulator.SubSystem.NewtonIterator.ConvRate        = 10
+Simulator.SubSystem.NewtonIterator.Data.MaxSteps   = 1
+
+Simulator.SubSystem.NewtonIterator.Data.CFL.Value      = 0.5
+Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Null
+Simulator.SubSystem.NewtonIterator.UpdateSol           = PhysicalityCFLUpdateSol
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.EtaMax        = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.OmegaMin      = 0.01
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLGrowth     = 1.025
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLBackoff    = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLMax        = 1000.
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.MaxRejections = 10
+
+Simulator.SubSystem.LinearSystemSolver = PETSC
+Simulator.SubSystem.LSSNames           = NewtonIteratorLSS
+Simulator.SubSystem.NewtonIteratorLSS.Data.PCType            = PCASM
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPType           = KSPGMRES
+Simulator.SubSystem.NewtonIteratorLSS.Data.MatOrderingType   = MATORDERING_RCM
+Simulator.SubSystem.NewtonIteratorLSS.Data.MaxIter           = 1000
+Simulator.SubSystem.NewtonIteratorLSS.Data.RelativeTolerance = 1e-4
+Simulator.SubSystem.NewtonIteratorLSS.Data.KSPShowRate       = 50
+
+###################################
+# Flux reconstruction
+
+Simulator.SubSystem.SpaceMethod                         = FluxReconstruction
+Simulator.SubSystem.FluxReconstruction.Builder          = StdBuilder
+Simulator.SubSystem.FluxReconstruction.SetupCom         = SetupExtra
+Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacobNS
+Simulator.SubSystem.FluxReconstruction.ConvSolveCom     = ConvDiffLLAVRHSJacobNS
+Simulator.SubSystem.FluxReconstruction.DiffSolveCom     = Null
+Simulator.SubSystem.FluxReconstruction.TimeRHSJacobCom  = PseudoSteadyTimeRHS
+Simulator.SubSystem.FluxReconstruction.JacobianSparsity = CellCentered
+Simulator.SubSystem.FluxReconstruction.ExtrapolateCom   = Null
+Simulator.SubSystem.FluxReconstruction.FinalizeRHSCom   = Null
+
+Simulator.SubSystem.FluxReconstruction.Data.UpdateVar    = Cons
+Simulator.SubSystem.FluxReconstruction.Data.SolutionVar  = Cons
+Simulator.SubSystem.FluxReconstruction.Data.LinearVar    = Roe
+Simulator.SubSystem.FluxReconstruction.Data.DiffusiveVar = Cons
+Simulator.SubSystem.FluxReconstruction.Data.RiemannFlux  = LaxFriedrichsFlux
+
+Simulator.SubSystem.FluxReconstruction.Data.ComputeVolumeForEachState  = true
+Simulator.SubSystem.FluxReconstruction.Data.SolutionPointDistribution  = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.FluxPointDistribution      = GaussLegendre
+Simulator.SubSystem.FluxReconstruction.Data.CorrectionFunctionComputer = VCJH
+Simulator.SubSystem.FluxReconstruction.Data.VCJH.CFactor               = 0.0
+
+Simulator.SubSystem.FluxReconstruction.Data.BR2Eta      = 5.0
+Simulator.SubSystem.FluxReconstruction.Data.NumJacobTol = 1e-7
+Simulator.SubSystem.FluxReconstruction.Data.FreezeJacob = false
+
+###################################
+# Shock capturing: LLAV, eps_0 = h (|V| + a) (2 - subcell resolution) / Peclet,
+# ramped over [S0 - Kappa, S0 + Kappa] by the smoothness of the monitored
+# variable (MonitoredPhysVar 1 = pressure). The band has to separate the
+# boundary layer from the shock, and it shifts with the polynomial order.
+
+Simulator.SubSystem.FluxReconstruction.Data.AddArtificialViscosity = true
+
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.MonitoredPhysVar  = 1
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.S0                = -1.5
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.Kappa             = 0.7
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.Peclet            = 5.0
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.AddUpdateCoeff    = true
+# the viscosity update is relaxed; without it the sensor and the solution can
+# lock into a cycle that stalls the residual
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.DampingCoeff      = 0.5
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.FreezeLimiterIter = 100000000
+Simulator.SubSystem.FluxReconstruction.ConvDiffLLAVRHSJacobNS.ShowRate          = 50
+
+Simulator.SubSystem.FluxReconstruction.PhysicalityCom = Null
+
+###################################
+# Boundary conditions
+
+Simulator.SubSystem.FluxReconstruction.BcNames         = Inlet Outlet Wall
+Simulator.SubSystem.FluxReconstruction.Inlet.applyTRS  = Inlet
+Simulator.SubSystem.FluxReconstruction.Outlet.applyTRS = Outlet1 Outlet2
+Simulator.SubSystem.FluxReconstruction.Wall.applyTRS   = Cylinder
+
+Simulator.SubSystem.FluxReconstruction.BcNamesDiff         = InletDiff OutletDiff WallDiff
+Simulator.SubSystem.FluxReconstruction.InletDiff.applyTRS  = Inlet
+Simulator.SubSystem.FluxReconstruction.OutletDiff.applyTRS = Outlet1 Outlet2
+Simulator.SubSystem.FluxReconstruction.WallDiff.applyTRS   = Cylinder
+
+Simulator.SubSystem.FluxReconstruction.Data.BcTypes = Dirichlet  SuperOutlet  NoSlipWallHeatFluxNS2D
+Simulator.SubSystem.FluxReconstruction.Data.BcNames = Inlet      Outlet       Wall
+
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Vars = x y
+Simulator.SubSystem.FluxReconstruction.Data.Inlet.Def  = 0.00100335 -5.00776 0.0 12640.969
+
+Simulator.SubSystem.FluxReconstruction.Data.Wall.HeatFlux     = true
+Simulator.SubSystem.FluxReconstruction.Data.Wall.T            = 500.0
+Simulator.SubSystem.FluxReconstruction.Data.Wall.ChangeToIsoT = 0
+
+###################################
+# Wall heat flux and Stanton number
+
+Simulator.SubSystem.DataPostProcessing      = DataProcessing
+Simulator.SubSystem.DataPostProcessingNames = DataProcessing2
+Simulator.SubSystem.DataProcessing2.Comds       = NavierStokesSkinFrictionHeatFluxFR
+Simulator.SubSystem.DataProcessing2.Names       = SkinFriction
+Simulator.SubSystem.DataProcessing2.ProcessRate = 100
+Simulator.SubSystem.DataProcessing2.SkinFriction.applyTRS   = Cylinder
+Simulator.SubSystem.DataProcessing2.SkinFriction.rhoInf     = 0.00100335
+Simulator.SubSystem.DataProcessing2.SkinFriction.TInf       = 200.0
+Simulator.SubSystem.DataProcessing2.SkinFriction.uInf       = 4991.04
+Simulator.SubSystem.DataProcessing2.SkinFriction.pInf       = 57.60152
+Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = false
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = wall_P1_LLAV.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileAero = aeroCoef_P1_LLAV.plt

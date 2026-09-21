@@ -357,6 +357,9 @@ void LLAVFluxReconstruction::execute()
       // if one of the neighbouring cells is parallel updatable, compute the correction flux
   //    if ((*m_states[LEFT ])[0]->isParUpdatable() || (*m_states[RIGHT])[0]->isParUpdatable())
   //    {
+	// fill the per-side cell metrics the compact face gradient needs
+	prepareFaceCellMetrics();
+
 	// set the face data
 	setFaceData(m_face->getID());//faceID
 	
@@ -470,7 +473,10 @@ void LLAVFluxReconstruction::execute()
 //////////////////////////////////////////////////////////////////////////////
 
 void LLAVFluxReconstruction::computeInterfaceFlxCorrection()
-{ 
+{
+  // compact face gradients of the artificial viscosity variables
+  computeCompactBR2FaceGradientsAV();
+
   // Loop over the flux points to calculate FI
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   { 
@@ -763,7 +769,11 @@ void LLAVFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& residual
           }
         }
       }
-	
+
+      // compact gradient of the artificial viscosity variables on this boundary face
+      computeCompactBR2BndFaceGradientAV(*m_cell,*(*m_faces)[iFace],iFace,(*m_bcStateComputers)[(*m_faceBCIdxCell)[iFace]],
+                                         m_unitNormalFlxPnts2,m_flxPntCoords,m_cellGradFlxPnt[0]);
+
       // compute ghost gradients
       if ((getMethodData().getUpdateVarStr() == "Cons" || getMethodData().getUpdateVarStr() == "RhoivtTv") && getMethodData().hasDiffTerm())
       {

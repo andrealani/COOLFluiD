@@ -26,6 +26,7 @@ namespace COOLFluiD {
  * 
  * @author Alexander Papen
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class DiffRHSJacobFluxReconstructionNS : public DiffRHSJacobFluxReconstruction {
 
@@ -52,46 +53,13 @@ protected: //functions
    */
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
-  /**
-   * compute the terms for the gradient computation for a bnd face
-   */
-  virtual void computeBndGradTerms(RealMatrix& gradTerm, RealMatrix& ghostGradTerm);
-  
-  /**
-   * compute the term for the gradient computation for the cell
-   */
-  virtual void computeCellGradTerm(RealMatrix& gradTerm);
-  
-  /**
-   * compute the terms for the gradient computation for a face
-   */
-  virtual void computeFaceGradTerms(RealMatrix& gradTermL, RealMatrix& gradTermR);
-  
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
-  /// compute the interface flux
-  virtual void computeInterfaceFlxCorrection();
-  
 protected: // data
-    
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for left neighbor
-  RealMatrix m_tempGradTermL;
-  
-  /// matrix to store the state terms needed for the gradients (p, u, v, T) for right neighbor
-  RealMatrix m_tempGradTermR;
   
   /// diffusive variable set
   Common::SafePtr< Physics::NavierStokes::NavierStokesVarSet > m_diffusiveVarSet;
-    
-  /// element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL;
-  
-  /// element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR;
-  
-  /// damping coefficient
-  CFreal m_dampCoeff;
     
 }; // class Solve
 

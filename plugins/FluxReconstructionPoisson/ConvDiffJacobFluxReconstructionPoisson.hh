@@ -33,6 +33,7 @@ namespace COOLFluiD {
  * time marching for Poisson
  * 
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class ConvDiffJacobFluxReconstructionPoisson : public ConvDiffJacobFluxReconstruction {
 
@@ -60,16 +61,15 @@ public: // functions
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
   
-  /// Execute processing actions
-  virtual void execute();
-  
 protected: //functions
   
-  /// compute the interface flux
+  /**
+   * Compute the common flux at the flux points of the current face: the
+   * diffusive flux of the average extrapolated state and the average of the two
+   * compact face gradients. The Poisson equation has no convective flux, so no
+   * convective Riemann flux is subtracted.
+   */
   virtual void computeInterfaceFlxCorrection();
-  
-  /// compute the Riemann flux to gradient jacobian numerically
-  virtual void computeRiemannFluxToGradJacobianNum(const CFreal resFactor);
   
   /**
    * compute the wave speed updates for this face
@@ -79,43 +79,33 @@ protected: //functions
   void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd);
   
   /**
-   * Compute the discontinuous contribution to the corrected gradients
+   * Compute the derivative of the common flux of computeInterfaceFlxCorrection()
+   * with respect to the states extrapolated to the flux points, times the
+   * residual factor.
    */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the correction part of the corrected gradient
-   */
-  virtual void computeGradientFaceCorrections();
-  
-  /// compute the Riemann flux jacobian numerically
   virtual void computeRiemannFluxJacobianNum(const CFreal resFactor);
-  
-  /// compute the gradient variables to state jacobians numerically
-  virtual void computeGradVarsToStateJacobianNum();
   
   /// prepare the computation of the diffusive flux
   void prepareFluxComputation();
   
   /**
-   * compute the unperturbed cell diffusive residuals
-   * @pre m_faceTermComputers->computeDiffFaceTermAndUpdateCoefContributions
-   * @pre setCellsData()
+   * Compute the unperturbed residual of the cell on one side of the current
+   * face with the base command, then store the magnetic field of that cell in
+   * the B sockets.
+   * @param side side of the cell, LEFT or RIGHT
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-  
-  /**
-   * compute the contribution of the diffusive face term to both Jacobians
-   */
-  void computeBothJacobsDiffFaceTerm();
 
   /**
-   * compute the contribution of the diffusive face term to one Jacobians
+   * Store the magnetic field B = grad(phi) at the solution points of the cell on
+   * one side of the current face, with phi the potential and grad(phi) its
+   * corrected gradient, in the sockets Bx, By, Bz and, with (x,y,z) the
+   * coordinates of the solution point, r = sqrt(x^2+y^2+z^2) and
+   * rXY = sqrt(x^2+y^2), in the sockets Br = (x*Bx + y*By + z*Bz)/r,
+   * Btheta = -y*Bx + x*By and Bphi = (z*x*Bx + z*y*By)/rXY - rXY*Bz.
+   * @param side side of the cell, LEFT or RIGHT
    */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
-  
-  /// compute the cell flux jacobian numerically
-  virtual void computeCellFluxJacobianNum(const CFreal resFactor);
+  void computeMagneticField(const CFuint side);
   
 protected: // data
   
@@ -140,60 +130,13 @@ protected: // data
   /// storage for Bphi
   Framework::DataSocketSource<CFreal> socket_Bphi;
 
-  /// matrix to store the state terms needed for the gradients inside element
-  RealMatrix m_tempGradTerm;
-    
-  /// matrix to store the state terms needed for the gradients for left neighbor
-  RealMatrix m_tempGradTermL;
-  
-  /// matrix to store the state terms needed for the gradients for right neighbor
-  RealMatrix m_tempGradTermR;
-  
-  /// element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL;
-  
-  /// element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR;
-  
-  /// extra element states of the left neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesL2;
-  
-  /// extra element states of the right neighbor in the correct format
-  std::vector< RealVector* > m_tempStatesR2;
-  
-  /// extra element states of the cell in the correct format
-  std::vector< RealVector* > m_tempStatesCell;
-
-  /// damping coefficient
-  CFreal m_dampCoeffDiff;
-  
   /// Vector transformer from update to solution variables
   Common::SafePtr<Framework::VarSetTransformer> m_updateToSolutionVecTrans;
-    
-  /// matrix to store the state terms needed for the gradients inside element for the jacobian computation
-  RealMatrix m_tempGradTermJacob;
-  
-  /// element states of the left neighbor in the correct format for the jacobian computation
-  std::vector< RealVector* > m_tempStatesJacob;
-  
-  /// matrix to store the state terms needed for the gradients inside element for the jacobian computation
-  RealMatrix m_tempGradTermJacob2;
-  
-  /// element states of the left neighbor in the correct format for the jacobian computation
-  std::vector< RealVector* > m_tempStatesJacob2;
-  
-  /// unperturbed grad vars
-  RealVector m_unpertGradVars;
-  
-  /// perturbed grad vars
-  RealVector m_pertGradVars;
   
   private:
 
   /// Physical data temporary vector
   RealVector m_pData;
-  /// Physical data temporary vector
-  RealVector m_pData2;
     
 }; // class Solve
 

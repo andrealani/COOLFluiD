@@ -14,7 +14,7 @@
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
 #include "FluxReconstructionMethod/RiemannFlux.hh"
 #include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/DiffRHSJacobFluxReconstruction.hh"
+#include "FluxReconstructionMethod/CombinedJacobFluxReconstruction.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,8 @@ namespace COOLFluiD {
 /// This is a standard command to assemble the convective, diffusive 
 /// and artificial viscosity part of the system using a FluxReconstruction solver for an implicit scheme
 /// @author Ray Vandenhoeck
-class ConvDiffJacobFluxReconstruction : public DiffRHSJacobFluxReconstruction {
+/// @author Rayan Dhib
+class ConvDiffJacobFluxReconstruction : public CombinedJacobFluxReconstruction {
 
 public: // functions
 
@@ -100,16 +101,6 @@ protected: //functions
    * @pre setCellsData()
    */
   virtual void computeUnpertCellDiffResiduals(const CFuint side);
-
-  /**
-   * compute the contribution of the diffusive face term to both Jacobians
-   */
-  void computeBothJacobsDiffFaceTerm();
-
-  /**
-   * compute the contribution of the diffusive face term to one Jacobians
-   */
-  void computeOneJacobDiffFaceTerm(const CFuint side);
   
   /**
    * compute the artificial diffusive flux
@@ -147,9 +138,6 @@ protected: //functions
   virtual void computeGradVarsToStateJacobianNum();
   
 protected: //data
-    
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
   
   /// current element index
   CFuint m_elemIdx;
@@ -178,23 +166,11 @@ protected: //data
   /// vector to store sol pnt values temporarily
   RealVector m_tempSolPntVec2;
   
-  /// stores the flux jacobian for each side, in each sol pnt, for each variable, for each direction
-  std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_fluxJacobian;
-  
-  /// stores the Riemann flux jacobian for each side, in each face flx pnt, for each variable
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxJacobian;
-  
-  /// convective Riemann flux
-  std::vector < RealVector > m_flxPntRiemannFluxDiff;
-  
   /// perturbed convective Riemann Flux
   std::vector < RealVector > m_flxPntRiemannFluxPert;
   
   /// temporary storage for a flux
   RealVector m_tempFlux;
-  
-  /// stores the flux jacobian to the gradients for each side, in each sol pnt, for each variable, for each gradient direction for each flux direction
-  std::vector< std::vector< std::vector< std::vector< std::vector< RealVector > > > > > m_gradientFluxJacobian;
   
   /// stores the gradient variables jacobian to the states for each side, in each sol pnt, for each depending state variable, for each grad vars variable
   std::vector< std::vector< std::vector< RealVector > > > m_gradVarsToStateJacobian;
@@ -202,16 +178,8 @@ protected: //data
   /// stores the gradient jacobian to the states for each side, in each sol pnt, for each depending side for each depending sol pnt, for each gradient direction
   std::vector< std::vector< std::vector< std::vector< RealVector > > > > m_gradientStateJacobian;
   
-  /// stores the Riemann flux jacobian to the gradients for each face flx pnt, for each variable, for each gradient direction
-  std::vector< std::vector< std::vector< RealVector > > > m_riemannFluxGradJacobian;
-  
   /// Continuous diffusive flux at the solution points backup for both neighbor cells
   std::vector< std::vector< std::vector< RealVector > > > m_contFlxBackupDiff;
-  
-  private:
-
-  /// Physical data temporary vector
-  RealVector m_pData;
 
 }; // class ConvDiffJacobFluxReconstruction
 

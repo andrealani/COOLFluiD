@@ -4,7 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
+#include <cmath>
+
 #include "Common/FilesystemException.hh"
+#include "Common/BadValueException.hh"
 #include "Framework/NamespaceSwitcher.hh"
 
 //#include "Framework/VolumeIntegrator.hh"
@@ -54,6 +57,8 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobIter","Iteration after which to freeze the Jacobian.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobInterval","Amount of iterations to freeze the Jacobian before recalculation.");
   options.addConfigOption< CFreal >("DiffFluxDamping","Damping coefficient of diffusive flux scheme.");
+  options.addConfigOption< CFreal >("BR2Eta","BR2 lifting multiplier eta of the compact face gradient of the diffusive flux, grad g^D + eta (g^I_f - g^D_f) grad h_f (default 5.0).");
+  options.addConfigOption< CFreal >("NumJacobTol","Relative step of the finite difference that builds the assembled Jacobian. The step is NumJacobTol*max(|value|,refValue), so it is set by the reference value wherever the local value is much smaller, as for the velocity at a no slip wall (default 10e-7, the historical value).");
   options.addConfigOption< bool >("AddArtificialViscosity","Flag telling whether to add artificial viscosity.");
   options.addConfigOption< std::string >("SolutionPointDistribution","Name of the solution point distribution");
   options.addConfigOption< std::string >("CorrectionFunctionComputer","Name of the correction function computer");
@@ -107,6 +112,12 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_diffDampCoeff = 1.0;
   setParameter("DiffFluxDamping", &m_diffDampCoeff);
   
+  m_br2Eta = 5.0;
+  setParameter("BR2Eta", &m_br2Eta);
+  
+  m_numJacobTol = 10e-7;
+  setParameter("NumJacobTol", &m_numJacobTol);
+  
   m_fluxPntDistributionStr = "Null";
   setParameter( "FluxPointDistribution", &m_fluxPntDistributionStr );
   
@@ -153,6 +164,14 @@ void FluxReconstructionSolverData::setup()
   
   SpaceMethodData::setup();
   
+  // the compact BR2 face lifting multiplier
+  if (!(std::isfinite(m_br2Eta) && m_br2Eta > 0.))
+  {
+    throw Common::BadValueException (FromHere(),"FluxReconstructionSolverData: BR2Eta has to be a finite positive scalar.");
+  }
+
+  CFLog(NOTICE, "FluxReconstructionSolverData => BR2Eta = " << m_br2Eta << "\n");
+  
   // setup TRS Geo builder
   m_stdTrsGeoBuilder.setup();
   
@@ -170,6 +189,10 @@ void FluxReconstructionSolverData::setup()
   // set reference values in numerical Jacobian computer
   RealVector refValues = PhysicalModelStack::getActive()->getImplementor()->getRefStateValues();
   m_numJacob->setRefValues(refValues);
+
+  m_numJacob->setTolerance(m_numJacobTol);
+
+  CFLog(NOTICE, "FluxReconstructionSolverData => NumJacobTol = " << m_numJacobTol << "\n");
   
   // setup the variable sets
   _updateVar   ->setup();

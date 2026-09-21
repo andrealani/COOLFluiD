@@ -144,16 +144,26 @@ void CNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 // 	  << ", rho = " << rhodim << ", Tv = " << _tvDim
 // 	  << ", ys = [" << _ys << "], ys.sum() = " << _ys.sum() << "\n");
     
-      cf_assert(m_ys.sum() > 0.99 && m_ys.sum() < 1.0001);
-    
-      RealMatrix jacob(m_nbrEqs,m_nbrEqs);
-      
+      // the mass fractions must sum to one, but a perturbed state (finite
+      // difference jacobian, JFNK matvec) or a transient can break that.
+      // renormalise instead of asserting, so those paths stay usable.
+      const CFreal ysSum = m_ys.sum();
+      if (ysSum > 0.0)
+      {
+        if (std::abs(ysSum - 1.0) > 1.0e-3)
+        {
+          CFLog(DEBUG_MIN, "CNEQSourceTerm::addSourceTerm() => renormalising ys, sum = "
+                << ysSum << "\n");
+        }
+        m_ys /= ysSum;
+      }
+
       // compute the mass production/destruction term
       m_library->getMassProductionTerm(Tdim, m_tvDim,
 				      pdim, rhodim, m_ys,
 				      false,
 				      m_omega,
-				      jacob);
+				      m_jacobDummy);
     
       CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => omega = " << m_omega << "\n");
     
@@ -233,6 +243,9 @@ void CNEQSourceTerm::setup()
 
   const CFuint nbTv = term->getNbScalarVars(1);
   m_tvDim.resize((nbTv > 1) ? nbTv : 1);
+
+  m_jacobDummy.resize(m_nbrEqs, m_nbrEqs);
+  m_jacobDummy = 0.0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
