@@ -20,7 +20,7 @@ ICPReactionTerm.ci
 )
 
 LIST ( APPEND ICP_requires_mods NavierStokes LTE )
-LIST ( APPEND ICP_cflibs Framework NavierStokes ICP LTE )
+LIST ( APPEND ICP_cflibs Framework NavierStokes LTE )
 CF_ADD_PLUGIN_LIBRARY ( ICP )
 
 LIST ( APPEND ICPNEQ_files

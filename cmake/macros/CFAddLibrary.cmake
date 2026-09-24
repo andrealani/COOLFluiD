@@ -123,24 +123,28 @@ MACRO( CF_ADD_LIBRARY LIBNAME )
 
     # only add link in dso library if building shared libs
     IF (BUILD_SHARED_LIBS)
-      GET_TARGET_PROPERTY(LIB_LOCNAME ${LIBNAME} LOCATION)
-      SET(DSO_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}${LIBNAME}${CMAKE_SHARED_LIBRARY_SUFFIX}${LIB_SUFFIX})
-      IF ( UNIX )
-        ADD_CUSTOM_COMMAND(
-          TARGET ${LIBNAME}
-          POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E remove ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
-          COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIB_LOCNAME} ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
-        )
-      ELSE()
-        ADD_CUSTOM_COMMAND(
-          TARGET ${LIBNAME}
-          POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E remove ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
-          COMMAND ${CMAKE_COMMAND} -E copy ${LIB_LOCNAME} ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
-        )
-      ENDIF()
-    ENDIF()
+  	SET(DSO_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}${LIBNAME}${CMAKE_SHARED_LIBRARY_SUFFIX}${LIB_SUFFIX})
+
+  	IF ( UNIX )
+    		ADD_CUSTOM_COMMAND(
+      		TARGET ${LIBNAME}
+      		POST_BUILD
+      		COMMAND ${CMAKE_COMMAND} -E remove ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
+      		COMMAND ${CMAKE_COMMAND} -E create_symlink
+      	  	      $<TARGET_FILE:${LIBNAME}>
+        	      	${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
+   		 )
+  	ELSE()
+    		ADD_CUSTOM_COMMAND(
+      		TARGET ${LIBNAME}
+      		POST_BUILD
+      		COMMAND ${CMAKE_COMMAND} -E remove ${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
+      		COMMAND ${CMAKE_COMMAND} -E copy
+        		      $<TARGET_FILE:${LIBNAME}>
+              		${COOLFluiD_DSO_DIR}/${DSO_LIB_NAME}
+    	)	
+  	ENDIF()
+	ENDIF()    
 
 	  # if not kernel lib and static is set 
 	  # then this lib will be added to the list of kernel libs
@@ -150,7 +154,12 @@ MACRO( CF_ADD_LIBRARY LIBNAME )
 
   ENDIF ()
 
-  GET_TARGET_PROPERTY ( ${LIBNAME}_LINK_LIBRARIES  ${LIBNAME} LINK_LIBRARIES )
+   # Only query target properties if the target was actually created
+  IF (TARGET ${LIBNAME})
+    GET_TARGET_PROPERTY(${LIBNAME}_LINK_LIBRARIES ${LIBNAME} LINK_LIBRARIES)
+  ELSE()
+    SET(${LIBNAME}_LINK_LIBRARIES "")
+  ENDIF()
   
   # log some info about the library
   LOGFILE("${LIBNAME} : [${CF_BUILD_${LIBNAME}}]")

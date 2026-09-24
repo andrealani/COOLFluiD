@@ -17,7 +17,8 @@
 # cmake behavior
 ##############################################################################
 
-CMAKE_MINIMUM_REQUIRED( VERSION 2.8.3 FATAL_ERROR )
+# the following requires "cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .." or "cmake -DCMAKE_POLICY_VERSION_MINIMUM=4.4 ..", as examples for 3.5 and 4.4, to run with newer versions
+cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR )
 
 # Tell the CMake makefile generator to not have rules depend on themselves.
 # This causes extra rebuilds when the include path changes from turning a library on or off

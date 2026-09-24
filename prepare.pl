@@ -1056,7 +1056,34 @@ sub run_configuration() # run configuration
 	{ $other_options .= " -DCMAKE_BUILD_TYPE=$caps_build";  }
   }
 
-  my $args = "cmake $comp_options -DCMAKE_C_COMPILER=$cc -DCMAKE_CXX_COMPILER=$cxx -DCMAKE_Fortran_COMPILER=$fc -DCMAKE_CUDA_COMPILER=$cudac -G\"$gen\" $other_options $plugin_options $coolfluid_dir";
+  # Detect cmake version and fix options if needed 
+  my $cmake_version_output = `cmake --version`;
+
+  my ($cmake_major, $cmake_minor) =
+    $cmake_version_output =~ /cmake version\s+(\d+)\.(\d+)/;
+
+  die "ERROR: Could not determine CMake version\n"
+    unless defined $cmake_major && defined $cmake_minor;
+
+  my $cmake_extra_options = "";
+
+  # CMake 4.x no longer supports compatibility with policy versions < 3.5.
+  # Set the policy minimum automatically when using CMake >= 4.
+  if ($cmake_major >= 4) {
+    $cmake_extra_options = "-DCMAKE_POLICY_VERSION_MINIMUM=3.5";
+    #    "-DCMAKE_POLICY_VERSION_MINIMUM=$cmake_major.$cmake_minor";
+  }
+  print "Detected CMake version: $cmake_major.$cmake_minor\n";
+
+  # fix for linking on Mac
+  if ($fc ne '' and $^O eq "darwin") {
+    my $sdkroot = `xcrun --sdk macosx --show-sdk-path`;
+    chomp($sdkroot);
+    $cmake_extra_options .= " -DCMAKE_OSX_SYSROOT=\"$sdkroot\"";
+    print "Extra cmake options: $cmake_extra_options\n";
+  }  
+
+  my $args = "cmake $cmake_extra_options $comp_options -DCMAKE_C_COMPILER=$cc -DCMAKE_CXX_COMPILER=$cxx -DCMAKE_Fortran_COMPILER=$fc -DCMAKE_CUDA_COMPILER=$cudac -G\"$gen\" $other_options $plugin_options $coolfluid_dir";
 
   print run_command($args);
 }
