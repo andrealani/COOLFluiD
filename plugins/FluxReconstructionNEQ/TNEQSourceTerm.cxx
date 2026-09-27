@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <cmath>
+
 #include "Common/CFLog.hh"
+#include "Common/BadValueException.hh"
 
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
@@ -45,7 +49,9 @@ TNEQSourceTerm::TNEQSourceTerm(const std::string& name) :
     m_divV(),
     m_pe(),
     m_omegaTv(),
-    m_refData(CFNULL)
+    m_refData(CFNULL),
+    m_logVariables(false),
+    m_platoJacob()
 {
   addConfigOptionsTo(this);
 }
@@ -76,86 +82,21 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 //   // loop over solution points in this cell to add the source term
 //   CFuint resID = m_nbrEqs*( (*m_cellStates)[0]->getLocalID() );
   const CFuint nbrSol = m_cellStates->size();
-  
-  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
-  
-  const CFuint iEqSS = eqSS.getEqSS();
+
   SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = m_eulerVarSet->getModel();
   const CFuint nbSpecies = term->getNbScalarVars(0);
   const CFuint nbEvEqs = term->getNbScalarVars(1);
-  const CFuint nbEulerEq = m_dim + 2;
-  const CFuint nbEqs = eqSS.getNbEqsSS();
-  const vector<CFuint>& varIDs = MultiScalarVarSet<Euler2DVarSet>::EULERSET::getEqSetData()[0].getEqSetVarIDs();
-  
-  bool doComputeST = false;
-  if (varIDs[0] > 0 && (iEqSS == 0 && nbEqs >= nbSpecies)) {
-    doComputeST = true;
-  }
 
-  if ((varIDs[0] == 0 && (iEqSS == 0) && (nbEqs >= nbEulerEq+nbSpecies)) ||
-      (varIDs[0] == 0 && (iEqSS == 1)))	 {
-    doComputeST = true;
-  }
-
-  if (doComputeST) {
-//     // this source term is for axisymmetric flows
-//     const vector<State*>* const states = element->getStates();
-// 
-//     cf_assert(states->size() == 1);
+  if (doComputeSourceTerm()) {
     for (CFuint iSol = 0; iSol < nbrSol; ++iSol)
-    { 
-      m_eulerVarSet->computePhysicalData(*((*m_cellStates)[iSol]), m_solPhysData);
-
-//     // this cannot be used as is in weakly coupled simulation
-//     if (_includeAxiNS) {
-//       computeAxiNS(element, source);
-//     }
-    
+    {
       RealVector& refData = m_eulerVarSet->getModel()->getReferencePhysicalData();
-    
-      SafePtr<NEQReactionTerm> rt = PhysicalModelStack::getActive()->getImplementor()->
-        getSourceTerm().d_castTo<Physics::NEQ::NEQReactionTerm>();
-    
-      CFreal pdim = (m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::P] + m_eulerVarSet->getModel()->getPressInf())*
-        refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::P];
-      cf_assert(pdim > 0.);
-      CFreal Tdim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T]*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
-      cf_assert(Tdim > 0.);
-      CFreal rhodim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO]*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO];
-      cf_assert(rhodim > 0.);
-    
-      const CFuint firstSpecies = term->getFirstScalarVar(0);
-      for (CFuint i = 0; i < nbSpecies; ++i) 
-      {
-        m_ys[i] = m_solPhysData[firstSpecies + i];
-      }
 
-      State *const currState = (*m_cellStates)[iSol];
-      setVibTemperature(m_solPhysData, *currState, m_tvDim);
-      m_tvDim *= refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
-      
-      cf_assert(m_tvDim > 0.0);
-    
-//     CFLog(DEBUG_MAX, "ChemNEQST::computeSource() => T = " << Tdim << ", p = " << pdim 
-// 	  << ", rho = " << rhodim << ", Tv = " << _tvDim
-// 	  << ", ys = [" << _ys << "], ys.sum() = " << _ys.sum() << "\n");
-      
+      CFreal pdim, Tdim, rhodim;
+      setLibraryInputs(*((*m_cellStates)[iSol]), pdim, Tdim, rhodim);
+
       m_omegaTv = 0.0;
       m_omegaRad = 0.0;
-
-      // the mass fractions must sum to one, but a perturbed state (finite
-      // difference jacobian, JFNK matvec) or a transient can break that.
-      // renormalise instead of asserting, so those paths stay usable.
-      const CFreal ysSum = m_ys.sum();
-      if (ysSum > 0.0)
-      {
-        if (std::abs(ysSum - 1.0) > 1.0e-3)
-        {
-          CFLog(DEBUG_MIN, "TNEQSourceTerm::addSourceTerm() => renormalising ys, sum = "
-                << ysSum << "\n");
-        }
-        m_ys /= ysSum;
-      }
 
      // compute the conservation equation source term
      // AM: ugly but effective
@@ -243,7 +184,145 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void TNEQSourceTerm::computeSourceVT(RealVector& omegaTv, CFreal& omegaRad) 
+bool TNEQSourceTerm::doComputeSourceTerm() const
+{
+  const EquationSubSysDescriptor& eqSS = PhysicalModelStack::getActive()->getEquationSubSysDescriptor();
+  const CFuint iEqSS = eqSS.getEqSS();
+  const CFuint nbEqs = eqSS.getNbEqsSS();
+  const CFuint nbSpecies = m_eulerVarSet->getModel()->getNbScalarVars(0);
+  const CFuint nbEulerEq = m_dim + 2;
+  const vector<CFuint>& varIDs = MultiScalarVarSet<Euler2DVarSet>::EULERSET::getEqSetData()[0].getEqSetVarIDs();
+
+  if (varIDs[0] > 0 && (iEqSS == 0 && nbEqs >= nbSpecies)) {
+    return true;
+  }
+  return ((varIDs[0] == 0 && (iEqSS == 0) && (nbEqs >= nbEulerEq+nbSpecies)) ||
+          (varIDs[0] == 0 && (iEqSS == 1)));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void TNEQSourceTerm::setLibraryInputs(const State& state, CFreal& pdim, CFreal& Tdim, CFreal& rhodim)
+{
+  m_eulerVarSet->computePhysicalData(state, m_solPhysData);
+
+  SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = m_eulerVarSet->getModel();
+  RealVector& refData = term->getReferencePhysicalData();
+
+  pdim = (m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::P] + term->getPressInf())*
+    refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::P];
+  cf_assert(pdim > 0.);
+  Tdim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T]*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
+  cf_assert(Tdim > 0.);
+  rhodim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO]*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO];
+  cf_assert(rhodim > 0.);
+
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  const CFuint firstSpecies = term->getFirstScalarVar(0);
+  for (CFuint i = 0; i < nbSpecies; ++i)
+  {
+    m_ys[i] = m_solPhysData[firstSpecies + i];
+  }
+
+  setVibTemperature(m_solPhysData, state, m_tvDim);
+  m_tvDim *= refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
+  cf_assert(m_tvDim > 0.0);
+
+  // the mass fractions must sum to one, but a perturbed state (finite
+  // difference jacobian, JFNK matvec) or a transient can break that.
+  // renormalise instead of asserting, so those paths stay usable.
+  const CFreal ysSum = m_ys.sum();
+  if (ysSum > 0.0)
+  {
+    if (std::abs(ysSum - 1.0) > 1.0e-3)
+    {
+      CFLog(DEBUG_MIN, "TNEQSourceTerm::addSourceTerm() => renormalising ys, sum = "
+            << ysSum << "\n");
+    }
+    m_ys /= ysSum;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void TNEQSourceTerm::getSToStateJacobian(const CFuint iState)
+{
+  for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+  {
+    m_stateJacobian[iEq] = 0.0;
+  }
+
+  if (!doComputeSourceTerm()) return;
+
+  SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = m_eulerVarSet->getModel();
+  RealVector& refData = term->getReferencePhysicalData();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  const CFuint nbEvEqs = term->getNbScalarVars(1);
+  const vector<CFuint>& speciesVarIDs = MultiScalarVarSet<Euler2DVarSet>::getEqSetData()[0].getEqSetVarIDs();
+  const vector<CFuint>& evVarIDs = MultiScalarVarSet<Euler2DVarSet>::getEqSetData()[1].getEqSetVarIDs();
+  const CFuint TID = nbSpecies + m_dim;
+
+  CFreal pdim, Tdim, rhodim;
+  setLibraryInputs(*((*m_cellStates)[iState]), pdim, Tdim, rhodim);
+
+  // J(i,j) = d prodterm_i / d W_j, W = [rho_s, momentum, T, Tv] (SI), prodterm = [omega_s, 0, omegaRad, omegaTv]
+  m_omegaTv = 0.0;
+  m_omegaRad = 0.0;
+  m_library->getSource(Tdim, m_tvDim, pdim, rhodim, m_ys, true, m_omega, m_omegaTv, m_omegaRad, m_platoJacob);
+
+  // same scaling of the rows as in addSourceTerm
+  const CFreal ovOmegaRef = PhysicalModelStack::getActive()->getImplementor()->
+    getRefLength()/(refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO]*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::V]);
+  const CFreal ovOmegavRef = PhysicalModelStack::getActive()->getImplementor()->
+    getRefLength()/((*m_refData)[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO]*(*m_refData)[MultiScalarVarSet<Euler2DVarSet>::PTERM::H]*(*m_refData)[MultiScalarVarSet<Euler2DVarSet>::PTERM::V]);
+
+  const CFreal refRho = refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::RHO];
+  const CFreal refT   = refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
+
+  // column j of W (PLATO order) and its update variable: stateCol = U index, dWdU = dW_j/dU_j
+  for (CFuint j = 0; j < nbSpecies + m_dim + 1 + nbEvEqs; ++j)
+  {
+    CFuint stateCol = j;
+    CFreal dWdU = 0.0;
+    if (j < nbSpecies)
+    {
+      stateCol = speciesVarIDs[j];
+      // rho_s = rho y_s is what the library used
+      dWdU = m_logVariables ? rhodim*m_ys[j] : refRho;
+    }
+    else if (j < nbSpecies + m_dim)
+    {
+      continue; // no dependence on the velocity
+    }
+    else if (j == TID)
+    {
+      stateCol = TID;
+      dWdU = m_logVariables ? Tdim : refT;
+    }
+    else
+    {
+      const CFuint iv = j - TID - 1;
+      stateCol = evVarIDs[iv];
+      dWdU = m_logVariables ? m_tvDim[iv] : refT;
+    }
+
+    // dR/dU with the rows of addSourceTerm: +omega_s, -omegaRad, +omegaTv
+    RealVector& col = m_stateJacobian[stateCol];
+    for (CFuint i = 0; i < nbSpecies; ++i)
+    {
+      col[speciesVarIDs[i]] = ovOmegaRef*m_platoJacob(i,j)*dWdU;
+    }
+    col[TID] = -ovOmegavRef*m_platoJacob(TID,j)*dWdU;
+    for (CFuint iv = 0; iv < nbEvEqs; ++iv)
+    {
+      col[evVarIDs[iv]] = ovOmegavRef*m_platoJacob(TID + 1 + iv,j)*dWdU;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void TNEQSourceTerm::computeSourceVT(RealVector& omegaTv, CFreal& omegaRad)
 { 
   CFreal pdim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::P]*(*m_refData)[MultiScalarVarSet<Euler2DVarSet>::PTERM::P];
   CFreal Tdim = m_solPhysData[MultiScalarVarSet<Euler2DVarSet>::PTERM::T]*(*m_refData)[MultiScalarVarSet<Euler2DVarSet>::PTERM::T];
@@ -261,7 +340,7 @@ void TNEQSourceTerm::setVibTemperature(const RealVector& pdata,
     Framework::PhysicalModelStack::getActive()->getDim()  + 1;
   
   for (CFuint i = 0; i < tvib.size(); ++i) {
-    tvib[i] =  state[startID + i];
+    tvib[i] = m_logVariables ? std::exp(state[startID + i]) : state[startID + i];
   }
 }
 
@@ -288,6 +367,38 @@ void TNEQSourceTerm::setup()
   Common::SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = this->m_eulerVarSet->getModel(); 
   m_refData = &term->getReferencePhysicalData();
 
+  // logarithmic update variables (LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv) store the logarithm of Tv
+  const std::vector<std::string>& varNames = this->m_eulerVarSet->getVarNames();
+  m_logVariables = (std::count(varNames.begin(), varNames.end(), "lnrho0") > 0);
+
+  if (m_useAnaJacob)
+  {
+    // the analytical Jacobian comes from PLATO and is written for the two update variable sets
+    // whose chain rule to [rho_s, T, Tv] is diagonal
+    if (m_library->getName().find("Plato") == std::string::npos)
+    {
+      throw Common::BadValueException (FromHere(),"TNEQSourceTerm: AnalyticalJacob needs the PLATO library, got " +
+                                       m_library->getName() + "\n");
+    }
+    const bool rhoivtTv = (std::count(varNames.begin(), varNames.end(), "rho0") > 0) &&
+                          (std::count(varNames.begin(), varNames.end(), "T") > 0);
+    const bool logVars  = m_logVariables && (std::count(varNames.begin(), varNames.end(), "lnT") > 0);
+    if (!rhoivtTv && !logVars)
+    {
+      throw Common::BadValueException (FromHere(),"TNEQSourceTerm: AnalyticalJacob supports the RhoivtTv and "
+                                       "LogRhoivLogTTv update variables only\n");
+    }
+    // PLATO's Jacobian is square in [rho_s, momentum, T, Tv], the same size as the state
+    const CFuint nbSpecies = term->getNbScalarVars(0);
+    if (m_nbrEqs != nbSpecies + m_dim + 1 + nbVibEnergyEqs)
+    {
+      throw Common::BadValueException (FromHere(),"TNEQSourceTerm: AnalyticalJacob needs one equation per species, "
+                                       "velocity component, T and Tv (no electron energy)\n");
+    }
+    m_platoJacob.resize(m_nbrEqs, m_nbrEqs);
+    CFLog(INFO, "TNEQSourceTerm: analytical source Jacobian from PLATO, "
+          << (m_logVariables ? "LogRhoivLogTTv" : "RhoivtTv") << " chain rule\n");
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

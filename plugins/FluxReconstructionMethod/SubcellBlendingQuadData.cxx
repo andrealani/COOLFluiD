@@ -4,7 +4,10 @@
 // GNU Lesser General Public License version 3 (LGPLv3).
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
+#include <cmath>
+
 #include "Common/BadValueException.hh"
+#include "Common/CFLog.hh"
 #include "Common/NotImplementedException.hh"
 
 #include "FluxReconstructionMethod/SubcellBlendingQuadData.hh"
@@ -42,7 +45,17 @@ SubcellBlendingQuadData::SubcellBlendingQuadData() :
   m_intfFluxDiff(),
   m_closestSolToFlx(CFNULL),
   m_flxPntFlxDim(CFNULL),
-  m_unitNormal()
+  m_unitNormal(),
+  m_closeSubcells(false),
+  m_warnedOpenElement(false),
+  m_intfTransWidth(),
+  m_extCoords(),
+  m_extPlaneIdx(),
+  m_cosine(),
+  m_eigenvalue(),
+  m_closureDefect(),
+  m_closurePotential(),
+  m_closureCoef()
 {
 }
 
@@ -203,6 +216,63 @@ void SubcellBlendingQuadData::setup(FluxReconstructionElementData* frData,
   m_intfFluxPert.assign(std::max(maxIntfPerSol, static_cast<CFuint>(1)), RealVector(m_nbrEqs));
   m_intfFluxDiff.resize(m_nbrEqs);
   m_unitNormal.resize(m_dim);
+
+  // --- data for closing the subcells on curved cells (see closeSubcells) ---
+
+  // transverse width of each internal interface
+  m_intfTransWidth.resize(nbrIntf);
+  for (CFuint iIntf = 0; iIntf < nbrIntf; ++iIntf)
+  {
+    const CFuint solL = m_intfSolL[iIntf];
+    const CFuint transIdx = (m_intfPlaneIdx[iIntf] == KSI) ? solL%nbr1D : solL/nbr1D;
+    m_intfTransWidth[iIntf] = m_widths1D[transIdx];
+  }
+
+  // the exterior subcell faces are the element flux points: this needs them at the
+  // transverse solution point coordinates (same 1D distribution for both)
+  SafePtr< vector< CFreal > > flxPnts1D = frData->getFlxPntsLocalCoord1D();
+  m_closeSubcells = (flxPnts1D->size() == nbr1D);
+  for (CFuint i = 0; m_closeSubcells && i < nbr1D; ++i)
+  {
+    m_closeSubcells = std::abs((*flxPnts1D)[i] - (*solPnts1D)[i]) < 1.0e-12;
+  }
+  if (!m_closeSubcells)
+  {
+    CFLog(WARN, "SubcellBlendingQuadData: flux and solution points differ in 1D, "
+          "the subcells are not closed on curved cells\n");
+  }
+
+  // exterior faces ksi = -1, ksi = +1, eta = -1, eta = +1, at the transverse solution points
+  m_extCoords.assign(4*nbr1D, RealVector(2));
+  m_extPlaneIdx.resize(4*nbr1D);
+  for (CFuint i = 0; i < nbr1D; ++i)
+  {
+    m_extCoords[i][KSI]           = -1.0; m_extCoords[i][ETA]           = (*solPnts1D)[i];
+    m_extCoords[nbr1D+i][KSI]     = +1.0; m_extCoords[nbr1D+i][ETA]     = (*solPnts1D)[i];
+    m_extCoords[2*nbr1D+i][KSI]   = (*solPnts1D)[i]; m_extCoords[2*nbr1D+i][ETA] = -1.0;
+    m_extCoords[3*nbr1D+i][KSI]   = (*solPnts1D)[i]; m_extCoords[3*nbr1D+i][ETA] = +1.0;
+    m_extPlaneIdx[i] = m_extPlaneIdx[nbr1D+i] = KSI;
+    m_extPlaneIdx[2*nbr1D+i] = m_extPlaneIdx[3*nbr1D+i] = ETA;
+  }
+
+  // eigenvectors of the path graph Laplacian with nbr1D nodes: cos(pi k (i+1/2)/n),
+  // eigenvalues 2 - 2 cos(pi k/n). The subcell grid Laplacian is the tensor product.
+  const CFreal pi = std::acos(-1.0);
+  m_cosine.assign(nbr1D, vector< CFreal >(nbr1D));
+  m_eigenvalue.resize(nbr1D);
+  for (CFuint k = 0; k < nbr1D; ++k)
+  {
+    const CFreal norm = std::sqrt((k == 0 ? 1.0 : 2.0)/nbr1D);
+    m_eigenvalue[k] = 2.0 - 2.0*std::cos(pi*k/nbr1D);
+    for (CFuint i = 0; i < nbr1D; ++i)
+    {
+      m_cosine[k][i] = norm*std::cos(pi*k*(i + 0.5)/nbr1D);
+    }
+  }
+
+  m_closureDefect.assign(nbrSolPnts, RealVector(m_dim));
+  m_closurePotential.assign(nbrSolPnts, RealVector(m_dim));
+  m_closureCoef.resize(m_dim);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -224,6 +294,123 @@ void SubcellBlendingQuadData::computeCellNormals(GeometricEntity* cell)
 {
   // the plane index is given per point, so both reference directions are done in one call
   m_intfNormals = cell->computeMappedCoordPlaneNormalAtMappedCoords(m_intfPlaneIdx, m_intfCoords);
+
+  // on a curved cell these sampled normals do not close the subcells
+  if (m_closeSubcells && m_nbrSolPnts1D > 1) closeSubcells(cell);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SubcellBlendingQuadData::closeSubcells(GeometricEntity* cell)
+{
+  // Area vector of a subcell face = metric normal x transverse width. Subcell s is closed
+  // if its outward area vectors sum to zero. With B the interface/subcell incidence
+  // (+1 on the low side, -1 on the high side), a the internal area vectors and b the
+  // exterior ones, the defect is r = B a + b. The smallest change of a that gives
+  // B a + b = 0 is a -= B^T phi with B B^T phi = r, B B^T being the Laplacian of the
+  // subcell grid, solved exactly with its cosine eigenvectors.
+  const CFuint n = m_nbrSolPnts1D;
+  const CFuint nbrSol = n*n;
+  const CFuint nbrIntf = m_intfSolL.size();
+
+  // exterior faces: the same metric as the element flux points
+  const vector< RealVector > extNormals =
+    cell->computeMappedCoordPlaneNormalAtMappedCoords(m_extPlaneIdx, m_extCoords);
+
+  for (CFuint iSol = 0; iSol < nbrSol; ++iSol) m_closureDefect[iSol] = 0.0;
+
+  // exterior contributions, outward: minus the plane normal on the low faces
+  CFreal extScale = 0.0;
+  for (CFuint i = 0; i < n; ++i)
+  {
+    const CFreal w = m_widths1D[i];
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      m_closureDefect[i][iDim]             -= w*extNormals[i][iDim];        // ksi = -1
+      m_closureDefect[(n-1)*n+i][iDim]     += w*extNormals[n+i][iDim];      // ksi = +1
+      m_closureDefect[i*n][iDim]           -= w*extNormals[2*n+i][iDim];    // eta = -1
+      m_closureDefect[i*n+n-1][iDim]       += w*extNormals[3*n+i][iDim];    // eta = +1
+      extScale += w*(std::abs(extNormals[i][iDim]) + std::abs(extNormals[n+i][iDim]) +
+                     std::abs(extNormals[2*n+i][iDim]) + std::abs(extNormals[3*n+i][iDim]));
+    }
+  }
+
+  // internal contributions: outward for the low side, inward for the high side
+  for (CFuint iIntf = 0; iIntf < nbrIntf; ++iIntf)
+  {
+    const CFreal w = m_intfTransWidth[iIntf];
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      m_closureDefect[m_intfSolL[iIntf]][iDim] += w*m_intfNormals[iIntf][iDim];
+      m_closureDefect[m_intfSolR[iIntf]][iDim] -= w*m_intfNormals[iIntf][iDim];
+    }
+  }
+
+  // the internal terms cancel in the sum over subcells, so the total is the closure of the
+  // element boundary itself; internal changes cannot fix that part (constant mode, skipped below)
+  if (!m_warnedOpenElement)
+  {
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      CFreal total = 0.0;
+      for (CFuint iSol = 0; iSol < nbrSol; ++iSol) total += m_closureDefect[iSol][iDim];
+      if (std::abs(total) > 1.0e-10*extScale)
+      {
+        CFLog(WARN, "SubcellBlendingQuadData: the exterior faces of an element do not close "
+              "(relative " << std::abs(total)/extScale << "), its subcells are closed up to that\n");
+        m_warnedOpenElement = true;
+        break;
+      }
+    }
+  }
+
+  // phi = sum over modes (k,l) != (0,0) of <r, e_kl>/(lambda_k + lambda_l) e_kl
+  for (CFuint iSol = 0; iSol < nbrSol; ++iSol) m_closurePotential[iSol] = 0.0;
+  for (CFuint k = 0; k < n; ++k)
+  {
+    for (CFuint l = 0; l < n; ++l)
+    {
+      if (k == 0 && l == 0) continue;
+
+      m_closureCoef = 0.0;
+      for (CFuint i = 0; i < n; ++i)
+      {
+        for (CFuint j = 0; j < n; ++j)
+        {
+          const CFreal e = m_cosine[k][i]*m_cosine[l][j];
+          for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+          {
+            m_closureCoef[iDim] += e*m_closureDefect[i*n+j][iDim];
+          }
+        }
+      }
+      m_closureCoef /= (m_eigenvalue[k] + m_eigenvalue[l]);
+
+      for (CFuint i = 0; i < n; ++i)
+      {
+        for (CFuint j = 0; j < n; ++j)
+        {
+          const CFreal e = m_cosine[k][i]*m_cosine[l][j];
+          for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+          {
+            m_closurePotential[i*n+j][iDim] += e*m_closureCoef[iDim];
+          }
+        }
+      }
+    }
+  }
+
+  // a -= B^T phi, back from area vector to normal by the transverse width
+  for (CFuint iIntf = 0; iIntf < nbrIntf; ++iIntf)
+  {
+    const CFuint solL = m_intfSolL[iIntf];
+    const CFuint solR = m_intfSolR[iIntf];
+    for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+    {
+      m_intfNormals[iIntf][iDim] -=
+        (m_closurePotential[solL][iDim] - m_closurePotential[solR][iDim])/m_intfTransWidth[iIntf];
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

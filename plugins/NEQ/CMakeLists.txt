@@ -67,6 +67,14 @@ Euler2DNEQRhoivtTvToConsInRhoivtTv.cxx
 Euler2DNEQRhoivtTvToConsInRhoivtTv.hh
 Euler2DNEQConsToRhoivtTvInRhoivtTv.cxx
 Euler2DNEQConsToRhoivtTvInRhoivtTv.hh
+Euler2DNEQLogRhoivLogTTv.cxx
+Euler2DNEQLogRhoivLogTTv.hh
+Euler2DNEQLogRhoivLogTTvToCons.cxx
+Euler2DNEQLogRhoivLogTTvToCons.hh
+Euler2DNEQRhoivtTvToLogRhoivLogTTv.cxx
+Euler2DNEQRhoivtTvToLogRhoivLogTTv.hh
+Euler2DNEQConsToLogRhoivLogTTvInLogRhoivLogTTv.cxx
+Euler2DNEQConsToLogRhoivLogTTvInLogRhoivLogTTv.hh
 Euler2DNEQRhoivtTvToPivtTv.cxx
 Euler2DNEQRhoivtTvToPivtTv.hh
 Euler2DNEQRhoivtTvToRoeVinokur.cxx
@@ -121,6 +129,9 @@ NavierStokesNEQPvty.hh
 NavierStokesNEQRhoivt.ci
 NavierStokesNEQRhoivt.cxx
 NavierStokesNEQRhoivt.hh
+NavierStokesNEQLogRhoivLogTTv.ci
+NavierStokesNEQLogRhoivLogTTv.cxx
+NavierStokesNEQLogRhoivLogTTv.hh
 NavierStokesCNEQVarSet.ci
 NavierStokesCNEQVarSet.hh
 NavierStokesTCNEQVarSet.ci

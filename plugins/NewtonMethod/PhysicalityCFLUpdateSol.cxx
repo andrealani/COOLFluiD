@@ -56,8 +56,11 @@ void PhysicalityCFLUpdateSol::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("PIndex","Position of the pressure in the physical data.");
   options.addConfigOption< std::vector<CFuint> >("BoundedVars","State variables whose relative change per update is bounded by BoundedVarsEtaMax (e.g. the temperatures).");
   options.addConfigOption< CFreal, Config::DynamicOption<> >("BoundedVarsEtaMax","Largest relative change allowed for the BoundedVars.");
+  options.addConfigOption< std::vector<CFuint> >("LogBoundedVars","Stored logarithms of variables (e.g. ln T, ln Tv) whose relative change per update is bounded by BoundedVarsEtaMax, i.e. |d ln x| <= ln(1 + BoundedVarsEtaMax).");
   options.addConfigOption< std::vector<CFuint> >("PartialDensityVars","Indices of partial densities in the stored update state. Empty disables their additional checks.");
   options.addConfigOption< CFreal, Config::DynamicOption<> >("PartialDensityEtaMax","Largest fractional increase or decrease of each partial density per accepted Newton update (default 0.1).");
+  options.addConfigOption< std::vector<CFuint> >("LogVars","Indices of logarithmic variables (e.g. ln rho_i) in the stored update state. Empty disables their check.");
+  options.addConfigOption< CFreal, Config::DynamicOption<> >("LogVarsMaxChange","Largest absolute change of each LogVars entry per accepted Newton update (default 2.3, a factor 10 on the variable).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -103,11 +106,20 @@ PhysicalityCFLUpdateSol::PhysicalityCFLUpdateSol(const std::string& name) :
   m_boundedEtaMax = 0.5;
   setParameter("BoundedVarsEtaMax",&m_boundedEtaMax);
 
+  m_logBoundedVars = std::vector<CFuint>();
+  setParameter("LogBoundedVars",&m_logBoundedVars);
+
   m_partialDensityVars = std::vector<CFuint>();
   setParameter("PartialDensityVars",&m_partialDensityVars);
 
   m_partialDensityEtaMax = 0.1;
   setParameter("PartialDensityEtaMax",&m_partialDensityEtaMax);
+
+  m_logVars = std::vector<CFuint>();
+  setParameter("LogVars",&m_logVars);
+
+  m_logVarsMaxChange = 2.3;
+  setParameter("LogVarsMaxChange",&m_logVarsMaxChange);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -148,6 +160,11 @@ void PhysicalityCFLUpdateSol::setup()
       throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: BoundedVars index outside the state");
     }
   }
+  for (CFuint i = 0; i < m_logBoundedVars.size(); ++i) {
+    if (m_logBoundedVars[i] >= PhysicalModelStack::getActive()->getNbEq()) {
+      throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: LogBoundedVars index outside the state");
+    }
+  }
   if (!(m_boundedEtaMax > 0.)) {
     throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: BoundedVarsEtaMax must be > 0");
   }
@@ -158,6 +175,14 @@ void PhysicalityCFLUpdateSol::setup()
   }
   if (!(m_partialDensityEtaMax > 0. && m_partialDensityEtaMax < 1.)) {
     throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: PartialDensityEtaMax must lie in (0,1)");
+  }
+  for (CFuint i = 0; i < m_logVars.size(); ++i) {
+    if (m_logVars[i] >= PhysicalModelStack::getActive()->getNbEq()) {
+      throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: LogVars index outside the state");
+    }
+  }
+  if (!(m_logVarsMaxChange > 0.)) {
+    throw BadValueException(FromHere(), "PhysicalityCFLUpdateSol: LogVarsMaxChange must be > 0");
   }
   if (m_rhoIndex >= m_pdata.size() || m_pIndex >= m_pdata.size()) {
     throw BadValueException(FromHere(),
@@ -340,6 +365,16 @@ void PhysicalityCFLUpdateSol::rejectUpdate(const CFreal omega)
 
 //////////////////////////////////////////////////////////////////////////////
 
+/// rho and p pass their floors and are finite: an overflowed trial state
+/// (rho = inf, p = inf) would otherwise pass the floor test
+static bool isAdmissible(const CFreal rho, const CFreal p,
+                         const CFreal rhoFloor, const CFreal pFloor)
+{
+  return std::isfinite(rho) && std::isfinite(p) && rho >= rhoFloor && p >= pFloor;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFreal* dU)
 {
   // Bound each partial density before evaluating trial thermodynamics. A
@@ -361,6 +396,21 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
   }
   if (omegaDensities == 0.) { return 0.; }
 
+  // Logarithmic variables: an absolute cap on the change, so exp() of the
+  // trial state stays finite. Evaluating the trial below at the full step
+  // could overflow (rho = inf passes a floor test), so this scale also bounds
+  // the segment the pressure and density test looks at.
+  for (CFuint i = 0; i < m_logVars.size(); ++i) {
+    const CFuint iEq = m_logVars[i];
+    const CFreal change = std::abs(m_alpha[iEq]*dU[iEq]);
+    if (!std::isfinite(change)) {
+      return 0.;
+    }
+    if (change > m_logVarsMaxChange) {
+      omegaDensities = std::min(omegaDensities, m_logVarsMaxChange/change);
+    }
+  }
+
   // Bounded state variables first: the change is linear in omega, so the
   // admissible scale is exact. Temperatures are the typical use, since a
   // Tv step of 1e5 K passes the density and pressure test untouched.
@@ -371,6 +421,15 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
     const CFreal allowed = m_boundedEtaMax*std::abs(state[iEq]);
     if (change > allowed) {
       omegaVars = std::min(omegaVars, (allowed > 0.) ? allowed/change : 0.);
+    }
+  }
+  // the same relative bound on a variable stored as its logarithm
+  const CFreal logAllowed = std::log(1. + m_boundedEtaMax);
+  for (CFuint i = 0; i < m_logBoundedVars.size(); ++i) {
+    const CFuint iEq = m_logBoundedVars[i];
+    const CFreal change = std::abs(m_alpha[iEq]*dU[iEq]);
+    if (change > logAllowed) {
+      omegaVars = std::min(omegaVars, logAllowed/change);
     }
   }
 
@@ -385,7 +444,7 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
   CFreal rho = 0., p = 0.;
   setTrialState(state, dU, omegaDensities);
   computeRhoP(*m_trial, rho, p);
-  if (rho >= rhoFloor && p >= pFloor) {
+  if (isAdmissible(rho, p, rhoFloor, pFloor)) {
     return std::min(omegaDensities, omegaVars);
   }
 
@@ -397,8 +456,8 @@ CFreal PhysicalityCFLUpdateSol::computeStateOmega(const State& state, const CFre
     const CFreal mid = 0.5*(lo + hi);
     setTrialState(state, dU, mid);
     computeRhoP(*m_trial, rho, p);
-    if (rho >= rhoFloor && p >= pFloor) { lo = mid; }
-    else                                { hi = mid; }
+    if (isAdmissible(rho, p, rhoFloor, pFloor)) { lo = mid; }
+    else                                        { hi = mid; }
   }
   return std::min(lo, omegaVars);
 }

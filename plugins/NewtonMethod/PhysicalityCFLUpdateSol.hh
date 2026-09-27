@@ -156,11 +156,20 @@ private:
   /// largest relative change allowed for the BoundedVars
   CFreal m_boundedEtaMax;
 
+  /// stored logarithms of variables (e.g. ln T) whose relative change is bounded by BoundedVarsEtaMax
+  std::vector<CFuint> m_logBoundedVars;
+
   /// indices of partial densities in the stored update state
   std::vector<CFuint> m_partialDensityVars;
 
   /// largest fractional increase or decrease allowed for each partial density
   CFreal m_partialDensityEtaMax;
+
+  /// indices of logarithmic variables (e.g. ln rho_i) in the stored update state
+  std::vector<CFuint> m_logVars;
+
+  /// largest absolute change allowed for each LogVars entry per update
+  CFreal m_logVarsMaxChange;
 
   /// consecutive rejected updates so far
   CFuint m_nbConsecutiveRejections;

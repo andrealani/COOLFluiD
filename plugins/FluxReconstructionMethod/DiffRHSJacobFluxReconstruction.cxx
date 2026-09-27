@@ -1118,7 +1118,8 @@ void DiffRHSJacobFluxReconstruction::addPerturbedVolumeGradient(const CFuint sid
       // Loop over gradient directions
       for (CFuint iDir = 0; iDir < m_dim; ++iDir)
       {
-        m_projectedCorrL = m_pertGradVarsChange[iEq] * (m_neighbCellFluxProjVects[m_pertSide][iDir][m_pertSol]);
+        // chain rule, as in addGradVarsVolumeTerm: metric at the point where the derivative is evaluated
+        m_projectedCorrL = m_pertGradVarsChange[iEq] * (m_neighbCellFluxProjVects[side][iDir][iSolIdx]);
 	  
         // compute the grad updates
         (*m_cellGrads[side][iSolIdx])[iEq] += (*m_solPolyDerivAtSolPnts)[iSolIdx][iDir][m_pertSol]*m_projectedCorrL*invJacobDet;

@@ -42,6 +42,7 @@ BCNoSlipWallrvt::BCNoSlipWallrvt(const std::string& name) :
   m_nbrEqs(),
   m_library(CFNULL),
   m_stateHasPartialDensities(true),
+  m_logVariables(false),
   m_nbSpecies(0),
   m_nbTv(0),
   m_ghostTTvib(),
@@ -158,40 +159,38 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 
     CFuint iTemp = m_tempID;
     for (CFuint i = 0; i < m_innerTTvib.size(); ++i, ++iTemp) {
-      m_innerTTvib[i] = (*(intStates[iState]))[iTemp];
+      // m_innerTTvib and m_ghostTTvib hold physical temperatures, also with ln T states
+      m_innerTTvib[i] = toTemperature((*(intStates[iState]))[iTemp]);
       if (iter >= m_changeToIsoT)
       {
         if (m_legacyGhost)
         {
-          (*(ghostStates[iState]))[iTemp] = m_wallT; //2.*m_wallT - m_innerTTvib[i];
-          // Guard the value just set, not m_ghostTTvib: that still holds the
-          // previous flux point, and on the very first call it is unset, which
-          // put a 10 K ghost (100x densities) on the first wall flux point and
-          // fed a 1e5 residual into the corner cell every restart.
-          if ((*(ghostStates[iState]))[iTemp] < 10.0)
+          m_ghostTTvib[i] = m_wallT; //2.*m_wallT - m_innerTTvib[i];
+          // floor the ghost temperature of this flux point at 10 K
+          if (m_ghostTTvib[i] < 10.0)
           {
-            CFLog(VERBOSE, "negative ghost T: " << (*(ghostStates[iState]))[iTemp] << ", inner T:" << m_innerTTvib[i] << "\n");
-            (*(ghostStates[iState]))[iTemp] = 10.0;
+            CFLog(VERBOSE, "negative ghost T: " << m_ghostTTvib[i] << ", inner T:" << m_innerTTvib[i] << "\n");
+            m_ghostTTvib[i] = 10.0;
           }
         }
         else
         {
           // temperature reflected about the wall temperature
-          (*(ghostStates[iState]))[iTemp] = max(2.*m_wallT - m_innerTTvib[i],0.01*m_wallT);
+          m_ghostTTvib[i] = max(2.*m_wallT - m_innerTTvib[i],0.01*m_wallT);
         }
       }
       else
       {
-        (*(ghostStates[iState]))[iTemp] = (*(intStates[iState]))[iTemp];
+        m_ghostTTvib[i] = m_innerTTvib[i];
       }
-      m_ghostTTvib[i] = (*(ghostStates[iState]))[iTemp];
+      (*(ghostStates[iState]))[iTemp] = fromTemperature(m_ghostTTvib[i]);
 
     }
     
 //     CFLog(DEBUG_MED, "NoSlipWallIsothermalNSrvt::setGhostStateImpl() => [Tw Ti Tg] = [" << this->m_wallTemp 
 // 	  << " " << innerState[this->m_tempID] << " " << 2.*this->m_wallTemp-innerState[this->m_tempID] << "]\n");
     
-    const CFreal ratioT = (*(intStates[iState]))[m_tempID]/m_ghostTTvib[0];
+    const CFreal ratioT = m_innerTTvib[0]/m_ghostTTvib[0];
     // the reflected ghost keeps the interior densities (scale 1), which for partial pressures means
     // scaling them by T_ghost / T_in; the legacy ghost keeps the pressure instead
     const CFreal densityScale  = m_legacyGhost ? ratioT : 1.0;
@@ -214,6 +213,10 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 	      // if there is Te, adiabatic condition is set on it
 	      if (nbTe == 1 && i == 0) {
 		(*(ghostStates[iState]))[0] = (*(intStates[iState]))[0];
+	      }
+	      else if (m_logVariables) {
+		// ln(rho_i*densityScale)
+		(*(ghostStates[iState]))[i] = (*(intStates[iState]))[i] + std::log(densityScale);
 	      }
 	      else {
 		(*(ghostStates[iState]))[i] = (*(intStates[iState]))[i]*densityScale;
@@ -240,7 +243,7 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
 	      // this fix is needed for ICP but could fail in other cases (RANS?)
 	      const CFuint TvID = i - m_tempID;
 	      if (TvID < m_ghostTTvib.size()) {
-		(*(ghostStates[iState]))[i] = m_ghostTTvib[TvID];
+		(*(ghostStates[iState]))[i] = fromTemperature(m_ghostTTvib[TvID]);
 	      }
 	      else {
 		(*(ghostStates[iState]))[i] = (*(intStates[iState]))[i];
@@ -281,7 +284,7 @@ void BCNoSlipWallrvt::computeGhostStates(const vector< State* >& intStates,
       if (std::isfinite(ratioT) && std::abs(ratioT) > 1.e3 && m_nbBadGhostReported < 5) {
         CFLog(ERROR, "BCNoSlipWallrvt: EXTREME ratioT = " << ratioT
               << " at iter " << iter << ", point " << iState
-              << ", T_in = " << (*(intStates[iState]))[m_tempID]
+              << ", T_in = " << m_innerTTvib[0]
               << ", T_ghost = " << m_ghostTTvib[0] << "\n");
         ++m_nbBadGhostReported;
       }
@@ -369,8 +372,8 @@ void BCNoSlipWallrvt::computeBndGradVars(const std::vector< RealVector* >& gradV
 
         if (iEq < sizeState - nbTe && TvID < m_ghostTTvib.size() && iter >= m_changeToIsoT)
         {
-          // temperature set by the wall
-          bndGradVarsFlxPnt[iEq] = wallT;
+          // temperature set by the wall (ln T_w when the gradient variables are ln T, ln Tv)
+          bndGradVarsFlxPnt[iEq] = fromTemperature(wallT);
         }
         else
         {
@@ -410,8 +413,9 @@ void BCNoSlipWallrvt::computeBndStates(const std::vector< Framework::State* >& i
 
     // temperature of the boundary state, the interior one before ChangeToIsoT, and the ratio
     // that takes the interior partial pressures to it
-    const CFreal bndT = (iter >= m_changeToIsoT) ? wallT : intState[m_tempID];
-    const CFreal ratioT = intState[m_tempID]/bndT;
+    const CFreal intT = toTemperature(intState[m_tempID]);
+    const CFreal bndT = (iter >= m_changeToIsoT) ? wallT : intT;
+    const CFreal ratioT = intT/bndT;
 
     for (CFuint iEq = 0; iEq < sizeState; ++iEq)
     {
@@ -427,7 +431,7 @@ void BCNoSlipWallrvt::computeBndStates(const std::vector< Framework::State* >& i
         if (iEq < sizeState - nbTe && TvID < m_ghostTTvib.size() && iter >= m_changeToIsoT)
         {
           // temperature set by the wall
-          bndState[iEq] = wallT;
+          bndState[iEq] = fromTemperature(wallT);
         }
         else
         {
@@ -441,7 +445,19 @@ void BCNoSlipWallrvt::computeBndStates(const std::vector< Framework::State* >& i
         {
           // rho_s at the boundary temperature with the interior partial pressure; the free
           // electron density is kept when its temperature is free
-          bndState[iEq] = (nbTe == 1 && iEq == 0) ? intState[iEq] : intState[iEq]*ratioT;
+          if (nbTe == 1 && iEq == 0)
+          {
+            bndState[iEq] = intState[iEq];
+          }
+          else if (m_logVariables)
+          {
+            // ln(rho_s*ratioT)
+            bndState[iEq] = intState[iEq] + std::log(ratioT);
+          }
+          else
+          {
+            bndState[iEq] = intState[iEq]*ratioT;
+          }
         }
         else
         {
@@ -544,6 +560,11 @@ void BCNoSlipWallrvt::setup()
   const std::vector<std::string>& varNames = this->getMethodData().getUpdateVar()->getVarNames();
   if ((int) std::count(varNames.begin(), varNames.end(), "rho0") > 0) {
     m_stateHasPartialDensities = true;
+  }
+  else if ((int) std::count(varNames.begin(), varNames.end(), "lnrho0") > 0) {
+    // LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv
+    m_stateHasPartialDensities = true;
+    m_logVariables = true;
   }
   else if ((int) std::count(varNames.begin(), varNames.end(), "p0") > 0) {
     m_stateHasPartialDensities = false;

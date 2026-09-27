@@ -3,6 +3,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include <cmath>
+
 #include "Framework/BaseMethodStrategyProvider.hh"
 #include "FluxReconstructionMethod/BCStateComputer.hh"
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
@@ -135,6 +137,21 @@ protected: // data
   
   /// flag telling if the state has partial densities
   bool m_stateHasPartialDensities;
+
+  /// flag telling if the state holds logarithmic variables (LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv)
+  bool m_logVariables;
+
+  /// physical temperature from its stored value
+  CFreal toTemperature(const CFreal stored) const
+  {
+    return m_logVariables ? std::exp(stored) : stored;
+  }
+
+  /// stored value of a physical temperature
+  CFreal fromTemperature(const CFreal T) const
+  {
+    return m_logVariables ? std::log(T) : T;
+  }
   
   /// number of species
   CFuint m_nbSpecies;

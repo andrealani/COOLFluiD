@@ -1,3 +1,5 @@
+#include <limits>
+
 #include "Framework/CFL.hh"
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/LSSIdxMapping.hh"
@@ -45,6 +47,8 @@ PseudoSteadyStdTimeRHSJacob::PseudoSteadyStdTimeRHSJacob(const std::string& name
   m_solPntsLocalCoords(CFNULL),
   m_diagValues(),
   m_isUnsteady(),
+  m_resetPastStates(false),
+  m_pastStatesResetIter(std::numeric_limits<CFuint>::max()),
   m_tempState(),
   m_updateToSolutionVecTrans(CFNULL),
   m_acc(CFNULL),
@@ -138,7 +142,22 @@ void PseudoSteadyStdTimeRHSJacob::execute()
 
   // check if computation is unsteady (time accurate)
   m_isUnsteady = dt > 0.;
-  
+
+  // Steady pseudo-time: the Newton method backs up the past states before the
+  // space residual, and the PhysicalityCom (limiter) may change the states in
+  // between. The time term would then pull the update back to the unlimited
+  // state, so the reference must be the current state. Done at the first
+  // Newton step of the iteration, once (the first assembly is the real iterate,
+  // later calls in the same iteration can be JFNK matrix-vector products), and
+  // never in linear residual mode. Without a limiter this is a no-op.
+  SafePtr<SubSystemStatus> subSysStatus = SubSystemStatusStack::getActive();
+  const CFuint iter = subSysStatus->getNbIter();
+  m_resetPastStates = !m_isUnsteady && subSysStatus->isFirstStep() &&
+                      subSysStatus->isSubIterationFirstStep() &&
+                      !getMethodData().isLinearResidualMode() &&
+                      iter != m_pastStatesResetIter;
+  if (m_resetPastStates) m_pastStatesResetIter = iter;
+
   m_acc.reset(m_lss->createBlockAccumulator(m_nbrSolPnts,m_nbrSolPnts,m_nbrEqs));
 
   // get datahandle of volumes if necessary
@@ -263,6 +282,9 @@ void PseudoSteadyStdTimeRHSJacob::addTimeResidual()
 
     // get state ID
     const CFuint stateID = currState->getLocalID();
+
+    // steady: the past state follows the (possibly limited) current state, see execute()
+    if (m_resetPastStates) *pastStates[stateID] = *currState;
 
     // get past state
     const State& pastState = *pastStates[stateID];

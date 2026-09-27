@@ -1,0 +1,58 @@
+################################################################################
+#
+# Converts heg_cylinder.msh (gmsh msh2, 41 x 50 Q2 quads) into the P0 CFmesh
+# heg_cylinder_P0.CFmesh read by hegFR_P0.CFcase.
+# Mesh preparation only, on ONE MPI rank: PLATO can be initialised only once per process.
+#
+# PLATO: set Plato.path below to your PLATO database directory.
+#
+################################################################################
+
+CFEnv.ExceptionLogLevel   = 1000
+CFEnv.ErrorOnUnusedConfig = false
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh \
+                         libNavierStokes libNEQ libPlatoI \
+                         libFluxReconstructionMethod libFluxReconstructionNavierStokes \
+                         libFluxReconstructionNEQ
+
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/HEG_cyl_FR
+Simulator.Paths.ResultsDir = plugins/NEQ/testcases/TCNEQ/HEG_cyl_FR
+
+Simulator.SubSystems     = SubSysMesh
+Simulator.SubSystemTypes = OnlyMeshSubSystem
+
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.MeshNamespace.MeshData          = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus   = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2DNEQ
+
+Simulator.SubSysMesh.NavierStokes2DNEQ.refValues = 1. 1. 1. 1. 1. 5956. 5956. 1. 1.
+Simulator.SubSysMesh.NavierStokes2DNEQ.PropertyLibrary    = Plato
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.mixtureName  = air5_nasa
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.reactionName = air5
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.transfName   = TTv
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO_Install/database
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.Xtol         = 1.e-14
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbSpecies      = 5
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbEulerEqs     = 3
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+
+Simulator.SubSysMesh.MeshMeshData.listTRS    = Wall Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat      = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName   = heg_cylinder_P0.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol   = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace  = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = heg_cylinder.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace     = MeshNamespace
+Simulator.SubSysMesh.CFmeshFileReader.convertFrom   = Gmsh2CFmesh
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P0
+Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = false
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace

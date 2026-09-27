@@ -1,0 +1,309 @@
+#include <cmath>
+
+#include "Framework/PhysicalChemicalLibrary.hh"
+
+//////////////////////////////////////////////////////////////////////////////
+
+namespace COOLFluiD {
+
+  namespace Physics {
+
+    namespace NEQ {
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokesNEQLogRhoivLogTTv<BASE>::NavierStokesNEQLogRhoivLogTTv
+(const std::string& name, Common::SafePtr<Framework::PhysicalModelImpl> model) :
+  NavierStokesNEQRhoivt<BASE>(name, model),
+  m_physTState(),
+  m_gradY(),
+  m_gradYPtrs(),
+  m_gradTemps(),
+  m_gradTempPtrs(),
+  m_rhoi(),
+  m_temps()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+NavierStokesNEQLogRhoivLogTTv<BASE>::~NavierStokesNEQLogRhoivLogTTv()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::setup()
+{
+  NavierStokesNEQRhoivt<BASE>::setup();
+
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  m_rhoi.resize(nbSpecies);
+  m_temps.resize(1 + nbTv);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQLogRhoivLogTTv<BASE>::setPartialDensities(const RealVector& state)
+{
+  const CFuint nbSpecies = m_rhoi.size();
+  CFreal rho = 0.0;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    m_rhoi[i] = std::exp(state[i]);
+    rho += m_rhoi[i];
+  }
+  return rho;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::setGradientVars(const std::vector<RealVector*>& states,
+                                                          RealMatrix& values,
+                                                          const CFuint stateSize)
+{
+  const CFuint nbValues = values.nbRows();
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  for (CFuint j = 0; j < stateSize; ++j) {
+    const RealVector& st = (*states[j]);
+    // ln y_i = ln rho_i - ln rho; u, v, ln T and ln Tv as stored
+    const CFreal lnRho = std::log(setPartialDensities(st));
+
+    for (CFuint i = 0; i < nbValues; ++i) {
+      values(i,j) = (i < nbSpecies) ? st[i] - lnRho : st[i];
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQLogRhoivLogTTv<BASE>::getDensity(const RealVector& state)
+{
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  CFreal rho = 0.0;
+  for (CFuint ie = 0; ie < nbSpecies; ++ie) {
+    rho += std::exp(state[ie]);
+  }
+  return rho;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::setComposition(const RealVector& state,
+                                                         const bool isPerturb,
+                                                         const CFuint iVar)
+{
+  using namespace COOLFluiD::Framework;
+
+  // same logic as NavierStokesNEQRhoivt::setComposition, with y_i from exp(ln rho_i)
+  this->useBackUpValues(false);
+  this->setBackUpValues(false);
+  this->freezeEnthalpies(false);
+
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  const CFreal ovRho = 1./setPartialDensities(state);
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    this->_ys[is] = m_rhoi[is]*ovRho;
+  }
+  this->_library->setSpeciesFractions(this->_ys);
+
+  const CFuint dim = PhysicalModelStack::getActive()->getDim();
+  if (isPerturb) {
+    // case in which speed components are perturbed (u+du, v+dv)
+    if ((dim == DIM_2D && (iVar == this->_uID || iVar == this->_vID)) ||
+        (dim == DIM_3D && (iVar == this->_uID || iVar == this->_vID || iVar == this->_wID))) {
+      this->useBackUpValues(true);
+    }
+
+    if (iVar < nbSpecies) {
+      // species enthalpies do not depend on partial densities
+      this->freezeEnthalpies(true);
+    }
+  }
+
+  // store the back up values if an unperturbed flux is computed
+  if (!isPerturb) {
+    this->setBackUpValues(true);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::setGradientState(const RealVector& state)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  // same logic as NavierStokesNEQRhoivt::setGradientState, with rho_i, T and
+  // Tv from the exp of the stored logarithms: _gradState = (y_i, u, v, T, Tv)
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  const CFreal rho = setPartialDensities(state);
+
+  const CFreal ovRho = 1./rho;
+  for (CFuint i = 0; i < nbSpecies; ++i) {
+    this->_gradState[i] = m_rhoi[i]*ovRho;
+  }
+
+  for (CFuint i = nbSpecies; i < this->_gradState.size(); ++i) {
+    this->_gradState[i] = (i >= this->_TID) ? std::exp(state[i]) : state[i];
+  }
+
+  const RealVector& refData = this->_eulerModel->getReferencePhysicalData();
+  CFreal rhodim = rho*refData[EulerTerm::RHO];
+  CFreal Tdim = this->_gradState[this->_TID]*refData[EulerTerm::T];
+  CFreal* tVec = CFNULL;
+
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  if (nbTv > 0) {
+    for (CFuint i = 0; i < nbTv; ++i) {
+      this->_avTvib[i] = this->_gradState[this->_TvibID[i]];
+    }
+    tVec = &this->_avTvib[0];
+
+    // the library reads T followed by the Tv's
+    m_temps[0] = this->_gradState[this->_TID];
+    for (CFuint i = 0; i < nbTv; ++i) {
+      m_temps[1 + i] = this->_gradState[this->_TvibID[i]];
+    }
+    this->_library->setState(&m_rhoi[0], &m_temps[0]);
+  }
+  else {
+    this->_library->setState(&m_rhoi[0], &Tdim);
+  }
+
+  this->_avP = this->_library->pressure(rhodim, Tdim, tVec)/refData[EulerTerm::P];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQLogRhoivLogTTv<BASE>::getDynViscosity(const RealVector& state,
+                                                            const std::vector<RealVector*>& gradients)
+{
+  using namespace COOLFluiD::Framework;
+  using namespace COOLFluiD::Physics::NavierStokes;
+
+  // same as NavierStokesNEQRhoivt::getDynViscosity with T, Tv = exp(ln T), exp(ln Tv);
+  // the composition is assumed to be set already
+  const RealVector& refData = this->_eulerModel->getReferencePhysicalData();
+  CFreal rhodim = getDensity(state)*refData[EulerTerm::RHO];
+  CFreal Tdim = std::exp(state[this->_TID])*refData[EulerTerm::T];
+
+  CFreal* tVec = CFNULL;
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  if (nbTv > 0) {
+    for (CFuint i = 0; i < nbTv; ++i) {
+      m_temps[1 + i] = std::exp(state[this->_TvibID[i]])*refData[EulerTerm::T];
+    }
+    tVec = &m_temps[1];
+  }
+
+  CFreal pdim = this->_library->pressure(rhodim, Tdim, tVec);
+  return this->_library->eta(Tdim, pdim, tVec) /
+    (this->getModel().getReferencePhysicalData())[NSTerm::MU];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::computeTransportProperties(const RealVector& state,
+                                                                     const std::vector<RealVector*>& gradients,
+                                                                     const RealVector& normal)
+{
+  // _gradState holds y_i here: getFlux calls setGradientState first. The base
+  // calls no other state reader, so the copy with physical temperatures is safe.
+  m_physTState.resize(state.size());
+  for (CFuint i = 0; i < state.size(); ++i) {
+    m_physTState[i] = (i >= this->_TID) ? std::exp(state[i]) : state[i];
+  }
+  NavierStokesNEQRhoivt<BASE>::computeTransportProperties(m_physTState, setMassFractionGradients(gradients), normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+RealVector& NavierStokesNEQLogRhoivLogTTv<BASE>::getFlux(const RealVector& values,
+                                                         const std::vector<RealVector*>& gradients,
+                                                         const RealVector& normal,
+                                                         const CFreal& radius)
+{
+  // T and Tv at this point for the substitution; the base sets them again.
+  // The species gradients are rebuilt later, in computeTransportProperties.
+  setGradientState(values);
+  return NavierStokesNEQRhoivt<BASE>::getFlux(values, setTemperatureGradients(gradients), normal, radius);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+CFreal NavierStokesNEQLogRhoivLogTTv<BASE>::getHeatFlux(const RealVector& state,
+                                                        const std::vector<RealVector*>& gradients,
+                                                        const RealVector& normal)
+{
+  // y_i, T and Tv at this point before the substitutions; the base sets them again
+  setGradientState(state);
+  return NavierStokesNEQRhoivt<BASE>::getHeatFlux
+    (state, setTemperatureGradients(setMassFractionGradients(gradients)), normal);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+const std::vector<RealVector*>& NavierStokesNEQLogRhoivLogTTv<BASE>::setMassFractionGradients
+(const std::vector<RealVector*>& gradients)
+{
+  const CFuint nbSpecies = this->_eulerModel->getNbScalarVars(0);
+  if (m_gradY.size() != nbSpecies) {
+    m_gradY.resize(nbSpecies);
+  }
+
+  m_gradYPtrs = gradients;
+  for (CFuint is = 0; is < nbSpecies; ++is) {
+    const CFuint iy = this->_yID[is];
+    // grad y_i = y_i grad(ln y_i), with y_i at this point
+    m_gradY[is].resize(gradients[iy]->size());
+    m_gradY[is] = this->_gradState[iy]*(*gradients[iy]);
+    m_gradYPtrs[iy] = &m_gradY[is];
+  }
+  return m_gradYPtrs;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
+const std::vector<RealVector*>& NavierStokesNEQLogRhoivLogTTv<BASE>::setTemperatureGradients
+(const std::vector<RealVector*>& gradients)
+{
+  const CFuint nbTemps = gradients.size() - this->_TID;
+  if (m_gradTemps.size() != nbTemps) {
+    m_gradTemps.resize(nbTemps);
+  }
+
+  m_gradTempPtrs = gradients;
+  for (CFuint i = 0; i < nbTemps; ++i) {
+    const CFuint iT = this->_TID + i;
+    // grad T = T grad(ln T), with T at this point
+    m_gradTemps[i].resize(gradients[iT]->size());
+    m_gradTemps[i] = this->_gradState[iT]*(*gradients[iT]);
+    m_gradTempPtrs[iT] = &m_gradTemps[i];
+  }
+  return m_gradTempPtrs;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+    } // namespace NEQ
+
+  } // namespace Physics
+
+} // namespace COOLFluiD
+
+//////////////////////////////////////////////////////////////////////////////

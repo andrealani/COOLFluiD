@@ -83,9 +83,14 @@ inline void extrapolateGradVarsToFlxPnt(const RealMatrix& gradVarsSolPnts,
  * Adds the volume term of the gradient of the gradient variables of one cell
  * to gradUpdates, before the division by the Jacobian determinant:
  *
- *   gradUpdates[j][iEq] += sum_i sum_dir dphi_j/dxi_dir(x_i) * g(iEq,i) * S_dir(x_i)
+ *   gradUpdates[j][iEq] += sum_i sum_dir dphi_i/dxi_dir(x_j) * g(iEq,i) * S_dir(x_j)
  *
  * with S_dir the mapped coordinate plane normals at the solution points.
+ * This is the chain rule: g is differentiated in reference space and the result
+ * is multiplied by the metric at the point x_j where the derivative is taken.
+ * Differentiating the product g*S instead would give a nonzero gradient of a
+ * constant g on curved cells, where the degree-P interpolant of S does not
+ * satisfy the metric identity (e.g. Q2 quads at P1).
  *
  * @param gradVarsSolPnts        gradient variables at the solution points, nbrEqs x nbrSolPnts
  * @param fluxProjVects          mapped coordinate plane normals [dir][solPnt]
@@ -115,11 +120,12 @@ inline void addGradVarsVolumeTerm(const RealMatrix& gradVarsSolPnts,
     {
       for (CFuint iDir = 0; iDir < dim; ++iDir)
       {
-        projectedCorr = gradVarsSolPnts(iEq,iSolPnt) * fluxProjVects[iDir][iSolPnt];
-
         for (CFuint jSolPnt = 0; jSolPnt < nbrSolSolDep; ++jSolPnt)
         {
           const CFuint jSolIdx = solSolDep[iSolPnt][jSolPnt];
+
+          // metric at the point where the derivative is evaluated
+          projectedCorr = gradVarsSolPnts(iEq,iSolPnt) * fluxProjVects[iDir][jSolIdx];
 
           gradUpdates[jSolIdx][iEq] += solPolyDerivAtSolPnts[jSolIdx][iDir][iSolPnt]*projectedCorr;
         }

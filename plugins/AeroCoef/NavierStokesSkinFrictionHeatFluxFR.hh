@@ -85,9 +85,13 @@ protected:
 
   /**
    * Tells whether the states hold the transition model variables, (p, u, v[, w], T)
-   * followed by k, omega, gamma and Re_theta: Puvt update variables and a
-   * GReKO or GReKLogO convective model. The last wall output column is then
-   * gamma, otherwise the radiative heat flux.
+   * followed by k, omega, gamma and the last transport variable of the transition
+   * model (Re_theta for GReKO and GReKLogO, alpha for gamma-alpha): Puvt update
+   * variables and one of those convective models. The last wall output column is
+   * then gamma, otherwise the radiative heat flux, and the Cfcrit column holds
+   * that last variable scaled to a skin friction coefficient. For gamma-alpha,
+   * Cf <= Cfcrit is the transition onset criterion its wall boundary condition
+   * applies, tau <= alpha sqrt(rho mu).
    */
   virtual bool hasTransitionLayout() const;
 

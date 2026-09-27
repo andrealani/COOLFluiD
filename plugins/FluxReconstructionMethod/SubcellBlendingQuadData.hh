@@ -72,7 +72,8 @@ public: // functions
   /// width of that subcell in the direction normal to the face of the given flux point
   CFreal getFaceSubcellWidth(const CFuint flxIdx) const;
 
-  /// Jacobian-scaled normals at the internal interfaces of the given cell.
+  /// Jacobian-scaled normals at the internal interfaces of the given cell, corrected so
+  /// that every subcell is closed (see closeSubcells).
   /// Must be called once per cell before computeSubcellRes or addSubcellResDelta.
   void computeCellNormals(Framework::GeometricEntity* cell);
 
@@ -104,6 +105,13 @@ private: // functions
                        const std::vector< Framework::State* >& states,
                        RiemannFlux& riemannFlux,
                        RealVector& result);
+
+  /// Correct the internal interface normals of the current cell so that every subcell
+  /// is closed: for each subcell the area vectors (normal x transverse width) of its four
+  /// faces sum to zero, so a constant flux gives a zero subcell residual. The exterior
+  /// faces (element flux points, shared with the neighbour element) are left untouched;
+  /// the internal area vectors get the smallest change that closes all subcells.
+  void closeSubcells(Framework::GeometricEntity* cell);
 
 private: // data
 
@@ -163,6 +171,39 @@ private: // data
 
   /// unit normal at the interface currently being evaluated
   RealVector m_unitNormal;
+
+  /// false if the face flux points do not sit at the transverse solution point
+  /// coordinates: then the subcell faces are not defined by the flux points and
+  /// the internal normals are left as sampled
+  bool m_closeSubcells;
+
+  /// true once the warning about an element whose exterior faces do not close was printed
+  bool m_warnedOpenElement;
+
+  /// transverse subcell width of each internal interface
+  std::vector< CFreal > m_intfTransWidth;
+
+  /// mapped coordinates of the exterior subcell faces, 4 x nbrSolPnts1D:
+  /// ksi = -1, ksi = +1, eta = -1, eta = +1, each ordered along the face
+  std::vector< RealVector > m_extCoords;
+
+  /// reference direction normal to each exterior subcell face, KSI or ETA
+  std::vector< CFuint > m_extPlaneIdx;
+
+  /// cosine eigenvectors of the 1D path graph Laplacian, [mode][point]
+  std::vector< std::vector< CFreal > > m_cosine;
+
+  /// eigenvalues of the 1D path graph Laplacian, per mode
+  std::vector< CFreal > m_eigenvalue;
+
+  /// closure defect of each subcell (sum of its outward area vectors)
+  std::vector< RealVector > m_closureDefect;
+
+  /// potential per subcell whose differences give the area vector corrections
+  std::vector< RealVector > m_closurePotential;
+
+  /// modal coefficient of the defect, scratch vector of size dim
+  RealVector m_closureCoef;
 
 }; // class SubcellBlendingQuadData
 

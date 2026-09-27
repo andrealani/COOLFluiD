@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <limits>
 #include <cmath>
 
@@ -136,18 +137,21 @@ void NavierStokesSkinFrictionHeatFRNEQ::computeDimensionalPressDensTemp
     getPhysicalPropertyLibrary<PhysicalChemicalLibrary>();
   
   const CFreal rhoRef = (m_updateVarSet->getModel()->getReferencePhysicalData())[EulerTerm::RHO];
-  const CFuint nbSpecies = library->getNbSpecies();
-  CFreal rho = 0.;
-  for (CFuint i = 0; i < nbSpecies; ++i) {
-    rho +=  (*m_cellStatesFlxPnt[flxIdx])[i];
-  }
-  rho *= rhoRef;
+  // the diffusive var set knows how the species are stored (rho_i or ln rho_i)
+  CFreal rho = m_diffVar->getDensity(*m_cellStatesFlxPnt[flxIdx])*rhoRef;
   
-  TDim =  (*m_cellStatesFlxPnt[flxIdx])[m_TID] * (m_updateVarSet->getModel()->getTempRef());
+  // logarithmic update variables (LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv) store ln T and ln Tv
+  const std::vector<std::string>& varNames = m_updateVarSet->getVarNames();
+  const bool logVariables = (std::count(varNames.begin(), varNames.end(), "lnrho0") > 0);
+  const RealVector& state = *m_cellStatesFlxPnt[flxIdx];
+  const CFreal TRef = m_updateVarSet->getModel()->getTempRef();
+
+  TDim = (logVariables ? std::exp(state[m_TID]) : state[m_TID])*TRef;
   
   const CFuint startTID = this->m_TID + 1;
   for (CFuint i = 0; i <  _tempVib.size(); ++i) {
-    _tempVib[i] =  (*m_cellStatesFlxPnt[flxIdx])[startTID + i]*(m_updateVarSet->getModel()->getTempRef());
+    const CFreal Tv = state[startTID + i];
+    _tempVib[i] = (logVariables ? std::exp(Tv) : Tv)*TRef;
   }
   
   CFreal* tVec = (_tempVib.size() == 0) ? CFNULL : &_tempVib[0];

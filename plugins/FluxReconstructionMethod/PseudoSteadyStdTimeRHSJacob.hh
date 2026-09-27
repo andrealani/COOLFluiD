@@ -20,8 +20,15 @@ namespace COOLFluiD {
 
 /**
  * Command to add the time residual
- * 
+ *
+ * Steady runs: the Newton method backs up the past states before the space
+ * residual, and the PhysicalityCom (limiter) can change the states in between.
+ * The time term V/dt (U - U_past) would then pull the solution back to the
+ * unlimited state, so at the first Newton step of each iteration the past
+ * states are set to the current (limited) states. No-op without a limiter.
+ *
  * @author Kris Van den Abeele
+ * @author Rayan Dhib
  */
 class PseudoSteadyStdTimeRHSJacob : public FluxReconstructionSolverCom {
 public:
@@ -109,7 +116,13 @@ protected:
 
   /// boolean telling whether computation is unsteady
   bool m_isUnsteady;
-  
+
+  /// true while this call has to reset the past states to the current ones (steady only, see execute())
+  bool m_resetPastStates;
+
+  /// iteration at which the past states were last reset
+  CFuint m_pastStatesResetIter;
+
   /// flag telling if to use global DT (global time stepping)
   bool m_useGlobalDT;
 

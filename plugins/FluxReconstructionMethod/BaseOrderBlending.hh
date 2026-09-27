@@ -9,6 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include <map>
 #include "Framework/DataSocketSink.hh"
 
 #include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
@@ -83,6 +84,35 @@ protected: // functions
 
   /// Apply the AlphaMin dead-band and AlphaMax cap to a raw alpha value.
   CFreal applyAlphaLimits(CFreal alpha) const;
+
+  /**
+   * Flag the cells where a ForceAlphaMinVars variable at a solution point lies
+   * more than ForceAlphaMinMargin below the smallest cell mean of the
+   * neighbouring cells. With ForceAlphaMinReleaseIter = 0 flags are never
+   * cleared; otherwise a flagged cell that passes the test with half the margin
+   * for that many consecutive iterations is released (only when allowRelease,
+   * i.e. alpha is not frozen). Does nothing when ForceAlphaMinVars is empty.
+   * Only owned cells are tested (an overlap cell at the edge of the halo lacks
+   * some neighbours); new flags and releases are then sent to every rank, which
+   * updates its copies of those cells.
+   */
+  void updateForcedCells(const bool allowRelease);
+
+  /// sets m_forcedCells to value on every rank's copy of the cells whose first state has one of the global IDs
+  CFuint shareForcedCells(const std::vector<CFuint>& firstStateGlobalIDs, const bool value);
+
+  /// true if a ForceAlphaMinVars variable at a solution point of the current cell (m_cellStates)
+  /// lies more than margin below the smallest cell mean of its neighbours
+  bool hasUndershoot(const CFuint elemIdx, const CFreal margin);
+
+  /// graded release (ForceAlphaMinReleaseRate > 0): updates the alpha floors of the owned cells
+  /// and shares the changes with every rank
+  void updateForcedFloors(const bool allowRelease);
+
+  /// graded release: updates m_forcedFloor, m_forcedFloorLimit and m_forcedCells on every rank's
+  /// copy of the given cells (first state global IDs, with floor and limit per cell)
+  void shareForcedFloors(const std::vector<CFuint>& firstStateGlobalIDs,
+                         const std::vector<CFreal>& floorsAndLimits);
 
   /// One Jacobi smoothing iteration: reads from m_sweepSnapshot, writes to socket_alpha.
   /// alpha_new[i] = applyAlphaLimits(max(snapshot[i], NeighborWeight * max_{j in N(i)} snapshot[j]))
@@ -183,6 +213,48 @@ protected: // data
 
   /// Current element index.
   CFuint m_elemIdx;
+
+  /// state variables whose undershoot below the neighbouring cell means forces alpha = 1 (e.g. ln rho_i)
+  std::vector< CFuint > m_forceAlphaMinVars;
+
+  /// margin of the undershoot test on the ForceAlphaMinVars
+  CFreal m_forceAlphaMinMargin;
+
+  /// consecutive clean iterations after which a flagged cell is released (0: never)
+  CFuint m_forceAlphaMinReleaseIter;
+
+  /// consecutive iterations each flagged cell has passed the release test
+  std::vector< CFuint > m_cleanIters;
+
+  /// cells released at the last update, all ranks (for the log line)
+  CFuint m_nbReleased;
+
+  /// graded release: floor decrease per clean iteration (0: off)
+  CFreal m_forceAlphaMinReleaseRate;
+
+  /// graded release: raise of the floor limit when the undershoot comes back
+  CFreal m_forceAlphaMinReleaseBackoff;
+
+  /// graded release: alpha floor per cell, 1 when flagged, 0 when not
+  std::vector< CFreal > m_forcedFloor;
+
+  /// graded release: lowest floor each cell may go back to (grows at each failed release)
+  std::vector< CFreal > m_forcedFloorLimit;
+
+  /// graded release: cells released since the start, all ranks (for the log line)
+  CFuint m_nbReleasedTotal;
+
+  /// graded release: sensor alpha of each cell before the floor (for the log line)
+  std::vector< CFreal > m_sensorAlpha;
+
+  /// cell means of the ForceAlphaMinVars, [cell][variable]
+  std::vector< std::vector< CFreal > > m_minVarsCellMeans;
+
+  /// cells flagged by the undershoot test, alpha = 1 while flagged
+  std::vector< bool > m_forcedCells;
+
+  /// local cell index of each cell, by the global ID of its first state (to apply the flags of other ranks)
+  std::map< CFuint, CFuint > m_cellByFirstStateGlobalID;
 
 }; // class BaseOrderBlending
 

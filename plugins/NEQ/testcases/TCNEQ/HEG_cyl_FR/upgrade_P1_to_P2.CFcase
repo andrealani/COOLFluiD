@@ -1,0 +1,60 @@
+################################################################################
+#
+# Raises the converged P1 solution hegFR_P1.CFmesh to P2 by sampling the P1
+# polynomial at the P2 solution points: writes heg_P2_init.CFmesh, the restart
+# file of hegFR_P2.CFcase. MeshUpgrade may store cells in another order (cells 0
+# and nbElem/2 exchanged, nodes and states together); the file is still correct,
+# so compare it with the P1 file by node list, not by cell index.
+# Mesh preparation only, on ONE MPI rank: PLATO can be initialised only once per process.
+#
+# PLATO: set Plato.path below to your PLATO database directory.
+#
+################################################################################
+
+CFEnv.ExceptionLogLevel   = 1000
+CFEnv.ErrorOnUnusedConfig = false
+
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader \
+                         libNavierStokes libNEQ libPlatoI \
+                         libFluxReconstructionMethod libFluxReconstructionNavierStokes \
+                         libFluxReconstructionNEQ
+
+Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/HEG_cyl_FR
+Simulator.Paths.ResultsDir = plugins/NEQ/testcases/TCNEQ/HEG_cyl_FR
+
+Simulator.SubSystems     = SubSysMesh
+Simulator.SubSystemTypes = OnlyMeshSubSystem
+
+Simulator.SubSysMesh.Namespaces = MeshNamespace
+Simulator.SubSysMesh.MeshNamespace.MeshData          = MeshMeshData
+Simulator.SubSysMesh.MeshNamespace.SubSystemStatus   = MeshSubSystemStatus
+Simulator.SubSysMesh.MeshNamespace.PhysicalModelType = NavierStokes2DNEQ
+
+Simulator.SubSysMesh.NavierStokes2DNEQ.refValues = 1. 1. 1. 1. 1. 5956. 5956. 1. 1.
+Simulator.SubSysMesh.NavierStokes2DNEQ.PropertyLibrary    = Plato
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.mixtureName  = air5_nasa
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.reactionName = air5
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.transfName   = TTv
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO_Install/database
+Simulator.SubSysMesh.NavierStokes2DNEQ.Plato.Xtol         = 1.e-14
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbSpecies      = 5
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbEulerEqs     = 3
+Simulator.SubSysMesh.NavierStokes2DNEQ.nbVibEnergyEqs = 1
+
+Simulator.SubSysMesh.MeshMeshData.listTRS    = Wall Inlet Outlet
+Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
+
+Simulator.SubSysMesh.OutputFormat      = CFmesh
+Simulator.SubSysMesh.CFmesh.FileName   = heg_P2_init.CFmesh
+Simulator.SubSysMesh.CFmesh.WriteSol   = WriteSolution
+Simulator.SubSysMesh.CFmesh.Namespace  = MeshNamespace
+
+Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = hegFR_P1.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Namespace     = MeshNamespace
+
+Simulator.SubSysMesh.SpaceMethod = Null
+Simulator.SubSysMesh.Null.Builder = MeshUpgrade
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = true
+Simulator.SubSysMesh.Null.Namespace = MeshNamespace

@@ -192,7 +192,9 @@ bool NavierStokesSkinFrictionHeatFluxFR::hasTransitionLayout() const
   const std::string updateVarStr = m_frData->getUpdateVarStr();
   const std::string convectiveName = PhysicalModelStack::getActive()->getConvectiveName();
 
-  return updateVarStr == "Puvt" && (convectiveName.find("GReKLogO") != std::string::npos || convectiveName.find("GReKO") != std::string::npos);
+  return updateVarStr == "Puvt" && (convectiveName.find("GReKLogO") != std::string::npos ||
+                                    convectiveName.find("GReKO") != std::string::npos ||
+                                    convectiveName.find("GammaAlpha") != std::string::npos);
 }
 
 //////////////////////////////////////////////////////////////////////////////

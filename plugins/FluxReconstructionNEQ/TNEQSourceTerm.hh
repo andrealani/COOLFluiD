@@ -19,7 +19,8 @@ namespace COOLFluiD {
  * A command for adding the source term for TNEQ
  *
  * @author Ray Vandenhoeck
- * @author Firas Ben Ameur 
+ * @author Firas Ben Ameur
+ * @author Rayan Dhib
  *
  */
 class TNEQSourceTerm : public CNEQSourceTerm {
@@ -90,6 +91,22 @@ protected:
   /// Compute the energy transfer terms
   void computeSourceVT(RealVector& omegaTv, CFreal& omegaRad);
 
+  /**
+   * Analytical Jacobian of the source term at one solution point (AnalyticalJacob = true).
+   * The library gives J(i,j) = d prodterm_i / d W_j, with W = [rho_s, momentum, T, Tv] in SI units.
+   * The chain rule to the update variables U is diagonal: dW_j/dU_j = rho_ref, T_ref (RhoivtTv)
+   * or rho_s, T, Tv (LogRhoivLogTTv, U = ln W).
+   * Stores m_stateJacobian[col][row] = dR_row/dU_col, R being the residual update of addSourceTerm.
+   * @param iState index of the solution point in the current cell
+   */
+  virtual void getSToStateJacobian(const CFuint iState);
+
+  /// true if the source term has to be computed for the active equation subsystem
+  bool doComputeSourceTerm() const;
+
+  /// fill the dimensional inputs of the chemistry library (T, Tv, p, rho, y) at one solution point
+  void setLibraryInputs(const Framework::State& state, CFreal& pdim, CFreal& Tdim, CFreal& rhodim);
+
 protected: // data
 
   /// radiation source term
@@ -106,7 +123,13 @@ protected: // data
   
   /// reference data
   Common::SafePtr<RealVector> m_refData;
-  
+
+  /// true if the update state holds logarithmic variables (LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv)
+  bool m_logVariables;
+
+  /// PLATO source Jacobian d prodterm_i / d W_j, W = [rho_s, momentum, T, Tv] (SI)
+  RealMatrix m_platoJacob;
+
 }; // class TNEQSourceTerm
 
 //////////////////////////////////////////////////////////////////////////////
