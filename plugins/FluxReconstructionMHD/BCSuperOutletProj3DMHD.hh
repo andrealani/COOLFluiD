@@ -26,6 +26,7 @@ namespace COOLFluiD {
  * for the 3D MHD equations.
  *
  * @author Ray Vandenhoeck
+ * @author Rayan Dhib
  */
 class BCSuperOutletProj3DMHD : public BCStateComputer {
 
@@ -73,11 +74,17 @@ protected: // data
   /// physical model (in conservative variables)
   Common::SafePtr<Physics::MHD::MHD3DProjectionVarSet> m_varSet;
 
+  /// builder of faces
+  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
+
   /// variable for physical data of ghostSol
   RealVector m_ghostSolPhysData;
 
   /// variable for physical data of intSol
   RealVector m_intSolPhysData;
+
+  /// number of flux pnts on a face
+  CFuint m_nbrFaceFlxPnts;
   
   CFreal m_refPhi;
   

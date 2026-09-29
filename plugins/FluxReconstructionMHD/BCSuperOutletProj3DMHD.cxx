@@ -71,9 +71,11 @@ void BCSuperOutletProj3DMHD::computeGhostStates(const vector< State* >& intState
                                                   const std::vector< RealVector >& coords)
 {
   // number of states
-  const CFuint nbrStates = ghostStates.size();
-  cf_assert(nbrStates == intStates.size());
-  cf_assert(nbrStates == normals.size());
+  //const CFuint nbrStates = ghostStates.size();
+  //cf_assert(nbrStates == intStates.size());
+  //cf_assert(nbrStates == normals.size());
+
+  CFuint nbrStates = coords.size();
 
   // loop over the states
   for (CFuint iState = 0; iState < nbrStates; ++iState)
@@ -230,9 +232,11 @@ void BCSuperOutletProj3DMHD::computeGhostGradients(const std::vector< std::vecto
                                                      const std::vector< RealVector >& coords)
 {
   // number of state gradients
-  const CFuint nbrStateGrads = intGrads.size();
-  cf_assert(nbrStateGrads == ghostGrads.size());
-  cf_assert(nbrStateGrads == normals.size());
+  //const CFuint nbrStateGrads = intGrads.size();
+  //cf_assert(nbrStateGrads == ghostGrads.size());
+  //cf_assert(nbrStateGrads == normals.size());
+
+  CFuint nbrStateGrads = m_nbrFaceFlxPnts;
   
   const CFuint nbrGradVars = intGrads[0].size();
   
@@ -396,16 +400,23 @@ void BCSuperOutletProj3DMHD::setup()
   vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
   cf_assert(frLocalData.size() > 0);
   
-  // compute flux point coordinates
-  SafePtr< vector<RealVector> > flxLocalCoords = frLocalData[0]->getFaceFlxPntsFaceLocalCoords();
-  const CFreal nbrFaceFlxPnts = flxLocalCoords->size();
+  // get face builder
+  m_faceBuilder = getMethodData().getFaceBuilder();
+
+  m_nbrFaceFlxPnts = frLocalData[0]->getFaceFlxPntsFaceLocalCoords()->size();
   
-  m_tempStates.resize(nbrFaceFlxPnts);
+  const CFPolyOrder::Type order = frLocalData[0]->getPolyOrder();
+  CFuint nbrFaceFlxPntsMax= (order+1)*(order+1);
+
+  //m_tempStates.resize(nbrFaceFlxPnts);
+
+  m_tempStates.resize(nbrFaceFlxPntsMax);
   
   // number of equations
   const CFuint nbEqs = PhysicalModelStack::getActive()->getNbEq();
   
-  for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+  //for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
+  for (CFuint iFlx = 0; iFlx < nbrFaceFlxPntsMax; ++iFlx)
   {
     m_tempStates[iFlx].resize(nbEqs); 
   }

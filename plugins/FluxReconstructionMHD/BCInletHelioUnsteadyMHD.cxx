@@ -19,6 +19,7 @@
 #include <iomanip>
 #include <regex>
 #include <algorithm>
+#include <ctime>
 
 // Filesystem includes will be handled via Environment/DirPaths which already includes boost filesystem
 
@@ -105,7 +106,7 @@ void BCInletHelioUnsteadyMHD::defineConfigOptions(Config::OptionList& options)
     ("StartTime", "Starting simulation time (non-dimensional) corresponding to StartDateTime");
     
   options.addConfigOption<CFreal>
-    ("EndTime", "Ending simulation time (non-dimensional) corresponding to EndDateTime");  
+    ("EndTime", "Ending simulation time (non-dimensional) corresponding to EndDateTime");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -236,14 +237,14 @@ void BCInletHelioUnsteadyMHD::computeGhostStates(const vector< State* >& intStat
 {
   // Dynamic time interpolation for time-evolving boundary conditions
   if (m_useTimeInterpolation) {
-    const CFreal currTime = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+    const CFreal currTime = SubSystemStatusStack::getActive()->getCurrentTime();
     // Only update if time has changed (for efficiency)
     if (std::abs(currTime - m_lastInterpolationTime) > 1e-12) {
       interpolateSurfaceDataAtTime(currTime);
       m_lastInterpolationTime = currTime;
     }
   }
-  
+
   // number of states
   //const CFuint nbrStates = ghostStates.size();
   //cf_assert(nbrStates == intStates.size());
@@ -379,11 +380,22 @@ void BCInletHelioUnsteadyMHD::generateFileListFromPattern()
     return {}; // Empty if no match
   };
   
-  // Helper function to convert datetime to seconds since epoch (simplified)
-  long long (*dateTimeToSeconds)(int, int, int, int, int, int) = 
+  // Helper function to convert datetime to seconds since the Unix epoch (UTC).
+  // Uses a proper calendar (timegm) instead of a fixed 30-day-month / 365-day-year
+  // shortcut. The old shortcut tied Mar 31 with Apr 01 (and every 31-day-month
+  // boundary), which corrupted std::sort ordering of the file list and made the
+  // BC interpolator march through files non-monotonically near those dates.
+  long long (*dateTimeToSeconds)(int, int, int, int, int, int) =
     [](int year, int month, int day, int hour, int min, int sec) -> long long {
-    // Simple conversion - assumes each month has 30 days (good enough for time differences)
-    return sec + min*60 + hour*3600 + day*86400LL + month*2592000LL + year*31536000LL;
+    std::tm tm = {};
+    tm.tm_year = year - 1900;
+    tm.tm_mon  = month - 1;
+    tm.tm_mday = day;
+    tm.tm_hour = hour;
+    tm.tm_min  = min;
+    tm.tm_sec  = sec;
+    tm.tm_isdst = 0;
+    return static_cast<long long>(timegm(&tm));
   };
   
   // Helper function to parse date-time string
@@ -844,7 +856,7 @@ void BCInletHelioUnsteadyMHD::setup()
     // Single file case - perform traditional spatial interpolation
     performInitialSpatialInterpolation(surfaces, bndFlxPnts);
   }
-  
+
   // cleanup the memory for single file case
   if (!m_useTimeInterpolation) {
     for (CFuint is = 0; is < nbSurf; ++is) {
@@ -962,7 +974,7 @@ void BCInletHelioUnsteadyMHD::interpolateSurfaceDataInTime()
   
   if (!m_useTimeInterpolation) return;
   
-  const CFreal currTime = SubSystemStatusStack::getActive()->getCurrentTimeDim();
+  const CFreal currTime = SubSystemStatusStack::getActive()->getCurrentTime();
   interpolateSurfaceDataAtTime(currTime);
 }
 
@@ -1192,7 +1204,11 @@ void BCInletHelioUnsteadyMHD::interpolateSurfaceDataAtTime(CFreal targetTime)
   // that are used in computeGhostStates. The spatial mapping remains the same,
   // but we need to re-extract the interpolated values from m_surfaceAtTime.
   updateBoundaryFluxPointValues();
-  
+
+  // Record the time so that subsequent calls (e.g., from computeGhostStates
+  // after preProcess already ran) skip the redundant update
+  m_lastInterpolationTime = targetTime;
+
   CFLog(VERBOSE, "BCInletHelioUnsteadyMHD::interpolateSurfaceDataAtTime() => END\n");
 }
 
@@ -1245,34 +1261,58 @@ void BCInletHelioUnsteadyMHD::extrapolateSpatialData()
   const CFuint nbOrients = bndFacesStartIdxs[0].size()-1; 
   const CFuint nbTRs = thisTRS->getNbTRs();
   
+  // Get FR data for prism face-type dispatch
+  vector< FluxReconstructionElementData* >& frLocalDataEx = getMethodData().getFRLocalData();
+  const CFGeoShape::Type elemShapeEx = frLocalDataEx[0]->getShape();
+  SafePtr< std::vector< std::vector< RealVector > > > faceFlxPntsLocalCoordsPerTypeEx =
+    frLocalDataEx[0]->getFaceFlxPntsLocalCoordsPerType();
+
   CFuint localFaceID = 0;
-  
+
   // Rebuild flux points for current surface data
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
     for (CFuint orient = 0; orient < nbOrients; ++orient) {
       const CFuint startFaceIdx = bndFacesStartIdxs[iTR][orient  ];
       const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][orient+1];
-      
+
       for (CFuint iFace = startFaceIdx; iFace < stopFaceIdx; ++iFace) {
         faceData.idx = iFace;
         GeometricEntity *const face = _faceBuilder->buildGE();
-        
-        for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx) {
-          m_flxPntCoords[iFlx] = face->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);
-          
+
+        // Detect face type for prism elements (triangle vs quad)
+        CFuint nbrFlxPntsThisFace = m_nbrFaceFlxPnts;
+        std::vector<RealVector>* localCoordsThisFace = &(*m_flxLocalCoords);
+        if (elemShapeEx == CFGeoShape::PRISM)
+        {
+          const CFGeoShape::Type faceGeo = face->getShape();
+          if (faceGeo == CFGeoShape::TRIAG)
+          {
+            nbrFlxPntsThisFace = (*faceFlxPntsLocalCoordsPerTypeEx)[0].size();
+            localCoordsThisFace = &((*faceFlxPntsLocalCoordsPerTypeEx)[0]);
+          }
+          else
+          {
+            nbrFlxPntsThisFace = (*faceFlxPntsLocalCoordsPerTypeEx)[1].size();
+            localCoordsThisFace = &((*faceFlxPntsLocalCoordsPerTypeEx)[1]);
+          }
+        }
+
+        for (CFuint iFlx = 0; iFlx < nbrFlxPntsThisFace; ++iFlx) {
+          m_flxPntCoords[iFlx] = face->computeCoordFromMappedCoord((*localCoordsThisFace)[iFlx]);
+
           FlxPntStruct thisFlxPnt;
           thisFlxPnt.setCentreCoordinates(m_flxPntCoords[iFlx]);
           thisFlxPnt.setLocalFaceID(localFaceID);
           thisFlxPnt.setLocalFluxID(iFlx);
           bndFlxPnts.push_back(thisFlxPnt);
         }
-        
+
         _faceBuilder->releaseGE();
         localFaceID++;
       }
     }
   }
-  
+
   // Now do the spatial interpolation with current surface data
   const CFuint nbBnd = bndFlxPnts.size();
   for(CFuint iFlx = 0; iFlx < nbBnd; iFlx++) {
@@ -1327,12 +1367,15 @@ void BCInletHelioUnsteadyMHD::extrapolateSpatialData()
       CFreal sumWeights = 0.0;
       
       for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
-        const CFuint idxs = closestPoint.surfaceIDs[n];
+        const CFint idxs_s = closestPoint.surfaceIDs[n];
+        const CFint idxp_s = closestPoint.pointsIDs[n];
+        if (idxs_s < 0 || idxp_s < 0) continue;
+        const CFuint idxs = static_cast<CFuint>(idxs_s);
+        const CFuint idxp = static_cast<CFuint>(idxp_s);
         const SurfaceData& sf = *m_surfaceAtTime[idxs];
         const CFreal weight = 1./closestPoint.r[n];
         sumWeights += weight;
-        const CFuint idxp = closestPoint.pointsIDs[n];
-        
+
         matchingRho += weight * sf.rho[idxp];
         matchingU += weight * sf.u[idxp];
         matchingV += weight * sf.v[idxp];
@@ -1728,38 +1771,67 @@ void BCInletHelioUnsteadyMHD::updateBoundaryFluxPointValues()
   // This is necessary because we need the flux point coordinates for spatial interpolation
   std::vector<FlxPntStruct> bndFlxPnts;
   
-  // Get face builder data
+  // Get face builder data and configure for THIS TRS
+  // (the shared builder may have been reconfigured by other BCs or interior face iterations)
+  SafePtr<TopologicalRegionSet> cellTrs = MeshDataStack::getActive()->getTrs("InnerCells");
   FaceToCellGEBuilder::GeoData& faceData = _faceBuilder->getDataGE();
-  
+  faceData.cellsTRS = cellTrs;
+  faceData.facesTRS = m_thisTRS;
+  faceData.isBoundary = true;
+
   map< std::string , vector< vector< CFuint > > >&
       bndFacesStartIdxsPerTRS = getMethodData().getBndFacesStartIdxs();
   vector< vector< CFuint > > bndFacesStartIdxs = bndFacesStartIdxsPerTRS[m_thisTRS->getName()];
-  
-  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1; 
+
+  const CFuint nbOrients = bndFacesStartIdxs[0].size()-1;
   const CFuint nbTRs = m_thisTRS->getNbTRs();
-  
+
+  // Get FR data for prism face-type dispatch
+  vector< FluxReconstructionElementData* >& frLocalData = getMethodData().getFRLocalData();
+  const CFGeoShape::Type elemShape = frLocalData[0]->getShape();
+  SafePtr< std::vector< std::vector< RealVector > > > faceFlxPntsLocalCoordsPerType =
+    frLocalData[0]->getFaceFlxPntsLocalCoordsPerType();
+
   CFuint localFaceID = 0;
-  
+
   // Rebuild flux points to get their coordinates
   for (CFuint iTR = 0; iTR < nbTRs; ++iTR) {
     for (CFuint orient = 0; orient < nbOrients; ++orient) {
       const CFuint startFaceIdx = bndFacesStartIdxs[iTR][orient  ];
       const CFuint stopFaceIdx  = bndFacesStartIdxs[iTR][orient+1];
-      
+
       for (CFuint iFace = startFaceIdx; iFace < stopFaceIdx; ++iFace) {
         faceData.idx = iFace;
         GeometricEntity *const face = _faceBuilder->buildGE();
-        
-        for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx) {
-          m_flxPntCoords[iFlx] = face->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx]);
-          
+
+        // Detect face type for prism elements (triangle vs quad)
+        CFuint nbrFlxPntsThisFace = m_nbrFaceFlxPnts;
+        std::vector<RealVector>* localCoordsThisFace = &(*m_flxLocalCoords);
+        if (elemShape == CFGeoShape::PRISM)
+        {
+          const CFGeoShape::Type faceGeo = face->getShape();
+          if (faceGeo == CFGeoShape::TRIAG)
+          {
+            nbrFlxPntsThisFace = (*faceFlxPntsLocalCoordsPerType)[0].size();
+            localCoordsThisFace = &((*faceFlxPntsLocalCoordsPerType)[0]);
+          }
+          else
+          {
+            nbrFlxPntsThisFace = (*faceFlxPntsLocalCoordsPerType)[1].size();
+            localCoordsThisFace = &((*faceFlxPntsLocalCoordsPerType)[1]);
+          }
+        }
+
+        for (CFuint iFlx = 0; iFlx < nbrFlxPntsThisFace; ++iFlx) {
+          m_flxPntCoords[iFlx] = face->computeCoordFromMappedCoord((*localCoordsThisFace)[iFlx]);
+
           FlxPntStruct thisFlxPnt;
           thisFlxPnt.setCentreCoordinates(m_flxPntCoords[iFlx]);
           thisFlxPnt.setLocalFaceID(localFaceID);
           thisFlxPnt.setLocalFluxID(iFlx);
           bndFlxPnts.push_back(thisFlxPnt);
         }
-        
+
         _faceBuilder->releaseGE();
         localFaceID++;
       }
@@ -1820,12 +1892,15 @@ void BCInletHelioUnsteadyMHD::updateBoundaryFluxPointValues()
       CFreal sumWeights = 0.0;
       
       for (CFuint n = 0; n < m_nbClosestPoints; ++n) {
-        const CFuint idxs = closestPoint.surfaceIDs[n];
+        const CFint idxs_s = closestPoint.surfaceIDs[n];
+        const CFint idxp_s = closestPoint.pointsIDs[n];
+        if (idxs_s < 0 || idxp_s < 0) continue;
+        const CFuint idxs = static_cast<CFuint>(idxs_s);
+        const CFuint idxp = static_cast<CFuint>(idxp_s);
         const SurfaceData& sf = *m_surfaceAtTime[idxs];
         const CFreal weight = 1./closestPoint.r[n];
         sumWeights += weight;
-        const CFuint idxp = closestPoint.pointsIDs[n];
-        
+
         matchingRho += weight * sf.rho[idxp];
         matchingU += weight * sf.u[idxp];
         matchingV += weight * sf.v[idxp];

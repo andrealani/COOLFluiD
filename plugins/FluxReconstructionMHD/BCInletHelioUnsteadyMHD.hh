@@ -238,9 +238,9 @@ protected: // helper function
   /**
    * Perform initial spatial interpolation for single file case
    */
-  void performInitialSpatialInterpolation(const std::vector<SurfaceData*>& surfaces, 
+  void performInitialSpatialInterpolation(const std::vector<SurfaceData*>& surfaces,
                                           const std::vector<FlxPntStruct>& bndFlxPnts);
-  
+
   /**
    * Generate file names and times automatically based on pattern and time range
    */
