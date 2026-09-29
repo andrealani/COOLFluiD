@@ -55,11 +55,6 @@ namespace COOLFluiD {
 /// only have a zero update under a strictly relative bound; no floor is added.
 /// An empty index list disables these additional checks.
 ///
-/// An accepted step calls beforeUpdate() with the states still unmodified and
-/// afterUpdate() once they are updated. Both do nothing here. A derived class
-/// uses them to add a treatment of its own without touching the step control,
-/// as PhysicalityCFLUpdateSolCorona does for the solar corona.
-///
 /// Limiter: Ceze and Fidkowski, Int. J. Numer. Meth. Engng 102 (2015),
 /// Algorithm 2. CFL gating on the relaxation factor: Ceze and Fidkowski,
 /// AIAA 2013-2686 (exponential progression with under-relaxation).
@@ -89,17 +84,6 @@ public:
   /// Execute Processing actions
   virtual void execute();
 
-protected:
-
-  /// Called on an accepted step, with the states still unmodified.
-  virtual void beforeUpdate() {}
-
-  /// Called on an accepted step, right after the states are updated.
-  virtual void afterUpdate() {}
-
-  /// update variable set (owned by the space method), reset at each execute()
-  Common::SafePtr<Framework::ConvectiveVarSet> m_varSet;
-
 private:
 
   /// Largest omega in [0,1] such that state + omega*Relaxation*dU keeps
@@ -119,6 +103,9 @@ private:
   void rejectUpdate(const CFreal omega);
 
 private:
+
+  /// update variable set (owned by the space method)
+  Common::SafePtr<Framework::ConvectiveVarSet> m_varSet;
 
   /// trial state scratch
   Framework::State* m_trial;

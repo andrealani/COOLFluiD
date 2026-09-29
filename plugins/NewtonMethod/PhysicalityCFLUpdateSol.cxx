@@ -301,7 +301,6 @@ void PhysicalityCFLUpdateSol::execute()
   // 3. accepted: apply omega*Relaxation*dU through the base class so that
   //    the filters, the validation and the updateCoeff reset stay in one place
   m_nbConsecutiveRejections = 0;
-  beforeUpdate();
   if (omega < 1.) {
     const std::vector<CFreal> alpha = m_alpha;
     for (CFuint iEq = 0; iEq < nbEqs; ++iEq) { m_alpha[iEq] *= omega; }
@@ -311,7 +310,6 @@ void PhysicalityCFLUpdateSol::execute()
   else {
     StdUpdateSol::execute();
   }
-  afterUpdate();
 
   // 4. CFL schedule: grow only after a clean update in an unretried step
   SafePtr<CFL> cfl = getMethodData().getCFL();
