@@ -508,6 +508,14 @@ void ConvJacobAnaFluxReconstruction::setFaceData(CFuint faceID)
     m_unitNormalFlxPnts[iFlxPnt] = m_mappedFaceNormalDir*m_faceJacobVecs[iFlxPnt]/m_faceJacobVecAbsSizeFlxPnts[iFlxPnt];
   }
 
+  // the gradients are only allocated (StdSetup) and computed (execute) when the
+  // case has diffusion or artificial viscosity; the convective Jacobian of this
+  // command never reads them
+  if (!(getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity()))
+  {
+    return;
+  }
+
   // get the gradients datahandle
   DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
 

@@ -10,7 +10,7 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -11.0283
+### Residual = -10.775
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.DoAssertions         = true
@@ -99,12 +99,12 @@ Simulator.SubSystem.Tecplot.AppendIter = false
 
 ###################################
 Simulator.SubSystem.StopCondition = RelativeNormAndMaxIter
-Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 50
+Simulator.SubSystem.RelativeNormAndMaxIter.MaxIter = 100
 Simulator.SubSystem.RelativeNormAndMaxIter.RelativeNorm = -10
 
 Simulator.SubSystem.ConvergenceMethod = BwdEuler
 Simulator.SubSystem.BwdEuler.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e5,0.5*2.0^max(i-1,0))
+Simulator.SubSystem.BwdEuler.Data.CFL.Function.Def = min(1e4,0.5*1.2^max(i-1,0))
 Simulator.SubSystem.BwdEuler.ConvergenceFile = convergenceCylEuler.plt
 Simulator.SubSystem.BwdEuler.ShowRate        = 1
 Simulator.SubSystem.BwdEuler.ConvRate        = 1

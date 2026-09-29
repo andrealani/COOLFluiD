@@ -176,6 +176,9 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
 {
   const CFreal resFactor = getMethodData().getResFactor();
 
+  // without a physical diffusive flux the gradients are neither read nor differentiated
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
   m_pertSide = side;
 
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
@@ -185,9 +188,12 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
     // dereference state
     State& pertState = *(*m_states[side])[iSol];
 
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    if (physDiff)
     {
-      *(m_tempGrad[iEq]) = (*(m_cellGrads[side][iSol]))[iEq];
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        *(m_tempGrad[iEq]) = (*(m_cellGrads[side][iSol]))[iEq];
+      }
     }
 
     // unperturbed diffusive minus convective flux
@@ -223,6 +229,11 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
       }
 
       m_numJacob->restore(pertState[iVar]);
+    }
+
+    if (!physDiff)
+    {
+      continue;
     }
 
     // unperturbed diffusive flux
@@ -296,12 +307,18 @@ void CombinedJacobFluxReconstruction::assembleFaceJacobian(const CFint ownedSide
   computeRiemannFluxJacobianNum(resFactor);
   computeRiemannFluxToGradJacobianNum(resFactor);
 
+  // without a physical diffusive flux the gradients are not touched
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
   // back up the gradients and the states of the cells
-  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  if (physDiff)
   {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
     {
-      m_cellGradsBackUp[iSide][iSol] = *(m_cellGrads[iSide][iSol]);
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        m_cellGradsBackUp[iSide][iSol] = *(m_cellGrads[iSide][iSol]);
+      }
     }
   }
   std::vector< State* >* cellStatesBackUp = m_cellStates;
@@ -309,7 +326,7 @@ void CombinedJacobFluxReconstruction::assembleFaceJacobian(const CFint ownedSide
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
     // gradient variables of the perturbed cell before the perturbation
-    if (hasPhysicalDiffusionJacobian())
+    if (physDiff)
     {
       computeCellGradVars(*(m_states[iSide]),m_gradVarsSolPntsBefore);
     }
@@ -349,11 +366,14 @@ void CombinedJacobFluxReconstruction::assembleFaceJacobian(const CFint ownedSide
   }
 
   // restore the gradients, the states and the face data
-  for (CFuint iSide = 0; iSide < 2; ++iSide)
+  if (physDiff)
   {
-    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    for (CFuint iSide = 0; iSide < 2; ++iSide)
     {
-      *(m_cellGrads[iSide][iSol]) = m_cellGradsBackUp[iSide][iSol];
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        *(m_cellGrads[iSide][iSol]) = m_cellGradsBackUp[iSide][iSol];
+      }
     }
   }
   m_cellStates = cellStatesBackUp;
@@ -372,6 +392,8 @@ void CombinedJacobFluxReconstruction::assembleFaceJacobian(const CFint ownedSide
 
 CFreal CombinedJacobFluxReconstruction::computePertCellGradients()
 {
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
   // the gradients start from zero, so the perturbed gradients are the change
   for (CFuint iSide = 0; iSide < 2; ++iSide)
   {
@@ -379,9 +401,12 @@ CFreal CombinedJacobFluxReconstruction::computePertCellGradients()
     {
       m_affectedSolPnts[iSide][iSol] = false;
 
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      if (physDiff)
       {
-        (*m_cellGrads[iSide][iSol])[iEq] = 0.0;
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          (*m_cellGrads[iSide][iSol])[iEq] = 0.0;
+        }
       }
     }
   }
@@ -395,7 +420,7 @@ CFreal CombinedJacobFluxReconstruction::computePertCellGradients()
   const CFreal invEps = 1.0/m_numJacob->getEps();
 
   // volume term and the liftings of every face of the perturbed cell
-  if (hasPhysicalDiffusionJacobian())
+  if (physDiff)
   {
     DiffRHSJacobFluxReconstruction::computePerturbedGradientsAnalytical(m_pertSide);
   }
@@ -410,13 +435,19 @@ CFreal CombinedJacobFluxReconstruction::computePertCellGradients()
 
 void CombinedJacobFluxReconstruction::computePertCompactFaceGradients(const CFuint nbrFaceFlxPnts, const CFreal invEps)
 {
+  // without a physical diffusive flux there is no face gradient to differentiate
+  if (!hasPhysicalDiffusionJacobian())
+  {
+    return;
+  }
+
   // derivative of the gradient variables at the solution points
   m_derivGradVarsSolPnts[LEFT] = 0.0;
   m_derivGradVarsSolPnts[RIGHT] = 0.0;
 
   for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
   {
-    m_derivGradVarsSolPnts[m_pertSide](iEq,m_pertSol) = hasPhysicalDiffusionJacobian() ? m_pertGradVarsChange[iEq]*invEps : 0.0;
+    m_derivGradVarsSolPnts[m_pertSide](iEq,m_pertSol) = m_pertGradVarsChange[iEq]*invEps;
   }
 
   // extrapolated to the flux points of the current face
@@ -443,6 +474,9 @@ void CombinedJacobFluxReconstruction::computePertCompactFaceGradients(const CFui
 
 void CombinedJacobFluxReconstruction::addCellVolumeJacobian(BlockAccumulator& acc, const CFuint destSide, const CFreal invEps)
 {
+  // the F_q dq term only exists with a physical diffusive flux
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
   // derivative of the flux at the solution points: dF = F_U dU + F_q dq
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
@@ -457,11 +491,14 @@ void CombinedJacobFluxReconstruction::addCellVolumeJacobian(BlockAccumulator& ac
         derivContFlx = m_fluxJacobian[destSide][iSol][m_pertVar][iDim];
       }
 
-      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      if (physDiff)
       {
-        for (CFuint iGradDim = 0; iGradDim < m_dim; ++iGradDim)
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          derivContFlx += m_gradientFluxJacobian[destSide][iSol][iEq][iGradDim][iDim]*((*m_cellGrads[destSide][iSol])[iEq][iGradDim]*invEps);
+          for (CFuint iGradDim = 0; iGradDim < m_dim; ++iGradDim)
+          {
+            derivContFlx += m_gradientFluxJacobian[destSide][iSol][iEq][iGradDim][iDim]*((*m_cellGrads[destSide][iSol])[iEq][iGradDim]*invEps);
+          }
         }
       }
 
@@ -509,6 +546,9 @@ void CombinedJacobFluxReconstruction::addFaceFluxJacobian(const CFuint destSide,
   // dereference accumulator
   BlockAccumulator& acc = *m_acc;
 
+  // the F^I_q dq_avg term only exists with a physical diffusive flux
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
   for (CFuint iFlx = 0; iFlx < nbrFaceFlxPnts; ++iFlx)
   {
     const CFuint pertFlxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][m_pertSide][iFlx];
@@ -517,11 +557,14 @@ void CombinedJacobFluxReconstruction::addFaceFluxJacobian(const CFuint destSide,
     // derivative of the common face flux: F_U E_f dU + F_q dq_avg
     m_derivFlxPntFlux = m_riemannFluxJacobian[m_pertSide][iFlx][m_pertVar]*(*m_solPolyValsAtFlxPnts)[pertFlxIdx][m_pertSol];
 
-    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    if (physDiff)
     {
-      for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
       {
-        m_derivFlxPntFlux += m_riemannFluxGradJacobian[iFlx][iEq][iDim]*(0.5*((*m_cellGradFlxPnt[LEFT][iFlx][iEq])[iDim]+(*m_cellGradFlxPnt[RIGHT][iFlx][iEq])[iDim]));
+        for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+        {
+          m_derivFlxPntFlux += m_riemannFluxGradJacobian[iFlx][iEq][iDim]*(0.5*((*m_cellGradFlxPnt[LEFT][iFlx][iEq])[iDim]+(*m_cellGradFlxPnt[RIGHT][iFlx][iEq])[iDim]));
+        }
       }
     }
 
@@ -593,11 +636,19 @@ void CombinedJacobFluxReconstruction::assembleIsolatedCellJacobian(const CFuint 
     m_neighbCellFluxProjVects[LEFT][iDim] = m_cells[LEFT]->computeMappedCoordPlaneNormalAtMappedCoords(m_dimList[iDim],*m_solPntsLocalCoords);
   }
 
-  // the gradients corrected with all the faces of the cell
-  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  // without a physical diffusive flux the gradients are not touched here
+  const bool physDiff = hasPhysicalDiffusionJacobian();
+
+  // the gradients corrected with all the faces of the cell; without a physical
+  // diffusive flux they are only looked up when they are allocated (diffusion
+  // or artificial viscosity), since the residual of a subclass may read them
+  if (physDiff || getMethodData().hasDiffTerm() || getMethodData().hasArtificialViscosity())
   {
-    m_cellGrads[LEFT][iSol] = &gradients[(*m_states[LEFT])[iSol]->getLocalID()];
+    DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      m_cellGrads[LEFT][iSol] = &gradients[(*m_states[LEFT])[iSol]->getLocalID()];
+    }
   }
 
   // volume residual
@@ -625,12 +676,15 @@ void CombinedJacobFluxReconstruction::assembleIsolatedCellJacobian(const CFuint 
   // back up the gradients
   for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
   {
-    m_cellGradsBackUp[LEFT][iSol] = *(m_cellGrads[LEFT][iSol]);
+    if (physDiff)
+    {
+      m_cellGradsBackUp[LEFT][iSol] = *(m_cellGrads[LEFT][iSol]);
+    }
     acc.setRowColIndex(iSol,(*m_states[LEFT])[iSol]->getLocalID());
   }
 
   // gradient variables of the cell before the perturbation
-  if (hasPhysicalDiffusionJacobian())
+  if (physDiff)
   {
     computeCellGradVars(*(m_states[LEFT]),m_gradVarsSolPntsBefore);
   }
@@ -646,11 +700,14 @@ void CombinedJacobFluxReconstruction::assembleIsolatedCellJacobian(const CFuint 
       m_pertVar = iVar;
 
       // the gradients start from zero, so the perturbed gradients are the change
-      for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
+      if (physDiff)
       {
-        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        for (CFuint jSol = 0; jSol < m_nbrSolPnts; ++jSol)
         {
-          (*m_cellGrads[LEFT][jSol])[iEq] = 0.0;
+          for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+          {
+            (*m_cellGrads[LEFT][jSol])[iEq] = 0.0;
+          }
         }
       }
 
@@ -663,7 +720,7 @@ void CombinedJacobFluxReconstruction::assembleIsolatedCellJacobian(const CFuint 
       const CFreal invEps = 1.0/m_numJacob->getEps();
 
       // volume term and the liftings of every face of the cell
-      if (hasPhysicalDiffusionJacobian())
+      if (physDiff)
       {
         addPerturbedVolumeGradient(LEFT);
         addPerturbedFaceLiftings(LEFT,m_allFaceLocalIdxs);
@@ -679,9 +736,12 @@ void CombinedJacobFluxReconstruction::assembleIsolatedCellJacobian(const CFuint 
   }
 
   // restore the gradients
-  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  if (physDiff)
   {
-    *(m_cellGrads[LEFT][iSol]) = m_cellGradsBackUp[LEFT][iSol];
+    for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    {
+      *(m_cellGrads[LEFT][iSol]) = m_cellGradsBackUp[LEFT][iSol];
+    }
   }
 
   // add the values to the jacobian matrix
