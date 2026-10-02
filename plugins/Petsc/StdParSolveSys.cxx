@@ -6,6 +6,7 @@
 
 #include "Petsc/PetscHeaders.hh" // must come before any header
 
+#include "Common/BadValueException.hh"
 #include "Common/CFLog.hh"
 
 #include "Framework/MeshData.hh"
@@ -164,8 +165,21 @@ stopTimer.start();
   ierr = KSPGetIterationNumber(ksp, &iter);
   CHKERRCONTINUE(ierr);
   
-  // Ask to stop the simulation if convergence is achieved at iteration 0 (i.e. LSS was not solved)
+  // If KSP stops at iteration 0, the solution update is zero. A negative
+  // KSPConvergedReason means KSP diverged (e.g. NaN or Inf in the system): abort.
+  // Otherwise KSP converged at iteration 0 (i.e. LSS was not solved): stop the run.
   if (iter == 0) {
+    KSPConvergedReason reason;
+    ierr = KSPGetConvergedReason(ksp, &reason);
+    CHKERRCONTINUE(ierr);
+    
+    if (reason < 0) {
+      throw BadValueException
+        (FromHere(), std::string("StdParSolveSys::execute() => KSP diverged at iteration 0") +
+         ((reason == KSP_DIVERGED_NANORINF) ? " (NaN or Inf in the linear system)" : ""));
+    }
+    
+    CFLog(INFO, "StdParSolveSys::execute() => KSP converged at iteration 0 (i.e. LSS was not solved), stopping the run\n");
     SubSystemStatusStack::getActive()->setStopSimulation(true);
   }
   
