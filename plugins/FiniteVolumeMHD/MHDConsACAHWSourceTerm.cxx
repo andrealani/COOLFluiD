@@ -280,7 +280,10 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
   // Qh_reville is also the exponential function, in the form given in the Reville et al 2020 paper.
   CFreal Qh_reville = 8.0e-5 *std::pow((RSun/r),2)*std::exp(-(r - RSun)/RSun)* ( 1e-7 / 1e-4);
   // Qh4 is the combined function of qh2 and Qh3 
+  //----->> Mark parameter sweep on lamda 2026.09.11  -------------
   CFreal Qh4 = Qh2* std::exp(-(r - RSun)/(0.7*RSun));
+  //CFreal Qh4 = Qh2* std::exp(-(r - RSun) / (0.91*RSun));
+  //----- Mark parameter sweep on lamda 2026.09.11  <<-------------
  // CFreal Qh4 = Qh2* std::exp(-(r - RSun)/(40e6));
 
 
@@ -488,7 +491,7 @@ void MHDConsACAHWSourceTerm::computeSource(Framework::GeometricEntity *const ele
 		  RadCur[i] = std::pow(10, logRadCur[i]);
 	  }
 
-	  CFreal Q_rad = 0.0;
+	  //CFreal Q_rad = 0.0;
 	  CFreal RadCur_Cur = 0.0;
 	  double Coefi1;
 	  double Coefi2;
