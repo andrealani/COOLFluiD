@@ -375,6 +375,9 @@ protected: // data
 
   /// boundary gradients of the diffusive boundary flux at the flux points [iFlx][iEq]
   std::vector< std::vector< RealVector* > > m_bndGradFlxPnt;
+  
+  /// flag telling whether the diffusive fluxes get the radius r = y of their point (Data.Axisymmetric)
+  bool m_axisymmetric;
 
 private: // functions
 

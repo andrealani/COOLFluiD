@@ -788,6 +788,9 @@ void ConvDiffLLAVJacobFluxReconstruction::redistributeCellViscosity(const CFuint
 
 void ConvDiffLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
 {   
+  // radius of the flux points (axisymmetric only)
+  setFlxPntRadii();
+  
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
   
@@ -1052,7 +1055,7 @@ void ConvDiffLLAVJacobFluxReconstruction::initJacobianComputation()
       for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
         // diffusive part 
-        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxBackupDiff[m_pertSide][m_pertSol][iDim]);
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],getSolPntRadius(*(*(m_states[m_pertSide]))[m_pertSol]),m_contFlxBackupDiff[m_pertSide][m_pertSol][iDim]);
         
         m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxBackupDiff[m_pertSide][m_pertSol][iDim];
         
@@ -1107,7 +1110,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeCellFluxJacobianNum(const CFrea
         for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
         {       
           // diffusive part
-          computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+          computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],getSolPntRadius(*(*(m_states[m_pertSide]))[m_pertSol]),m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
                     
           // convective part
           m_contFlxNeighb[m_pertSide][m_pertSol][iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol]);
@@ -1168,7 +1171,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeRiemannFluxJacobianNum(const CF
         prepareFlxPntFluxComputation(iFlxPnt);
      
         // compute diffusive flux
-        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxPert[iFlxPnt]);
+        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],m_flxPntRadius[iFlxPnt],m_flxPntRiemannFluxPert[iFlxPnt]);
         
         if (m_pertSide == LEFT)
         {
@@ -1237,7 +1240,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeFluxToGradJacobianNum(const CFr
           for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
           {       
             // diffusive part
-            computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+            computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],getSolPntRadius(*(*(m_states[m_pertSide]))[m_pertSol]),m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
 
             // compute the flux current jacobian term
             // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
@@ -1289,7 +1292,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeRiemannFluxToGradJacobianNum(co
         prepareFlxPntFluxComputation(iFlxPnt);
      
         // compute diffusive flux
-        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFluxPert[iFlxPnt]);
+        computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],m_flxPntRadius[iFlxPnt],m_flxPntRiemannFluxPert[iFlxPnt]);
      
         // compute the flux current jacobian term
         // compute the finite difference derivative of the face term (note an implicit minus sign is added here, by the ordering of arguments)
@@ -1731,7 +1734,7 @@ void ConvDiffLLAVJacobFluxReconstruction::computeUnpertCellDiffResiduals(const C
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       // add diffusive part 
-      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSolPnt],0,m_contFlxWoLLAV[iSolPnt][iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSolPnt],getSolPntRadius(*(*(m_states[side]))[iSolPnt]),m_contFlxWoLLAV[iSolPnt][iDim]);
       
       // add convective part
       m_contFlxWoLLAV[iSolPnt][iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[side][iDim][iSolPnt]);

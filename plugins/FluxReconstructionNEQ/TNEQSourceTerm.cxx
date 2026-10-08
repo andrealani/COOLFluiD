@@ -11,6 +11,7 @@
 #include "NavierStokes/Euler2DVarSet.hh"
 
 #include "Framework/PhysicalChemicalLibrary.hh"
+#include "Framework/PhysicalConsts.hh"
 
 #include "FluxReconstructionNEQ/FluxReconstructionNEQ.hh"
 #include "FluxReconstructionNEQ/TNEQSourceTerm.hh"
@@ -39,6 +40,7 @@ TNEQSourceTermProvider("TNEQSourceTerm");
 
 void TNEQSourceTerm::defineConfigOptions(Config::OptionList& options)
 {
+  options.addConfigOption< bool >("ElectronPressureWork","Ionized mixtures: add the electron pressure work -p_e div(u) to the equation of the free-electron energy (default false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -51,9 +53,17 @@ TNEQSourceTerm::TNEQSourceTerm(const std::string& name) :
     m_omegaTv(),
     m_refData(CFNULL),
     m_logVariables(false),
-    m_platoJacob()
+    m_platoJacob(),
+    m_electronPressureWork(false),
+    m_addPeDivV(false),
+    m_teID(0),
+    m_Re(0.),
+    socket_gradients("gradients")
 {
   addConfigOptionsTo(this);
+
+  m_electronPressureWork = false;
+  setParameter("ElectronPressureWork",&m_electronPressureWork);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -168,9 +178,11 @@ void TNEQSourceTerm::addSourceTerm(RealVector& resUpdates)
 	resUpdates[m_nbrEqs*iSol + evVarIDs[i]] = m_omegaTv[i]*ovOmegavRef;
       }
     
-//       if (m_library->presenceElectron()) {
-//         computePeDivV(element,m_srcTerm,jacob);    
-//       }
+      // electron pressure work -p_e div(u) [W/m3], scaled as omegaTv
+      if (m_addPeDivV) {
+        computePeDivV(iSol, rhodim);
+        resUpdates[m_nbrEqs*iSol + evVarIDs[m_teID]] -= m_pe*m_divV*ovOmegavRef;
+      }
 
       CFLog(DEBUG_MAX,"ChemNEQST::computeSource() => source = " << resUpdates << "\n");
       
@@ -318,6 +330,55 @@ void TNEQSourceTerm::getSToStateJacobian(const CFuint iState)
       col[evVarIDs[iv]] = ovOmegavRef*m_platoJacob(TID + 1 + iv,j)*dWdU;
     }
   }
+
+  // electron pressure work -p_e div(u), p_e = rho_e R_e T_e: derivatives with respect to rho_e and T_e at
+  // this point (div(u) comes from the gradients, whose dependence on the states is not included)
+  if (m_addPeDivV)
+  {
+    computePeDivV(iState, rhodim);
+    const CFuint row = evVarIDs[m_teID];
+    const CFreal rhoE = rhodim*m_ys[0];
+    const CFreal Te = m_tvDim[m_teID];
+    const CFreal dWdRhoE = m_logVariables ? rhoE : refRho;
+    const CFreal dWdTe = m_logVariables ? Te : refT;
+    m_stateJacobian[speciesVarIDs[0]][row] -= ovOmegavRef*m_Re*Te*m_divV*dWdRhoE;
+    m_stateJacobian[evVarIDs[m_teID]][row] -= ovOmegavRef*rhoE*m_Re*m_divV*dWdTe;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void TNEQSourceTerm::computePeDivV(const CFuint iSol, const CFreal rhodim)
+{
+  SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = m_eulerVarSet->getModel();
+  const CFuint nbSpecies = term->getNbScalarVars(0);
+  RealVector& refData = term->getReferencePhysicalData();
+
+  // the velocity components follow the partial densities in the update variables (RhoivtTv,
+  // LogRhoivLogTTv); gradients holds the gradients of the update variables
+  DataHandle< vector< RealVector > > gradients = socket_gradients.getDataHandle();
+  const vector< RealVector >& grad = gradients[(*m_cellStates)[iSol]->getLocalID()];
+  const CFuint uID = nbSpecies;
+
+  CFreal divV = 0.;
+  for (CFuint iDim = 0; iDim < m_dim; ++iDim)
+  {
+    divV += grad[uID + iDim][iDim];
+  }
+
+  // axisymmetric: div(u) has v/r, r = y of the solution point, with the limit dv/dr on the axis
+  if (getMethodData().isAxisymmetric())
+  {
+    const CFreal r = (m_cell->computeCoordFromMappedCoord((*m_solPntsLocalCoords)[iSol]))[YY];
+    divV += (r > 0.) ? (*(*m_cellStates)[iSol])[uID + 1]/r : grad[uID + 1][YY];
+  }
+
+  // dimensional div(u): velocity reference over the reference length
+  m_divV = divV*refData[MultiScalarVarSet<Euler2DVarSet>::PTERM::V]/
+    PhysicalModelStack::getActive()->getImplementor()->getRefLength();
+
+  // p_e = rho_e R_e T_e, the electron being the first species
+  m_pe = rhodim*m_ys[0]*m_Re*m_tvDim[m_teID];
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -367,6 +428,28 @@ void TNEQSourceTerm::setup()
   Common::SafePtr<MultiScalarVarSet<Euler2DVarSet>::PTERM> term = this->m_eulerVarSet->getModel(); 
   m_refData = &term->getReferencePhysicalData();
 
+  // electron pressure work: free electrons are the first species, their energy is carried by the
+  // temperature m_tvDim[electrEnergyID] (Tv without a Te equation, Te otherwise)
+  m_addPeDivV = m_electronPressureWork && m_library->presenceElectron();
+  if (m_electronPressureWork && !m_library->presenceElectron())
+  {
+    CFLog(WARN, "TNEQSourceTerm: ElectronPressureWork ignored, the mixture has no free electrons\n");
+  }
+  if (m_addPeDivV)
+  {
+    const CFint teID = m_library->getElectrEnergyID();
+    if (teID < 0 || teID >= static_cast<CFint>(nbVibEnergyEqs))
+    {
+      throw Common::BadValueException (FromHere(),"TNEQSourceTerm: no energy equation carries the free-electron energy\n");
+    }
+    m_teID = static_cast<CFuint>(teID);
+    RealVector mm(term->getNbScalarVars(0));
+    m_library->getMolarMasses(mm);
+    m_Re = PhysicalConsts::UnivRgas()/mm[0];
+    CFLog(INFO, "TNEQSourceTerm: electron pressure work -p_e div(u) in the energy equation of temperature " << m_teID
+          << ", R_e = " << m_Re << " J/(kg K)\n");
+  }
+
   // logarithmic update variables (LogRhoivLogTTv: ln rho_i, u, v, ln T, ln Tv) store the logarithm of Tv
   const std::vector<std::string>& varNames = this->m_eulerVarSet->getVarNames();
   m_logVariables = (std::count(varNames.begin(), varNames.end(), "lnrho0") > 0);
@@ -415,6 +498,12 @@ std::vector< Common::SafePtr< BaseDataSocketSink > >
     TNEQSourceTerm::needsSockets()
 {
   std::vector< Common::SafePtr< BaseDataSocketSink > > result = CNEQSourceTerm::needsSockets();
+
+  // the velocity divergence of the electron pressure work comes from the solution-point gradients
+  if (m_electronPressureWork)
+  {
+    result.push_back(&socket_gradients);
+  }
 
   return result;
 }

@@ -257,6 +257,29 @@ CFreal NavierStokesNEQLogRhoivLogTTv<BASE>::getHeatFlux(const RealVector& state,
 //////////////////////////////////////////////////////////////////////////////
 
 template <class BASE>
+void NavierStokesNEQLogRhoivLogTTv<BASE>::getAxiSourceTerm(const RealVector& physicalData,
+                                                           const RealVector& state,
+                                                           const std::vector<RealVector*>& gradients,
+                                                           const CFreal& radius,
+                                                           RealVector& source)
+{
+  // y_i, T and Tv at this point before the substitutions; the base sets them again and
+  // reads Tv from the gradient state, so the stored logarithms are passed unchanged
+  setGradientState(state);
+  NavierStokesNEQRhoivt<BASE>::getAxiSourceTerm
+    (physicalData, state, setTemperatureGradients(setMassFractionGradients(gradients)), radius, source);
+
+  // Tv equation as in getFlux: sum over molecules of hsVib J_i (in the base) plus sum over all
+  // species of hsEl J_i (added here); the base computed hsEl and rhoUdiff above
+  const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
+  if (nbTv == 1 && this->_library->getNbTe() == 0) {
+    source[this->_TvibID[0]] -= MathTools::MathFunctions::innerProd(this->_hsEl, this->_rhoUdiff);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template <class BASE>
 const std::vector<RealVector*>& NavierStokesNEQLogRhoivLogTTv<BASE>::setMassFractionGradients
 (const std::vector<RealVector*>& gradients)
 {

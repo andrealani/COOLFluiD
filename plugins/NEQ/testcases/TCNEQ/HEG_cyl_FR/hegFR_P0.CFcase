@@ -8,7 +8,7 @@
 # variables LogRhoivLogTTv (ln rho_i, u, v, ln T, ln Tv)
 #
 # HEG cylinder: front half of a 45 mm radius cylinder in 5-species air (PLATO
-# air5_nasa / air5, two temperatures), u = 5956 m/s, T = Tv = 901 K, wall at
+# air5 / air5, two temperatures, partition functions), u = 5956 m/s, T = Tv = 901 K, wall at
 # 300 K. Mesh heg_cylinder.msh: 41 x 50 Q2 quads, tanh
 # stretching from the wall (first cell 2e-5 R) scaled with the local shock distance,
 # so rings run parallel to the bow shock; outer boundary at 2.5 shock distances.
@@ -52,11 +52,11 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 1. 1. 1. 1. 1. 5956. 5956. 1. 1.
 
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary    = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName  = air5_nasa
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName  = air5
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = air5
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.transfName   = TTv
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO_Install/database
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol         = 1.e-14
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol         = 1.e-100
 
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies      = 5
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs     = 3

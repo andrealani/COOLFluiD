@@ -101,7 +101,8 @@ DiffBndCorrectionsRHSFluxReconstruction::DiffBndCorrectionsRHSFluxReconstruction
   m_flxPntGradVars(),
   m_bndGradVarsStore(),
   m_bndGradVars(),
-  m_bndGradFlxPnt()
+  m_bndGradFlxPnt(),
+  m_axisymmetric(false)
 {
 }
 
@@ -510,7 +511,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
     }
 
     // compute FI
-    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
+    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],m_axisymmetric ? m_flxPntCoords[iFlxPnt][YY] : 0.,m_flxPntRiemannFlux[iFlxPnt]);
 
     // compute FI in the local frame
     m_cellFlx[iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt];
@@ -521,7 +522,7 @@ void DiffBndCorrectionsRHSFluxReconstruction::computeInterfaceFlxCorrection()
 
 void DiffBndCorrectionsRHSFluxReconstruction::computeFlux(const RealVector& values, const std::vector< RealVector* >& gradients, const RealVector& normal, const CFreal& radius, RealVector& flux)
 {
-  flux = m_diffusiveVarSet->getFlux(values,gradients,normal,0);
+  flux = m_diffusiveVarSet->getFlux(values,gradients,normal,radius);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -722,6 +723,8 @@ void DiffBndCorrectionsRHSFluxReconstruction::setup()
   
   // get the diffusive varset, the Null one gives the states themselves
   m_diffusiveVarSet = getMethodData().getDiffusiveVar();
+  
+  m_axisymmetric = getMethodData().isAxisymmetric();
 
   // multiplier of the face lifting in the compact BR2 face gradient
   m_br2Eta = getMethodData().getBR2Eta();

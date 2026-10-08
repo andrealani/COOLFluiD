@@ -666,6 +666,9 @@ void ConvDiffLLAVFluxReconstruction::setFaceDataForGradients(CFuint faceID)
 
 void ConvDiffLLAVFluxReconstruction::setFaceData(CFuint faceID)
 {   
+  // radius of the flux points (axisymmetric only)
+  setFlxPntRadii();
+  
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
   
@@ -976,7 +979,7 @@ void ConvDiffLLAVFluxReconstruction::computeUnpertCellDiffResiduals(const CFuint
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
       // add diffusive part 
-      computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlxWoLLAV[iSolPnt][iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],getSolPntRadius(*(*(m_states[side]))[iSolPnt]),m_contFlxWoLLAV[iSolPnt][iDim]);
       
       // add convective part
       m_contFlxWoLLAV[iSolPnt][iDim] -= m_updateVarSet->getFlux()(m_pData,m_cellFluxProjVects[iDim][iSolPnt]);

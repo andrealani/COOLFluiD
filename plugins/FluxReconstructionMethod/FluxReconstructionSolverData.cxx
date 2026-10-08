@@ -57,6 +57,7 @@ void FluxReconstructionSolverData::defineConfigOptions(Config::OptionList& optio
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobIter","Iteration after which to freeze the Jacobian.");
   options.addConfigOption< CFuint,Config::DynamicOption<> >("FreezeJacobInterval","Amount of iterations to freeze the Jacobian before recalculation.");
   options.addConfigOption< CFreal >("DiffFluxDamping","Damping coefficient of diffusive flux scheme.");
+  options.addConfigOption< bool >("Axisymmetric","2D axisymmetric (x axial, y = r): pass the radius r = y of each solution and flux point to the diffusive fluxes, so the stresses include v/r. The axisymmetric source term is set separately (default false: radius 0, planar fluxes).");
   options.addConfigOption< CFreal >("BR2Eta","BR2 lifting multiplier eta of the compact face gradient of the diffusive flux, grad g^D + eta (g^I_f - g^D_f) grad h_f (default 5.0).");
   options.addConfigOption< CFreal >("NumJacobTol","Relative step of the finite difference that builds the assembled Jacobian. The step is NumJacobTol*max(|value|,refValue), so it is set by the reference value wherever the local value is much smaller, as for the velocity at a no slip wall (default 10e-7, the historical value).");
   options.addConfigOption< bool >("AddArtificialViscosity","Flag telling whether to add artificial viscosity.");
@@ -89,6 +90,7 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   m_maxNbrRFluxPnts(),
   m_maxNbrStatesData(),
   m_resFactor(),
+  m_blendingHoldStage(0),
   m_hasDiffTerm(),
   m_bndFacesStartIdxs(),
   m_innerFacesStartIdxs(),
@@ -114,6 +116,9 @@ FluxReconstructionSolverData::FluxReconstructionSolverData(Common::SafePtr<Frame
   
   m_br2Eta = 5.0;
   setParameter("BR2Eta", &m_br2Eta);
+  
+  m_axisymmetric = false;
+  setParameter("Axisymmetric", &m_axisymmetric);
   
   m_numJacobTol = 10e-7;
   setParameter("NumJacobTol", &m_numJacobTol);
@@ -171,6 +176,15 @@ void FluxReconstructionSolverData::setup()
   }
 
   CFLog(NOTICE, "FluxReconstructionSolverData => BR2Eta = " << m_br2Eta << "\n");
+  
+  if (m_axisymmetric)
+  {
+    if (PhysicalModelStack::getActive()->getDim() != DIM_2D)
+    {
+      throw Common::BadValueException (FromHere(),"FluxReconstructionSolverData: Axisymmetric needs a 2D mesh.");
+    }
+    CFLog(NOTICE, "FluxReconstructionSolverData => Axisymmetric: diffusive fluxes get r = y\n");
+  }
   
   // setup TRS Geo builder
   m_stdTrsGeoBuilder.setup();

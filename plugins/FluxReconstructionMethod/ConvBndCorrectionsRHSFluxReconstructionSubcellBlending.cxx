@@ -31,6 +31,7 @@ MethodCommandProvider< ConvBndCorrectionsRHSFluxReconstructionSubcellBlending, F
 ConvBndCorrectionsRHSFluxReconstructionSubcellBlending::ConvBndCorrectionsRHSFluxReconstructionSubcellBlending(const std::string& name) :
   ConvBndCorrectionsRHSFluxReconstruction(name),
   socket_alpha("alpha"),
+  socket_subcellFaceSamples("subcellFaceSamples"),
   m_scData()
 {
 }
@@ -48,6 +49,7 @@ ConvBndCorrectionsRHSFluxReconstructionSubcellBlending::needsSockets()
 {
   std::vector< SafePtr< BaseDataSocketSink > > result = ConvBndCorrectionsRHSFluxReconstruction::needsSockets();
   result.push_back(&socket_alpha);
+  result.push_back(&socket_subcellFaceSamples);
   return result;
 }
 
@@ -61,10 +63,34 @@ CFreal ConvBndCorrectionsRHSFluxReconstructionSubcellBlending::getCellAlpha()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvBndCorrectionsRHSFluxReconstructionSubcellBlending::storeFaceSamples()
+{
+  DataHandle< CFreal > samples = socket_subcellFaceSamples.getDataHandle();
+  if (samples.size() == 0) return;
+
+  const CFuint nbrFlxPnts = m_scData.getNbrFlxPnts();
+  const CFuint cellID = m_intCell->getID();
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    const CFuint start  = m_nbrEqs*(cellID*nbrFlxPnts + flxIdx);
+    const State& inner  = *(m_cellStatesFlxPnt[iFlxPnt]);
+    const State& ghost  = *(m_flxPntGhostSol[iFlxPnt]);
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      samples[start+iEq] = 0.5*(inner[iEq] + ghost[iEq]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvBndCorrectionsRHSFluxReconstructionSubcellBlending::computeCorrection(vector< RealVector >& corrections)
 {
   // FR correction -(F* divh) of all solution points
   ConvBndCorrectionsRHSFluxReconstruction::computeCorrection(corrections);
+
+  storeFaceSamples();
 
   const CFreal alpha = getCellAlpha();
   if (alpha <= 0.0) return;

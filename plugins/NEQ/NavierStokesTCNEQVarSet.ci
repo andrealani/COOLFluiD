@@ -325,17 +325,19 @@ void NavierStokesTCNEQVarSet<BASE>::getAxiSourceTerm(const RealVector& physicalD
   const CFuint nbTv = this->_eulerModel->getNbScalarVars(1);
   CFreal avTdim = Tref*physicalData[EulerTerm::T];
   CFreal avpdim = (physicalData[EulerTerm::P] + this->_eulerModel->getPressInf())*eulerRefData[EulerTerm::P];
+  // Tv from the gradient state filled by setGradientState above: the state itself holds ln Tv
+  // with the LogRhoivLogTTv variables, the gradient state holds Tv for every variable set
   for (CFuint i =  0; i <  nbTv; ++i) {
-    this->_avTvibdim[i] = Tref*state[this->_TvibID[i]];
+    this->_avTvibdim[i] = Tref*this->_gradState[this->_TvibID[i]];
   }
-    
+
   // Getting species total enthalpies
   this->_library->getSpeciesTotEnthalpies(avTdim, this->_avTvibdim, avpdim, this->_hsTot, &this->_hsVib, &this->_hsEl);
   const CFreal invHref = 1./eulerRefData[EulerTerm::H];
-  this->_hsTot *= invHref; 
+  this->_hsTot *= invHref;
   this->_hsVib *= invHref;
   this->_hsEl *= invHref;
-  
+
   // Computing normal concentration gradients
   const CFreal ovL = 1./PhysicalModelStack::getActive()->
     getImplementor()->getRefLength();

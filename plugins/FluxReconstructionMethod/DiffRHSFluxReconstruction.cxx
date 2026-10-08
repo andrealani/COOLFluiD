@@ -89,6 +89,8 @@ DiffRHSFluxReconstruction::DiffRHSFluxReconstruction(const std::string& name) :
   m_unitNormalFlxPnts(),
   m_faceJacobVecSizeFlxPnts(),
   m_flxPntCoords(),
+  m_axisymmetric(false),
+  m_flxPntRadius(),
   m_cellFluxProjVects(),
   m_cellGrads(),
   m_cellGradFlxPnt(),
@@ -401,7 +403,7 @@ void DiffRHSFluxReconstruction::computeInterfaceFlxCorrection()
     prepareFlxPntFluxComputation(iFlxPnt);
      
     // compute the common diffusive flux
-    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],0,m_flxPntRiemannFlux[iFlxPnt]);
+    computeFlux(m_avgSol,m_avgGrad,m_unitNormalFlxPnts[iFlxPnt],m_flxPntRadius[iFlxPnt],m_flxPntRiemannFlux[iFlxPnt]);
      
     // compute FI in the mapped coord frame
     m_cellFlx[LEFT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT];
@@ -868,6 +870,9 @@ void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
 
   // compute face Jacobian vectors
   m_faceJacobVecs = m_face->computeFaceJacobDetVectorAtMappedCoords(*m_flxLocalCoords);
+  
+  // radius of the flux points (axisymmetric only)
+  setFlxPntRadii();
 
   // Loop over flux points to set the normal vectors
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
@@ -907,6 +912,18 @@ void DiffRHSFluxReconstruction::setFaceData(CFuint faceID)
       const CFuint stateID = (*(m_states[iSide]))[iState]->getLocalID();
       m_cellGrads[iSide][iState] = &gradients[stateID];
     }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffRHSFluxReconstruction::setFlxPntRadii()
+{
+  if (!m_axisymmetric) return;
+  
+  for (CFuint iFlx = 0; iFlx < m_nbrFaceFlxPnts; ++iFlx)
+  {
+    m_flxPntRadius[iFlx] = m_face->computeCoordFromMappedCoord((*m_flxLocalCoords)[iFlx])[YY];
   }
 }
 
@@ -978,7 +995,7 @@ void DiffRHSFluxReconstruction::computeDivDiscontFlx(vector< RealVector >& resid
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
 //       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
-       computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],0,m_contFlx[iSolPnt][iDim]);
+       computeFlux(m_avgSol,m_tempGrad,m_cellFluxProjVects[iDim][iSolPnt],getSolPntRadius(*(*m_cellStates)[iSolPnt]),m_contFlx[iSolPnt][iDim]);
 //       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
 //        {
 //       if (m_cell->getID() == 11) CFLog(INFO,"iSol: " << iSolPnt << ", iDir: " << iDim << ", iEq: " << iEq << ", state: " << m_avgSol[iEq] <<
@@ -1416,6 +1433,8 @@ void DiffRHSFluxReconstruction::setup()
   m_corrFctDiv.resize(m_nbrSolPnts);
   m_cellFluxProjVects.resize(m_dim+m_ndimplus);
   m_flxPntCoords.resize(m_nbrFaceFlxPnts);
+  m_axisymmetric = getMethodData().isAxisymmetric();
+  m_flxPntRadius.assign(m_nbrFaceFlxPnts, 0.);
   m_faceInvCharLengths.resize(m_nbrFaceFlxPnts);
   m_avgSol.resize(m_nbrEqs);
   m_avgGrad.resize(m_nbrEqs);

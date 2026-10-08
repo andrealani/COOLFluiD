@@ -84,9 +84,14 @@ protected:
 				 const Framework::State& state,
 				 RealVector& tvib);
       
-  /// Compute non conservative term \f$ p_e \nabla \cdot v \f$.
-  void computePeDivV(Framework::GeometricEntity *const element,
-		     RealVector& source, RealMatrix& jacobian);
+  /**
+   * Electron pressure work at one solution point (option ElectronPressureWork): sets m_pe = rho_e R_e T_e
+   * [Pa] and m_divV = div(u) [1/s] (plus v/r with Data.Axisymmetric), with rho_e = rho y_e, R_e = R_u/M_e
+   * and T_e the temperature of the equation that carries the free-electron energy
+   * @param iSol index of the solution point in the current cell
+   * @param rhodim dimensional density at that point
+   */
+  void computePeDivV(const CFuint iSol, const CFreal rhodim);
 
   /// Compute the energy transfer terms
   void computeSourceVT(RealVector& omegaTv, CFreal& omegaRad);
@@ -129,6 +134,21 @@ protected: // data
 
   /// PLATO source Jacobian d prodterm_i / d W_j, W = [rho_s, momentum, T, Tv] (SI)
   RealMatrix m_platoJacob;
+
+  /// option: add the electron pressure work -p_e div(u) to the free-electron energy equation
+  bool m_electronPressureWork;
+
+  /// true if the electron pressure work is computed (option on and free electrons in the mixture)
+  bool m_addPeDivV;
+
+  /// index in the temperature vector m_tvDim of the free-electron temperature T_e
+  CFuint m_teID;
+
+  /// gas constant of the free electrons R_e = R_u / M_e [J/(kg K)]
+  CFreal m_Re;
+
+  /// socket for the gradients of the update variables at the solution points
+  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
 
 }; // class TNEQSourceTerm
 

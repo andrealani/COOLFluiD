@@ -6,9 +6,10 @@
 # finite difference Jacobian, curved Q2 quads, Lax-Friedrichs flux, isothermal
 # noncatalytic no-slip wall, Dirichlet and SuperOutlet BCs, logarithmic update
 # variables LogRhoivLogTTv (ln rho_i, u, v, ln T, ln Tv), subcell order blending
+# with linear subcells in the subsonic blended cells
 #
 # HEG cylinder: front half of a 45 mm radius cylinder in 5-species air (PLATO
-# air5_nasa / air5, two temperatures), u = 5956 m/s, T = Tv = 901 K, wall at
+# air5 / air5, two temperatures, partition functions), u = 5956 m/s, T = Tv = 901 K, wall at
 # 300 K. Mesh heg_cylinder.msh: 41 x 50 Q2 quads, tanh
 # stretching from the wall (first cell 2e-5 R) scaled with the local shock distance,
 # so rings run parallel to the bow shock; outer boundary at 2.5 shock distances.
@@ -52,11 +53,11 @@ Simulator.SubSystem.Default.PhysicalModelType = NavierStokes2DNEQ
 Simulator.SubSystem.NavierStokes2DNEQ.refValues = 1. 1. 1. 1. 1. 5956. 5956. 1. 1.
 
 Simulator.SubSystem.NavierStokes2DNEQ.PropertyLibrary    = Plato
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName  = air5_nasa
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.mixtureName  = air5
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.reactionName = air5
 Simulator.SubSystem.NavierStokes2DNEQ.Plato.transfName   = TTv
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO_Install/database
-Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol         = 1.e-14
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.path         = /Users/rayan/PLATO/database
+Simulator.SubSystem.NavierStokes2DNEQ.Plato.Xtol         = 1.e-100
 
 Simulator.SubSystem.NavierStokes2DNEQ.nbSpecies      = 5
 Simulator.SubSystem.NavierStokes2DNEQ.nbEulerEqs     = 3
@@ -68,7 +69,8 @@ Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
 Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
 Simulator.SubSystem.MeshCreator     = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = heg_P2_init.CFmesh
-# the order blending sweeps over neighbours: NbOverlapLayers >= NbSweeps + 1 keeps alpha rank independent
+# the order blending sweeps over neighbours and the face blending reads the alpha of the first
+# overlap layer: NbOverlapLayers >= NbSweeps + 2 keeps alpha rank independent
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 3
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 
@@ -107,8 +109,8 @@ Simulator.SubSystem.Tecplot.AppendIter     = false
 #Simulator.SubSystem.CGNS.AppendTime = false
 #Simulator.SubSystem.CGNS.AppendIter = false
 #Simulator.SubSystem.CGNS.Data.printExtraValues = true
-#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = alpha smoothness
-#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = alpha smoothness
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = alpha smoothness subcellOrder
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = alpha smoothness subcellOrder
 
 ###################################
 # Stop condition: norm of the ln T update
@@ -213,13 +215,22 @@ Simulator.SubSystem.FluxReconstruction.OrderBlending.NeighborWeight   = 0.5
 Simulator.SubSystem.FluxReconstruction.OrderBlending.NbSweeps         = 1
 # alpha moves a quarter of the way from its previous value to the new sensor field each iteration
 Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.25
-# a cell where a ln rho_i solution point falls more than ln 2 below the smallest neighbour cell mean
-# gets alpha = 1; graded release: the floor then drops 0.05 per clean iteration, and if the undershoot
-# comes back (full margin) it goes back to 1 and never drops below its failure level + 0.1
+# a cell where a ln rho_i solution point falls more than ln 2 below the smallest cell mean of its
+# neighbours gets alpha = 1 for the rest of the run; each boundary face counts as one more neighbour,
+# with the mean of the cell trace on it, so a profile falling into the cold wall is not flagged
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinVars   = 0 1 2 3 4
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinMargin = 0.693147
-Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinReleaseRate    = 0.05
-Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinReleaseBackoff = 0.1
+Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinBoundaryGhost = true
+# alpha and the linear/first-order subcell choices are frozen once the residual stalls: the CFL
+# has not grown for 50 iterations and the residual dropped by less than 0.1 decade over them
+Simulator.SubSystem.FluxReconstruction.OrderBlending.FreezeAlphaStallWindow = 50
+# the blended cells whose solution points are all subsonic use linear subcells (limited
+# reconstruction in the update variables); the shock cells and their supersonic upstream
+# neighbours keep first-order subcells. The choice between the two and the slope limiter
+# factors are frozen together with alpha (FreezeAlphaStallWindow)
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellReconstruction      = Linear
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellLimiter             = VanAlbada
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellReconstructionMachMax = 1.0
 
 ###################################
 # Boundary conditions

@@ -202,7 +202,7 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
     m_updateVarSet->computePhysicalData(pertState,m_pData);
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
-      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],0,m_unpertContFlx[iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],getSolPntRadius(pertState),m_unpertContFlx[iDim]);
       m_unpertContFlx[iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[side][iDim][iSol]);
     }
 
@@ -218,7 +218,7 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
       m_updateVarSet->computePhysicalData(pertState,m_pData);
       for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
-        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],0,m_pertContFlx[iDim]);
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],getSolPntRadius(pertState),m_pertContFlx[iDim]);
         m_pertContFlx[iDim] -= m_updateVarSet->getFlux()(m_pData,m_neighbCellFluxProjVects[side][iDim][iSol]);
       }
 
@@ -241,7 +241,7 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
     prepareSolPntFluxComputation(pertState.getLocalID());
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
-      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],0,m_unpertContFlx[iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],getSolPntRadius(pertState),m_unpertContFlx[iDim]);
     }
 
     // derivative with respect to the gradients
@@ -257,7 +257,7 @@ void CombinedJacobFluxReconstruction::computeCellFluxJacobians(const CFuint side
         prepareSolPntFluxComputation(pertState.getLocalID());
         for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
         {
-          computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],0,m_pertContFlx[iDim]);
+          computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSol],getSolPntRadius(pertState),m_pertContFlx[iDim]);
         }
 
         for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)

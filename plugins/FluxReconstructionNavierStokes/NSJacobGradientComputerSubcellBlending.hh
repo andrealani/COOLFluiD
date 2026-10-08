@@ -36,6 +36,16 @@ public: // functions
 
   /// Destructor
   virtual ~NSJacobGradientComputerSubcellBlending() {}
+
+protected: // functions
+
+  /// largest Mach number at the solution points of the cell (Euler physical data)
+  virtual CFreal computeCellMaxMach(const std::vector< Framework::State* >& states);
+
+private: // data
+
+  /// physical data of one solution point
+  RealVector m_machPData;
     
 }; // class Solve
 

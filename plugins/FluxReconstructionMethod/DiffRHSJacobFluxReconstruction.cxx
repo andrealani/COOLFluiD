@@ -409,7 +409,7 @@ void DiffRHSJacobFluxReconstruction::computeCellWithoutInnerFace(const CFuint ce
 
     for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
     {
-      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[LEFT][iDim][m_pertSol],0,m_contFlxNeighb[LEFT][m_pertSol][iDim]);
+      computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[LEFT][iDim][m_pertSol],getSolPntRadius(*(*(m_states[LEFT]))[m_pertSol]),m_contFlxNeighb[LEFT][m_pertSol][iDim]);
       m_contFlxBackup[LEFT][m_pertSol][iDim] = m_contFlxNeighb[LEFT][m_pertSol][iDim];
     }
   }
@@ -523,7 +523,7 @@ void DiffRHSJacobFluxReconstruction::computeBothJacobsDiffFaceTerm()
       // calculate the discontinuous flux projected on x, y, z-directions
       for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
-        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],getSolPntRadius(*(*(m_states[m_pertSide]))[m_pertSol]),m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
         m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxNeighb[m_pertSide][m_pertSol][iDim];
       }
     }
@@ -749,7 +749,7 @@ void DiffRHSJacobFluxReconstruction::computeOneJacobDiffFaceTerm(const CFuint si
       // calculate the discontinuous flux projected on x, y, z-directions
       for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
-        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],0,m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[m_pertSide][iDim][m_pertSol],getSolPntRadius(*(*(m_states[m_pertSide]))[m_pertSol]),m_contFlxNeighb[m_pertSide][m_pertSol][iDim]);
         m_contFlxBackup[m_pertSide][m_pertSol][iDim] = m_contFlxNeighb[m_pertSide][m_pertSol][iDim];
       }
     }
@@ -1384,7 +1384,7 @@ void DiffRHSJacobFluxReconstruction::computeDivDiscontFlxNeighb(RealVector& resi
       for (CFuint iDim = 0; iDim < m_dim+m_ndimplus; ++iDim)
       {
 //       m_contFlx[iSolPnt][iDim] = m_diffusiveVarSet->getFlux(m_avgSol,grad,m_cellFluxProjVects[iDim][iSolPnt],0);
-        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSolPnt],0,m_contFlxNeighb[side][iSolPnt][iDim]);
+        computeFlux(m_avgSol,m_tempGrad,m_neighbCellFluxProjVects[side][iDim][iSolPnt],getSolPntRadius(*(*(m_states[side]))[iSolPnt]),m_contFlxNeighb[side][iSolPnt][iDim]);
       }
     }
 

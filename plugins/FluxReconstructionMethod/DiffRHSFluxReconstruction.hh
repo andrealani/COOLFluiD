@@ -269,6 +269,22 @@ protected: //functions
   {
     prepareFluxComputation();
   }
+  
+  /**
+   * Sets m_flxPntRadius, the radius r = y of the flux points of the current face
+   * m_face, when Data.Axisymmetric is on. Every setFaceData calls it; without the
+   * option the radii stay 0 and the diffusive fluxes are the planar ones.
+   */
+  void setFlxPntRadii();
+  
+  /**
+   * Returns the radius r = y of a solution point when Data.Axisymmetric is on, 0 otherwise
+   * @param state state of the solution point (its coordinates are set by StdSetup)
+   */
+  CFreal getSolPntRadius(const Framework::State& state) const
+  {
+    return m_axisymmetric ? state.getCoordinates()[YY] : 0.;
+  }
 
 protected: //data
   /// socket for gradients
@@ -403,6 +419,12 @@ protected: //data
   
   /// flux point coordinates
   std::vector< RealVector > m_flxPntCoords;
+  
+  /// flag telling whether the diffusive fluxes get the radius r = y of their point (Data.Axisymmetric)
+  bool m_axisymmetric;
+  
+  /// radius r = y of the flux points of the current face (0 unless m_axisymmetric)
+  std::vector< CFreal > m_flxPntRadius;
   
   /// flux projection vectors in solution points for disc flux
   std::vector< std::vector< RealVector > > m_cellFluxProjVects;

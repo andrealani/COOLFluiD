@@ -3,6 +3,8 @@ IF ( CF_ENABLE_PLATO AND NOT CF_ENABLE_LONG )
    Plato.hh
    PlatoLibrary.hh
    PlatoLibrary.cxx
+   ChargeNeutralityFilterState.hh
+   ChargeNeutralityFilterState.cxx
    )
    LIST ( APPEND PlatoI_includedirs ${PLATO_INCLUDE_DIR} )
    LIST ( APPEND PlatoI_libs ${PLATO_LIBRARY} )

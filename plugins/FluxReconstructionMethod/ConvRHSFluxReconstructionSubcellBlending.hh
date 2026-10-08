@@ -11,6 +11,7 @@
 
 #include "FluxReconstructionMethod/ConvRHSFluxReconstruction.hh"
 #include "FluxReconstructionMethod/SubcellBlendingQuadData.hh"
+#include "Common/SelfRegistPtr.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -45,6 +46,12 @@ namespace COOLFluiD {
  * with Gauss-Legendre points are fed fluxes built from extrapolated states,
  * which are unlimited reconstructions.
  *
+ * SubcellReconstruction option (default FirstOrder): Linear reconstructs the states at
+ * every subcell face, internal ones and element faces, with limited slopes (SubcellLimiter),
+ * see SubcellBlendingQuadData. The element face samples (trace of the neighbour cell, or
+ * boundary face value) are kept in the socket subcellFaceSamples, filled by the face loop
+ * of this command and by the boundary commands, which run before it.
+ *
  * Companion commands: ConvBndCorrectionsRHSFluxReconstructionSubcellBlending for
  * boundary faces, and the Jacobian variants for implicit runs.
  *
@@ -75,6 +82,9 @@ public: // functions
   /// Returns the DataSocket's that this command needs as sinks
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > > needsSockets();
 
+  /// Returns the DataSocket's that this command provides as sources
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSource > > providesSockets();
+
 protected: // functions
 
   /// face Riemann flux, blended with the first-order flux between the adjacent
@@ -97,6 +107,13 @@ protected: // functions
   /// zero when FaceFluxBlending is off
   CFreal computeFaceAlphaF();
 
+  /// store the element face samples of the current face for both cells (linear reconstruction)
+  void storeFaceSamples();
+
+  /// first-order flux at one element face flux point, between the closest solution point
+  /// states or, with the linear reconstruction, between the reconstructed states
+  const RealVector& computeFaceLoFlux(const CFuint iFlxPnt);
+
   /// add the subcell P0 boundary flux of the current face to the corrections of one neighbour
   void addSubcellFaceFlux(const CFuint side, const CFreal alpha,
                           std::vector< RealVector >& corrections);
@@ -105,6 +122,29 @@ protected: // data
 
   /// socket holding the per-cell blending coefficient
   Framework::DataSocketSink< CFreal > socket_alpha;
+
+  /// element face samples for the linear reconstruction, [cell][flux point][equation]
+  Framework::DataSocketSource< CFreal > socket_subcellFaceSamples;
+
+  /// SubcellReconstruction option: FirstOrder or Linear
+  std::string m_reconstruction;
+
+  /// SubcellLimiter option: VanAlbada, Minmod or None
+  std::string m_limiter;
+
+  /// SubcellLimiterEps option: van Albada smoothing size, relative
+  CFreal m_limiterEps;
+
+  /// SubcellReconstructionVar option: variables of the reconstruction, empty for the update ones
+  std::string m_reconstructionVar;
+
+
+  /// transformers between the update and the reconstruction variables
+  Common::SelfRegistPtr< Framework::VarSetTransformer > m_toRecTrans;
+  Common::SelfRegistPtr< Framework::VarSetTransformer > m_fromRecTrans;
+
+  /// reconstructed left and right states at an element face flux point
+  std::vector< Framework::State* > m_faceRecStates;
 
   /// subcell grid of the element
   SubcellBlendingQuadData m_scData;

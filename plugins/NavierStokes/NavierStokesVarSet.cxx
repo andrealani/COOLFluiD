@@ -27,6 +27,7 @@ NavierStokesVarSet::NavierStokesVarSet(const std::string& name,
   _thermCondCoeff(0.0),
   _useBackUpValues(false),
   _setBackUpValues(false),
+  _axisymmetric(false),
   _wallDistance(0.),
   _gradState(),
   _normal(),
@@ -105,6 +106,10 @@ void NavierStokesVarSet::computeStressTensor(const RealVector& state,
     // if the face is a boundary face, the radius could be 0
     // check against eps instead of 0. for safety
     divTerm = _gradState[_vID]/radius;
+  }
+  else if (dim == DIM_2D && _axisymmetric) {
+    // on the axis v = 0 and v/r tends to dv/dr
+    divTerm = (*gradients[_vID])[YY];
   }
   else if (dim == DIM_3D) {
     const RealVector& gradW = *gradients[_wID];

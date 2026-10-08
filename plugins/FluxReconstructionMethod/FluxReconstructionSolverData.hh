@@ -290,6 +290,14 @@ public: // functions
     return &m_bcTRSNameStr;
   }
   
+  /// hold stage of the order blending: 0 while alpha and the subcell reconstruction choices
+  /// follow the solution, 1 once OrderBlending froze alpha (FreezeAlphaIter or
+  /// FreezeAlphaStallWindow); the subcell reconstruction records its choices whenever it changes
+  CFuint getBlendingHoldStage() const { return m_blendingHoldStage; }
+
+  /// set m_blendingHoldStage
+  void setBlendingHoldStage(const CFuint stage) { m_blendingHoldStage = stage; }
+
   /// set m_resFactor
   void setResFactor(CFreal resFactor)
   {
@@ -366,6 +374,12 @@ public: // functions
   CFreal getBR2Eta()
   {
     return m_br2Eta;
+  }
+  
+  /// Returns true when the diffusive fluxes get the radius r = y of their point (2D axisymmetric, x axial, y radial)
+  bool isAxisymmetric() const
+  {
+    return m_axisymmetric;
   }
   
   /// Returns a boolean telling whether to freeze the Jacobian
@@ -499,6 +513,9 @@ private:  // data
   
   /// Multiplier of the face lifting in the compact BR2 face gradient
   CFreal m_br2Eta;
+  
+  /// Flag telling whether the diffusive fluxes get the radius of their point (2D axisymmetric)
+  bool m_axisymmetric;
 
   /// Relative step of the finite difference that builds the assembled Jacobian
   CFreal m_numJacobTol;
@@ -526,7 +543,10 @@ private:  // data
   
   /// factor to multiply the residual with, coming from the time discretization
   CFreal m_resFactor;
-  
+
+  /// hold stage of the order blending (see getBlendingHoldStage)
+  CFuint m_blendingHoldStage;
+
   /// boolean storing wether there is a diffusive term
   bool m_hasDiffTerm;
   

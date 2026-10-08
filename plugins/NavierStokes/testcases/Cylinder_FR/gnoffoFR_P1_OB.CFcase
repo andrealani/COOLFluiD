@@ -79,7 +79,9 @@ Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 Simulator.SubSystem.MeshCreator     = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName          = gnoffo_P1_OB_start.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
+# the order blending sweeps over neighbours and the face blending reads the alpha of the first
+# overlap layer: NbOverlapLayers >= NbSweeps + 2 keeps alpha rank independent
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 3
 
 # the solution comes from the restart file; Null still needs one init name
 Simulator.SubSystem.FluxReconstruction.InitComds = Null
@@ -111,8 +113,8 @@ Simulator.SubSystem.Tecplot.AppendIter  = false
 #Simulator.SubSystem.CGNS.SaveRate   = 250
 #Simulator.SubSystem.CGNS.AppendTime = false
 #Simulator.SubSystem.CGNS.AppendIter = false
-#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = alpha smoothness
-#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = alpha smoothness
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.SocketNames   = alpha smoothness subcellOrder
+#Simulator.SubSystem.CGNS.Data.DataHandleOutput.VariableNames = alpha smoothness subcellOrder
 
 ###################################
 # Stop condition
@@ -198,9 +200,10 @@ Simulator.SubSystem.FluxReconstruction.OrderBlending.NbSweeps         = 1
 # below 1 the blending coefficient is relaxed; at 1 it and the solution can lock
 # into a period-2 oscillation that stalls the residual
 Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.5
-# once the CFL has ramped, alpha is frozen: while it keeps moving, even in the
-# 6th digit, the Newton operator changes every iteration and the residual stalls
-Simulator.SubSystem.FluxReconstruction.OrderBlending.freezeFilterIter = 500
+# alpha and the linear/first-order subcell choices are frozen once the residual stalls: the CFL
+# has not grown for 50 iterations and the residual dropped by less than 0.1 decade over them
+# (while alpha keeps moving, even in the 6th digit, the Newton operator changes every iteration)
+Simulator.SubSystem.FluxReconstruction.OrderBlending.FreezeAlphaStallWindow = 50
 
 Simulator.SubSystem.FluxReconstruction.PhysicalityCom = Null
 

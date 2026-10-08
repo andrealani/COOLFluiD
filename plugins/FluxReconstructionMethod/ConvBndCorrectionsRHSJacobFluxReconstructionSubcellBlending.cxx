@@ -31,6 +31,7 @@ MethodCommandProvider< ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlendi
 ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending::ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending(const std::string& name) :
   ConvBndCorrectionsRHSJacobFluxReconstruction(name),
   socket_alpha("alpha"),
+  socket_subcellFaceSamples("subcellFaceSamples"),
   m_scData(),
   m_scSolScaled()
 {
@@ -49,6 +50,7 @@ ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending::needsSockets()
 {
   std::vector< SafePtr< BaseDataSocketSink > > result = ConvBndCorrectionsRHSJacobFluxReconstruction::needsSockets();
   result.push_back(&socket_alpha);
+  result.push_back(&socket_subcellFaceSamples);
   return result;
 }
 
@@ -82,10 +84,34 @@ void ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending::addSubcellFace
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending::storeFaceSamples()
+{
+  DataHandle< CFreal > samples = socket_subcellFaceSamples.getDataHandle();
+  if (samples.size() == 0) return;
+
+  const CFuint nbrFlxPnts = m_scData.getNbrFlxPnts();
+  const CFuint cellID = m_intCell->getID();
+  for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+  {
+    const CFuint flxIdx = (*m_faceFlxPntConn)[m_orient][iFlxPnt];
+    const CFuint start  = m_nbrEqs*(cellID*nbrFlxPnts + flxIdx);
+    const State& inner  = *(m_cellStatesFlxPnt[iFlxPnt]);
+    const State& ghost  = *(m_flxPntGhostSol[iFlxPnt]);
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      samples[start+iEq] = 0.5*(inner[iEq] + ghost[iEq]);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvBndCorrectionsRHSJacobFluxReconstructionSubcellBlending::computeCorrection(vector< RealVector >& corrections)
 {
   // FR correction -(F* divh) of all solution points
   ConvBndCorrectionsRHSJacobFluxReconstruction::computeCorrection(corrections);
+
+  storeFaceSamples();
 
   const CFreal alpha = getCellAlpha();
   if (alpha <= 0.0) return;

@@ -6,6 +6,13 @@
 
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
+#include "Common/BadValueException.hh"
+#include "Common/StringOps.hh"
+#include "Environment/Factory.hh"
+#include "Framework/PhysicalModel.hh"
+#include "Framework/VarSetTransformer.hh"
+#include "MathTools/MathConsts.hh"
+#include <algorithm>
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/ConvRHSJacobFluxReconstructionSubcellBlending.hh"
@@ -31,16 +38,39 @@ MethodCommandProvider< ConvRHSJacobFluxReconstructionSubcellBlending, FluxRecons
 ConvRHSJacobFluxReconstructionSubcellBlending::ConvRHSJacobFluxReconstructionSubcellBlending(const std::string& name) :
   ConvRHSJacobFluxReconstruction(name),
   socket_alpha("alpha"),
+  socket_subcellFaceSamples("subcellFaceSamples"),
+  socket_subcellOrder("subcellOrder"),
   m_scData(),
   m_currFaceAlphaF(0.0),
   m_currCellAlpha(0.0),
   m_flxPntFaceConn(CFNULL),
-  m_blendedFaceFlux()
+  m_blendedFaceFlux(),
+  m_faceRecStates(),
+  m_recordedStage(0),
+  m_recordFace(false),
+  m_cellMask(),
+  m_frozenPhi(),
+  m_frozenValid()
 {
   addConfigOptionsTo(this);
 
   m_faceFluxBlending = true;
   setParameter("FaceFluxBlending", &m_faceFluxBlending);
+
+  m_reconstruction = "FirstOrder";
+  setParameter("SubcellReconstruction", &m_reconstruction);
+
+  m_limiter = "VanAlbada";
+  setParameter("SubcellLimiter", &m_limiter);
+
+  m_limiterEps = 1.0e-3;
+  setParameter("SubcellLimiterEps", &m_limiterEps);
+
+  m_reconstructionVar = "";
+  setParameter("SubcellReconstructionVar", &m_reconstructionVar);
+
+  m_recMachMax = MathTools::MathConsts::CFrealMax();
+  setParameter("SubcellReconstructionMachMax", &m_recMachMax);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -56,6 +86,27 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::defineConfigOptions(Config::
   options.addConfigOption< bool >("FaceFluxBlending",
     "Blend the face Riemann flux with the first-order flux between the adjacent solution points, "
     "weighted by max(alpha_L, alpha_R). With alpha = 1 the cell then runs a pure subcell P0 scheme.");
+  options.addConfigOption< std::string >("SubcellReconstruction",
+    "States at the subcell faces: FirstOrder (solution point values, default) or Linear "
+    "(limited linear reconstruction to every subcell face, element faces included).");
+  options.addConfigOption< std::string >("SubcellLimiter",
+    "Slope limiter of the Linear reconstruction: VanAlbada (default, smooth, needed for Newton "
+    "convergence), Minmod, or None (average of the two secants, unlimited, for verification only).");
+  options.addConfigOption< std::string >("SubcellReconstructionVar",
+    "Variables of the Linear reconstruction (a variable set name of the physical model, e.g. Puvt); "
+    "default: the update variables. Primitive variables avoid negative pressures of conservative "
+    "reconstructions at high Mach.");
+  options.addConfigOption< CFreal >("SubcellReconstructionMachMax",
+    "Cells whose largest solution point Mach number reaches this value keep the first-order "
+    "subcells, also at their element faces (default: no limit, every blended cell is "
+    "reconstructed). 1 restricts the reconstruction to subsonic cells, which keeps the shock "
+    "and its supersonic upstream cells first order. Needs a physics command that computes the "
+    "Mach number (computeCellMaxMach), e.g. ConvRHSJacobNSSubcellBlending. Once OrderBlending freezes "
+    "alpha (FreezeAlphaIter or FreezeAlphaStallWindow), this choice and the limiter factors of the "
+    "slopes are frozen too, recorded on the solution of the iteration where alpha is frozen.");
+  options.addConfigOption< CFreal >("SubcellLimiterEps",
+    "VanAlbada smoothing size, relative to the largest value of the stencil (default 1e-3): "
+    "differences below it are not limited, so smooth extrema are not clipped.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -72,6 +123,17 @@ ConvRHSJacobFluxReconstructionSubcellBlending::needsSockets()
 {
   std::vector< SafePtr< BaseDataSocketSink > > result = ConvRHSJacobFluxReconstruction::needsSockets();
   result.push_back(&socket_alpha);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+std::vector< SafePtr< BaseDataSocketSource > >
+ConvRHSJacobFluxReconstructionSubcellBlending::providesSockets()
+{
+  std::vector< SafePtr< BaseDataSocketSource > > result = ConvRHSJacobFluxReconstruction::providesSockets();
+  result.push_back(&socket_subcellFaceSamples);
+  result.push_back(&socket_subcellOrder);
   return result;
 }
 
@@ -95,27 +157,143 @@ CFreal ConvRHSJacobFluxReconstructionSubcellBlending::computeFaceAlphaF()
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvRHSJacobFluxReconstructionSubcellBlending::execute()
+{
+  // alpha was frozen (or the hold stage changed): the choices are recorded again on the
+  // current solution, in this evaluation
+  const CFuint stage = getMethodData().getBlendingHoldStage();
+  if (m_cellMask.size() > 0 && stage != m_recordedStage)
+  {
+    std::fill(m_cellMask.begin(), m_cellMask.end(), -1);
+    std::fill(m_frozenValid.begin(), m_frozenValid.end(), 0);
+    m_recordedStage = stage;
+    if (stage > 0 && PE::GetPE().GetRank(getMethodData().getNamespace()) == 0)
+    {
+      CFLog(INFO, "SubcellBlending: reconstruction choices and limiter factors frozen with alpha\n");
+    }
+  }
+
+  ConvRHSJacobFluxReconstruction::execute();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool ConvRHSJacobFluxReconstructionSubcellBlending::reconstructCell(const std::vector< State* >& states,
+                                                                   const CFuint cellID, const bool record)
+{
+  // decision held for the current blending hold stage
+  if (m_cellMask.size() > 0 && m_cellMask[cellID] >= 0) return (m_cellMask[cellID] == 1);
+
+  const bool use = !(m_recMachMax < MathTools::MathConsts::CFrealMax() &&
+                      computeCellMaxMach(states) >= m_recMachMax);
+  if (record && isReconstructionFrozen()) m_cellMask[cellID] = use ? 1 : 0;
+  return use;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool ConvRHSJacobFluxReconstructionSubcellBlending::isReconstructionFrozen() const
+{
+  return m_cellMask.size() > 0 && m_recordedStage > 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSJacobFluxReconstructionSubcellBlending::setLimiterRecording(const bool record)
+{
+  if (m_cellMask.size() == 0) return;
+  m_scData.setLimiterFreeze(&m_frozenPhi[0], &m_frozenValid[0], record && isReconstructionFrozen());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSJacobFluxReconstructionSubcellBlending::storeFaceSamples()
+{
+  // the sample of a cell at a flux point is the trace of the other cell there
+  DataHandle< CFreal > samples = socket_subcellFaceSamples.getDataHandle();
+  const CFuint nbrFlxPnts = m_scData.getNbrFlxPnts();
+  for (CFuint side = 0; side < 2; ++side)
+  {
+    const CFuint other  = 1 - side;
+    const CFuint cellID = m_cells[side]->getID();
+    for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
+    {
+      const CFuint flxIdx = (*m_faceFlxPntConnPerOrient)[m_orient][side][iFlxPnt];
+      const CFuint start  = m_nbrEqs*(cellID*nbrFlxPnts + flxIdx);
+      const State& trace  = *(m_cellStatesFlxPnt[other][iFlxPnt]);
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        samples[start+iEq] = trace[iEq];
+      }
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const RealVector& ConvRHSJacobFluxReconstructionSubcellBlending::computeFaceLoFlux(const CFuint iFlxPnt)
+{
+  // solution points adjacent to this flux point in the left and right cell. In the
+  // perturbation loop the states and the traces carry the perturbation directly.
+  const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT ][iFlxPnt];
+  const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt];
+
+  if (!m_scData.isLinear())
+  {
+    return m_riemannFluxComputer->computeFlux(*((*m_states[LEFT ])[m_scData.getClosestSol(flxIdxL)]),
+                                              *((*m_states[RIGHT])[m_scData.getClosestSol(flxIdxR)]),
+                                              m_unitNormalFlxPnts[iFlxPnt]);
+  }
+
+  // each side reconstructs its closest solution point to the face, with the trace of
+  // the other side as outer sample; a side kept first order (SubcellReconstructionMachMax)
+  // uses its solution point value
+  const CFuint flxIdx[2] = {flxIdxL, flxIdxR};
+  for (CFuint side = 0; side < 2; ++side)
+  {
+    if (reconstructCell(*m_states[side], m_cells[side]->getID(), m_recordFace))
+    {
+      m_scData.reconstructAtElementFace(*m_states[side], flxIdx[side], *(m_cellStatesFlxPnt[1-side][iFlxPnt]),
+                                        *m_faceRecStates[side]);
+    }
+    else
+    {
+      *m_faceRecStates[side] = *((*m_states[side])[m_scData.getClosestSol(flxIdx[side])]);
+    }
+  }
+  return m_riemannFluxComputer->computeFlux(*m_faceRecStates[LEFT], *m_faceRecStates[RIGHT],
+                                            m_unitNormalFlxPnts[iFlxPnt]);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvRHSJacobFluxReconstructionSubcellBlending::computeInterfaceFlxCorrection()
 {
   // face Riemann flux from the extrapolated states, unscaled in m_flxPntRiemannFlux
   // and scaled by the face Jacobian in m_cellFlx
   ConvRHSJacobFluxReconstruction::computeInterfaceFlxCorrection();
 
+  // needed by the cell loop also when this face uses no first-order flux
+  if (m_scData.isLinear()) storeFaceSamples();
+
+  // unperturbed face: the mask and the limiter factors may be recorded here
+  m_recordFace = true;
+  setLimiterRecording(true);
+
   m_currFaceAlphaF = computeFaceAlphaF();
-  if (m_currFaceAlphaF <= 0.0) return;
+  if (m_currFaceAlphaF <= 0.0)
+  {
+    m_recordFace = false;
+    setLimiterRecording(false);
+    return;
+  }
 
   const CFreal oneMinusAlphaF = 1.0 - m_currFaceAlphaF;
 
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
-    const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT ][iFlxPnt];
-    const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlxPnt];
-    State& solStateL = *((*m_states[LEFT ])[m_scData.getClosestSol(flxIdxL)]);
-    State& solStateR = *((*m_states[RIGHT])[m_scData.getClosestSol(flxIdxR)]);
-
-    // first-order flux between the adjacent solution point states
-    const RealVector& loFlux = m_riemannFluxComputer->computeFlux(solStateL, solStateR,
-                                                                 m_unitNormalFlxPnts[iFlxPnt]);
+    // first-order flux between the adjacent solution points
+    const RealVector& loFlux = computeFaceLoFlux(iFlxPnt);
 
     for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
     {
@@ -126,6 +304,9 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::computeInterfaceFlxCorrectio
     m_cellFlx[LEFT ][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][LEFT ];
     m_cellFlx[RIGHT][iFlxPnt] = (m_flxPntRiemannFlux[iFlxPnt])*m_faceJacobVecSizeFlxPnts[iFlxPnt][RIGHT];
   }
+
+  m_recordFace = false;
+  setLimiterRecording(false);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -198,9 +379,42 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::setCellData()
   ConvRHSJacobFluxReconstruction::setCellData();
 
   m_currCellAlpha = getCellAlpha(*m_cellStates);
+
+  // order of the subcell scheme at the solution points (output only), set below for
+  // reconstructed cells
+  DataHandle< CFreal > order = socket_subcellOrder.getDataHandle();
+  const CFreal cellOrder = (m_currCellAlpha <= 0.0) ? 0.0 : 1.0;
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    order[(*m_cellStates)[iSol]->getLocalID()] = cellOrder;
+  }
+
   if (m_currCellAlpha <= 0.0) return;
 
   m_scData.computeCellNormals(m_cell);
+
+  if (m_scData.isLinear())
+  {
+    const bool cellLinear = reconstructCell(*m_cellStates, m_cell->getID(), true);
+    m_scData.setCellLinear(cellLinear);
+    if (cellLinear)
+    {
+      DataHandle< CFreal > samples = socket_subcellFaceSamples.getDataHandle();
+      const CFuint start = m_nbrEqs*m_cell->getID()*m_scData.getNbrFlxPnts();
+      cf_assert(start < samples.size());
+      // unperturbed slopes: the limiter factors may be recorded here
+      setLimiterRecording(true);
+      m_scData.computeCellSlopes(*m_cellStates, &samples[start]);
+      setLimiterRecording(false);
+
+      // half an order per direction kept by the admissibility test
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        const CFuint nbDirs = (m_scData.isReconstructed(0, iSol) ? 1 : 0) + (m_scData.isReconstructed(1, iSol) ? 1 : 0);
+        order[(*m_cellStates)[iSol]->getLocalID()] = 1.0 + 0.5*nbDirs;
+      }
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -219,14 +433,7 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::computePertInterfaceFlxCorre
 
     if (m_currFaceAlphaF > 0.0)
     {
-      const CFuint flxIdxL = (*m_faceFlxPntConnPerOrient)[m_orient][LEFT ][iFlx];
-      const CFuint flxIdxR = (*m_faceFlxPntConnPerOrient)[m_orient][RIGHT][iFlx];
-
-      // the closest solution point states carry the perturbation directly
-      const RealVector& loFlux = m_riemannFluxComputer->computeFlux(
-          *((*m_states[LEFT ])[m_scData.getClosestSol(flxIdxL)]),
-          *((*m_states[RIGHT])[m_scData.getClosestSol(flxIdxR)]),
-          m_unitNormalFlxPnts[iFlx]);
+      const RealVector& loFlux = computeFaceLoFlux(iFlx);
 
       const CFreal oneMinusAlphaF = 1.0 - m_currFaceAlphaF;
       for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
@@ -313,14 +520,77 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::setup()
   cf_assert(frLocalData.size() == 1);
 
   m_scData.setup(frLocalData[0], m_dim, m_nbrEqs);
+  // telescoped subcell normals from the FR derivative, correction terms included
+  m_scData.setCorrectionFunction(m_corrFctDiv);
   cf_assert(m_scData.getNbrSolPnts1D()*m_scData.getNbrSolPnts1D() == m_nbrSolPnts);
 
   m_flxPntFaceConn = frLocalData[0]->getFlxPntFaceConn();
 
   m_blendedFaceFlux.resize(m_nbrEqs);
 
-  CFLog(INFO, "ConvRHSJacobFluxReconstructionSubcellBlending: FaceFluxBlending = " << m_faceFluxBlending
-        << ", 1D subcell widths =");
+  // in FR every state belongs to one cell
+  DataHandle< CFreal > order = socket_subcellOrder.getDataHandle();
+  order.resize(MeshDataStack::getActive()->getTrs("InnerCells")->getLocalNbGeoEnts()*m_nbrSolPnts);
+  for (CFuint i = 0; i < order.size(); ++i) order[i] = 0.0;
+
+  if (m_reconstruction == "Linear")
+  {
+    m_scData.setReconstruction(m_limiter, m_limiterEps, getMethodData().getUpdateVar());
+
+    // buffers of the held choices (used while OrderBlending holds alpha)
+    {
+      SafePtr< TopologicalRegionSet > allCells = MeshDataStack::getActive()->getTrs("InnerCells");
+      // in FR every state belongs to one cell
+      const CFuint nbStates = allCells->getLocalNbGeoEnts()*m_nbrSolPnts;
+      m_cellMask.assign(allCells->getLocalNbGeoEnts(), -1);
+      m_frozenPhi.assign(2*nbStates*m_nbrEqs, 0.0);
+      m_frozenValid.assign(2*nbStates, 0);
+      m_recordedStage = 0;
+    }
+
+    const std::string updateVar = getMethodData().getUpdateVarStr();
+    if (m_reconstructionVar != "" && m_reconstructionVar != updateVar)
+    {
+      SafePtr< PhysicalModel > physModel = PhysicalModelStack::getActive();
+      const std::string toRecStr =
+        VarSetTransformer::getProviderName(physModel->getConvectiveName(), updateVar, m_reconstructionVar);
+      const std::string fromRecStr =
+        VarSetTransformer::getProviderName(physModel->getConvectiveName(), m_reconstructionVar, updateVar);
+      m_toRecTrans.reset(Environment::Factory< VarSetTransformer >::getInstance().getProvider(toRecStr)
+                         ->create(physModel->getImplementor()));
+      m_fromRecTrans.reset(Environment::Factory< VarSetTransformer >::getInstance().getProvider(fromRecStr)
+                           ->create(physModel->getImplementor()));
+      m_toRecTrans->setup(1);
+      m_fromRecTrans->setup(1);
+      m_scData.setReconstructionVars(m_toRecTrans.getPtr(), m_fromRecTrans.getPtr());
+    }
+
+    SafePtr< TopologicalRegionSet > cells = MeshDataStack::getActive()->getTrs("InnerCells");
+    socket_subcellFaceSamples.getDataHandle().resize
+      (cells->getLocalNbGeoEnts()*m_scData.getNbrFlxPnts()*m_nbrEqs);
+
+    RealVector dummyCoord(m_dim);
+    dummyCoord = 0.0;
+    for (CFuint side = 0; side < 2; ++side)
+    {
+      m_faceRecStates.push_back(new State());
+      m_faceRecStates[side]->setSpaceCoordinates(new Node(dummyCoord, false));
+    }
+  }
+  else if (m_reconstruction != "FirstOrder")
+  {
+    throw BadValueException(FromHere(),
+      "ConvRHSJacobFluxReconstructionSubcellBlending: SubcellReconstruction must be FirstOrder or Linear, not "
+      + m_reconstruction);
+  }
+
+  CFLog(INFO, "ConvRHSJacobFluxReconstructionSubcellBlending: SubcellReconstruction = " << m_reconstruction
+        << (m_reconstruction == "Linear" ? " (" + m_limiter + ", eps " + StringOps::to_str(m_limiterEps)
+                                           + ", variables " + (m_reconstructionVar == "" ?
+                                             getMethodData().getUpdateVarStr() : m_reconstructionVar)
+                                           + ", Mach max " + StringOps::to_str(m_recMachMax) + ")"
+                                         : std::string(""))
+        << ", FaceFluxBlending = " << m_faceFluxBlending << ", 1D subcell widths =");
   const vector< CFreal >& widths = m_scData.getWidths1D();
   for (CFuint i = 0; i < widths.size(); ++i)
   {
@@ -334,6 +604,13 @@ void ConvRHSJacobFluxReconstructionSubcellBlending::setup()
 void ConvRHSJacobFluxReconstructionSubcellBlending::unsetup()
 {
   CFAUTOTRACE;
+
+  for (CFuint side = 0; side < m_faceRecStates.size(); ++side)
+  {
+    // the state owns its coordinates (Node built with isOnMesh = false)
+    deletePtr(m_faceRecStates[side]);
+  }
+  m_faceRecStates.clear();
 
   ConvRHSJacobFluxReconstruction::unsetup();
 }

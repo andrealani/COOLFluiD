@@ -1,4 +1,5 @@
 #include "Common/CFLog.hh"
+#include "Common/BadValueException.hh"
 
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/NamespaceSwitcher.hh"
@@ -127,6 +128,11 @@ void NS2DAxiSourceTerm::addSourceTerm(RealVector& resUpdates)
 //    resUpdates[m_nbrEqs*iSol + vID] = m_solPhysData[EulerTerm::P] - tauThetaTheta;
  
     const CFreal r = max(m_cutoffR,(m_cell->computeCoordFromMappedCoord((*m_solPntsLocalCoords)[iSol]))[YY]);
+    
+    if (!(r > 0.))
+    {
+      throw Common::BadValueException (FromHere(),"NS2DAxiSourceTerm: solution point on the axis, use GaussLegendre solution points or CutoffR > 0");
+    }
         
     m_diffVarSet->getAxiSourceTerm(m_solPhysData,*((*m_cellStates)[iSol]),*(m_cellGrads[iSol]),r,m_srcTerm);
       
@@ -165,11 +171,24 @@ void NS2DAxiSourceTerm::setup()
   {
     throw Common::ShouldNotBeHereException (FromHere(),"Update variable set is not Euler2DVarSet in Euler2DAxiSourceTerm!");
   }
-  cf_assert(m_nbrEqs == 4);
-  
+  // 4 equations for a perfect gas; the NEQ variable sets add species and vibrational energies,
+  // and their getAxiSourceTerm fills all of them
+  cf_assert(m_nbrEqs >= 4);
+
   m_eulerVarSet->getModel()->resizePhysicalData(m_solPhysData);
   
   m_diffVarSet = getMethodData().getDiffusiveVar().d_castTo<NavierStokes2DVarSet>();
+  
+  // with Data.Axisymmetric the diffusive fluxes get the radius r = y of their point,
+  // and on the axis (r = 0) the v/r term of div(u) takes its limit dv/dr
+  if (getMethodData().isAxisymmetric())
+  {
+    m_diffVarSet->setAxisymmetric(true);
+  }
+  else
+  {
+    CFLog(WARN, "NS2DAxiSourceTerm: Data.Axisymmetric = false, the diffusive fluxes miss the v/r term of div(u)\n");
+  }
   
   m_srcTerm.resize(m_nbrEqs);
   

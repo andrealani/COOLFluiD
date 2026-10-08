@@ -1,7 +1,11 @@
 ################################################################################
 #
-# Converts heg_cylinder.msh (gmsh msh2, 41 x 50 Q2 quads) into the P0 CFmesh
-# heg_cylinder_P0.CFmesh read by hegFR_P0.CFcase.
+# Raises the converged P2 solution hegFR_P2.CFmesh to P3 by sampling the P2
+# polynomial at the P3 solution points: writes heg_P3_init.CFmesh, the restart
+# file of hegFR_P3.CFcase. MeshUpgrade may store cells in another order (cells 0
+# and nbElem/2 exchanged, nodes and states together); the file is still correct.
+# Check it with
+#   python3 tools/check_upgrade.py hegFR_P2.CFmesh heg_P3_init.CFmesh
 # Mesh preparation only, on ONE MPI rank: PLATO can be initialised only once per process.
 #
 # PLATO: set Plato.path below to your PLATO database directory.
@@ -11,7 +15,7 @@
 CFEnv.ExceptionLogLevel   = 1000
 CFEnv.ErrorOnUnusedConfig = false
 
-Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libGmsh2CFmesh \
+Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader \
                          libNavierStokes libNEQ libPlatoI \
                          libFluxReconstructionMethod libFluxReconstructionNavierStokes \
                          libFluxReconstructionNEQ
@@ -42,17 +46,16 @@ Simulator.SubSysMesh.MeshMeshData.listTRS    = Wall Inlet Outlet
 Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
 
 Simulator.SubSysMesh.OutputFormat      = CFmesh
-Simulator.SubSysMesh.CFmesh.FileName   = heg_cylinder_P0.CFmesh
+Simulator.SubSysMesh.CFmesh.FileName   = heg_P3_init.CFmesh
 Simulator.SubSysMesh.CFmesh.WriteSol   = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace  = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = heg_cylinder.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = hegFR_P2.CFmesh
 Simulator.SubSysMesh.CFmeshFileReader.Namespace     = MeshNamespace
-Simulator.SubSysMesh.CFmeshFileReader.convertFrom   = Gmsh2CFmesh
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P0
-Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = false
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
+Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = true
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace

@@ -13,6 +13,8 @@
 #include "Common/StringOps.hh"
 #include <fstream>
 #include <cstdlib>
+#include <algorithm>
+#include <cctype>
 //#include <mutation++.h> 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -46,6 +48,7 @@ void PlatoLibrary::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("transfName","Name of the transfer file.");
   options.addConfigOption< CFdouble >("Xtol","Tolerance on mole fraction for transport properties.");
   options.addConfigOption< CFdouble >("scaleElectricalConductivity","Scaling factor for PLATO's electrical conductivity"); // Vatsalya : Plato version June-2022.
+  options.addConfigOption< bool >("ChargeNeutrality","Ionized mixtures: the electron density used by the thermodynamic, transport and chemistry evaluations is set from the ions, rho_e = m_e sum_k q_k rho_k / m_k (as the Mutation++ interface does), so a charge imbalance of the discrete state cannot feed the chemistry; the electron continuity equation then carries a passive copy (default false).");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -63,6 +66,7 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _Ri(),
     _hi(),
     _molIDs(),
+    _speciesEnergyModes(),
     _hiVib(),
     _hiEl(),
     _qi(),
@@ -89,6 +93,11 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
   
   _transfName = "empty";
   setParameter("transfName",&_transfName);
+
+  _nasaThermo = false;
+
+  _chargeNeutrality = false;
+  setParameter("ChargeNeutrality",&_chargeNeutrality);
 
   _Xtol = 1.e-12;
   setParameter("Xtol",&_Xtol);
@@ -202,6 +211,7 @@ void PlatoLibrary::setLibrarySequentially()
   _Yn.resize(_NC);
   _molIDs.resize(_NS);
   _hi.resize(_NS);
+  _speciesEnergyModes.resize(_NS*_nTemp);
   _hiVib.resize(_NS);
   _hiEl.resize(_NS);
   _mmi.resize(_NS);
@@ -245,6 +255,38 @@ void PlatoLibrary::setLibrarySequentially()
   CFout << " _Rgas = " <<_Rgas<<"\n";
   /*Set flag to indicate is the mixture is neutral or ionized*/
   _hasElectrons = (get_nb_e() == 1) ? true : false;
+
+  /*Thermodynamic model, from the mixture file PLATO has just read: NASA polynomials when
+    NASA_POLY_THERMO = T, partition functions otherwise (PLATO default)*/
+  _nasaThermo = false;
+  {
+    const std::string mixFile = envPlato + "/mixture/" + _mixtureName;
+    std::ifstream fin(mixFile.c_str());
+    std::string line;
+    while (std::getline(fin, line)) {
+      const std::string::size_type c = line.find('#');
+      if (c != std::string::npos) line.erase(c);
+      const std::string::size_type eq = line.find('=');
+      if (line.find("NASA_POLY_THERMO") == std::string::npos || eq == std::string::npos) continue;
+      std::string v = line.substr(eq + 1);
+      v.erase(std::remove_if(v.begin(), v.end(), ::isspace), v.end());
+      std::transform(v.begin(), v.end(), v.begin(), ::toupper);
+      _nasaThermo = (v == "T" || v == "TRUE" || v == ".TRUE." || v == ".T.");
+    }
+  }
+  CFLog(INFO, "PlatoLibrary => thermodynamics: " << (_nasaThermo ? "NASA polynomials" : "partition functions") << "\n");
+
+  /*Charge neutrality coefficients: the electron is the first species, the charges are in units of e*/
+  _neutralCoefY.resize(_NS);
+  _neutralCoefY = 0.;
+  _normConcGradNeutral.resize(_NS);
+  if (_chargeNeutrality && _hasElectrons) {
+    cf_assert(_qi[0] < 0.);
+    for (CFint is = 1; is < _NS; ++is) {
+      if (_qi[is] > 0.) _neutralCoefY[is] = _mmi[0]*_qi[is]/_mmi[is];
+    }
+    CFLog(INFO, "PlatoLibrary => charge neutrality: electron density from the ions\n");
+  }
 
   /*Set tolerance on mole fractions (for transport properties)*/
   set_X_tol(&_Xtol);
@@ -290,6 +332,7 @@ void PlatoLibrary::unsetup()
     _Yn.resize(0);
     _hi.resize(0);
     _molIDs.resize(0);
+    _speciesEnergyModes.resize(0);
     _hiVib.resize(0);
     _hiEl.resize(0);
     _mmi.resize(0);
@@ -881,6 +924,14 @@ void PlatoLibrary::setSpeciesFractions(const RealVector& ys)
     if (_Yi[is] > 1.0) _Yi[is] = 1.0; //Vatsalya: original had cf_assert(_Yi<1.1) that crashed at CFL=10 during FD Jacobian perturbation where perturbed species can exceed 1.0; softened to clamp
       
   }
+
+  /*Charge neutrality: electron mass fraction from the ions*/
+  if (_chargeNeutrality && _hasElectrons) {
+    _Yi[0] = 0.;
+    for (CFint is = 1; is < _NS; ++is) {
+      _Yi[0] += _neutralCoefY[is]*_Yi[is];
+    }
+  }
   //CFout<<"******computed here/////////// \n"; // we go here in TCNEQ
   /*Set mass fractions of chemical components*/
   get_comp_fractions(&_Yi[0], &_Yc[0]);
@@ -947,6 +998,15 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
     _rhoi[i] = rho*ys[i];
   }
 
+  /*Charge neutrality: electron density from the ions*/
+  const bool neutral = _chargeNeutrality && _hasElectrons;
+  if (neutral) {
+    _rhoi[0] = 0.;
+    for (CFint i = 1; i < _NS; ++i) {
+      _rhoi[0] += _neutralCoefY[i]*_rhoi[i];
+    }
+  }
+
   /*Temperature vector*/
   _tvec[0] = temp;
   for (CFint i = 1; i < _nTemp; ++i) {
@@ -963,6 +1023,17 @@ void PlatoLibrary::getMassProductionTerm(CFdouble& temp, RealVector& tVec, CFdou
     for (CFint i = 0; i < _nEqs; ++i) {
       for (CFint j = 0; j < _nEqs; ++j) {
         jacobian(i,j) = _jprodterm(j,i);
+      }
+    }
+
+    /*Charge neutrality: rho_e is a function of the ion densities (chain rule on the partial
+      density columns), and the source no longer depends on the electron density of the state*/
+    if (neutral) {
+      for (CFint i = 0; i < _nEqs; ++i) {
+        for (CFint k = 1; k < _NS; ++k) {
+          jacobian(i,k) += _neutralCoefY[k]*jacobian(i,0);
+        }
+        jacobian(i,0) = 0.;
       }
     }
 
@@ -997,6 +1068,15 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
     _rhoi[i] = rho*ys[i];
   }
 
+  /*Charge neutrality: electron density from the ions*/
+  const bool neutral = _chargeNeutrality && _hasElectrons;
+  if (neutral) {
+    _rhoi[0] = 0.;
+    for (CFint i = 1; i < _NS; ++i) {
+      _rhoi[0] += _neutralCoefY[i]*_rhoi[i];
+    }
+  }
+
   /*Temperature vector*/
   _tvec[0] = temp;
   for (CFint i = 1; i < _nTemp; ++i) {
@@ -1013,6 +1093,17 @@ void PlatoLibrary::getSource(CFdouble& temp, RealVector& tVec, CFdouble& pressur
     for (CFint i = 0; i < _nEqs; ++i) {
       for (CFint j = 0; j < _nEqs; ++j) {
         jacobian(i,j) = _jprodterm(j,i);
+      }
+    }
+
+    /*Charge neutrality: rho_e is a function of the ion densities (chain rule on the partial
+      density columns), and the source no longer depends on the electron density of the state*/
+    if (neutral) {
+      for (CFint i = 0; i < _nEqs; ++i) {
+        for (CFint k = 1; k < _NS; ++k) {
+          jacobian(i,k) += _neutralCoefY[k]*jacobian(i,0);
+        }
+        jacobian(i,0) = 0.;
       }
     }
 
@@ -1061,22 +1152,33 @@ void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure,
   /*Compute binary diffusion coefficients*/
   get_bin_diff_coeff(&nd, &Th, &Te, &_Xi[0], &_Dij[0]);
 
+  /*Charge neutrality: gradient of the electron fraction from the ion gradients (mass fractions:
+    coefficients m_e q_k / m_k, mole fractions in the fast branch: q_k)*/
+  RealVector& concGrads = (_chargeNeutrality && _hasElectrons) ? _normConcGradNeutral : normConcGradients;
+  if (_chargeNeutrality && _hasElectrons) {
+    _normConcGradNeutral = normConcGradients;
+    _normConcGradNeutral[0] = 0.;
+    for (CFint is = 1; is < _NS; ++is) {
+      _normConcGradNeutral[0] += (fast ? std::max(_qi[is], 0.) : _neutralCoefY[is])*normConcGradients[is];
+    }
+  }
+
   /*Diffusion driving forces (gradients of mole fractions*/
   if (!fast) {
     CFdouble mm = 0.0;
     CFdouble normMMassGradient = 0.0;
     for (CFint is = 0; is < _NS; ++is) {
         mm += _Xi[is]*_mmi[is];
-        normMMassGradient += normConcGradients[is]/_mmi[is];
+        normMMassGradient += concGrads[is]/_mmi[is];
     }
     normMMassGradient *= -(mm*mm);
   
     for (CFint is = 0; is < _NS; ++is) {
-      _dfi[is] = (mm*normConcGradients[is] + _Yi[is]*normMMassGradient)/_mmi[is];
+      _dfi[is] = (mm*concGrads[is] + _Yi[is]*normMMassGradient)/_mmi[is];
     }
   } else {
     for (CFint is = 0; is < _NS; ++is) {
-      _dfi[is] = normConcGradients[is];
+      _dfi[is] = concGrads[is];
     }
   } 
   
@@ -1149,12 +1251,59 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
     _tvec[i] = tVec[i - 1];
   }
 
-  /* Thermo-chemical non-equilibrium case*/
-  if (_nTemp > 1) {
+  /* Thermo-chemical non-equilibrium case, partition functions and one vibrational temperature*/
+  if (_nTemp > 1 && !_nasaThermo && _nbTvib == 1) {
 
-     // species_tot_vib_el_enthalpy() calls safe_exit() and aborts whenever PLATO is built
-     // with PLATO_HAVE_NASA_POLY (see plato-main_munafo/src/thermo/thermo_prop_enthalpy.F90);
-     // species_enthalpy_modes() is the NASA-safe decomposition and is valid in both modes.
+     // species_tot_vib_el_enthalpy() evaluates every energy mode at its own temperature:
+     // hi = h_i(T, Tv), hiv = energy of the Tv mode, hiel = energy of the Te mode (electrons:
+     // c_p,e Te). Without a Te equation Te = Tv, so hiv = hiel for the heavy species: the energy
+     // of the Tv mode is passed once, as hsVib for the molecules and as hsEl for atoms and
+     // electrons, which is how the NEQ variable sets sum it (sum over molecules of hsVib J_i
+     // plus sum over all species of hsEl J_i)
+     species_tot_vib_el_enthalpy(&_tvec[0], &hsTot[0], &_hiVib[0], &_hiEl[0]);
+
+     *hsVib = 0.;
+     for (CFint i = 0; i < _NS; ++i) {
+       (*hsEl)[i] = _hiEl[i];
+     }
+     for (CFint i = 0; i < _nMol; ++i) {
+       const CFint is = _molIDs[i];
+       (*hsVib)[is] = _hiVib[is];
+       if (_nbTe == 0) {
+         (*hsEl)[is] = 0.;
+       }
+     }
+
+  /* Thermo-chemical non-equilibrium case, NASA polynomials, neutral mixture, one vibrational temperature*/
+  } else if (_nTemp == 2 && _nasaThermo && _nbTvib == 1 && _nbTe == 0 && !_hasElectrons &&
+             get_nb_comp() == _NS) {
+
+     // species_enthalpy() gives hi = h_i(T, Tv) and species_energy_modes() the energy of each
+     // temperature mode, index 1 being the Tv mode (vibration and electronic excitation). As in the
+     // branch above, the Tv-mode energy is passed once: hsVib for the molecules, hsEl for the atoms.
+     // These are the PLATO calls of the converged NASA HEG runs of 2026-10-06; this branch cannot
+     // be run with a PLATO built without NASA polynomials
+     species_enthalpy(&_tvec[0], &hsTot[0]);
+     species_energy_modes(&_tvec[0], &_speciesEnergyModes[0]);
+
+     *hsVib = 0.;
+     for (CFint i = 0; i < _NS; ++i) {
+       (*hsEl)[i] = _speciesEnergyModes[i*_nTemp + 1];
+     }
+     for (CFint i = 0; i < _nMol; ++i) {
+       const CFint is = _molIDs[i];
+       (*hsVib)[is] = (*hsEl)[is];
+       (*hsEl)[is] = 0.;
+     }
+
+  /* Thermo-chemical non-equilibrium case, other configurations (ionized NASA mixtures,
+     several vibrational temperatures)*/
+  } else if (_nTemp > 1) {
+
+     // species_enthalpy_modes() evaluates every mode at T. With NASA polynomials it returns the
+     // internal energy lumped in hiInt and zero vibrational and electronic parts, so here the
+     // species diffusion carries no Tv-mode energy (species_tot_vib_el_enthalpy() stops when
+     // PLATO is built with NASA polynomials, see plato-main_munafo/src/thermo/thermo_prop_enthalpy.F90)
      RealVector hiTr(_NS);
      RealVector hiRot(_NS);
      RealVector hiF(_NS);
@@ -1167,9 +1316,13 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
        hsTot[i] = hiTr[i] + hiF[i] + hiInt[i];
      }
 
-     /*Vibrational energies*/
+     /*Vibrational energies, stored per species (zero for atoms and electrons):
+       the NEQ variable sets read hsVib[species ID], as Mutation++ fills it.
+       Filling it in molecule order gave each molecule the h_vib of another
+       species and left the last molecules at zero*/
+     *hsVib = 0.;
      for (CFint i = 0; i < _nMol; ++i) {
-       (*hsVib)[i] = _hiVib[_molIDs[i]];
+       (*hsVib)[_molIDs[i]] = _hiVib[_molIDs[i]];
      }
 
      /*Free-electron/electronic energies*/

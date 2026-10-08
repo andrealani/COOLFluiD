@@ -82,6 +82,18 @@ public:
                              const std::vector<RealVector*>& gradients,
                              const RealVector& normal);
 
+  /**
+   * Source of the axisymmetric equations (planar form times r), with the mass fraction and
+   * temperature gradients rebuilt first. With one Tv and no Te equation, the diffusion of the
+   * Tv-mode energy of atoms and electrons (sum of hsEl J_i over the species) is added to the
+   * Tv equation, as in getFlux; the base source has only the molecules' hsVib J_i.
+   */
+  virtual void getAxiSourceTerm(const RealVector& physicalData,
+                                const RealVector& state,
+                                const std::vector<RealVector*>& gradients,
+                                const CFreal& radius,
+                                RealVector& source);
+
 protected:
 
   /// Set the gradient state (y_i, u, v, T, Tv), the library state and the pressure

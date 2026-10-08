@@ -7,6 +7,9 @@
 #include "Framework/MethodCommandProvider.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/BaseTerm.hh"
+#include "Framework/CFL.hh"
+#include "Framework/SubSystemStatus.hh"
+#include <limits>
 #include "Common/BadValueException.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
@@ -52,12 +55,20 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   m_s(0.0),
   m_alphaRelaxation(1.0),
   m_alphaInitialized(false),
+  m_stage(0),
+  m_lastIter(std::numeric_limits<CFuint>::max()),
+  m_resHistory(),
+  m_cflHistory(),
   m_order(0),
   m_nbrSolPnts(0),
   m_nbrEqs(0),
   m_dim(0),
   m_iElemType(0),
-  m_elemIdx(0)
+  m_elemIdx(0),
+  m_bndFaceOrients(),
+  m_bndFacesBuilt(false),
+  m_faceFlxPntConn(CFNULL),
+  m_solPolyValsAtFlxPnts(CFNULL)
 {
   addConfigOptionsTo(this);
 
@@ -91,6 +102,10 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   setParameter("NbSweeps", &m_nbSweeps);
 
   // Iteration to freeze alpha (reuses prevAlpha). Default: never freeze.
+  m_freezeAlphaIter = 1000000;
+  setParameter("FreezeAlphaIter", &m_freezeAlphaIter);
+
+  // former name of FreezeAlphaIter, still read so that existing cases keep freezing
   m_freezeFilterIter = 1000000;
   setParameter("freezeFilterIter", &m_freezeFilterIter);
 
@@ -101,19 +116,13 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   m_forceAlphaMinMargin = std::log(2.0);
   setParameter("ForceAlphaMinMargin", &m_forceAlphaMinMargin);
 
-  // Release of the flags after this many clean iterations. Default: never.
-  m_forceAlphaMinReleaseIter = 0;
-  setParameter("ForceAlphaMinReleaseIter", &m_forceAlphaMinReleaseIter);
+  // Boundary faces as neighbours in the undershoot test. Default: off.
+  m_forceAlphaMinBoundaryGhost = false;
+  setParameter("ForceAlphaMinBoundaryGhost", &m_forceAlphaMinBoundaryGhost);
 
-  // Graded release: floor decrease per clean iteration. Default: off.
-  m_forceAlphaMinReleaseRate = 0.0;
-  setParameter("ForceAlphaMinReleaseRate", &m_forceAlphaMinReleaseRate);
-
-  m_forceAlphaMinReleaseBackoff = 0.1;
-  setParameter("ForceAlphaMinReleaseBackoff", &m_forceAlphaMinReleaseBackoff);
-
-  m_nbReleased = 0;
-  m_nbReleasedTotal = 0;
+  // Automatic freeze on a stalled residual. Default: off.
+  m_freezeStallWindow = 0;
+  setParameter("FreezeAlphaStallWindow", &m_freezeStallWindow);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -127,10 +136,19 @@ BaseOrderBlending::~BaseOrderBlending()
 void BaseOrderBlending::configure(Config::ConfigArgs& args)
 {
   FluxReconstructionSolverCom::configure(args);
+  if (m_freezeFilterIter != 1000000)
+  {
+    CFLog(WARN, "OrderBlending: freezeFilterIter is deprecated, use FreezeAlphaIter\n");
+  }
   if (!(m_alphaRelaxation > 0.0 && m_alphaRelaxation <= 1.0))
   {
     throw BadValueException(FromHere(),
       "OrderBlending RelaxationFactor must be in (0, 1].");
+  }
+  if (m_freezeStallWindow > 0 && getFreezeAlphaIter() < 1000000)
+  {
+    throw BadValueException(FromHere(),
+      "OrderBlending: FreezeAlphaStallWindow and FreezeAlphaIter cannot be used together");
   }
 }
 
@@ -160,25 +178,27 @@ void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< CFuint >("NbSweeps",
     "Number of smoothing iterations beyond the initial spread. "
     "Total spreading passes = NbSweeps + 1.");
-  options.addConfigOption< CFuint, Config::DynamicOption<> >("freezeFilterIter",
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("FreezeAlphaIter",
     "Iteration number at which alpha is frozen (reuses prevAlpha). "
     "The first evaluation always initializes alpha. Very large = never freeze.");
+  options.addConfigOption< CFuint, Config::DynamicOption<> >("freezeFilterIter",
+    "Deprecated name of FreezeAlphaIter. If both are given, the smaller iteration is used.");
   options.addConfigOption< std::vector<CFuint> >("ForceAlphaMinVars",
     "State variables (e.g. ln rho_i) checked for undershoots: a cell where one of them at a solution point lies "
-    "more than ForceAlphaMinMargin below the smallest cell mean of its neighbours gets alpha = 1 from then on. "
-    "Empty (default) disables it.");
+    "more than ForceAlphaMinMargin below the smallest cell mean of its neighbours gets alpha = 1 for the rest of "
+    "the run. Empty (default) disables it.");
   options.addConfigOption< CFreal >("ForceAlphaMinMargin",
     "Margin of the ForceAlphaMinVars undershoot test, in the units of the variables (default ln 2).");
-  options.addConfigOption< CFuint >("ForceAlphaMinReleaseIter",
-    "A flagged cell that passes the undershoot test with half the margin for this many consecutive iterations "
-    "gets its alpha from the sensor again (not while alpha is frozen). 0 (default): flags are never released.");
-  options.addConfigOption< CFreal >("ForceAlphaMinReleaseRate",
-    "Graded release: a flagged cell keeps alpha >= f, with f = 1 when flagged and f lowered by this amount "
-    "per iteration while the cell passes the test with half the margin. 0 (default): off. "
-    "Not together with ForceAlphaMinReleaseIter.");
-  options.addConfigOption< CFreal >("ForceAlphaMinReleaseBackoff",
-    "Graded release: if the undershoot comes back at floor f, the cell goes back to 1 and its floor never "
-    "drops below f plus this amount again (default 0.1).");
+  options.addConfigOption< bool >("ForceAlphaMinBoundaryGhost",
+    "Each boundary face of a cell counts as one more neighbour in the undershoot test, with the average of the "
+    "cell trace over the face as its mean, so a profile falling into a boundary (a cold wall) is not flagged. "
+    "Default false.");
+  options.addConfigOption< CFuint >("FreezeAlphaStallWindow",
+    "Automatic freeze: once the CFL has not grown for this many iterations and the monitored residual dropped "
+    "by less than 0.1 decade over them, alpha is computed from the sensor (without relaxation) on the current "
+    "solution and frozen for the rest of the run, together with the subcell reconstruction choices. "
+    "The undershoot flags (ForceAlphaMinVars) are kept and new ones still raise alpha to 1. "
+    "0 (default): off. Not together with FreezeAlphaIter.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -213,17 +233,28 @@ void BaseOrderBlending::execute()
 
   const CFuint iter = SubSystemStatusStack::getActive()->getNbIter();
 
-  // graded release: flagged cells keep alpha >= their floor instead of alpha = 1
-  const bool graded = m_forceAlphaMinReleaseRate > 0.0;
-
-  // cells where a ForceAlphaMinVars variable undershoots its neighbours; while
-  // alpha is frozen no flag is released (the frozen value is kept)
-  updateForcedCells(!(m_alphaInitialized && iter >= m_freezeFilterIter));
-
-  // Initialize once even if freezing was requested at iteration zero.
-  // Subsequent frozen evaluations reuse the previously applied field.
-  if (m_alphaInitialized && iter >= m_freezeFilterIter)
+  // automatic freeze (FreezeAlphaStallWindow), checked once per iteration (this command
+  // runs at every nonlinear residual evaluation); the first evaluation only initializes alpha
+  bool freezeNow = false;
+  if (iter != m_lastIter)
   {
+    m_lastIter = iter;
+    if (m_freezeStallWindow > 0 && m_alphaInitialized && m_stage == 0) freezeNow = isStalled();
+  }
+
+  // FreezeAlphaIter: alpha held from that iteration on
+  if (m_alphaInitialized && iter >= getFreezeAlphaIter() && m_stage == 0)
+  {
+    m_stage = 1;
+    getMethodData().setBlendingHoldStage(m_stage);
+  }
+
+  // undershoot flags, kept for the whole run (also after the freeze)
+  updateForcedCells();
+
+  if (m_stage > 0)
+  {
+    // held alpha; a newly flagged cell is raised to 1
     for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
     {
       const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
@@ -233,112 +264,107 @@ void BaseOrderBlending::execute()
         geoData.idx = elemIdx;
         m_cell = m_cellBuilder->buildGE();
         m_cellStates = m_cell->getStates();
-        // no flag is released while frozen, so a newly flagged cell is raised to 1 also when frozen
         const CFreal prev = prevAlpha[(*m_cellStates)[0]->getLocalID()];
-        const CFreal frozen = graded ? std::max(prev, m_forcedFloor[elemIdx]) :
-                                       (m_forcedCells[elemIdx] ? 1.0 : prev);
+        const CFreal held = m_forcedCells[elemIdx] ? 1.0 : prev;
         for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          output[(*m_cellStates)[iSol]->getLocalID()] = frozen;
-          prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = frozen;
+          output[(*m_cellStates)[iSol]->getLocalID()] = held;
+          prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = held;
         }
         m_cellBuilder->releaseGE();
       }
     }
-    PE::GetPE().setBarrier(getMethodData().getNamespace());
-    CFTRACEEND;
-    return;
   }
-
-  //
-  // Phase 1: per-cell physics compute. No neighbor interaction.
-  // Writes raw physics-based alpha to socket_alpha. All local cells are
-  // processed, including the non-updatable overlap cells of a parallel run,
-  // whose states are already synchronised at this point.
-  //
-  for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+  else
   {
-    const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
-    const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-
-    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
+    //
+    // Phase 1: per-cell physics compute. No neighbor interaction.
+    // Writes raw physics-based alpha to socket_alpha. All local cells are
+    // processed, including the non-updatable overlap cells of a parallel run,
+    // whose states are already synchronised at this point.
+    //
+    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
     {
-      geoData.idx = elemIdx;
-      m_elemIdx = elemIdx;
-      m_cell = m_cellBuilder->buildGE();
-      m_cellStates = m_cell->getStates();
+      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
 
-      computeSmoothness();
-
-      // forcing: alpha = max(sensor alpha, floor of the cell) in the graded release,
-      // 1 for a flagged cell otherwise; applied before the smoothing below, so the
-      // neighbours of a forced cell are raised like those of any sensor-detected cell
-      const CFreal sensorAlpha = applyAlphaLimits(computeBlendingCoefficient(m_s));
-      if (graded) m_sensorAlpha[elemIdx] = sensorAlpha;
-      const CFreal alpha = graded ? std::max(sensorAlpha, m_forcedFloor[elemIdx]) :
-                                    (m_forcedCells[elemIdx] ? 1.0 : sensorAlpha);
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
       {
-        output[(*m_cellStates)[iSol]->getLocalID()] = alpha;
-      }
+        geoData.idx = elemIdx;
+        m_elemIdx = elemIdx;
+        m_cell = m_cellBuilder->buildGE();
+        m_cellStates = m_cell->getStates();
 
-      m_cellBuilder->releaseGE();
-    }
-  }
+        computeSmoothness();
 
-  //
-  // Phase 2: (NbSweeps + 1) Jacobi smoothing iterations.
-  // Each iteration snapshots socket_alpha and writes max-pooled values back.
-  // The "+1" is the initial neighbor spread; NbSweeps additional passes extend it.
-  //
-  const CFuint nbIterations = m_nbSweeps + 1;
-  for (CFuint it = 0; it < nbIterations; ++it)
-  {
-    applyJacobiSmoothingPass();
-  }
-
-  //
-  // Phase 3: relax toward the requested field after all spatial spreading.
-  // On the first evaluation there is no previous field, so use the request
-  // directly. Do not apply the dead-band again after temporal relaxation.
-  //
-  for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
-  {
-    const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
-    const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-    {
-      geoData.idx = elemIdx;
-      m_cell = m_cellBuilder->buildGE();
-      m_cellStates = m_cell->getStates();
-      const CFuint firstID = (*m_cellStates)[0]->getLocalID();
-      CFreal finalAlpha = output[firstID];
-      const CFreal alphaFloor = graded ? m_forcedFloor[elemIdx] : (m_forcedCells[elemIdx] ? 1.0 : 0.0);
-      if (alphaFloor >= 1.0)
-      {
-        // no relaxation: the flagged cell goes to 1 at once
-        finalAlpha = 1.0;
-      }
-      else
-      {
-        if (m_alphaInitialized && m_alphaRelaxation < 1.0)
+        // a flagged cell gets 1 before the smoothing below, so its neighbours
+        // are raised like those of any sensor-detected cell
+        const CFreal alpha = m_forcedCells[elemIdx] ? 1.0 : applyAlphaLimits(computeBlendingCoefficient(m_s));
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
         {
-          finalAlpha = prevAlpha[firstID] +
-            m_alphaRelaxation * (finalAlpha - prevAlpha[firstID]);
+          output[(*m_cellStates)[iSol]->getLocalID()] = alpha;
         }
-        // a releasing cell does not drop below its floor
-        finalAlpha = std::max(finalAlpha, alphaFloor);
+
+        m_cellBuilder->releaseGE();
       }
-      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+    }
+
+    //
+    // Phase 2: (NbSweeps + 1) Jacobi smoothing iterations.
+    // Each iteration snapshots socket_alpha and writes max-pooled values back.
+    // The "+1" is the initial neighbor spread; NbSweeps additional passes extend it.
+    //
+    const CFuint nbIterations = m_nbSweeps + 1;
+    for (CFuint it = 0; it < nbIterations; ++it)
+    {
+      applyJacobiSmoothingPass();
+    }
+
+    //
+    // Phase 3: relax toward the requested field after all spatial spreading.
+    // On the first evaluation and at the automatic freeze the request is used
+    // directly. Do not apply the dead-band again after temporal relaxation.
+    //
+    const bool relax = m_alphaInitialized && !freezeNow && m_alphaRelaxation < 1.0;
+    for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
+    {
+      const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
+      const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
+      for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
       {
-        output[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
-        prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
+        geoData.idx = elemIdx;
+        m_cell = m_cellBuilder->buildGE();
+        m_cellStates = m_cell->getStates();
+        const CFuint firstID = (*m_cellStates)[0]->getLocalID();
+        CFreal finalAlpha = output[firstID];
+        if (m_forcedCells[elemIdx])
+        {
+          // no relaxation: the flagged cell goes to 1 at once
+          finalAlpha = 1.0;
+        }
+        else if (relax)
+        {
+          finalAlpha = prevAlpha[firstID] + m_alphaRelaxation * (finalAlpha - prevAlpha[firstID]);
+        }
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          output[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
+          prevAlpha[(*m_cellStates)[iSol]->getLocalID()] = finalAlpha;
+        }
+        m_cellBuilder->releaseGE();
       }
-      m_cellBuilder->releaseGE();
+    }
+
+    m_alphaInitialized = true;
+
+    // this alpha is held from now on; the subcell reconstruction records its
+    // choices on the same solution in this iteration
+    if (freezeNow)
+    {
+      m_stage = 1;
+      getMethodData().setBlendingHoldStage(m_stage);
     }
   }
-
-  m_alphaInitialized = true;
 
   // Say how much blending is actually being applied. Without this there is no
   // way to tell a sensor that never fires from one that is doing its job.
@@ -347,8 +373,6 @@ void BaseOrderBlending::execute()
   {
     CFreal aMax = 0., aSum = 0.;
     CFuint nAct = 0, nTot = 0, nForced = 0;
-    // graded release: floor above the sensor and above its limit / at its limit / below the sensor
-    CFuint nDecaying = 0, nParked = 0, nInactive = 0;
     for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
     {
       const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
@@ -364,14 +388,7 @@ void BaseOrderBlending::execute()
           aMax = std::max(aMax, a);
           aSum += a;
           if (a > m_alphaMin) ++nAct;
-          if (graded ? (m_forcedFloor[elemIdx] >= 1.0) : m_forcedCells[elemIdx]) ++nForced;
-          const CFreal f = graded ? m_forcedFloor[elemIdx] : 0.0;
-          if (f > 0.0 && f < 1.0)
-          {
-            if (f <= m_sensorAlpha[elemIdx])                   ++nInactive;
-            else if (f <= m_forcedFloorLimit[elemIdx] + 1.e-12) ++nParked;
-            else                                              ++nDecaying;
-          }
+          if (m_forcedCells[elemIdx]) ++nForced;
           ++nTot;
         }
         m_cellBuilder->releaseGE();
@@ -390,12 +407,6 @@ void BaseOrderBlending::execute()
       MPI_Allreduce(&nActL, &nAct, 1, MPI_UNSIGNED, MPI_SUM, comm);
       MPI_Allreduce(&nTotL, &nTot, 1, MPI_UNSIGNED, MPI_SUM, comm);
       MPI_Allreduce(&nForcedL, &nForced, 1, MPI_UNSIGNED, MPI_SUM, comm);
-      if (graded)
-      {
-        CFuint nL[3] = {nDecaying, nParked, nInactive}, nG[3];
-        MPI_Allreduce(nL, nG, 3, MPI_UNSIGNED, MPI_SUM, comm);
-        nDecaying = nG[0]; nParked = nG[1]; nInactive = nG[2];
-      }
     }
 #endif
     if (nTot > 0 && PE::GetPE().GetRank(nsp) == 0)
@@ -406,19 +417,8 @@ void BaseOrderBlending::execute()
       if (!m_forceAlphaMinVars.empty())
       {
         CFLog(INFO, ", " << nForced << " forced to 1");
-        if (m_forceAlphaMinReleaseIter > 0 || graded)
-        {
-          if (graded)
-          {
-            CFLog(INFO, ", " << nDecaying << " decaying, " << nParked << " parked, "
-                  << nInactive << " inactive, " << m_nbReleased << " released (" << m_nbReleasedTotal << " in total)");
-          }
-          else
-          {
-            CFLog(INFO, ", " << m_nbReleased << " released");
-          }
-        }
       }
+      if (m_stage > 0) CFLog(INFO, ", frozen");
       CFLog(INFO, "\n");
     }
   }
@@ -430,22 +430,100 @@ void BaseOrderBlending::execute()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BaseOrderBlending::updateForcedCells(const bool allowRelease)
+bool BaseOrderBlending::isStalled()
 {
-  if (m_forceAlphaMinVars.empty())
-  {
-    return;
-  }
+  // monitored residual of the previous iteration and CFL of this one, both global,
+  // so every rank takes the same decision
+  const CFreal res = SubSystemStatusStack::getActive()->getResidual();
+  const CFreal cfl = getMethodData().getCFL()->getCFLValue();
 
-  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  m_resHistory.push_back(res);
+  m_cflHistory.push_back(cfl);
+  if (m_resHistory.size() > m_freezeStallWindow + 1)
+  {
+    m_resHistory.pop_front();
+    m_cflHistory.pop_front();
+  }
+  if (m_resHistory.size() < m_freezeStallWindow + 1) return false;
+
+  // no freeze while the CFL is still growing
+  if (m_cflHistory.back() > m_cflHistory.front()) return false;
+
+  // stall: the residual dropped by less than a tenth of a decade over the window
+  const CFreal windowMin = *std::min_element(m_resHistory.begin() + 1, m_resHistory.end());
+  if (m_resHistory.front() - windowMin >= 0.1) return false;
+
+  const std::string nsp = getMethodData().getNamespace();
+  if (PE::GetPE().GetRank(nsp) == 0)
+  {
+    CFLog(INFO, "OrderBlending: residual stalled over " << m_freezeStallWindow << " iterations at iteration "
+          << m_lastIter << " (residual " << res << ", CFL " << cfl
+          << "), alpha and the subcell reconstruction choices frozen\n");
+  }
+  return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BaseOrderBlending::buildBoundaryFaces()
+{
+  m_bndFacesBuilt = true;
+
   SafePtr<TopologicalRegionSet> cells = MeshDataStack::getActive()->getTrs("InnerCells");
+  m_bndFaceOrients.assign(cells->getLocalNbGeoEnts(), std::vector<CFuint>());
+
+  // boundary TRSs only: the partition faces have their own start indexes
+  std::map< std::string , std::vector< std::vector< CFuint > > >& bndFacesStartIdxsPerTRS =
+    getMethodData().getBndFacesStartIdxs();
+
+  SafePtr< GeometricEntityPool< FaceToCellGEBuilder > > faceBuilder = getMethodData().getFaceBuilder();
+  FaceToCellGEBuilder::GeoData& faceData = faceBuilder->getDataGE();
+  faceData.cellsTRS = cells;
+  faceData.isBoundary = true;
+
+  CFuint nbFaces = 0;
+  std::map< std::string , std::vector< std::vector< CFuint > > >::const_iterator it;
+  for (it = bndFacesStartIdxsPerTRS.begin(); it != bndFacesStartIdxsPerTRS.end(); ++it)
+  {
+    faceData.facesTRS = MeshDataStack::getActive()->getTrs(it->first);
+    const std::vector< std::vector< CFuint > >& startIdxs = it->second;
+    for (CFuint iTR = 0; iTR < startIdxs.size(); ++iTR)
+    {
+      // the orientation of a boundary face is the local index of that face in its cell
+      const CFuint nbOrients = startIdxs[iTR].size() - 1;
+      for (CFuint orient = 0; orient < nbOrients; ++orient)
+      {
+        for (CFuint faceID = startIdxs[iTR][orient]; faceID < startIdxs[iTR][orient+1]; ++faceID)
+        {
+          faceData.idx = faceID;
+          GeometricEntity* face = faceBuilder->buildGE();
+          m_bndFaceOrients[face->getNeighborGeo(0)->getID()].push_back(orient);
+          faceBuilder->releaseGE();
+          ++nbFaces;
+        }
+      }
+    }
+  }
+  CFLog(VERBOSE, "OrderBlending: " << nbFaces << " local boundary faces in the undershoot test\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BaseOrderBlending::computeUndershootReferences()
+{
+  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
   StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
-  geoData.trs = cells;
+  geoData.trs = MeshDataStack::getActive()->getTrs("InnerCells");
+
+  if (m_forceAlphaMinBoundaryGhost && !m_bndFacesBuilt) buildBoundaryFaces();
 
   const CFuint nbrElemTypes = elemType->size();
   const CFuint nbrVars = m_forceAlphaMinVars.size();
 
-  // cell means of the checked variables, overlap cells included
+  // cell means of the checked variables, overlap cells included; for a cell with boundary
+  // faces also the smallest face mean, where the face mean of a variable is the average of
+  // the trace of the cell polynomial over the flux points of that face (the averaging of
+  // the cell means, applied to the face)
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
     const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
@@ -464,99 +542,83 @@ void BaseOrderBlending::updateForcedCells(const bool allowRelease)
           mean += (*((*m_cellStates)[iSol]))[var];
         }
         m_minVarsCellMeans[elemIdx][iVar] = mean/m_nbrSolPnts;
+
+        if (m_forceAlphaMinBoundaryGhost)
+        {
+          CFreal bndMin = MathTools::MathConsts::CFrealMax();
+          for (CFuint iFace = 0; iFace < m_bndFaceOrients[elemIdx].size(); ++iFace)
+          {
+            const std::vector<CFuint>& faceFlxPnts = (*m_faceFlxPntConn)[m_bndFaceOrients[elemIdx][iFace]];
+            CFreal faceMean = 0.0;
+            for (CFuint iFlx = 0; iFlx < faceFlxPnts.size(); ++iFlx)
+            {
+              const std::vector<CFreal>& coefs = (*m_solPolyValsAtFlxPnts)[faceFlxPnts[iFlx]];
+              for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+              {
+                faceMean += coefs[iSol]*(*((*m_cellStates)[iSol]))[var];
+              }
+            }
+            bndMin = std::min(bndMin, faceMean/faceFlxPnts.size());
+          }
+          m_minVarsBndMeans[elemIdx][iVar] = bndMin;
+        }
       }
       m_cellBuilder->releaseGE();
     }
   }
+}
 
-  if (m_forceAlphaMinReleaseRate > 0.0)
+//////////////////////////////////////////////////////////////////////////////
+
+void BaseOrderBlending::updateForcedCells()
+{
+  if (m_forceAlphaMinVars.empty())
   {
-    updateForcedFloors(allowRelease);
     return;
   }
 
-  // a solution point below every neighbouring cell mean by more than the margin,
-  // tested on owned cells only, whose neighbour lists are complete; a flagged
-  // cell is released after m_forceAlphaMinReleaseIter consecutive iterations
-  // above the neighbour minimum minus half the margin
-  const bool release = allowRelease && m_forceAlphaMinReleaseIter > 0;
-  const CFreal releaseMargin = 0.5*m_forceAlphaMinMargin;
+  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
+  StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
+
+  computeUndershootReferences();
+
+  // owned unflagged cells, whose neighbour lists are complete
   std::vector<CFuint> newFlags;
-  std::vector<CFuint> releases;
+  const CFuint nbrElemTypes = elemType->size();
   for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
   {
     const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
     const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
     for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
     {
-      if ((m_forcedCells[elemIdx] && !release) || m_NeighborIDs[elemIdx].empty())
-      {
-        continue;
-      }
+      if (m_forcedCells[elemIdx] || m_NeighborIDs[elemIdx].empty()) continue;
       geoData.idx = elemIdx;
       m_cell = m_cellBuilder->buildGE();
       m_cellStates = m_cell->getStates();
-      if (!(*m_cellStates)[0]->isParUpdatable())
-      {
-        m_cellBuilder->releaseGE();
-        continue;
-      }
-      // flagged cells are tested with the release margin, the others with the full one
-      const bool flagged = m_forcedCells[elemIdx];
-      const CFreal margin = flagged ? releaseMargin : m_forceAlphaMinMargin;
-      bool undershoot = false;
-      for (CFuint iVar = 0; iVar < nbrVars && !undershoot; ++iVar)
-      {
-        const CFuint var = m_forceAlphaMinVars[iVar];
-        CFreal neighbourMin = MathTools::MathConsts::CFrealMax();
-        for (CFuint i = 0; i < m_NeighborIDs[elemIdx].size(); ++i)
-        {
-          neighbourMin = std::min(neighbourMin, m_minVarsCellMeans[m_NeighborIDs[elemIdx][i]][iVar]);
-        }
-        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
-        {
-          if ((*((*m_cellStates)[iSol]))[var] < neighbourMin - margin)
-          {
-            undershoot = true;
-            break;
-          }
-        }
-      }
-
-      if (!flagged && undershoot)
+      if ((*m_cellStates)[0]->isParUpdatable() && hasUndershoot(elemIdx, m_forceAlphaMinMargin))
       {
         m_forcedCells[elemIdx] = true;
-        m_cleanIters[elemIdx] = 0;
         newFlags.push_back((*m_cellStates)[0]->getGlobalID());
-      }
-      else if (flagged)
-      {
-        m_cleanIters[elemIdx] = undershoot ? 0 : m_cleanIters[elemIdx] + 1;
-        if (m_cleanIters[elemIdx] >= m_forceAlphaMinReleaseIter)
-        {
-          m_forcedCells[elemIdx] = false;
-          m_cleanIters[elemIdx] = 0;
-          releases.push_back((*m_cellStates)[0]->getGlobalID());
-        }
       }
       m_cellBuilder->releaseGE();
     }
   }
 
-  // every rank updates its copies of the cells flagged or released by their owners
+  // every rank updates its copies of the cells flagged by their owners
   shareForcedCells(newFlags, true);
-  m_nbReleased = shareForcedCells(releases, false);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 bool BaseOrderBlending::hasUndershoot(const CFuint elemIdx, const CFreal margin)
 {
-  // a solution point of the current cell below every neighbouring cell mean by more than the margin
+  // a solution point of the current cell below every neighbouring cell mean, and below the
+  // face means of the boundary faces with ForceAlphaMinBoundaryGhost, by more than the margin
+  const bool ghost = m_forceAlphaMinBoundaryGhost && !m_bndFaceOrients[elemIdx].empty();
   for (CFuint iVar = 0; iVar < m_forceAlphaMinVars.size(); ++iVar)
   {
     const CFuint var = m_forceAlphaMinVars[iVar];
-    CFreal neighbourMin = MathTools::MathConsts::CFrealMax();
+    CFreal neighbourMin = ghost ? m_minVarsBndMeans[elemIdx][iVar] : MathTools::MathConsts::CFrealMax();
     for (CFuint i = 0; i < m_NeighborIDs[elemIdx].size(); ++i)
     {
       neighbourMin = std::min(neighbourMin, m_minVarsCellMeans[m_NeighborIDs[elemIdx][i]][iVar]);
@@ -567,148 +629,6 @@ bool BaseOrderBlending::hasUndershoot(const CFuint elemIdx, const CFreal margin)
     }
   }
   return false;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void BaseOrderBlending::updateForcedFloors(const bool allowRelease)
-{
-  // Graded release. A flagged cell keeps alpha >= f:
-  //  - undershoot on an unflagged cell (full margin): f = 1
-  //  - cell at f = 1: starts releasing once clean with half the margin
-  //  - cell with 0 < f < 1: f -= rate, not below its limit, unless it undershoots again with the
-  //    full margin; then the limit becomes f + backoff and f goes back to 1. f = 0 unflags it.
-  // Starting with half the margin and failing only with the full one is a hysteresis: small
-  // high-order wiggles during the release do not send the cell back.
-  // The limit only grows, so each floor settles at the lowest value that keeps its cell clean.
-  // Owned cells are tested; the changes are then copied to every rank.
-  SafePtr<vector<ElementTypeData> > elemType = MeshDataStack::getActive()->getElementTypeData();
-  StdTrsGeoBuilder::GeoData& geoData = m_cellBuilder->getDataGE();
-
-  const CFreal releaseMargin = 0.5*m_forceAlphaMinMargin;
-  std::vector<CFuint> changedIDs;
-  std::vector<CFreal> changedValues;
-  CFuint nbReleasedLocal = 0;
-
-  const CFuint nbrElemTypes = elemType->size();
-  for (m_iElemType = 0; m_iElemType < nbrElemTypes; ++m_iElemType)
-  {
-    const CFuint startIdx = (*elemType)[m_iElemType].getStartIdx();
-    const CFuint endIdx   = (*elemType)[m_iElemType].getEndIdx();
-    for (CFuint elemIdx = startIdx; elemIdx < endIdx; ++elemIdx)
-    {
-      if (m_NeighborIDs[elemIdx].empty()) continue;
-
-      const bool flagged = m_forcedFloor[elemIdx] > 0.0;
-      // a flagged cell only changes when releasing is allowed (not while alpha is frozen)
-      if (flagged && !allowRelease) continue;
-
-      geoData.idx = elemIdx;
-      m_cell = m_cellBuilder->buildGE();
-      m_cellStates = m_cell->getStates();
-      if (!(*m_cellStates)[0]->isParUpdatable())
-      {
-        m_cellBuilder->releaseGE();
-        continue;
-      }
-
-      const CFreal oldFloor = m_forcedFloor[elemIdx];
-      const bool undershoot = hasUndershoot(elemIdx, (oldFloor >= 1.0) ? releaseMargin : m_forceAlphaMinMargin);
-
-      if (!flagged)
-      {
-        if (undershoot) m_forcedFloor[elemIdx] = 1.0;
-      }
-      else if (undershoot)
-      {
-        // the undershoot came back during the release: never go this low again
-        if (oldFloor < 1.0)
-        {
-          m_forcedFloorLimit[elemIdx] = std::min(1.0, oldFloor + m_forceAlphaMinReleaseBackoff);
-          m_forcedFloor[elemIdx] = 1.0;
-        }
-      }
-      else
-      {
-        CFreal newFloor = std::max(oldFloor - m_forceAlphaMinReleaseRate, m_forcedFloorLimit[elemIdx]);
-        if (newFloor < 1.0e-12)
-        {
-          newFloor = 0.0;
-          ++nbReleasedLocal;
-        }
-        m_forcedFloor[elemIdx] = newFloor;
-      }
-
-      if (m_forcedFloor[elemIdx] != oldFloor)
-      {
-        m_forcedCells[elemIdx] = m_forcedFloor[elemIdx] > 0.0;
-        changedIDs.push_back((*m_cellStates)[0]->getGlobalID());
-        changedValues.push_back(m_forcedFloor[elemIdx]);
-        changedValues.push_back(m_forcedFloorLimit[elemIdx]);
-      }
-      m_cellBuilder->releaseGE();
-    }
-  }
-
-  // every rank updates its copies (overlap cells) of the cells changed by their owners
-  shareForcedFloors(changedIDs, changedValues);
-
-  // cells released at this update, all ranks (the other counts are made in execute())
-  m_nbReleased = nbReleasedLocal;
-#ifdef CF_HAVE_MPI
-  if (PE::GetPE().IsParallel())
-  {
-    MPI_Comm comm = PE::GetPE().GetCommunicator(getMethodData().getNamespace());
-    MPI_Allreduce(&nbReleasedLocal, &m_nbReleased, 1, MPI_UNSIGNED, MPI_SUM, comm);
-  }
-#endif
-  m_nbReleasedTotal += m_nbReleased;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void BaseOrderBlending::shareForcedFloors(const std::vector<CFuint>& firstStateGlobalIDs,
-                                          const std::vector<CFreal>& floorsAndLimits)
-{
-#ifdef CF_HAVE_MPI
-  if (PE::GetPE().IsParallel())
-  {
-    const std::string nsp = getMethodData().getNamespace();
-    MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
-    const int nbRanks = PE::GetPE().GetProcessorCount(nsp);
-
-    // gather the IDs, then the (floor, limit) pairs with doubled counts
-    int nbLocal = static_cast<int>(firstStateGlobalIDs.size());
-    std::vector<int> counts(nbRanks, 0);
-    MPI_Allgather(&nbLocal, 1, MPI_INT, &counts[0], 1, MPI_INT, comm);
-
-    std::vector<int> displs(nbRanks, 0);
-    for (int r = 1; r < nbRanks; ++r) displs[r] = displs[r-1] + counts[r-1];
-    const CFuint nbTotal = displs[nbRanks-1] + counts[nbRanks-1];
-    if (nbTotal == 0) return;
-
-    std::vector<CFuint> allIDs(nbTotal);
-    MPI_Allgatherv(firstStateGlobalIDs.empty() ? CFNULL : const_cast<CFuint*>(&firstStateGlobalIDs[0]), nbLocal,
-                   MPI_UNSIGNED, &allIDs[0], &counts[0], &displs[0], MPI_UNSIGNED, comm);
-
-    std::vector<int> counts2(nbRanks), displs2(nbRanks);
-    for (int r = 0; r < nbRanks; ++r) { counts2[r] = 2*counts[r]; displs2[r] = 2*displs[r]; }
-    std::vector<CFreal> allValues(2*nbTotal);
-    MPI_Allgatherv(floorsAndLimits.empty() ? CFNULL : const_cast<CFreal*>(&floorsAndLimits[0]), 2*nbLocal,
-                   MPI_DOUBLE, &allValues[0], &counts2[0], &displs2[0], MPI_DOUBLE, comm);
-
-    for (CFuint i = 0; i < nbTotal; ++i)
-    {
-      std::map<CFuint, CFuint>::const_iterator it = m_cellByFirstStateGlobalID.find(allIDs[i]);
-      if (it != m_cellByFirstStateGlobalID.end())
-      {
-        m_forcedFloor[it->second]      = allValues[2*i];
-        m_forcedFloorLimit[it->second] = allValues[2*i+1];
-        m_forcedCells[it->second]      = allValues[2*i] > 0.0;
-      }
-    }
-  }
-#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -747,7 +667,6 @@ CFuint BaseOrderBlending::shareForcedCells(const std::vector<CFuint>& firstState
         if (it != m_cellByFirstStateGlobalID.end())
         {
           m_forcedCells[it->second] = value;
-          m_cleanIters[it->second] = 0;
         }
       }
     }
@@ -1138,23 +1057,18 @@ void BaseOrderBlending::setup()
   socket_prevAlpha.getDataHandle().resize(nbStates);
   socket_smoothness.getDataHandle().resize(nbStates);
 
-  // undershoot flags (ForceAlphaMinVars) and the cell means they are tested against
+  // undershoot flags (ForceAlphaMinVars) and the means they are tested against
   m_forcedCells.assign(nbrCells, false);
-  m_cleanIters.assign(nbrCells, 0);
-  m_forcedFloor.assign(nbrCells, 0.0);
-  m_forcedFloorLimit.assign(nbrCells, 0.0);
-  m_sensorAlpha.assign(nbrCells, 0.0);
+  m_bndFacesBuilt = false;
+  m_faceFlxPntConn = frLocalData[0]->getFaceFlxPntConn();
+  m_solPolyValsAtFlxPnts = frLocalData[0]->getCoefSolPolyInFlxPnts();
 
-  if (m_forceAlphaMinReleaseRate > 0.0 && m_forceAlphaMinReleaseIter > 0)
-  {
-    throw BadValueException(FromHere(),
-      "OrderBlending: ForceAlphaMinReleaseRate and ForceAlphaMinReleaseIter cannot be used together");
-  }
-  if (!(m_forceAlphaMinReleaseRate >= 0.0) || !(m_forceAlphaMinReleaseBackoff >= 0.0))
-  {
-    throw BadValueException(FromHere(),
-      "OrderBlending: ForceAlphaMinReleaseRate and ForceAlphaMinReleaseBackoff must be >= 0");
-  }
+  // alpha follows the sensor at the start of every run
+  m_stage = 0;
+  m_lastIter = std::numeric_limits<CFuint>::max();
+  m_resHistory.clear();
+  m_cflHistory.clear();
+  getMethodData().setBlendingHoldStage(0);
 
   for (CFuint i = 0; i < m_forceAlphaMinVars.size(); ++i)
   {
@@ -1168,6 +1082,7 @@ void BaseOrderBlending::setup()
     throw BadValueException(FromHere(), "OrderBlending: ForceAlphaMinMargin must be >= 0");
   }
   m_minVarsCellMeans.assign(nbrCells, std::vector<CFreal>(m_forceAlphaMinVars.size(), 0.0));
+  m_minVarsBndMeans.assign(nbrCells, std::vector<CFreal>(m_forceAlphaMinVars.size(), 0.0));
 
   m_cellByFirstStateGlobalID.clear();
   if (!m_forceAlphaMinVars.empty())

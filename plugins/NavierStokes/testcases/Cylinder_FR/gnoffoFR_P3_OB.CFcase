@@ -3,14 +3,14 @@
 # This COOLFluiD CFcase file tests:
 #
 # FR, VCJH, NS2D, implicit Newton, curved quads, Lax-Friedrichs scheme,
-# isothermal no-slip wall, Dirichlet and SuperOutlet BCs, P2,
+# isothermal no-slip wall, Dirichlet and SuperOutlet BCs, P3,
 # subcell order blending with linear subcells in the subsonic blended cells
 #
 # Gnoffo cylinder: Ching, Lv, Ihme, JCP 376 (2019), Table 2. M 17.605,
 # rho_inf 0.00100335 kg/m3, U_inf 4991.04 m/s along -x, T_inf 200 K,
 # isothermal wall at 500 K, cylinder radius 1 m.
 #
-# Restarts from gnoffo_P1_OB.CFmesh, which the P1 OB case writes.
+# Restarts from gnoffo_P2_OB.CFmesh, which the P2 OB case writes.
 #
 ################################################################################
 #
@@ -52,17 +52,17 @@ Simulator.SubSysMesh.MeshMeshData.listTRS    = Inlet Outlet1 Outlet2 Cylinder
 Simulator.SubSysMesh.MeshMeshData.Namespaces = MeshNamespace
 
 Simulator.SubSysMesh.OutputFormat     = CFmesh
-Simulator.SubSysMesh.CFmesh.FileName  = gnoffo_P2_OB_start.CFmesh
+Simulator.SubSysMesh.CFmesh.FileName  = gnoffo_P3_OB_start.CFmesh
 Simulator.SubSysMesh.CFmesh.WriteSol  = WriteSolution
 Simulator.SubSysMesh.CFmesh.Namespace = MeshNamespace
 
 Simulator.SubSysMesh.MeshCreator = CFmeshFileReader
-Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffo_P1_OB.CFmesh
+Simulator.SubSysMesh.CFmeshFileReader.Data.FileName = gnoffo_P2_OB.CFmesh
 Simulator.SubSysMesh.CFmeshFileReader.Namespace     = MeshNamespace
 
 Simulator.SubSysMesh.SpaceMethod = Null
 Simulator.SubSysMesh.Null.Builder = MeshUpgrade
-Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P2
+Simulator.SubSysMesh.Null.MeshUpgrade.PolynomialOrder = P3
 Simulator.SubSysMesh.Null.MeshUpgrade.UpgradeInit     = true
 Simulator.SubSysMesh.Null.Namespace = MeshNamespace
 
@@ -76,7 +76,7 @@ Simulator.SubSystem.NavierStokes2D.refLength  = 1.0
 
 Simulator.SubSystem.Default.listTRS = InnerCells Inlet Outlet1 Outlet2 Cylinder
 Simulator.SubSystem.MeshCreator     = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName          = gnoffo_P2_OB_start.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName          = gnoffo_P3_OB_start.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
 # the order blending sweeps over neighbours and the face blending reads the alpha of the first
 # overlap layer: NbOverlapLayers >= NbSweeps + 2 keeps alpha rank independent
@@ -91,13 +91,13 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.OutputFormat = CFmesh Tecplot #CGNS
 
-Simulator.SubSystem.CFmesh.FileName   = gnoffo_P2_OB.CFmesh
+Simulator.SubSystem.CFmesh.FileName   = gnoffo_P3_OB.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate   = 250
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol   = ParWriteSolution
 
-Simulator.SubSystem.Tecplot.FileName    = gnoffo_P2_OB.plt
+Simulator.SubSystem.Tecplot.FileName    = gnoffo_P3_OB.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = Cons
 Simulator.SubSystem.Tecplot.WriteSol    = WriteSolutionHighOrder
 Simulator.SubSystem.Tecplot.SaveRate    = 250
@@ -107,7 +107,7 @@ Simulator.SubSystem.Tecplot.AppendIter  = false
 # High-order CGNS output, one file for all ranks. To enable it, uncomment
 # libCGNSWriter in Simulator.Modules.Libs, CGNS in OutputFormat above, and the
 # block below. libCGNSWriter is only built when CGNS is found at configure time.
-#Simulator.SubSystem.CGNS.FileName   = gnoffo_P2_OB.cgns
+#Simulator.SubSystem.CGNS.FileName   = gnoffo_P3_OB.cgns
 #Simulator.SubSystem.CGNS.WriteSol   = ParCGNSHighOrderWriter
 #Simulator.SubSystem.CGNS.SaveRate   = 250
 #Simulator.SubSystem.CGNS.AppendTime = false
@@ -127,7 +127,7 @@ Simulator.SubSystem.AbsoluteNormAndMaxIter.AbsNorm = -8
 # rho or p by more than EtaMax, and the CFL follows that scaling
 
 Simulator.SubSystem.ConvergenceMethod              = NewtonIterator
-Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_P2_OB.plt
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_P3_OB.plt
 Simulator.SubSystem.NewtonIterator.ShowRate        = 10
 Simulator.SubSystem.NewtonIterator.ConvRate        = 10
 Simulator.SubSystem.NewtonIterator.Data.MaxSteps   = 1
@@ -201,7 +201,7 @@ Simulator.SubSystem.FluxReconstruction.OrderBlending.NeighborWeight   = 0.5
 Simulator.SubSystem.FluxReconstruction.OrderBlending.NbSweeps         = 1
 # below 1 the blending coefficient is relaxed; at 1 it and the solution can lock
 # into a period-2 oscillation that stalls the residual
-Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.5
+Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.25
 # alpha and the linear/first-order subcell choices are frozen once the residual stalls: the CFL
 # has not grown for 50 iterations and the residual dropped by less than 0.1 decade over them
 # (while alpha keeps moving, even in the 6th digit, the Newton operator changes every iteration)
@@ -251,5 +251,5 @@ Simulator.SubSystem.DataProcessing2.SkinFriction.TInf       = 200.0
 Simulator.SubSystem.DataProcessing2.SkinFriction.uInf       = 4991.04
 Simulator.SubSystem.DataProcessing2.SkinFriction.pInf       = 57.60152
 Simulator.SubSystem.DataProcessing2.SkinFriction.AppendIter = false
-Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = wall_P2_OB.plt
-Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileAero = aeroCoef_P2_OB.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileWall = wall_P3_OB.plt
+Simulator.SubSystem.DataProcessing2.SkinFriction.OutputFileAero = aeroCoef_P3_OB.plt

@@ -703,6 +703,9 @@ void ConvDiffCLLAVJacobFluxReconstruction::computeEpsilon()
 
 void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
 {   
+  // radius of the flux points (axisymmetric only)
+  setFlxPntRadii();
+  
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
 

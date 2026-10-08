@@ -33,6 +33,10 @@ namespace COOLFluiD {
  * variant would need the BC to produce a ghost state for a second set of inner
  * states.
  *
+ * With the linear reconstruction (SubcellReconstruction = Linear in the interior command)
+ * this command also stores the boundary face samples used for the slopes of the solution
+ * points next to the face; it runs before the interior command.
+ *
  * @author Rayan Dhib
  */
 class ConvBndCorrectionsRHSFluxReconstructionSubcellBlending : public ConvBndCorrectionsRHSFluxReconstruction {
@@ -62,10 +66,19 @@ protected: // functions
   /// blending coefficient of the cell behind the current boundary face
   CFreal getCellAlpha();
 
+  /// Store the boundary face value 0.5 (inner trace + ghost state) as element face sample
+  /// of the cell behind the face, for the linear reconstruction of the interior command.
+  /// The average is the face value for the usual ghost states (mirror, prescribed, copied).
+  void storeFaceSamples();
+
 protected: // data
 
   /// socket holding the per-cell blending coefficient
   Framework::DataSocketSink< CFreal > socket_alpha;
+
+  /// element face samples for the linear reconstruction, filled here at boundary faces
+  /// (empty with the first-order subcells)
+  Framework::DataSocketSink< CFreal > socket_subcellFaceSamples;
 
   /// subcell grid of the element
   SubcellBlendingQuadData m_scData;

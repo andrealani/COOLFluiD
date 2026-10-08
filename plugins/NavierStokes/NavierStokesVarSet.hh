@@ -154,6 +154,13 @@ public: // classes
   void setWallDistance(CFreal dist) {_wallDistance = dist;}
   
   /**
+   * Set the flag telling that the fluxes are 2D axisymmetric (x axial, y = r).
+   * On the axis, where the radius given to the fluxes is 0, the term v/r of
+   * div(u) then takes its limit dv/dr instead of 0
+   */
+  void setAxisymmetric(bool flag) {_axisymmetric = flag;}
+  
+  /**
    * Get the axisymmetric source term
    */
   virtual void getAxiSourceTerm(const RealVector& physicalData,
@@ -209,6 +216,9 @@ protected:
 
   /// flag to set back up values for certain quantities
   bool _setBackUpValues;
+  
+  /// flag telling that the fluxes are 2D axisymmetric (v/r -> dv/dr on the axis)
+  bool _axisymmetric;
 
   /// wall distance
   CFreal _wallDistance;

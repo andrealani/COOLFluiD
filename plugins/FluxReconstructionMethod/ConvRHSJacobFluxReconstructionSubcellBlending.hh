@@ -11,6 +11,7 @@
 
 #include "FluxReconstructionMethod/ConvRHSJacobFluxReconstruction.hh"
 #include "FluxReconstructionMethod/SubcellBlendingQuadData.hh"
+#include "Common/SelfRegistPtr.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -57,6 +58,10 @@ public: // functions
   /// Configures the command
   virtual void configure(Config::ConfigArgs& args);
 
+  /// records the reconstruction choices again when the blending hold stage changed (alpha
+  /// frozen), then computes the residual (and the Jacobian) of the parent
+  virtual void execute();
+
   /// Set up private data and data of the aggregated classes in this command before processing phase
   virtual void setup();
 
@@ -65,6 +70,9 @@ public: // functions
 
   /// Returns the DataSocket's that this command needs as sinks
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > > needsSockets();
+
+  /// Returns the DataSocket's that this command provides as sources
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSource > > providesSockets();
 
 protected: // functions
 
@@ -77,6 +85,29 @@ protected: // functions
 
   /// FR volume term scaled by (1-alpha) plus the internal subcell P0 fluxes scaled by alpha
   virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
+
+  /// true if the cell holding the given states uses the linear reconstruction:
+  /// largest Mach number of its solution points below SubcellReconstructionMachMax
+  /// record = true: unperturbed evaluation, the decision is stored while the blending is held
+  bool reconstructCell(const std::vector< Framework::State* >& states, const CFuint cellID, const bool record);
+
+  /// true once the order blending froze alpha (hold stage >= 1, see
+  /// FluxReconstructionSolverData::getBlendingHoldStage)
+  bool isReconstructionFrozen() const;
+
+  /// hand the limiter freezing buffers to the subcell data, recording only if record and frozen
+  void setLimiterRecording(const bool record);
+
+  /// largest Mach number at the solution points of a cell, for SubcellReconstructionMachMax;
+  /// physics-specific, 0 here (no restriction)
+  virtual CFreal computeCellMaxMach(const std::vector< Framework::State* >& states) { return 0.; }
+
+  /// store the element face samples of the current face for both cells (linear reconstruction)
+  void storeFaceSamples();
+
+  /// first-order flux at one element face flux point, between the closest solution point
+  /// states or, with the linear reconstruction, between the reconstructed states
+  const RealVector& computeFaceLoFlux(const CFuint iFlxPnt);
 
   /// metric terms of the current cell at the solution points and at the subcell interfaces
   virtual void setCellData();
@@ -101,6 +132,49 @@ protected: // data
 
   /// socket holding the per-cell blending coefficient
   Framework::DataSocketSink< CFreal > socket_alpha;
+
+  /// element face samples for the linear reconstruction, [cell][flux point][equation]
+  Framework::DataSocketSource< CFreal > socket_subcellFaceSamples;
+
+  /// order of the subcell scheme at each solution point, for output (CGNS DataHandleOutput):
+  /// 0 alpha = 0 (FR only), 1 first-order subcells, 2 linear reconstruction along both
+  /// directions, 1.5 along one of them (the other set to first order by the admissibility test)
+  Framework::DataSocketSource< CFreal > socket_subcellOrder;
+
+  /// SubcellReconstruction option: FirstOrder or Linear
+  std::string m_reconstruction;
+
+  /// SubcellLimiter option: VanAlbada, Minmod or None
+  std::string m_limiter;
+
+  /// SubcellLimiterEps option: van Albada smoothing size, relative
+  CFreal m_limiterEps;
+
+  /// SubcellReconstructionVar option: variables of the reconstruction, empty for the update ones
+  std::string m_reconstructionVar;
+
+  /// SubcellReconstructionMachMax option: cells reaching this Mach number keep first-order subcells
+  CFreal m_recMachMax;
+
+  /// blending hold stage the stored choices belong to (0: nothing stored, live choices)
+  CFuint m_recordedStage;
+
+  /// true while the unperturbed face fluxes are computed (the mask may be recorded)
+  bool m_recordFace;
+
+  /// frozen reconstruction choice per cell: -1 not frozen yet, 0 first order, 1 reconstructed
+  std::vector< CFint > m_cellMask;
+
+  /// frozen limiter factors, [state][direction][equation], and their flags [state][direction]
+  std::vector< CFreal > m_frozenPhi;
+  std::vector< CFuint > m_frozenValid;
+
+  /// transformers between the update and the reconstruction variables
+  Common::SelfRegistPtr< Framework::VarSetTransformer > m_toRecTrans;
+  Common::SelfRegistPtr< Framework::VarSetTransformer > m_fromRecTrans;
+
+  /// reconstructed left and right states at an element face flux point
+  std::vector< Framework::State* > m_faceRecStates;
 
   /// subcell grid of the element
   SubcellBlendingQuadData m_scData;

@@ -511,6 +511,13 @@ public:
 			       RealVector* hsVib,
 			       RealVector* hsEl);
   
+  /// True when the option ChargeNeutrality is on and the mixture has free electrons
+  bool hasChargeNeutrality() const {return _chargeNeutrality && _hasElectrons;}
+
+  /// Coefficients c_k of y_e = sum_k c_k y_k (charge neutrality): c_k = m_e q_k / m_k for
+  /// the ions (m = molar mass, q_k = charge number), 0 for the other species
+  const RealVector& getChargeNeutralityCoefficients() const {return _neutralCoefY;}
+
   /*
    * This function returns the free-electron temperature 
    */
@@ -536,6 +543,21 @@ protected:
 
   /*Transfer file name*/
   std::string _transfName;
+
+  /*Thermodynamic model of the mixture: true for NASA polynomials (NASA_POLY_THERMO = T in the
+    PLATO mixture file), false for partition functions*/
+  bool _nasaThermo;
+
+  /*Charge neutrality (option ChargeNeutrality, ionized mixtures): the electron density of the
+    thermodynamic, transport and chemistry evaluations is set from the ions*/
+  bool _chargeNeutrality;
+
+  /*Coefficients of y_e = sum_k _neutralCoefY[k] y_k, valid for mass fractions and partial densities:
+    m_e q_k / m_k for the ions (q_k = charge number), 0 for the other species*/
+  RealVector _neutralCoefY;
+
+  /*Species gradients with the electron entry from the ions (work vector of getRhoUdiff)*/
+  RealVector _normConcGradNeutral;
 
   /*Number of atomic species*/
   CFint _nAt;
@@ -598,6 +620,10 @@ protected:
 
   /*Enthalpies (working vector)*/
   RealVector _hi;
+
+  /*Species energy of each temperature mode from species_energy_modes(), temperature index
+    varying fastest (work vector of the NASA neutral 2T split in getSpeciesTotEnthalpies)*/
+  RealVector _speciesEnergyModes;
 
   /*Vibrational enthalpies (working vector)*/
   RealVector _hiVib;

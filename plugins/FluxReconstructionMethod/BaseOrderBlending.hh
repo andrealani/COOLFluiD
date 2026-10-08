@@ -9,6 +9,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include <algorithm>
+#include <deque>
 #include <map>
 #include "Framework/DataSocketSink.hh"
 
@@ -38,6 +40,11 @@ namespace COOLFluiD {
  * velocity_magnitude. Physics-specific expressions (e.g. B2 for MHD) are
  * added by overriding extractMonitoredField() in a subclass.
  *
+ * Alpha can be frozen instead of following the sensor: from FreezeAlphaIter
+ * on, or automatically once the residual stalls (FreezeAlphaStallWindow). The
+ * subcell blending RHS freezes its reconstruction choices together with alpha
+ * (FluxReconstructionSolverData::getBlendingHoldStage).
+ *
  * @author Rayan Dhib
  */
 class BaseOrderBlending : public FluxReconstructionSolverCom {
@@ -65,6 +72,10 @@ public:
 
 protected: // functions
 
+  /// Iteration from which alpha is frozen: the smaller of FreezeAlphaIter and its former
+  /// name freezeFilterIter
+  CFuint getFreezeAlphaIter() const { return std::min(m_freezeAlphaIter, m_freezeFilterIter); }
+
   /**
    * Fill m_tempSolPntVec with the monitored scalar evaluated at each
    * solution point of the current cell (m_cellStates).
@@ -86,33 +97,44 @@ protected: // functions
   CFreal applyAlphaLimits(CFreal alpha) const;
 
   /**
-   * Flag the cells where a ForceAlphaMinVars variable at a solution point lies
-   * more than ForceAlphaMinMargin below the smallest cell mean of the
-   * neighbouring cells. With ForceAlphaMinReleaseIter = 0 flags are never
-   * cleared; otherwise a flagged cell that passes the test with half the margin
-   * for that many consecutive iterations is released (only when allowRelease,
-   * i.e. alpha is not frozen). Does nothing when ForceAlphaMinVars is empty.
-   * Only owned cells are tested (an overlap cell at the edge of the halo lacks
-   * some neighbours); new flags and releases are then sent to every rank, which
-   * updates its copies of those cells.
+   * Flag the unflagged cells that fail the undershoot test (hasUndershoot with
+   * ForceAlphaMinMargin); flags are kept for the whole run. Releasing a flag
+   * on a converged solution changes the operator at the front that needed it
+   * (a flagged cell is first order, so the test cannot see whether it still
+   * needs the flag). Does nothing when ForceAlphaMinVars is empty. Only owned
+   * cells are tested (an overlap cell at the edge of the halo lacks some
+   * neighbours); new flags are then sent to every rank, which updates its
+   * copies of those cells.
    */
-  void updateForcedCells(const bool allowRelease);
+  void updateForcedCells();
 
-  /// sets m_forcedCells to value on every rank's copy of the cells whose first state has one of the global IDs
+  /// cell means of the ForceAlphaMinVars, and with ForceAlphaMinBoundaryGhost the smallest
+  /// boundary face mean of each boundary cell, for all local cells (overlap included)
+  void computeUndershootReferences();
+
+  /// local face index of every boundary face (physical boundary TRSs, partition faces
+  /// excluded) of each cell, built once from the boundary face lists of the solver data
+  void buildBoundaryFaces();
+
+  /// sets m_forcedCells to value on every rank's copy of the cells whose first state has one of
+  /// the global IDs; returns the number of cells over all ranks
   CFuint shareForcedCells(const std::vector<CFuint>& firstStateGlobalIDs, const bool value);
 
   /// true if a ForceAlphaMinVars variable at a solution point of the current cell (m_cellStates)
-  /// lies more than margin below the smallest cell mean of its neighbours
+  /// lies more than margin below the smallest cell mean of its neighbours and, with
+  /// ForceAlphaMinBoundaryGhost, below the face means of its boundary faces
   bool hasUndershoot(const CFuint elemIdx, const CFreal margin);
 
-  /// graded release (ForceAlphaMinReleaseRate > 0): updates the alpha floors of the owned cells
-  /// and shares the changes with every rank
-  void updateForcedFloors(const bool allowRelease);
-
-  /// graded release: updates m_forcedFloor, m_forcedFloorLimit and m_forcedCells on every rank's
-  /// copy of the given cells (first state global IDs, with floor and limit per cell)
-  void shareForcedFloors(const std::vector<CFuint>& firstStateGlobalIDs,
-                         const std::vector<CFreal>& floorsAndLimits);
+  /**
+   * Automatic freeze test (FreezeAlphaStallWindow = W > 0), called once per
+   * iteration while alpha follows the sensor. Reads the monitored residual r of
+   * the previous iteration and the CFL, both global, so every rank takes the
+   * same decision: true once the CFL has not grown over the last W iterations
+   * and r dropped by less than a tenth of a decade over them. Re-freezing later
+   * from a more converged solution was tried and cycles: Mach-mask choices of
+   * cells near SubcellReconstructionMachMax flip at every rebuild (Gnoffo P3).
+   */
+  bool isStalled();
 
   /// One Jacobi smoothing iteration: reads from m_sweepSnapshot, writes to socket_alpha.
   /// alpha_new[i] = applyAlphaLimits(max(snapshot[i], NeighborWeight * max_{j in N(i)} snapshot[j]))
@@ -187,7 +209,10 @@ protected: // data
   /// Total spreading passes = m_nbSweeps + 1.
   CFuint m_nbSweeps;
 
-  /// Iteration number at which alpha is frozen (reuses prevAlpha).
+  /// Iteration number at which alpha is frozen (reuses prevAlpha), option FreezeAlphaIter.
+  CFuint m_freezeAlphaIter;
+
+  /// Same, under the former option name freezeFilterIter; the smaller of the two is used.
   CFuint m_freezeFilterIter;
 
   /// Fraction of the newly computed sensor field applied after initialization; default 1 (no temporal relaxation).
@@ -195,6 +220,19 @@ protected: // data
 
   /// True once prevAlpha holds an applied field for this setup/restart.
   bool m_alphaInitialized;
+
+  /// FreezeAlphaStallWindow option: window W in iterations of the automatic freeze (0: off)
+  CFuint m_freezeStallWindow;
+
+  /// 0 while alpha follows the sensor, 1 once it is frozen (FreezeAlphaIter or FreezeAlphaStallWindow)
+  CFuint m_stage;
+
+  /// iteration of the last call, to test for a stall once per iteration
+  CFuint m_lastIter;
+
+  /// monitored residual and CFL of the last W + 1 iterations
+  std::deque< CFreal > m_resHistory;
+  std::deque< CFreal > m_cflHistory;
 
   /// FR polynomial order.
   CFuint m_order;
@@ -220,37 +258,26 @@ protected: // data
   /// margin of the undershoot test on the ForceAlphaMinVars
   CFreal m_forceAlphaMinMargin;
 
-  /// consecutive clean iterations after which a flagged cell is released (0: never)
-  CFuint m_forceAlphaMinReleaseIter;
+  /// ForceAlphaMinBoundaryGhost option: boundary faces count as neighbours in the undershoot test
+  bool m_forceAlphaMinBoundaryGhost;
 
-  /// consecutive iterations each flagged cell has passed the release test
-  std::vector< CFuint > m_cleanIters;
+  /// local face indices of the boundary faces of each cell (see buildBoundaryFaces)
+  std::vector< std::vector< CFuint > > m_bndFaceOrients;
 
-  /// cells released at the last update, all ranks (for the log line)
-  CFuint m_nbReleased;
+  /// true once m_bndFaceOrients is built
+  bool m_bndFacesBuilt;
 
-  /// graded release: floor decrease per clean iteration (0: off)
-  CFreal m_forceAlphaMinReleaseRate;
-
-  /// graded release: raise of the floor limit when the undershoot comes back
-  CFreal m_forceAlphaMinReleaseBackoff;
-
-  /// graded release: alpha floor per cell, 1 when flagged, 0 when not
-  std::vector< CFreal > m_forcedFloor;
-
-  /// graded release: lowest floor each cell may go back to (grows at each failed release)
-  std::vector< CFreal > m_forcedFloorLimit;
-
-  /// graded release: cells released since the start, all ranks (for the log line)
-  CFuint m_nbReleasedTotal;
-
-  /// graded release: sensor alpha of each cell before the floor (for the log line)
-  std::vector< CFreal > m_sensorAlpha;
+  /// flux points of each local face, and the solution polynomials at the flux points
+  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
+  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
 
   /// cell means of the ForceAlphaMinVars, [cell][variable]
   std::vector< std::vector< CFreal > > m_minVarsCellMeans;
 
-  /// cells flagged by the undershoot test, alpha = 1 while flagged
+  /// smallest boundary face mean of the ForceAlphaMinVars, [cell][variable] (boundary cells)
+  std::vector< std::vector< CFreal > > m_minVarsBndMeans;
+
+  /// cells flagged by the undershoot test, alpha = 1 for the rest of the run
   std::vector< bool > m_forcedCells;
 
   /// local cell index of each cell, by the global ID of its first state (to apply the flags of other ranks)

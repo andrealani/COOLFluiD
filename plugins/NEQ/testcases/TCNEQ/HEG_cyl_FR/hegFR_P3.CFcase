@@ -2,10 +2,11 @@
 #
 # This COOLFluiD CFcase file tests:
 #
-# FR P1, VCJH, NavierStokes2DNEQ with PLATO, implicit Newton on an assembled
+# FR P3, VCJH, NavierStokes2DNEQ with PLATO, implicit Newton on an assembled
 # finite difference Jacobian, curved Q2 quads, Lax-Friedrichs flux, isothermal
 # noncatalytic no-slip wall, Dirichlet and SuperOutlet BCs, logarithmic update
 # variables LogRhoivLogTTv (ln rho_i, u, v, ln T, ln Tv), subcell order blending
+# with linear subcells in the subsonic blended cells
 #
 # HEG cylinder: front half of a 45 mm radius cylinder in 5-species air (PLATO
 # air5 / air5, two temperatures, partition functions), u = 5956 m/s, T = Tv = 901 K, wall at
@@ -15,8 +16,8 @@
 #
 # State order: [ln rho_N, ln rho_O, ln rho_N2, ln rho_NO, ln rho_O2, u, v, ln T, ln Tv]
 #
-# Restarts from heg_P1_init.CFmesh, the converged P0 solution sampled at the
-# P1 solution points by upgrade_P0_to_P1.CFcase. The monitored residual is the
+# Restarts from heg_P3_init.CFmesh, the converged P2 solution sampled at the
+# P3 solution points by upgrade_P2_to_P3.CFcase. The monitored residual is the
 # norm of the ln T update, ||dT/T||.
 #
 # PLATO: set Plato.path below to your PLATO database directory.
@@ -26,7 +27,6 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -6.00569
 
 CFEnv.ExceptionLogLevel    = 1000
 CFEnv.ErrorOnUnusedConfig  = false
@@ -68,7 +68,7 @@ Simulator.SubSystem.NavierStokes2DNEQ.nbVibEnergyEqs = 1
 
 Simulator.SubSystem.Default.listTRS = Wall Inlet Outlet
 Simulator.SubSystem.MeshCreator     = CFmeshFileReader
-Simulator.SubSystem.CFmeshFileReader.Data.FileName = heg_P1_init.CFmesh
+Simulator.SubSystem.CFmeshFileReader.Data.FileName = heg_P3_init.CFmesh
 # the order blending sweeps over neighbours and the face blending reads the alpha of the first
 # overlap layer: NbOverlapLayers >= NbSweeps + 2 keeps alpha rank independent
 Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 3
@@ -86,13 +86,13 @@ Simulator.SubSystem.FluxReconstruction.InitNames = InField
 
 Simulator.SubSystem.OutputFormat = CFmesh Tecplot
 
-Simulator.SubSystem.CFmesh.FileName   = hegFR_P1.CFmesh
+Simulator.SubSystem.CFmesh.FileName   = hegFR_P3.CFmesh
 Simulator.SubSystem.CFmesh.SaveRate   = 50
 Simulator.SubSystem.CFmesh.AppendTime = false
 Simulator.SubSystem.CFmesh.AppendIter = false
 Simulator.SubSystem.CFmesh.WriteSol   = ParWriteSolution
 
-Simulator.SubSystem.Tecplot.FileName       = hegFR_P1.plt
+Simulator.SubSystem.Tecplot.FileName       = hegFR_P3.plt
 Simulator.SubSystem.Tecplot.Data.updateVar = LogRhoivLogTTv
 Simulator.SubSystem.Tecplot.Data.printExtraValues = true
 Simulator.SubSystem.Tecplot.WriteSol       = WriteSolutionHighOrder
@@ -103,7 +103,7 @@ Simulator.SubSystem.Tecplot.AppendIter     = false
 # High-order CGNS output, one file for all ranks, with rho_i, T and Tv as extra values.
 # To use it: add libCGNSWriter to Simulator.Modules.Libs, CGNS to OutputFormat, and
 # uncomment the block below.
-#Simulator.SubSystem.CGNS.FileName   = hegFR_P1.cgns
+#Simulator.SubSystem.CGNS.FileName   = hegFR_P3.cgns
 #Simulator.SubSystem.CGNS.WriteSol   = ParCGNSHighOrderWriter
 #Simulator.SubSystem.CGNS.SaveRate   = 100
 #Simulator.SubSystem.CGNS.AppendTime = false
@@ -125,7 +125,7 @@ Simulator.SubSystem.AbsoluteNormAndMaxIter.AbsNorm = -6.0
 # by more than 2.3, and the CFL follows that scaling
 
 Simulator.SubSystem.ConvergenceMethod = NewtonIterator
-Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_hegFR_P1.plt
+Simulator.SubSystem.NewtonIterator.ConvergenceFile = convergence_hegFR_P3.plt
 Simulator.SubSystem.NewtonIterator.ShowRate = 1
 Simulator.SubSystem.NewtonIterator.ConvRate = 1
 Simulator.SubSystem.NewtonIterator.Data.L2.MonitoredVarID = 7
@@ -224,6 +224,13 @@ Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinBoundaryGhost 
 # alpha and the linear/first-order subcell choices are frozen once the residual stalls: the CFL
 # has not grown for 50 iterations and the residual dropped by less than 0.1 decade over them
 Simulator.SubSystem.FluxReconstruction.OrderBlending.FreezeAlphaStallWindow = 50
+# the blended cells whose solution points are all subsonic use linear subcells (limited
+# reconstruction in the update variables); the shock cells and their supersonic upstream
+# neighbours keep first-order subcells. The choice between the two and the slope limiter
+# factors are frozen together with alpha (FreezeAlphaStallWindow)
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellReconstruction      = Linear
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellLimiter             = VanAlbada
+Simulator.SubSystem.FluxReconstruction.ConvRHSJacobNSSubcellBlending.SubcellReconstructionMachMax = 1.0
 
 ###################################
 # Boundary conditions
@@ -271,5 +278,5 @@ Simulator.SubSystem.DataProcessingWall.WallQuantities.VID      = 6
 Simulator.SubSystem.DataProcessingWall.WallQuantities.TID      = 7
 Simulator.SubSystem.DataProcessingWall.WallQuantities.StantonNumberID = 0
 Simulator.SubSystem.DataProcessingWall.WallQuantities.AppendIter     = false
-Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileWall = wall_hegFR_P1.plt
-Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileAero = aeroCoef_hegFR_P1.plt
+Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileWall = wall_hegFR_P3.plt
+Simulator.SubSystem.DataProcessingWall.WallQuantities.OutputFileAero = aeroCoef_hegFR_P3.plt

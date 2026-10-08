@@ -66,6 +66,11 @@ protected: // functions
   /// blending coefficient of the cell behind the current boundary face
   CFreal getCellAlpha();
 
+  /// Store the boundary face value 0.5 (inner trace + ghost state) as element face sample
+  /// of the cell behind the face, for the linear reconstruction of the interior command.
+  /// The average is the face value for the usual ghost states (mirror, prescribed, copied).
+  void storeFaceSamples();
+
   /// add the subcell P0 boundary flux of one face flux point to the corrections
   void addSubcellFaceFlux(const CFuint iFlxPnt, const CFreal alpha, const CFint faceDir,
                           std::vector< RealVector >& corrections);
@@ -74,6 +79,10 @@ protected: // data
 
   /// socket holding the per-cell blending coefficient
   Framework::DataSocketSink< CFreal > socket_alpha;
+
+  /// element face samples for the linear reconstruction, filled here at boundary faces
+  /// (empty with the first-order subcells)
+  Framework::DataSocketSink< CFreal > socket_subcellFaceSamples;
 
   /// subcell grid of the element
   SubcellBlendingQuadData m_scData;
