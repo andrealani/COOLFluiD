@@ -66,7 +66,6 @@ PlatoLibrary::PlatoLibrary(const std::string& name)
     _Ri(),
     _hi(),
     _molIDs(),
-    _speciesEnergyModes(),
     _hiVib(),
     _hiEl(),
     _qi(),
@@ -211,7 +210,6 @@ void PlatoLibrary::setLibrarySequentially()
   _Yn.resize(_NC);
   _molIDs.resize(_NS);
   _hi.resize(_NS);
-  _speciesEnergyModes.resize(_NS*_nTemp);
   _hiVib.resize(_NS);
   _hiEl.resize(_NS);
   _mmi.resize(_NS);
@@ -332,7 +330,6 @@ void PlatoLibrary::unsetup()
     _Yn.resize(0);
     _hi.resize(0);
     _molIDs.resize(0);
-    _speciesEnergyModes.resize(0);
     _hiVib.resize(0);
     _hiEl.resize(0);
     _mmi.resize(0);
@@ -1274,29 +1271,7 @@ void PlatoLibrary::getSpeciesTotEnthalpies(CFdouble& temp,
        }
      }
 
-  /* Thermo-chemical non-equilibrium case, NASA polynomials, neutral mixture, one vibrational temperature*/
-  } else if (_nTemp == 2 && _nasaThermo && _nbTvib == 1 && _nbTe == 0 && !_hasElectrons &&
-             get_nb_comp() == _NS) {
-
-     // species_enthalpy() gives hi = h_i(T, Tv) and species_energy_modes() the energy of each
-     // temperature mode, index 1 being the Tv mode (vibration and electronic excitation). As in the
-     // branch above, the Tv-mode energy is passed once: hsVib for the molecules, hsEl for the atoms.
-     // These are the PLATO calls of the converged NASA HEG runs of 2026-10-06; this branch cannot
-     // be run with a PLATO built without NASA polynomials
-     species_enthalpy(&_tvec[0], &hsTot[0]);
-     species_energy_modes(&_tvec[0], &_speciesEnergyModes[0]);
-
-     *hsVib = 0.;
-     for (CFint i = 0; i < _NS; ++i) {
-       (*hsEl)[i] = _speciesEnergyModes[i*_nTemp + 1];
-     }
-     for (CFint i = 0; i < _nMol; ++i) {
-       const CFint is = _molIDs[i];
-       (*hsVib)[is] = (*hsEl)[is];
-       (*hsEl)[is] = 0.;
-     }
-
-  /* Thermo-chemical non-equilibrium case, other configurations (ionized NASA mixtures,
+  /* Thermo-chemical non-equilibrium case, other configurations (NASA polynomials,
      several vibrational temperatures)*/
   } else if (_nTemp > 1) {
 

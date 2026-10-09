@@ -621,10 +621,6 @@ protected:
   /*Enthalpies (working vector)*/
   RealVector _hi;
 
-  /*Species energy of each temperature mode from species_energy_modes(), temperature index
-    varying fastest (work vector of the NASA neutral 2T split in getSpeciesTotEnthalpies)*/
-  RealVector _speciesEnergyModes;
-
   /*Vibrational enthalpies (working vector)*/
   RealVector _hiVib;
 
