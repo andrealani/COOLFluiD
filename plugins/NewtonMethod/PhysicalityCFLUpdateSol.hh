@@ -48,12 +48,14 @@ namespace COOLFluiD {
 /// physics whose physical data carries rho and p. This command owns the CFL
 /// value: run it with Data.CFL.ComputeCFL = Null.
 ///
-/// Optional PartialDensityVars are indices in the stored update state, not
-/// physical data. Their increases and decreases are bounded independently by
-/// PartialDensityEtaMax (default 0.1). This preserves nonnegative partial
-/// densities from an admissible starting state. A zero partial density can
-/// only have a zero update under a strictly relative bound; no floor is added.
-/// An empty index list disables these additional checks.
+/// Optional BoundedVars are indices in the stored update state, not physical
+/// data. The change of each one is bounded by BoundedVarsEtaMax times its
+/// current magnitude. This scale also bounds the segment on which rho and p
+/// are checked, so a variable that must stay positive (p and T of Puvt, with
+/// BoundedVarsEtaMax < 1) is never evaluated past its bound. An empty index
+/// list disables these checks.
+///
+/// PhysicalityCFLUpdateSolNEQ extends the limiter through the protected hooks.
 ///
 /// Limiter: Ceze and Fidkowski, Int. J. Numer. Meth. Engng 102 (2015),
 /// Algorithm 2. CFL gating on the relaxation factor: Ceze and Fidkowski,
@@ -84,15 +86,37 @@ public:
   /// Execute Processing actions
   virtual void execute();
 
+protected:
+
+  /// Hook: lower the two step scales of one state with bounds on its single
+  /// entries. omegaTrial bounds the segment on which rho and p are checked, so
+  /// it must keep the trial states evaluable; omegaLinear is only combined with
+  /// the result. omegaTrial = 0 rejects the update.
+  virtual void boundEntrySteps(const Framework::State& state, const CFreal* dU,
+                               CFreal& omegaTrial, CFreal& omegaLinear) {}
+
+  /// Hook: also print the full step of the binding state
+  virtual bool reportFullStep() const { return false; }
+
+  /// Hook: change a trial state the way the update will (e.g. a state filter),
+  /// before its rho and p are checked
+  virtual void filterTrialState(Framework::State& trial) {}
+
+  /// Hook: true when the physical data of the full-step trial of a state can be
+  /// evaluated for the binding-state print (every BoundedVars entry keeps its sign)
+  virtual bool fullStepEvaluable(const Framework::State& state,
+                                 const Framework::State& trial) const;
+
+  /// rho and p of a state through the update variable set's physical data
+  /// (also fills m_pdata)
+  void computeRhoP(const Framework::State& state, CFreal& rho, CFreal& p);
+
 private:
 
   /// Largest omega in [0,1] such that state + omega*Relaxation*dU keeps
   /// rho and p above their floors. Returns 0 when the state itself is not
   /// physical or the update is not finite, which forces a rejection.
   CFreal computeStateOmega(const Framework::State& state, const CFreal* dU);
-
-  /// rho and p of a state through the update variable set's physical data
-  void computeRhoP(const Framework::State& state, CFreal& rho, CFreal& p);
 
   /// Fill the trial state with state + omega*Relaxation*dU
   void setTrialState(const Framework::State& state, const CFreal* dU,
@@ -102,6 +126,17 @@ private:
   /// this iteration with the states untouched.
   void rejectUpdate(const CFreal omega);
 
+protected:
+
+  /// physical data scratch (filled by computeRhoP)
+  RealVector m_pdata;
+
+  /// state variables whose relative change per update is bounded by BoundedVarsEtaMax
+  std::vector<CFuint> m_boundedVars;
+
+  /// largest relative change allowed for the BoundedVars
+  CFreal m_boundedEtaMax;
+
 private:
 
   /// update variable set (owned by the space method)
@@ -109,9 +144,6 @@ private:
 
   /// trial state scratch
   Framework::State* m_trial;
-
-  /// physical data scratch
-  RealVector m_pdata;
 
   /// largest fractional decrease of rho and p allowed per update
   CFreal m_etaMax;
@@ -136,27 +168,6 @@ private:
 
   /// position of the pressure in the physical data
   CFuint m_pIndex;
-
-  /// state variables whose relative change per update is bounded by BoundedVarsEtaMax
-  std::vector<CFuint> m_boundedVars;
-
-  /// largest relative change allowed for the BoundedVars
-  CFreal m_boundedEtaMax;
-
-  /// stored logarithms of variables (e.g. ln T) whose relative change is bounded by BoundedVarsEtaMax
-  std::vector<CFuint> m_logBoundedVars;
-
-  /// indices of partial densities in the stored update state
-  std::vector<CFuint> m_partialDensityVars;
-
-  /// largest fractional increase or decrease allowed for each partial density
-  CFreal m_partialDensityEtaMax;
-
-  /// indices of logarithmic variables (e.g. ln rho_i) in the stored update state
-  std::vector<CFuint> m_logVars;
-
-  /// largest absolute change allowed for each LogVars entry per update
-  CFreal m_logVarsMaxChange;
 
   /// consecutive rejected updates so far
   CFuint m_nbConsecutiveRejections;

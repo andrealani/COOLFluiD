@@ -190,6 +190,30 @@ ENDIF()
 #######################################################################
 
 IF ( NOT CF_HAVE_SINGLE_EXEC )
+SET ( MYLIBNAME5 "NewtonMethodNEQ" )
+ELSE ()
+SET ( MYLIBNAME5 "coolfluid-solver" )
+ENDIF()
+
+LIST ( APPEND NewtonMethodNEQ_files
+PhysicalityCFLUpdateSolNEQ.cxx
+PhysicalityCFLUpdateSolNEQ.hh
+)
+
+IF ( NOT CF_HAVE_SINGLE_EXEC )
+LIST ( APPEND NewtonMethodNEQ_requires_mods NavierStokes )
+LIST ( APPEND NewtonMethodNEQ_cflibs Framework NewtonMethod NavierStokes )
+CF_ADD_PLUGIN_LIBRARY ( NewtonMethodNEQ )
+ELSE()
+ FOREACH (AFILE ${NewtonMethodNEQ_files} )
+ LIST(APPEND coolfluid-solver_files ../../plugins/NewtonMethod/${AFILE} )
+ ENDFOREACH(AFILE)
+ CF_CACHE_LIST_APPEND ( ${MYLIBNAME5}_files  ${coolfluid-solver_files} )
+ENDIF()
+
+#######################################################################
+
+IF ( NOT CF_HAVE_SINGLE_EXEC )
 SET ( MYLIBNAME4 "NewtonMethodMHD" )
 ELSE () 
 SET ( MYLIBNAME4 "coolfluid-solver" )
