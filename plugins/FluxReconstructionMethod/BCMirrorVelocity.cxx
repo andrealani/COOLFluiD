@@ -31,6 +31,19 @@ BCMirrorVelocity::BCMirrorVelocity(const std::string& name) :
   m_velocityTGradG()
 {
   CFAUTOTRACE;
+  addConfigOptionsTo(this);
+
+  m_reflectedGhost = false;
+  setParameter("ReflectedGhost",&m_reflectedGhost);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BCMirrorVelocity::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("ReflectedGhost","Ghost velocity is the mirror image of the interior velocity, u_int - 2 v_n n/|n|^2, "
+                                  "instead of the wall state u_int - v_n n/|n|^2 (default false, the wall state). The boundary state of the "
+                                  "diffusive terms is the wall state in both cases.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -51,6 +64,10 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
   
   
   cf_assert(m_velocityIDs.size() == dim);
+
+  // 1: the ghost is the wall state (zero normal velocity); 2: the mirror image
+  const CFreal ghostFactor = m_reflectedGhost ? 2.0 : 1.0;
+
   for (CFuint iState = 0; iState < intStates.size() ; ++iState){
    CFreal vn = 0.;
    CFreal area2 = 0.;
@@ -66,7 +83,7 @@ void BCMirrorVelocity::computeGhostStates(const vector< State* >& intStates,
        (*ghostStates[iState])[i] = (*intStates[iState])[i];
      }
      else {
-       (*ghostStates[iState])[i]= (*intStates[iState])[i] - 1.0*vn*normals[iState][jxx]/area2;
+       (*ghostStates[iState])[i]= (*intStates[iState])[i] - ghostFactor*vn*normals[iState][jxx]/area2;
        jxx++;
      }
      // if (i == 2 &&  (*ghostStates[iState])[i] < -0.000001) CFLog(INFO, "intState: " << *intStates[iState] << ", ghost: " << *ghostStates[iState] << "\n");
@@ -189,10 +206,17 @@ void BCMirrorVelocity::computeBndStates(const std::vector< Framework::State* >& 
 {
   const CFuint nbrStates = intStates.size();
 
-  // the ghost state already carries the projected wall velocity
+  // the boundary state is the wall state: the mean of the interior and reflected ghost states
   for (CFuint iState = 0; iState < nbrStates; ++iState)
   {
-    *bndStates[iState] = *ghostStates[iState];
+    if (m_reflectedGhost)
+    {
+      *bndStates[iState] = 0.5*(*intStates[iState] + *ghostStates[iState]);
+    }
+    else
+    {
+      *bndStates[iState] = *ghostStates[iState];
+    }
   }
 }
 

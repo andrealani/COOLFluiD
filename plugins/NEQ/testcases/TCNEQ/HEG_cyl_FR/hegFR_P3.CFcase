@@ -36,7 +36,7 @@ CFEnv.RegistSignalHandlers = false
 Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWriter \
                          libNavierStokes libNEQ libPlatoI \
                          libFluxReconstructionMethod libFluxReconstructionNavierStokes \
-                         libFluxReconstructionNEQ libPetscI libNewtonMethod \
+                         libFluxReconstructionNEQ libPetscI libNewtonMethod libNewtonMethodNEQ \
                          libAeroCoefFR libAeroCoefFRNEQ
 
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/HEG_cyl_FR
@@ -136,17 +136,17 @@ Simulator.SubSystem.NewtonIterator.Data.DoComputeJacobian = true
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value      = 0.05
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Null
 
-Simulator.SubSystem.NewtonIterator.UpdateSol = PhysicalityCFLUpdateSol
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.EtaMax        = 0.1
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.OmegaMin      = 0.01
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLGrowth     = 1.025
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLBackoff    = 0.1
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLMax        = 1000.
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.MaxRejections = 10
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.LogBoundedVars    = 7 8
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.BoundedVarsEtaMax = 0.5
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.LogVars           = 0 1 2 3 4
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.LogVarsMaxChange  = 2.3
+Simulator.SubSystem.NewtonIterator.UpdateSol = PhysicalityCFLUpdateSolNEQ
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.EtaMax        = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.OmegaMin      = 0.01
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLGrowth     = 1.025
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLBackoff    = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLMax        = 1000.
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.MaxRejections = 10
+# LogBoundedVars: filled from the model (ln T and ln Tv)
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.BoundedVarsEtaMax = 0.5
+# LogVars: filled from the model (ln rho_i of every species)
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.LogVarsMaxChange  = 2.3
 
 Simulator.SubSystem.LinearSystemSolver = PETSC
 Simulator.SubSystem.LSSNames = NewtonIteratorLSS
@@ -221,9 +221,11 @@ Simulator.SubSystem.FluxReconstruction.OrderBlending.RelaxationFactor = 0.25
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinVars   = 0 1 2 3 4
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinMargin = 0.693147
 Simulator.SubSystem.FluxReconstruction.OrderBlending.ForceAlphaMinBoundaryGhost = true
-# alpha and the linear/first-order subcell choices are frozen once the residual stalls: the CFL
-# has not grown for 50 iterations and the residual dropped by less than 0.1 decade over them
+# alpha and the linear/first-order subcell choices are frozen once the residual stalls at the target
+# CFL: the CFL has stayed at 1000 (CFLMax) for 50 iterations and the residual dropped by less than
+# 0.1 decade over them
 Simulator.SubSystem.FluxReconstruction.OrderBlending.FreezeAlphaStallWindow = 50
+Simulator.SubSystem.FluxReconstruction.OrderBlending.FreezeAlphaStallMinCFL = 1000.
 # the blended cells whose solution points are all subsonic use linear subcells (limited
 # reconstruction in the update variables); the shock cells and their supersonic upstream
 # neighbours keep first-order subcells. The choice between the two and the slope limiter

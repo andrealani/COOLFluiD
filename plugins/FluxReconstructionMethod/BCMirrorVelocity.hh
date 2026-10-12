@@ -15,7 +15,12 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This class represents a supersonic outlet boundary condition
+ * This class represents a slip wall (mirror) boundary condition: the ghost
+ * state copies the interior state except for its normal velocity v_n.
+ *
+ * Default ghost: the wall state, u_ghost = u_int - v_n n/|n|^2. With
+ * ReflectedGhost = true: the mirror image, u_ghost = u_int - 2 v_n n/|n|^2.
+ * The boundary state of the diffusive terms is the wall state in both cases.
  *
  * @author Ray Vandenhoeck
  * @author Firas Ben Ameur
@@ -30,6 +35,10 @@ public:  // methods
 
   /// Destructor
   ~BCMirrorVelocity();
+
+  /// Defines the Config Option's of this class
+  /// @param options a OptionList where to add the Option's
+  static void defineConfigOptions(Config::OptionList& options);
 
   /// Gets the Class name
   static std::string getClassName()
@@ -111,6 +120,9 @@ protected:
   
   /// temporary velocity gradient
   RealVector m_velocityTGradG;
+
+  /// ghost velocity is the mirror image of the interior velocity (default false: the wall state)
+  bool m_reflectedGhost;
   
 }; // class BCMirrorVelocity
     

@@ -41,7 +41,8 @@ namespace COOLFluiD {
  * added by overriding extractMonitoredField() in a subclass.
  *
  * Alpha can be frozen instead of following the sensor: from FreezeAlphaIter
- * on, or automatically once the residual stalls (FreezeAlphaStallWindow). The
+ * on, or automatically once the residual stalls (FreezeAlphaStallWindow), the
+ * latter optionally only once the CFL has reached FreezeAlphaStallMinCFL. The
  * subcell blending RHS freezes its reconstruction choices together with alpha
  * (FluxReconstructionSolverData::getBlendingHoldStage).
  *
@@ -129,8 +130,9 @@ protected: // functions
    * Automatic freeze test (FreezeAlphaStallWindow = W > 0), called once per
    * iteration while alpha follows the sensor. Reads the monitored residual r of
    * the previous iteration and the CFL, both global, so every rank takes the
-   * same decision: true once the CFL has not grown over the last W iterations
-   * and r dropped by less than a tenth of a decade over them. Re-freezing later
+   * same decision: true once the CFL has not grown over the last W iterations,
+   * every CFL of the window is at or above FreezeAlphaStallMinCFL, and r dropped
+   * by less than a tenth of a decade over them. Re-freezing later
    * from a more converged solution was tried and cycles: Mach-mask choices of
    * cells near SubcellReconstructionMachMax flip at every rebuild (Gnoffo P3).
    */
@@ -223,6 +225,9 @@ protected: // data
 
   /// FreezeAlphaStallWindow option: window W in iterations of the automatic freeze (0: off)
   CFuint m_freezeStallWindow;
+
+  /// FreezeAlphaStallMinCFL option: smallest CFL allowed in the window of the automatic freeze (0: no condition)
+  CFreal m_freezeStallMinCFL;
 
   /// 0 while alpha follows the sensor, 1 once it is frozen (FreezeAlphaIter or FreezeAlphaStallWindow)
   CFuint m_stage;

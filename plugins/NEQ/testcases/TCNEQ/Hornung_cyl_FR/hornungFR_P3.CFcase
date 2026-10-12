@@ -37,7 +37,7 @@ Simulator.Modules.Libs = libCFmeshFileWriter libCFmeshFileReader libTecplotWrite
                          libNavierStokes libNEQ libPlatoI \
                          libFluxReconstructionMethod libFluxReconstructionNavierStokes \
                          libFluxReconstructionNEQ \
-                         libPetscI libNewtonMethod libAeroCoefFR libAeroCoefFRNEQ #libCGNSWriter
+                         libPetscI libNewtonMethod libNewtonMethodNEQ libAeroCoefFR libAeroCoefFRNEQ #libCGNSWriter
 
 Simulator.Paths.WorkingDir = plugins/NEQ/testcases/TCNEQ/Hornung_cyl_FR
 Simulator.Paths.ResultsDir = plugins/NEQ/testcases/TCNEQ/Hornung_cyl_FR
@@ -131,20 +131,20 @@ Simulator.SubSystem.NewtonIterator.Data.MaxSteps = 1
 Simulator.SubSystem.NewtonIterator.Data.CFL.Value      = 0.5
 Simulator.SubSystem.NewtonIterator.Data.CFL.ComputeCFL = Null
 
-Simulator.SubSystem.NewtonIterator.UpdateSol = PhysicalityCFLUpdateSol
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.EtaMax        = 0.1
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.OmegaMin      = 0.01
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLGrowth     = 1.025
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLBackoff    = 0.1
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.CFLMax        = 10000.
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.MaxRejections = 10
+Simulator.SubSystem.NewtonIterator.UpdateSol = PhysicalityCFLUpdateSolNEQ
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.EtaMax        = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.OmegaMin      = 0.01
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLGrowth     = 1.025
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLBackoff    = 0.1
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.CFLMax        = 10000.
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.MaxRejections = 10
 # the mixture density and pressure are guarded by EtaMax above; T and Tv need
 # their own bound, without it Tv once ran to 5e5 K inside the thermal layer
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.BoundedVars        = 4 5
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.BoundedVarsEtaMax  = 0.5
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.BoundedVars        = 4 5
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.BoundedVarsEtaMax  = 0.5
 # cap increases and decreases of each partial density independently
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.PartialDensityVars   = 0 1
-Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSol.PartialDensityEtaMax = 0.1
+# PartialDensityVars: filled from the model (rho_i of every species)
+Simulator.SubSystem.NewtonIterator.PhysicalityCFLUpdateSolNEQ.PartialDensityEtaMax = 0.1
 
 # floor on T and Tv: the CFL controller guards the mixture rho and p, not the
 # temperatures

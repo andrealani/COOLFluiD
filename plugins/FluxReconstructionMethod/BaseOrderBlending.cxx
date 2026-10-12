@@ -123,6 +123,10 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   // Automatic freeze on a stalled residual. Default: off.
   m_freezeStallWindow = 0;
   setParameter("FreezeAlphaStallWindow", &m_freezeStallWindow);
+
+  // CFL the whole window must have reached before the automatic freeze is tested. Default: no condition.
+  m_freezeStallMinCFL = 0.;
+  setParameter("FreezeAlphaStallMinCFL", &m_freezeStallMinCFL);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -199,6 +203,9 @@ void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
     "solution and frozen for the rest of the run, together with the subcell reconstruction choices. "
     "The undershoot flags (ForceAlphaMinVars) are kept and new ones still raise alpha to 1. "
     "0 (default): off. Not together with FreezeAlphaIter.");
+  options.addConfigOption< CFreal >("FreezeAlphaStallMinCFL",
+    "Automatic freeze: the stall test runs only when every CFL of the window is at or above this value (e.g. the "
+    "CFLMax of the CFL controller). 0 (default): no condition.");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -445,6 +452,9 @@ bool BaseOrderBlending::isStalled()
     m_cflHistory.pop_front();
   }
   if (m_resHistory.size() < m_freezeStallWindow + 1) return false;
+
+  // no freeze before the CFL has reached FreezeAlphaStallMinCFL over the whole window
+  if (*std::min_element(m_cflHistory.begin(), m_cflHistory.end()) < m_freezeStallMinCFL) return false;
 
   // no freeze while the CFL is still growing
   if (m_cflHistory.back() > m_cflHistory.front()) return false;
