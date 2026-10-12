@@ -8,6 +8,11 @@ TNEQSourceTerm.cxx
 TNEQSourceTerm.hh
 PositivityIDPNEQ.cxx
 PositivityIDPNEQ.hh
+Freno2021ManufacturedSolution.hh
+ManufacturedForcingTNEQ.cxx
+ManufacturedForcingTNEQ.hh
+ComputeErrorMMSTNEQ.cxx
+ComputeErrorMMSTNEQ.hh
 )
 
 LIST ( APPEND FluxReconstructionNEQ_cflibs FluxReconstructionMethod NEQ Framework)
