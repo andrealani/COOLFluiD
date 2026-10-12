@@ -263,9 +263,9 @@ void TensorProductGaussIntegrator::resetQuadPntsMappedCoorAndWheights1D(const CF
 
       m_quadPntsWheights1D  [2] = 128./225.;
 
-      m_quadPntsWheights1D  [3] = (322.-13.*sqrt(70.))/900.;
-      
-      m_quadPntsWheights1D  [4] = (322.+13.*sqrt(70.))/900.;
+      m_quadPntsWheights1D  [3] = (322.+13.*sqrt(70.))/900.;
+
+      m_quadPntsWheights1D  [4] = (322.-13.*sqrt(70.))/900.;
 
     } break;
     case CFPolyOrder::ORDER5:
