@@ -3,9 +3,8 @@
 # Comments begin with "#"
 # Meta Comments begin with triple "#"
 #
-### Residual = -13.9669
-#-13.9676
-#-13.9062 
+### Residual = -15.1439
+#-13.9669
 
 ###############################################################################
 # User defined parameters
@@ -47,22 +46,19 @@ Simulator.SubSystem.Flow.InField.Def = \
 1. 2. 3. 0.108*((1/r)^5) 0.
 
 # Stop Condition
-#Simulator.SubSystem.StopCondition       = Norm
-#Simulator.SubSystem.Norm.valueNorm      = -3.0
+Simulator.SubSystem.StopCondition       = Norm
+Simulator.SubSystem.Norm.valueNorm      = -1.5 #-3.0
 #Simulator.SubSystem.StopConditionSubSystemStatus = FlowSubSystemStatus
-Simulator.SubSystem.StopCondition          = MaxNumberSteps
-Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
+#Simulator.SubSystem.StopCondition          = MaxNumberSteps
+#Simulator.SubSystem.MaxNumberSteps.nbSteps = 100
 
 # CFL definition
 #Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Interactive
-Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
-Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
-if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
+#Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Function
+#Simulator.SubSystem.FlowIterator.Data.CFL.Function.Def = \
+#if(i<20,2.0,if(i<50,4.0,if(i<70,8.0,if(i<100,16.,if(i<120,32.,min(1000.,cfl*1.05^2))))))
 #if(i<500,1.0,if(i<1500,2.0,if(i<2500,4.0,if(i<4000,8.,if(i<5000,16.,min(10000.,cfl*1.02^2))))))
-
 #if(i<100,2.0,if(i<200,4.0,if(i<300,8.0,if(i<400,16.,if(i<500,32.,min(1000.,cfl*1.02^2))))))
-#if(i<100,2.0,if(i<200,4.0,if(i<300,8.0,if(i<500,16.,if(i<800,32.,min(500.,cfl*1.02^2))))))
-#if(i<500,2.0,if(i<1000,4.0,if(i<1500,8.0,if(i<2000,16.,if(i<2500,32.,min(200.,cfl*1.02^2))))))
 
 # Restart option
 Simulator.SubSystem.Flow.Restart = false #### only for restart
@@ -230,7 +226,18 @@ Simulator.SubSystem.ConvergenceMethodNames = EMIterator FlowIterator # This orde
 
 Simulator.SubSystem.FlowIterator.Namespace = FlowNamespace
 Simulator.SubSystem.FlowIterator.Data.CollaboratorNames = Flow FlowLSS
-Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
+#Simulator.SubSystem.FlowIterator.UpdateSol = StdUpdateSol
+Simulator.SubSystem.FlowIterator.UpdateSol = PhysicalityCFLUpdateSol
+Simulator.SubSystem.FlowIterator.Data.CFL.Value      = 2.0   # starting CFL
+Simulator.SubSystem.FlowIterator.Data.CFL.ComputeCFL = Null
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.CFLGrowth  = 1.1    # growth rate of the CFL
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.CFLBackoff = 0.1    # cut factor when an update is rejected
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.CFLMax     = 1000.   # target CFL
+# optional
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.EtaMax        = 0.1
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.OmegaMin      = 0.01
+Simulator.SubSystem.FlowIterator.PhysicalityCFLUpdateSol.MaxRejections = 10
+
 
 Simulator.SubSystem.FlowIterator.Data.L2.MonitoredVarID = 7
 Simulator.SubSystem.FlowIterator.AbsoluteNormAndMaxIter.MaxIter = 1
@@ -336,7 +343,7 @@ Simulator.SubSystem.Flow.Data.MHDConsACAHWST.RadiativeLossTerm = 1
 Simulator.SubSystem.Flow.Data.MHDConsACAHWST.deCompEorNot = 1
 
 # Boundary Conditions
-Simulator.SubSystem.Flow.BcComds = SuperInletProjectionParallelRotationFVMCC SuperOutletMHD3DProjectionFVMCC 
+Simulator.SubSystem.Flow.BcComds = SuperInletProjectionParallelRotationFVMCC SuperOutletMHD3DProjectionFVMCC
 #SuperInletProjectionConstrainedFVMCC SuperOutletMHD3DProjectionFVMCC
 Simulator.SubSystem.Flow.BcNames = Jet1 Jet2
 
