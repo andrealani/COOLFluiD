@@ -77,6 +77,8 @@ ConvergenceMethodData::ConvergenceMethodData(Common::SafePtr<Method> owner)
 
   m_freezeJacobianStride = 0;
   setParameter("FreezeJacobianStride",&m_freezeJacobianStride);
+
+  m_nextCFL = 0.;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -59,6 +59,12 @@ public: // functions
   /// Get the CFL
   Common::SafePtr<Framework::CFL> getCFL() { return &m_CFL; }
 
+  /// Store a CFL that takes effect at the start of the next step
+  void setNextCFL(const CFreal cfl) { m_nextCFL = cfl; }
+
+  /// Apply the stored CFL, if any
+  void applyNextCFL() { if (m_nextCFL > 0.) { m_CFL.setCFLValue(m_nextCFL); m_nextCFL = 0.; } }
+
   /// Get an object that is able to filter the state values
   /// For example, if pressure is below zero, set to zero.
   /// @returns a FilterState to be used by the concrete methods for filtering
@@ -171,6 +177,9 @@ private: // data
   
   /// CFL object
   Framework::CFL  m_CFL;
+
+  /// CFL to apply at the start of the next step (0: none)
+  CFreal m_nextCFL;
     
   /// Name of the norm
   std::string m_normStr;

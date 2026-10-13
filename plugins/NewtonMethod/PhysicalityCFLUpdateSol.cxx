@@ -284,7 +284,7 @@ void PhysicalityCFLUpdateSol::execute()
   }
   else if (m_cflMax > 0. && cflValue < m_cflMax) {
     const CFreal newCFL = std::min(cflValue*m_cflGrowth, m_cflMax);
-    cfl->setCFLValue(newCFL);
+    getMethodData().setNextCFL(newCFL);
     CFLog(VERBOSE, "PhysicalityCFLUpdateSol: omega = 1, CFL " << cflValue
           << " -> " << newCFL << "\n");
   }
