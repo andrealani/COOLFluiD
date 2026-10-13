@@ -434,8 +434,8 @@ CFdouble PlatoLibrary::eta(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, tVec);
   
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
  
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -497,8 +497,8 @@ void PlatoLibrary::lambdaVibNEQ(CFreal& temp, RealVector& tVec,  CFdouble& press
     _tvec[i] = tVec[i - 1]; 
   }
  
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
 
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -575,8 +575,8 @@ CFdouble PlatoLibrary::sigma_debug(CFdouble& temp, CFdouble& pressure, CFreal* t
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, tVec);
   
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
   CFdouble M_e = _Yi[0];// mass fraction
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -602,8 +602,8 @@ CFdouble PlatoLibrary::sigma(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, tVec);
   
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
  
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -765,8 +765,8 @@ void PlatoLibrary::setDensityEnthalpyEnergy(CFdouble& temp,
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, &tVec[0]);
  
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
 
   /*Compute number  and mass densities*/
   CFdouble nd  = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -808,8 +808,8 @@ CFdouble PlatoLibrary::density(CFdouble& temp, CFdouble& pressure, CFreal* tVec)
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, tVec);
  
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
 
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
@@ -1140,8 +1140,8 @@ void PlatoLibrary::getRhoUdiff(CFdouble& temp, CFdouble& pressure,
   CFdouble Th = temp;
   CFdouble Te = get_el_temp(temp, tVec);
 
-  /*Electron mole fraction*/
-  CFdouble Xe = _Xi[0];
+  /*Electron mole fraction (species 0), zero in a mixture without electrons*/
+  CFdouble Xe = _hasElectrons ? _Xi[0] : 0.;
 
   /*Compute number density*/
   CFdouble nd = get_nb_density(&pressure, &Th, &Te, &Xe);
