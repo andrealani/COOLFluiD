@@ -154,6 +154,8 @@ void ConvergenceMethod::takeStep()
 
   if (m_stopwatch.isNotRunning()) { m_stopwatch.start(); }
 
+  if (getConvergenceMethodData().isNotNull()) { getConvergenceMethodData()->applyNextCFL(); }
+
   takeStepImpl();
   if ( hasToUpdateConv() ) updateConvergenceFile();
 
