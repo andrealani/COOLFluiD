@@ -1,6 +1,6 @@
 ################################################################################
 #
-# Converts heg_cylinder.msh (gmsh msh2, 41 x 50 Q2 quads) into the P0 CFmesh
+# Converts heg_cylinder.msh (gmsh msh2, 41 x 60 Q2 quads) into the P0 CFmesh
 # heg_cylinder_P0.CFmesh read by hegFR_P0.CFcase.
 # Mesh preparation only, on ONE MPI rank: PLATO can be initialised only once per process.
 #

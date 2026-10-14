@@ -9,7 +9,7 @@
 #
 # HEG cylinder: front half of a 45 mm radius cylinder in 5-species air (PLATO
 # air5 / air5, two temperatures, partition functions), u = 5956 m/s, T = Tv = 901 K, wall at
-# 300 K. Mesh heg_cylinder.msh: 41 x 50 Q2 quads, tanh
+# 300 K. Mesh heg_cylinder.msh: 41 x 60 Q2 quads, tanh
 # stretching from the wall (first cell 2e-5 R) scaled with the local shock distance,
 # so rings run parallel to the bow shock; outer boundary at 2.5 shock distances.
 #
