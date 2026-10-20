@@ -706,6 +706,13 @@ void ConvDiffCLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
   // radius of the flux points (axisymmetric only)
   setFlxPntRadii();
   
+  // the cell face loops of DiffRHSJacobFluxReconstruction reassign m_faceJacobVecs with the number of flux
+  // points of the face they treat, which differs between the triangle and quad faces of a prism
+  if (m_faceJacobVecs.size() < m_nbrFaceFlxPnts)
+  {
+    m_faceJacobVecs.resize(m_nbrFaceFlxPnts, RealVector(m_dim));
+  }
+
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
 

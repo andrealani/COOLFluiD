@@ -44,7 +44,6 @@ DiffRHSJacobFluxReconstructionNS::DiffRHSJacobFluxReconstructionNS(const std::st
   DiffRHSJacobFluxReconstruction(name),
   m_diffusiveVarSet(CFNULL)
 {
-  addConfigOptionsTo(this);
 }
   
 //////////////////////////////////////////////////////////////////////////////

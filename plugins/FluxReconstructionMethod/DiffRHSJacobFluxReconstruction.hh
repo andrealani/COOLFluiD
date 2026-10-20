@@ -38,6 +38,9 @@ public: // functions
   /// Destructor
   virtual ~DiffRHSJacobFluxReconstruction() {}
 
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
+
   /// Execute processing actions
   virtual void execute();
   
@@ -385,6 +388,12 @@ protected: //data
   /// Continuous flux at the solution points for both neighbor cells
   std::vector< std::vector< std::vector< RealVector > > > m_contFlxNeighb;
 
+  /// lift the partition faces of overlap cells as internal faces with an unperturbed neighbour (option
+  /// PartitionFaceLifting), instead of applying the boundary condition with index 0 there
+  bool m_partitionFaceLifting;
+
+  /// flags telling whether a face (by face ID) belongs to a partition TRS, filled when m_partitionFaceLifting is true
+  std::vector< bool > m_isPartitionFace;
 
   
 }; // class Solve

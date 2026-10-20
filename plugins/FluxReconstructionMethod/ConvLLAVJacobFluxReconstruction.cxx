@@ -648,6 +648,13 @@ void ConvLLAVJacobFluxReconstruction::prepareIsolatedCellAV(const CFuint cellID)
 
 void ConvLLAVJacobFluxReconstruction::setFaceDataForGradients(CFuint faceID)
 {   
+  // the cell face loops of DiffRHSJacobFluxReconstruction reassign m_faceJacobVecs with the number of flux
+  // points of the face they treat, which differs between the triangle and quad faces of a prism
+  if (m_faceJacobVecs.size() < m_nbrFaceFlxPnts)
+  {
+    m_faceJacobVecs.resize(m_nbrFaceFlxPnts, RealVector(m_dim));
+  }
+
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
   
@@ -707,6 +714,13 @@ void ConvLLAVJacobFluxReconstruction::setFaceDataForGradients(CFuint faceID)
 
 void ConvLLAVJacobFluxReconstruction::setFaceData(CFuint faceID)
 {   
+  // the cell face loops of DiffRHSJacobFluxReconstruction reassign m_faceJacobVecs with the number of flux
+  // points of the face they treat, which differs between the triangle and quad faces of a prism
+  if (m_faceJacobVecs.size() < m_nbrFaceFlxPnts)
+  {
+    m_faceJacobVecs.resize(m_nbrFaceFlxPnts, RealVector(m_dim));
+  }
+
   // get the face flux point normals
   DataHandle< CFreal > flxPntNormals = socket_flxPntNormals.getDataHandle();
   

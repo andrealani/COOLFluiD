@@ -92,9 +92,22 @@ DiffRHSJacobFluxReconstruction::DiffRHSJacobFluxReconstruction(const std::string
   m_unpertAllCellDiffRes(),
   m_affectedSolPnts(),
   m_contFlxBackup(),
-  m_contFlxNeighb()
+  m_contFlxNeighb(),
+  m_partitionFaceLifting(),
+  m_isPartitionFace()
   {
+    addConfigOptionsTo(this);
+
+    m_partitionFaceLifting = false;
+    setParameter("PartitionFaceLifting", &m_partitionFaceLifting);
   }
+
+//////////////////////////////////////////////////////////////////////////////
+
+void DiffRHSJacobFluxReconstruction::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("PartitionFaceLifting","Jacobian of the cell gradients in parallel: lift the partition faces of overlap cells as internal faces whose neighbour on the other process is not perturbed (true), or apply the boundary condition with index 0 there (false, default).");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1242,27 +1255,39 @@ void DiffRHSJacobFluxReconstruction::addPerturbedFaceLiftings(const CFuint side,
         extrapolateGradVarsToFaceFlxPnts((*m_faceFlxPntConn)[faceIdx]);
       }
 
+      // a partition face has its neighbour on another process, and that neighbour is not perturbed
+      const bool isPartitionFace = m_partitionFaceLifting && m_isPartitionFace[(*m_faces[side])[faceIdx]->getID()];
+
       Common::SafePtr< BCStateComputer > bcStateComputer = (*m_bcStateComputers)[(*m_faceBCIdx[side])[faceIdx]];
-      bcStateComputer->setFace((*m_faces[side])[faceIdx]);
+      if (!isPartitionFace)
+      {
+        bcStateComputer->setFace((*m_faces[side])[faceIdx]);
+      }
 
       for (CFuint iFlx = 0; iFlx < NbpertFlxPnts; ++iFlx)
       {
         const CFreal phiPert = (*m_solPolyValsAtFlxPnts)[pertFlxPntsIdx[iFlx]][m_pertSol];
 
-        // boundary value with the perturbation
-        bcStateComputer->computeGhostStates(m_cellStatesFlxPnt[0],m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
-        computePertBndGradVars(bcStateComputer,m_pertGradVarsFlxPnt,m_pertBndGradVars,artificialViscosity);
+        if (!isPartitionFace)
+        {
+          // boundary value with the perturbation
+          bcStateComputer->computeGhostStates(m_cellStatesFlxPnt[0],m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
+          computePertBndGradVars(bcStateComputer,m_pertGradVarsFlxPnt,m_pertBndGradVars,artificialViscosity);
 
-        (*(m_cellStatesFlxPnt[0][pertFlxPnts[iFlx]]))[m_pertVar] -= m_numJacob->getEps() * phiPert;
+          (*(m_cellStatesFlxPnt[0][pertFlxPnts[iFlx]]))[m_pertVar] -= m_numJacob->getEps() * phiPert;
 
-        // and without it
-        bcStateComputer->computeGhostStates(m_cellStatesFlxPnt[0],m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
-        computePertBndGradVars(bcStateComputer,m_gradVarsFlxPntBefore,m_bndGradVarsBefore,artificialViscosity);
+          // and without it
+          bcStateComputer->computeGhostStates(m_cellStatesFlxPnt[0],m_flxPntGhostSol,m_unitNormalFlxPnts,m_flxPntCoords);
+          computePertBndGradVars(bcStateComputer,m_gradVarsFlxPntBefore,m_bndGradVarsBefore,artificialViscosity);
+        }
 
         for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
         {
-          // the boundary lifting lifts g_b - g, so its change is dg_b minus the change of the extrapolated g
-          const CFreal pertBndGradVarsChange = (*m_pertBndGradVars[pertFlxPnts[iFlx]])[iEq] - (*m_bndGradVarsBefore[pertFlxPnts[iFlx]])[iEq];
+          // the boundary lifting lifts g_b - g, so its change is dg_b minus the change of the extrapolated g;
+          // on a partition face g_b is the average with the unperturbed neighbour, so dg_b is half of dg
+          // and the lifting matches that of an internal face
+          const CFreal pertBndGradVarsChange = isPartitionFace ? 0.5*phiPert*m_pertGradVarsChange[iEq] :
+            (*m_pertBndGradVars[pertFlxPnts[iFlx]])[iEq] - (*m_bndGradVarsBefore[pertFlxPnts[iFlx]])[iEq];
 
           const CFreal pertGradVarsJump = pertBndGradVarsChange - phiPert*m_pertGradVarsChange[iEq];
 
@@ -1639,6 +1664,32 @@ void DiffRHSJacobFluxReconstruction::setup()
 
   // get BC state computers
   m_bcStateComputers = getMethodData().getBCStateComputers();
+
+  // flag the faces of the partition TRSs (faces of overlap cells whose neighbour lives on another process)
+  m_isPartitionFace.clear();
+  if (m_partitionFaceLifting)
+  {
+    SafePtr< ConnectivityTable<CFuint> > faceToInFaceIdxOrientOrBCIdx =
+      MeshDataStack::getActive()->getConnectivity("faceToInFaceIdxOrientOrBCIdx");
+    m_isPartitionFace.assign(faceToInFaceIdxOrientOrBCIdx->nbRows(), false);
+
+    CFuint nbrPartitionFaces = 0;
+    vector< SafePtr<TopologicalRegionSet> > trsList = MeshDataStack::getActive()->getTrsList();
+    for (CFuint iTRS = 0; iTRS < trsList.size(); ++iTRS)
+    {
+      if (trsList[iTRS]->hasTag("partition"))
+      {
+        const CFuint nbrTrsFaces = trsList[iTRS]->getLocalNbGeoEnts();
+        for (CFuint iFace = 0; iFace < nbrTrsFaces; ++iFace)
+        {
+          m_isPartitionFace[trsList[iTRS]->getLocalGeoID(iFace)] = true;
+        }
+        nbrPartitionFaces += nbrTrsFaces;
+      }
+    }
+
+    CFLog(INFO, "DiffRHSJacobFluxReconstruction: PartitionFaceLifting on, " << nbrPartitionFaces << " partition faces\n");
+  }
 
   // get the linear system solver
   m_lss = getMethodData().getLinearSystemSolver()[0];
