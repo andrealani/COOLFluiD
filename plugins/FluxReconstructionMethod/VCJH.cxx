@@ -38,6 +38,7 @@ VCJHProvider("VCJH");
 void VCJH::defineConfigOptions(Config::OptionList& options)
 {
     options.addConfigOption< CFreal >("CFactor","Value of the C factor for VCJH 1D correction function");
+    options.addConfigOption< bool >("ConservativeObliqueFace","Normalize the correction functions of the oblique face (triangle hypotenuse, also used by the oblique quadrilateral face of prisms, and the oblique face of tetrahedra) like those of the other faces, which makes the scheme conservative on those elements (default true). The stored face fluxes already carry the face size; false restores the previous normalization, which counts the oblique face size twice and is not conservative across those faces (expert use only, to reproduce old results).");
     //options.addConfigOption< CFreal >("kappa","Value of the k factor for VCJH 2D correction function");
 }
 
@@ -51,6 +52,9 @@ VCJH::VCJH(const std::string& name) :
   
   m_cfactor = 0.0;
   setParameter("CFactor",&m_cfactor);
+
+  m_conservativeObliqueFace = true;
+  setParameter("ConservativeObliqueFace",&m_conservativeObliqueFace);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -662,8 +666,11 @@ RealVector VCJH::computeIntRHSTriag(const CFPolyOrder::Type solOrder, CFuint f, 
       }
     }
 
+  // face length factor of the 1D face quadrature (half the reference face length). The face fluxes the correction
+  // functions multiply already carry the face length, so with ConservativeObliqueFace the hypotenuse gets the factor of
+  // the other faces and its length is counted once
   G[0]=0.5;
-  G[1]=sqrt(2.)/2.;
+  G[1]=m_conservativeObliqueFace ? 0.5 : sqrt(2.)/2.;
   G[2]=0.5;
 
   ksi[0]=(flux_points[j]+1.)/2.;
@@ -937,9 +944,12 @@ RealVector VCJH::computeIntRHSTetra(const CFPolyOrder::Type solOrder, CFuint f, 
   //G[2]=0.5;
   //G[3]=sqrt(3.)/2.;
 
+  // face area factor of the face quadrature (twice the reference face area). The face fluxes the correction functions
+  // multiply already carry the face area, so with ConservativeObliqueFace the oblique face (face 2) gets the factor of
+  // the other faces and its area is counted once
   G[0]=1.;
   G[1]=1.;
-  G[2]=sqrt(3.);
+  G[2]=m_conservativeObliqueFace ? 1. : sqrt(3.);
   G[3]=1.;
 
 

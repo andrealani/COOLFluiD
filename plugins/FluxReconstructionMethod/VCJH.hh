@@ -126,6 +126,10 @@ private : // private data
   /// Value of the C factor for VCJH 1D correction function
   CFreal  m_cfactor;
 
+  /// flag telling whether the correction functions of the oblique face (triangle, prism, tetrahedron) are normalized
+  /// like those of the other faces
+  bool m_conservativeObliqueFace;
+
 }; // class VCJH
 
 //////////////////////////////////////////////////////////////////////////////
