@@ -11,6 +11,9 @@
 #include "Framework/SubSystemStatus.hh"
 #include <limits>
 #include "Common/BadValueException.hh"
+#ifdef CF_HAVE_MPI
+#include "Common/MPI/MPIStructDef.hh"
+#endif
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/BaseOrderBlending.hh"
@@ -41,6 +44,7 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   socket_alpha("alpha"),
   socket_prevAlpha("prevAlpha"),
   socket_smoothness("smoothness"),
+  socket_states("states"),
   m_cellBuilder(CFNULL),
   m_cell(CFNULL),
   m_cellStates(CFNULL),
@@ -222,6 +226,16 @@ BaseOrderBlending::providesSockets()
 
 //////////////////////////////////////////////////////////////////////////////
 
+std::vector< SafePtr< BaseDataSocketSink > >
+BaseOrderBlending::needsSockets()
+{
+  std::vector< SafePtr< BaseDataSocketSink > > result;
+  result.push_back(&socket_states);
+  return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void BaseOrderBlending::execute()
 {
   CFTRACEBEGIN;
@@ -315,16 +329,20 @@ void BaseOrderBlending::execute()
         m_cellBuilder->releaseGE();
       }
     }
+    syncAlpha(output);
 
     //
     // Phase 2: (NbSweeps + 1) Jacobi smoothing iterations.
     // Each iteration snapshots socket_alpha and writes max-pooled values back.
     // The "+1" is the initial neighbor spread; NbSweeps additional passes extend it.
+    // A pass reads the neighbours of each cell, and an overlap cell may lack some of
+    // them, so the owner's values are copied to the overlap cells after each pass.
     //
     const CFuint nbIterations = m_nbSweeps + 1;
     for (CFuint it = 0; it < nbIterations; ++it)
     {
       applyJacobiSmoothingPass();
+      syncAlpha(output);
     }
 
     //
@@ -372,6 +390,10 @@ void BaseOrderBlending::execute()
       getMethodData().setBlendingHoldStage(m_stage);
     }
   }
+
+  // the applied alpha of every overlap cell is the owner's, in both branches
+  syncAlpha(output);
+  syncAlpha(prevAlpha);
 
   // Say how much blending is actually being applied. Without this there is no
   // way to tell a sensor that never fires from one that is doing its job.
@@ -742,6 +764,75 @@ void BaseOrderBlending::applyJacobiSmoothingPass()
       m_cellBuilder->releaseGE();
     }
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BaseOrderBlending::syncAlpha(DataHandle< CFreal >& values)
+{
+#ifdef CF_HAVE_MPI
+  const std::string nsp = getMethodData().getNamespace();
+  if (!PE::GetPE().IsParallel()) return;
+
+  // sendList[r]: local IDs of the owned states that rank r holds as overlap states;
+  // recvList[r]: local IDs of the overlap states owned by rank r, in the order of
+  // the send list of rank r
+  DataHandle< State*, GLOBAL > states = socket_states.getDataHandle();
+  const std::vector< std::vector< CFuint > >& sendList = states.getGhostSendList();
+  const std::vector< std::vector< CFuint > >& recvList = states.getGhostReceiveList();
+  const CFuint nbRanks = sendList.size();
+  cf_assert(recvList.size() == nbRanks);
+
+  MPI_Comm comm = PE::GetPE().GetCommunicator(nsp);
+
+  // the tag only has to differ from the tags of other point-to-point messages on this
+  // communicator (the state synchronisation uses 100 and 101); its value has no meaning
+  const int tag = 7311;
+
+  // MPI type of CFreal
+  CFreal sample = 0.;
+  const MPI_Datatype realType = MPIStructDef::getMPIType(&sample);
+
+  m_syncSendBuf.resize(nbRanks);
+  m_syncRecvBuf.resize(nbRanks);
+  std::vector< MPI_Request > requests;
+  requests.reserve(2*nbRanks);
+
+  for (CFuint r = 0; r < nbRanks; ++r)
+  {
+    if (recvList[r].empty()) continue;
+    m_syncRecvBuf[r].resize(recvList[r].size());
+    requests.push_back(MPI_REQUEST_NULL);
+    MPI_Irecv(&m_syncRecvBuf[r][0], static_cast<int>(recvList[r].size()), realType,
+              static_cast<int>(r), tag, comm, &requests.back());
+  }
+
+  for (CFuint r = 0; r < nbRanks; ++r)
+  {
+    if (sendList[r].empty()) continue;
+    m_syncSendBuf[r].resize(sendList[r].size());
+    for (CFuint i = 0; i < sendList[r].size(); ++i)
+    {
+      m_syncSendBuf[r][i] = values[sendList[r][i]];
+    }
+    requests.push_back(MPI_REQUEST_NULL);
+    MPI_Isend(&m_syncSendBuf[r][0], static_cast<int>(sendList[r].size()), realType,
+              static_cast<int>(r), tag, comm, &requests.back());
+  }
+
+  if (!requests.empty())
+  {
+    MPI_Waitall(static_cast<int>(requests.size()), &requests[0], MPI_STATUSES_IGNORE);
+  }
+
+  for (CFuint r = 0; r < nbRanks; ++r)
+  {
+    for (CFuint i = 0; i < recvList[r].size(); ++i)
+    {
+      values[recvList[r][i]] = m_syncRecvBuf[r][i];
+    }
+  }
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

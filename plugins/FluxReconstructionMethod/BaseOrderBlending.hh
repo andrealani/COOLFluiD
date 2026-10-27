@@ -33,7 +33,10 @@ namespace COOLFluiD {
  *
  * Alpha is computed for every local cell, including the non-updatable overlap
  * cells of a parallel run, so that face-based blending reads a valid alpha
- * on both sides of a partition boundary.
+ * on both sides of a partition boundary. After each step that reads the
+ * neighbours, the owner's values are copied to the overlap cells of the other
+ * ranks (syncAlpha), so alpha does not depend on the partitioning and needs one
+ * overlap layer, whatever NbSweeps.
  *
  * Physics-agnostic base class. Handles monitored expressions that can be
  * extracted from any state/physical data: rho, p, rho*p, p/rho, rho/p,
@@ -65,6 +68,9 @@ public:
 
   virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSource > >
     providesSockets();
+
+  virtual std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
+    needsSockets();
 
   void execute();
 
@@ -142,6 +148,13 @@ protected: // functions
   /// alpha_new[i] = applyAlphaLimits(max(snapshot[i], NeighborWeight * max_{j in N(i)} snapshot[j]))
   void applyJacobiSmoothingPass();
 
+  /**
+   * Copy the values of the owned states to their overlap copies on the other
+   * ranks, with the ghost lists of the states (no-op in serial). values holds one
+   * entry per local state. Every rank must call it the same number of times.
+   */
+  void syncAlpha(Framework::DataHandle< CFreal >& values);
+
 protected: // data
 
   /// Blending coefficient per solution point, consumed by the blending RHS classes.
@@ -152,6 +165,9 @@ protected: // data
 
   /// Per-solution-point smoothness indicator (for visualization / diagnostics).
   Framework::DataSocketSource< CFreal > socket_smoothness;
+
+  /// States, for their ghost lists (syncAlpha).
+  Framework::DataSocketSink< Framework::State*, Framework::GLOBAL > socket_states;
 
   /// Cell builder from the solver data.
   Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
@@ -287,6 +303,10 @@ protected: // data
 
   /// local cell index of each cell, by the global ID of its first state (to apply the flags of other ranks)
   std::map< CFuint, CFuint > m_cellByFirstStateGlobalID;
+
+  /// send and receive buffers of syncAlpha, [rank][state of the ghost list]
+  std::vector< std::vector< CFreal > > m_syncSendBuf;
+  std::vector< std::vector< CFreal > > m_syncRecvBuf;
 
 }; // class BaseOrderBlending
 
