@@ -120,7 +120,7 @@ protected: // functions
   virtual void computeInterfaceFlxCorrection();
   
   /// compute the total correction
-  void computeCorrection(std::vector< RealVector >& corrections);
+  virtual void computeCorrection(std::vector< RealVector >& corrections);
 
   /// add the residual updates to the RHS
   void updateRHS();
