@@ -45,6 +45,8 @@ ConvRHSJacobFluxReconstructionSubcellBlending.cxx
 ConvRHSJacobFluxReconstructionSubcellBlending.hh
 SubcellBlendingQuadData.cxx
 SubcellBlendingQuadData.hh
+BlendingP0Data.cxx
+BlendingP0Data.hh
 ConvLLAVJacobFluxReconstruction.cxx
 ConvLLAVJacobFluxReconstruction.hh
 DiffRHSFluxReconstruction.cxx

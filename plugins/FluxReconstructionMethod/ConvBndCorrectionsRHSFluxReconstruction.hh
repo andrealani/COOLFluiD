@@ -125,7 +125,7 @@ protected: // functions
   void setupGradientData();
   
   /// add the updates to the wave speed
-  void updateWaveSpeed();
+  virtual void updateWaveSpeed();
   
   /// set the bnd face data necessary to compute FI-FD
   virtual void setBndFaceData(CFuint faceID);

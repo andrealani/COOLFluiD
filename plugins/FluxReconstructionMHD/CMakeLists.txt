@@ -16,6 +16,8 @@ MHDGradientComputer.hh
 MHDGradientComputer.cxx
 DiffRHSFluxReconstructionMHD.hh
 DiffRHSFluxReconstructionMHD.cxx
+MHDJacobBlendingCommands.hh
+MHDJacobBlendingCommands.cxx
 BCSuperOutletProj3DMHD.hh
 BCSuperOutletProj3DMHD.cxx
 BCSuperInletProjMHD.hh

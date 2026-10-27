@@ -1,179 +1,104 @@
+// Copyright (C) 2016 KU Leuven, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
+
 #ifndef COOLFluiD_FluxReconstructionMethod_ConvBndCorrectionsRHSJacobFluxReconstructionBlending_hh
 #define COOLFluiD_FluxReconstructionMethod_ConvBndCorrectionsRHSJacobFluxReconstructionBlending_hh
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/DataSocketSink.hh"
-#include "FluxReconstructionMethod/BCStateComputer.hh"
-#include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
-#include "FluxReconstructionMethod/RiemannFlux.hh"
-#include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
-#include "FluxReconstructionMethod/ConvBndCorrectionsRHSFluxReconstructionBlending.hh"
+#include "FluxReconstructionMethod/ConvBndCorrectionsRHSJacobFluxReconstruction.hh"
+#include "FluxReconstructionMethod/BlendingP0Data.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
 namespace COOLFluiD {
-  
-  namespace Framework {
-    class BlockAccumulator;
-  }
-
-    namespace FluxReconstructionMethod {
+  namespace FluxReconstructionMethod {
 
 //////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * This class represents a command that computes contribution of the boundary face terms for the
-   * Flux Reconstruction schemes for convective terms to the RHS with order blending for implicit schemes
-   *
-   * @author Rayan Dhib
-   * 
-   * based on the class ConvBndCorrectionsRHSJacobFluxReconstruction
-   * @author Ray Vandenhoeck
-   * @author Alexander Papen
-   *
-   */
-class ConvBndCorrectionsRHSJacobFluxReconstructionBlending : public ConvBndCorrectionsRHSFluxReconstructionBlending {
+/**
+ * Boundary convective RHS and Jacobian command of the cell-wise P0
+ * order blending (UseBlending = true), implicit counterpart of
+ * ConvBndCorrectionsRHSFluxReconstructionBlending.
+ *
+ * The face flux at a boundary face is the FR boundary flux F_I (no P0 flux of
+ * cell averages, alpha_f = 0). Residual of the cell K at solution point i, with
+ * alpha_K its blending coefficient, divh_i,fp the divergence of the correction
+ * function of flux point fp and W_fp its cell-average weight:
+ *   C_i = -(1 - alpha_K) sum_fp divh_i,fp F_I,fp - alpha_K sum_fp W_fp F_I,fp
+ * With alpha_K > 0 the second sum couples every solution point of the cell to
+ * every one, so the Jacobian block of the cell is dense. alpha frozen.
+ *
+ * @author Rayan Dhib
+ */
+class ConvBndCorrectionsRHSJacobFluxReconstructionBlending : public ConvBndCorrectionsRHSJacobFluxReconstruction {
 
-public:
-  typedef Framework::BaseMethodCommandProvider<
-      FluxReconstructionSolverData,ConvBndCorrectionsRHSJacobFluxReconstructionBlending > PROVIDER;
+public: // functions
 
-public:
+  /// Constructor
+  explicit ConvBndCorrectionsRHSJacobFluxReconstructionBlending(const std::string& name);
 
-  /**
-   * Constructor
-   */
-  ConvBndCorrectionsRHSJacobFluxReconstructionBlending(const std::string& name);
+  /// Destructor
+  virtual ~ConvBndCorrectionsRHSJacobFluxReconstructionBlending() {}
 
-  /**
-   * Default destructor
-   */
-  virtual ~ConvBndCorrectionsRHSJacobFluxReconstructionBlending();
-
-  /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
-   */
+  /// Set up private data and data of the aggregated classes in this command before processing phase
   virtual void setup();
 
-  /**
-   * Unset up private data and data of the aggregated classes
-   * in this command after processing phase
-   */
+  /// Unsetup private data
   virtual void unsetup();
 
-  /**
-   * Configures the command.
-   */
-  virtual void configure ( Config::ConfigArgs& args );
+  /// Returns the DataSocket's that this command needs as sinks
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > > needsSockets();
 
 protected: // functions
 
-  /**
-   * Execute on the current TRS
-   */
-  virtual void executeOnTrs();
-  
-  /**
-   * compute the contribution of the convective boundary flux correction to the Jacobian
-   */
-  void computeJacobConvBndCorrection();
-  
-  /**
-   * compute the contribution of the convective boundary flux correction to the Jacobian
-   */
-  void extrapolatePerturbedState();
-  
-  /**
-   * store backups of values before perturbing the states
-   */
-  void storeBackups();
-  
-  /**
-   * restore values after perturbing a state
-   */
-  void restoreFromBackups();
-  
-  /// compute the perturbed interface flux
-  virtual void computePertInterfaceFlxCorrection();
-  
-  /// compute the total perturbed correction
-  void computePertCorrection(std::vector< RealVector >& corrections);
+  /// FR boundary correction scaled by (1 - alpha_K) plus the P0 part -alpha_K sum_fp W_fp F_I
+  virtual void computeCorrection(std::vector< RealVector >& corrections);
+
+  /// perturbed correction: the full correction when alpha_K > 0, the FR one otherwise
+  virtual void computePertCorrection(std::vector< RealVector >& corrections);
+
+  /// every solution point is coupled to every one when alpha_K > 0
+  virtual bool pertCouplesAllSolPnts()
+  {
+    return getCellAlpha() > 0.0;
+  }
+
+  /// FR wave speed scaled by (1 - alpha) plus the P0 wave speed scaled by alpha
+  virtual void updateWaveSpeed();
+
+  /// blending coefficient of the current cell
+  CFreal getCellAlpha();
+
+  /// P0 wave speed of the current face, from the cell average
+  CFreal computeWaveSpeedP0();
 
 protected: // data
-  
-  /// pointer to the linear system solver
-  Common::SafePtr<Framework::LinearSystemSolver> m_lss;
 
-  /// pointer to the numerical Jacobian computer
-  Common::SafePtr<Framework::NumericalJacobian> m_numJacob;
+  /// socket holding the per-cell blending coefficient
+  Framework::DataSocketSink< CFreal > socket_alpha;
 
-  /// accumulator for LSSMatrix
-  std::auto_ptr<Framework::BlockAccumulator> m_acc;
+  /// metric Jacobian at the solution points, for the cell average
+  Framework::DataSocketSink< CFreal > socket_volumes;
 
-  /// perturbed updates to the residuals
-  RealVector m_pertResUpdates;
-  
-  /// unperturbed updates to the residuals
-  RealVector m_resUpdates;
+  /// weights and cell averages
+  BlendingP0Data m_p0Data;
 
-  /// derivative of update to one CV-residual
-  RealVector m_derivResUpdates;
-  
-  /// perturbed corrections due to the boundary faces for the Jacobian
-  std::vector< RealVector> m_pertCorrections;
-  
-  /// index of the perturbed solution point
-  CFuint m_pertSol;
-  
-  /// index of the perturbed variable
-  CFuint m_pertVar;
-  
-  /// dependencies of sol pnts on flx pnts
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDep;
+  /// cell average of the current cell, update variables
+  Framework::State* m_cellAvgState;
 
-  /// nbr of flx pnts on which a sol pnt is dependent
-  CFuint m_nbrFlxDep;
-  
-  /// backup of extrapolated states in the flux points of the cell
-  std::vector< RealVector > m_cellStatesFlxPntBackup;
-  
-  /// influenced flx pnt idx (by perturbation)
-  CFuint m_influencedFlxPnt;
+  /// physical data of the cell average
+  RealVector m_pDataP0;
 
-  /// influenced flx pnts idx (by perturbation)
-  std::vector< CFuint> m_influencedFlxPnts;
-  
-  /// Number of influenced flx pnts (by perturbation)
-  CFuint m_NbInfluencedFlxPnts;
-  
-  /// Element shape
-  CFGeoShape::Type elemShape;
-
-  /// backup of interface fluxes at the flux points of a face
-  std::vector< RealVector> m_flxPntRiemannFluxBackup;
-
-  std::vector< RealVector> m_flxPntRiemannFluxBackupP0;
-  std::vector< RealVector > m_cellStatesFlxPntBackupP0;
-
-  std::vector< Framework::State* >* m_cellStatesP0;
-
-  Common::SafePtr<Framework::NumericalJacobian> m_numJacob_P0;
-
-  /// backup of P0 states for Jacobian computation
-  std::vector< RealVector > m_P0StateBackup;
-
-  /// boolean telling whether a sol pnt has been updated during Jacobian computation
-  std::vector< bool > m_solPntUpdated;
-
-}; // end of class ConvBndCorrectionsRHSJacobFluxReconstructionBlending
+}; // class ConvBndCorrectionsRHSJacobFluxReconstructionBlending
 
 //////////////////////////////////////////////////////////////////////////////
 
- } // namespace FluxReconstructionMethod
-
-} // namespace COOLFluiD
+  }  // namespace FluxReconstructionMethod
+}  // namespace COOLFluiD
 
 //////////////////////////////////////////////////////////////////////////////
 

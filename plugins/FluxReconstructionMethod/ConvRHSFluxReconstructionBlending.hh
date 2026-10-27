@@ -9,11 +9,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "Framework/BaseMethodStrategyProvider.hh"
-
-#include "FluxReconstructionMethod/FluxReconstructionSolverData.hh"
-#include "FluxReconstructionMethod/RiemannFlux.hh"
-#include "FluxReconstructionMethod/BaseCorrectionFunction.hh"
+#include "FluxReconstructionMethod/ConvRHSFluxReconstruction.hh"
+#include "FluxReconstructionMethod/BlendingP0Data.hh"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -23,15 +20,32 @@ namespace COOLFluiD {
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * This is a standard command to assemble the convective part of the system using a FluxReconstruction solver with order blending
- * 
+ * Explicit convective RHS command with cell-wise P0 order blending
+ * (UseBlending = true).
+ *
+ * Notation: alpha_K the blending coefficient of cell K (socket "alpha", filled by
+ * the OrderBlending command), alpha_f = max(alpha_L, alpha_R) the coefficient of a
+ * face, F_D the discontinuous flux of the cell extrapolated to its flux points, F_I
+ * the FR interface Riemann flux, F* the same Riemann flux evaluated with the
+ * conserved cell averages u_bar_L and u_bar_R, divh_i,fp the divergence of the
+ * correction function of flux point fp at solution point i, W_fp the cell-average
+ * weight of that correction (BlendingP0Data).
+ *
+ * Residual of cell K at solution point i:
+ *   R_i = (1 - alpha_K) [ -div F_D + sum_fp divh_i,fp F_D - sum_fp divh_i,fp F_I ]   (FR part)
+ *       - sum_fp W_fp [ alpha_f F*_fp + (alpha_K - alpha_f) F_I,fp ]                 (low-order part)
+ * The low-order part is the same at every solution point, so it changes the cell
+ * average only. It equals alpha_K R_P0 - sum_fp W_fp (alpha_f - alpha_K)(F* - F_I),
+ * with R_P0 = -sum_fp W_fp F* the first-order finite-volume residual of the cell
+ * averages; the second term acts only on faces where the neighbour is more blended.
+ * The cell average moves by -sum_fp W_fp [(1 - alpha_f) F_I + alpha_f F*], a flux
+ * both neighbours share for any alpha field.
+ * alpha = 0 everywhere is plain FR. Boundary faces use the FR boundary flux
+ * (ConvBndCorrectionsRHSFluxReconstructionBlending).
+ *
  * @author Rayan Dhib
- * 
- * based on the class ConvRHSFluxReconstruction
- * @author Alexander Papen
- * @author Ray Vandenhoeck
  */
-class ConvRHSFluxReconstructionBlending : public FluxReconstructionSolverCom {
+class ConvRHSFluxReconstructionBlending : public ConvRHSFluxReconstruction {
 
 public: // functions
 
@@ -41,424 +55,69 @@ public: // functions
   /// Destructor
   virtual ~ConvRHSFluxReconstructionBlending() {}
 
-  /// Execute processing actions
-  void execute();
-  
-  /**
-   * Defines the Config Option's of this class
-   * @param options a OptionList where to add the Option's
-   */
-  static void defineConfigOptions(Config::OptionList& options);
-  
-  /**
-   * Configures the command.
-   */
-  virtual void configure ( Config::ConfigArgs& args );
-  
-  /**
-   * Set up private data and data of the aggregated classes
-   * in this command before processing phase
-   */
+  /// Set up private data and data of the aggregated classes in this command before processing phase
   virtual void setup();
 
-  /**
-   * Unsetup private data
-   */
+  /// Unsetup private data
   virtual void unsetup();
-  
+
   /// Returns the DataSocket's that this command needs as sinks
-  /// @return a vector of SafePtr with the DataSockets
-  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > >
-    needsSockets();
-    
-protected: //functions
+  std::vector< Common::SafePtr< Framework::BaseDataSocketSink > > needsSockets();
 
-  /// compute the interface flux
-  void computeInterfaceFlxCorrection();
-  
-  /// compute the divergence of the discontinuous flx (-divFD+divhFD)
-  void computeDivDiscontFlx(std::vector< RealVector >& residuals);
-  
-  /// add the residual updates to the RHS
-  void updateRHS();
-  
-  /**
-   * add the residual updates to the RHS of both neighbor cells
-   */
-  void updateRHSBothSides();
-  
-  /// add the updates to the wave speed
-  void updateWaveSpeed();
-  
-  /// compute the correction -(FI)divh of a neighbouring cell of the face
-  void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
-  
-  /**
-   * compute the wave speed updates for this face
-   */
-  void computeWaveSpeedUpdates(std::vector< CFreal >& waveSpeedUpd, 
-                               std::vector< CFreal >& waveSpeedUpdP0);
-  
-  /**
-   * Set the data for the current face necessary to calculate FI-FD
-   */
-  void setFaceData(CFuint faceID);
-  
-  /**
-   * Set the data for the current cell necessary to calculate the residual update
-   */
-  void setCellData();
-  
-  /**
-   * Compute the left and right states in the flx pnts
-   */
-  void computeFlxPntStates();
-  
-  /**
-   * Compute the volume term contribution to the gradients of the current cell:
-   * the derivative of the polynomial interpolating the gradient variables g(U)
-   * at the solution points, divided by the Jacobian determinant once the face
-   * liftings of this cell are in.
-   */
-  virtual void computeGradients();
-  
-  /**
-   * Compute the lifting of the current interior face into the gradients of
-   * both cells. Each side lifts its gradient variables extrapolated to the
-   * flux points to the average of the two sides.
-   */
-  virtual void computeGradientFaceCorrections();
+protected: // functions
 
-  /**
-   * Add the liftings of the current interior face to m_gradUpdates of both
-   * sides, from the variables being differentiated extrapolated to the flux
-   * points of the face.
-   */
-  void addInteriorFaceLiftings(const RealMatrix& gradVarsFlxPntL, const RealMatrix& gradVarsFlxPntR);
+  /// FR interface flux, and the P0 flux of the cell averages when alpha_f > 0
+  virtual void computeInterfaceFlxCorrection();
 
-  /// allocate the data of the gradient computation
-  void setupGradientData();
+  /// FR face correction scaled by (1 - alpha_K) plus the low-order part of the face
+  virtual void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
 
-protected: //data
-  /// socket for gradients
-  Framework::DataSocketSink< std::vector< RealVector > > socket_gradients;
-  
-  /// socket for gradientsAV
-  Framework::DataSocketSink< std::vector< RealVector > > socket_gradientsAV;
-  
-  /// storage of the rhs
-  Framework::DataSocketSink<CFreal> socket_rhs;
-  
-  /// socket for updateCoeff
-  /// denominators of the coefficients for the update
-  Framework::DataSocketSink<CFreal > socket_updateCoeff;
-  
-  /// socket for size of projection vector in face flux points
-  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPnts;
+  /// FR volume term scaled by (1 - alpha)
+  virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
 
-  Framework::DataSocketSink<  std::vector< CFreal > > socket_faceJacobVecSizeFaceFlxPntsP0;
-  
-  /// storage of the volumes
-  Framework::DataSocketSink<CFreal> socket_volumes;
+  /// flux projection vectors and alpha of the current cell
+  virtual void setCellData();
 
-  /// socket for output of the filtering
+  /// FR wave speed scaled by (1 - alpha) plus the P0 wave speed scaled by alpha
+  virtual void updateWaveSpeed();
+
+  /// blending coefficient of the cell holding the given states
+  CFreal getCellAlpha(const std::vector< Framework::State* >& states);
+
+  /// cell averages of both neighbours of the current face
+  void computeFaceCellAverages();
+
+  /// P0 wave speed of one side of the current face, from the cell average of that side
+  CFreal computeWaveSpeedP0(const CFuint side);
+
+  /// low-order part of the face, -sum_fp W_fp [alpha_f F* + (alpha_K - alpha_f) F_I],
+  /// added to every solution point of one side
+  void addMeanFaceTerm(const CFuint side, const CFreal alpha, std::vector< RealVector >& corrections);
+
+protected: // data
+
+  /// socket holding the per-cell blending coefficient
   Framework::DataSocketSink< CFreal > socket_alpha;
-  
-  /// update variable set
-  Common::SafePtr< Framework::ConvectiveVarSet > m_updateVarSet;
-  
-  /// builder of cells
-  Common::SafePtr<Framework::GeometricEntityPool<Framework::StdTrsGeoBuilder> > m_cellBuilder;
-  
-  /// builder of faces
-  Common::SafePtr<Framework::GeometricEntityPool<Framework::FaceToCellGEBuilder> > m_faceBuilder;
-  
-  /// index of element type
-  CFuint m_iElemType;
-  
-  /// variable for cell
-  Framework::GeometricEntity* m_cell;
-  
-  /// vector containing pointers to the states in a cell
-  std::vector< Framework::State* >* m_cellStates;
-  
-  /// extrapolated states in the flux points of the cell
-  std::vector< std::vector< Framework::State* > > m_cellStatesFlxPnt;
 
-  std::vector< std::vector< Framework::State* > > m_cellStatesFlxPntP0;
-  
-  /// vector containing pointers to the fluxes in the flux points
-  std::vector< std::vector< RealVector > > m_cellFlx;
+  /// weights and cell averages
+  BlendingP0Data m_p0Data;
 
-  std::vector< std::vector< RealVector > > m_cellFlxP0;
-  
-  /// solution point mapped coordinates
-  Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoords;
+  /// cell averages of the two neighbours of the current face, update variables
+  std::vector< Framework::State* > m_cellAvgStates;
 
-  Common::SafePtr< std::vector< RealVector > > m_solPntsLocalCoordsP0;
-  
-  /// flux point mapped coordinates
-  Common::SafePtr< std::vector< RealVector > > m_flxPntsLocalCoords;
+  /// true when the cell averages of the current face are up to date
+  bool m_faceAvgsDone;
 
-  Common::SafePtr< std::vector< RealVector > > m_flxPntsLocalCoordsP0;
-  
-  /// flx pnt - face connectivity per orient
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrient;
+  /// weight of the P0 flux at the current face
+  CFreal m_currFaceAlphaF;
 
-  Common::SafePtr< std::vector< std::vector< std::vector< CFuint > > > > m_faceFlxPntConnPerOrientP0;
+  /// blending coefficient of the current cell
+  CFreal m_currCellAlpha;
 
-  /// flx pnt - face connectivity
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConn;
+  /// P0 flux F* of the cell averages in the flux points of the current face
+  std::vector< RealVector > m_flxPntFluxP0;
 
-  /// flx pnt - face connectivity for P0
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceFlxPntConnP0;   
-
-  /// face connectivity per orient
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_faceConnPerOrient;
-  
-  /// number of equations in the physical model
-  CFuint m_nbrEqs;
-  
-  /// number of dimensions in the physical model
-  CFuint m_dim;
-  
-  /// variable for current face orientation
-  CFuint m_orient;
-  
-  /// number of solution pnts in the cell
-  CFuint m_nbrSolPnts;
-  
-  /// number of face flx pnts
-  CFuint m_nbrFaceFlxPnts;
-
-  CFuint m_nbrFaceFlxPntsP0;
-  
-  /// variable for current face
-  Framework::GeometricEntity* m_face;
-  
-  /// variable for current neighbouring cells
-  std::vector< Framework::GeometricEntity* > m_cells;
-  
-  /// Riemann flux
-  Common::SafePtr< RiemannFlux > m_riemannFluxComputer;
-  
-  /// Correction function computer
-  Common::SafePtr< BaseCorrectionFunction > m_corrFctComputer;
-  
-  /// Divergence of the correction function for current cell
-  std::vector< std::vector< CFreal > > m_corrFctDiv;
-
-  /// Divergence of the P0 correction function
-  std::vector< std::vector< CFreal > > m_corrFctDivP0;
-  
-  std::vector< RealVector > m_P0State;
-  std::vector< std::vector< RealVector > > m_statesP0;
-
-  /// variable for the states in the left and right cell
-  std::vector< std::vector< Framework::State* >* > m_states;
-
-  /// vector of filtered interface fluxes
-  std::vector< std::vector< RealVector > > m_Filtered_flxPntRiemannFlux;
-  
-  /// Interface fluxes at the flux points of a face
-  std::vector< RealVector> m_flxPntRiemannFlux;
-
-  std::vector< RealVector> m_flxPntRiemannFluxP0;
-  
-  /// Continuous flux at the solution points
-  std::vector< std::vector< RealVector> > m_contFlx;
-
-  std::vector< std::vector< RealVector> > m_contFlxP0;
-
-  /// Filtered discontinuous flux at the solution points
-  std::vector< std::vector< RealVector> > m_Filtered_DiscontFlux;
-  
-  /// Vandermonde Matrix
-  RealMatrix  m_vdm;
-
-  /// Inverse of the Vandermonde
-  RealMatrix m_vdmInv;
-
-  /// Face type index
-  CFuint m_faceType;
-
-  /// local cell flux point - face connectivity
-  std::vector< CFuint > m_flxPntFaceConn;
-  
-  /// Divergence of the continuous flux at the solution points
-  std::vector< RealVector> m_divContFlx;
-  
-  /// updates for the wave speed
-  std::vector< CFreal > m_waveSpeedUpd;
-
-  std::vector< CFreal > m_waveSpeedUpdP0;
-
-  /// Per-flux-point P0 wave speed factor: |corrFctDivP0[iFlx]|/0.5, clamped to >=1.0
-  /// Accounts for non-uniform correction function divergence magnitudes (e.g. prism quad vs triag faces)
-  std::vector<CFreal> m_corrFctDivP0WaveSpeedFactor;
-
-  /// face Jacobian vector sizes (abs)
-  std::vector< CFreal > m_faceJacobVecAbsSizeFlxPnts;
-
-  std::vector< CFreal > m_faceJacobVecAbsSizeFlxPntsP0;
-  
-  /// coefficients for integration over a face
-  Common::SafePtr< RealVector > m_faceIntegrationCoefs;
-  
-  Common::SafePtr< RealVector > m_faceIntegrationCoefsP0;
-
-  /// local cell face - mapped coordinate direction per orientation
-  Common::SafePtr< std::vector< std::vector< CFint > > > m_faceMappedCoordDir;
-  
-  /// local cell face - mapped coordinate direction
-  Common::SafePtr< std::vector< CFint > > m_faceLocalDir;
-  
-  /// unit normal vector in flux points
-  std::vector< RealVector > m_unitNormalFlxPnts;
-
-  std::vector< RealVector > m_unitNormalFlxPntsP0;
-  
-  /// face Jacobian vector sizes
-  std::vector< std::vector< CFreal > > m_faceJacobVecSizeFlxPnts;
-
-  std::vector< std::vector< CFreal > > m_faceJacobVecSizeFlxPntsP0;
-  
-  /// flux point coordinates
-  std::vector< RealVector > m_flxPntCoords;
-  
-  /// flux projection vectors in solution points for disc flux
-  std::vector< std::vector< RealVector > > m_cellFluxProjVects;
-
-  std::vector< std::vector< RealVector > > m_cellFluxProjVectsP0;
-  
-  /// updates to the gradients
-  std::vector< std::vector< std::vector< RealVector > > > m_gradUpdates;
-  
-  /// coefs to extrapolate the states to the flx pnts
-  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPnts;
-  
-  Common::SafePtr< std::vector< std::vector< CFreal > > > m_solPolyValsAtFlxPntsP0;
-
-  /// coefs to compute the derivative of the states in the sol pnts
-  Common::SafePtr< std::vector< std::vector< std::vector< CFreal > > > > m_solPolyDerivAtSolPnts;
-
-  /// dimensions on which to evaluate the flux in the flux points
-  Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDim;
-
-  Common::SafePtr< std::vector< CFuint > >  m_flxPntFlxDimP0;
-  
-  /// the discontinuous flux extrapolated to the flux points
-  std::vector< RealVector > m_extrapolatedFluxes;
-
-  std::vector< RealVector > m_extrapolatedFluxesP0;
-  
-  std::vector< RealVector > m_Filtered_extrapolated;
-  
-  /// face local coordinates of the flux points on one face
-  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoords;
-
-  Common::SafePtr< std::vector< RealVector > > m_flxLocalCoordsP0;
-
-  /// local coordinates of the flux points on one face per face type
-  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerType;
-
-  Common::SafePtr<std::vector< std::vector< RealVector > > > m_faceFlxPntsLocalCoordsPerTypeP0;
-
-  std::vector< Framework::State* >* m_cellStatesP0;
-
-  /// coefficients for integration over a face per face type
-  Common::SafePtr<std::vector<  RealVector > > m_faceIntegrationCoefsPerType;
-
-  Common::SafePtr<std::vector<  RealVector > > m_faceIntegrationCoefsPerTypeP0;
-
-  /// dependencies of flx pnts on sol pnts
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDep;
-
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_flxSolDepP0;
-
-  /// dependencies of solution pnts on sol pnts
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solSolDep;
-
-  /// dependencies of flx pnts on sol pnts
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDep;
-
-  Common::SafePtr< std::vector< std::vector< CFuint > > > m_solFlxDepP0;
-
-  /// cell average solution coefficients for weighting P0 contributions
-  Common::SafePtr< RealVector > m_cellAvgSolCoefs;
-
-  /// nbr of sol pnts on which a flx pnt is dependent
-  CFuint m_nbrSolDep;
-
-  /// nbr of flx pnts a sol pnt influences
-  CFuint m_nbrFlxDep;
-
-  CFuint m_nbrFlxDepP0;
-
-  /// nbr of sol pnts a sol pnt influences
-  CFuint m_nbrSolSolDep;
-
-  /// list of dimensions in which the flux will be evaluated in each sol pnt
-  std::vector< std::vector< CFuint > > m_dimList;
-
-  /// vector to store the face jacobians in
-  std::vector< RealVector > m_faceJacobVecs;
-
-  std::vector< RealVector > m_faceJacobVecsP0;
-  
-  /// left correction term projected on a normal
-  RealVector m_projectedCorrL;
-  
-  /// right correction term projected on a normal
-  RealVector m_projectedCorrR;
-  
-  /// array for jacobian determinants in sol pnts
-  std::valarray<CFreal> m_jacobDet;
-
-  /// Physical data temporary vector
-  RealVector m_pData;
-  
-  /// Divergence of the continuous flux at the solution points of the left neighbour
-  std::vector< RealVector> m_divContFlxL;
-  
-  /// Divergence of the continuous flux at the solution points of the right neighbour
-  std::vector< RealVector> m_divContFlxR;
-  
-  /// FR order
-  CFuint m_order;
-
-  /// number of additionnal face normal directions per element for Triag (,terta and prism)
-  CFuint m_ndimplus;
-
-  /// Factor correcting Face normals direction (-1 factor needed for Tetra, due to the numbering convention the face normals are pointing inwards)
-  CFreal m_mappedFaceNormalDir;
-
-  /// First column of VDM (for rank-1 P0 projection)
-  RealVector m_vdmCol0;
-
-  /// First row of VDM inverse (for rank-1 P0 projection)
-  RealVector m_vdmInvRow0;
-
-  /// diffusive variable set, provides the gradient variables g(U)
-  Common::SafePtr< Framework::DiffusiveVarSet > m_diffusiveVarSet;
-
-  /// transformer from update to solution variables
-  Common::SafePtr< Framework::VarSetTransformer > m_updateToSolutionVecTrans;
-
-  /// variables being differentiated at the solution points of the current cell or of both face neighbours
-  std::vector< RealMatrix > m_gradVarsSolPnts;
-
-  /// those variables extrapolated to the flux points of the current face, for both sides
-  std::vector< RealMatrix > m_gradVarsFlxPnt;
-
-  /// those variables extrapolated to one flux point, for both sides
-  std::vector< RealVector > m_flxPntGradVars;
-
-  /// solution point state data of the current cell or of both face neighbours
-  std::vector< std::vector< RealVector* > > m_gradVarStatePtrs;
-
-
-}; // class Solve
+}; // class ConvRHSFluxReconstructionBlending
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -468,4 +127,3 @@ protected: //data
 //////////////////////////////////////////////////////////////////////////////
 
 #endif // COOLFluiD_FluxReconstructionMethod_ConvRHSFluxReconstructionBlending_hh
-
