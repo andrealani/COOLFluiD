@@ -214,11 +214,15 @@ protected: // data
   /// Transition half-width around s0 for the sinusoidal ramp.
   CFreal m_kappa;
 
-  /// Lower dead-band threshold: coefficients below this value become zero.
+  /// Dead-band threshold: coefficients below this value become zero, and with
+  /// m_snapAlphaToOne coefficients above 1 - m_alphaMin become one.
   CFreal m_alphaMin;
 
   /// Maximum blending coefficient cap.
   CFreal m_alphaMax;
+
+  /// SnapAlphaToOne option: alpha > 1 - AlphaMin is set to 1
+  bool m_snapAlphaToOne;
 
   /// Decay factor applied to neighbor alpha during Jacobi smoothing.
   CFreal m_neighborWeight;

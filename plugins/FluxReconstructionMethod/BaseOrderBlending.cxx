@@ -95,6 +95,9 @@ BaseOrderBlending::BaseOrderBlending(const std::string& name) :
   m_alphaMax = 1.0;
   setParameter("AlphaMax", &m_alphaMax);
 
+  m_snapAlphaToOne = true;
+  setParameter("SnapAlphaToOne", &m_snapAlphaToOne);
+
   setParameter("RelaxationFactor", &m_alphaRelaxation);
 
   // Decay factor for neighbor alpha during Jacobi smoothing.
@@ -173,9 +176,11 @@ void BaseOrderBlending::defineConfigOptions(Config::OptionList& options)
     "'rho', 'p', 'rho*p', 'p/rho', 'rho/p', 'velocity_magnitude'. "
     "Physics subclasses may add more (e.g. 'B2' in OrderBlendingMHD).");
   options.addConfigOption< CFreal >("AlphaMin",
-    "Lower dead-band threshold: alpha < AlphaMin snaps to 0.");
+    "Dead-band threshold: alpha < AlphaMin snaps to 0, and with SnapAlphaToOne alpha > 1 - AlphaMin snaps to 1.");
   options.addConfigOption< CFreal >("AlphaMax",
     "Maximum blending coefficient cap.");
+  options.addConfigOption< bool >("SnapAlphaToOne",
+    "alpha > 1 - AlphaMin is set to 1 (default true).");
   options.addConfigOption< CFreal >("RelaxationFactor",
     "Fraction of the new sensor field applied after spatial spreading: "
     "alpha = previous + factor*(requested - previous). Default 1.0 "
@@ -865,8 +870,10 @@ CFreal BaseOrderBlending::applyAlphaLimits(CFreal alpha) const
   {
     alpha = 0.0;
   }
-  // The sinusoidal sensor already reaches one continuously. An early snap
-  // to one would introduce a finite jump into the state-dependent residual.
+  else if (m_snapAlphaToOne && alpha > 1.0 - m_alphaMin)
+  {
+    alpha = 1.0;
+  }
   return std::min(alpha, m_alphaMax);
 }
 

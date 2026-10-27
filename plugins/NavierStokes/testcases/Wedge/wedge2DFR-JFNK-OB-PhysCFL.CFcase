@@ -9,8 +9,8 @@
 #
 ################################################################################
 #
-# converged residual on 8 cores
-### Residual = -7.48761
+# converged residual on 16 cores
+### Residual = -7.66672
 #
 
 CFEnv.ExceptionLogLevel    = 1000
@@ -154,7 +154,7 @@ Simulator.SubSystem.Default.listTRS = InnerCells SuperInlet SuperOutlet SlipWall
 Simulator.SubSystem.MeshCreator = CFmeshFileReader
 Simulator.SubSystem.CFmeshFileReader.Data.FileName = wedge2DFRUpgraded.CFmesh
 Simulator.SubSystem.CFmeshFileReader.Data.CollaboratorNames = FluxReconstruction
-Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 3
+Simulator.SubSystem.CFmeshFileReader.ParReadCFmesh.ParCFmeshFileReader.NbOverlapLayers = 2
 
 Simulator.SubSystem.FluxReconstruction.SpaceRHSJacobCom = RHSJacob
 Simulator.SubSystem.FluxReconstruction.ConvSolveCom = ConvRHSJacob
