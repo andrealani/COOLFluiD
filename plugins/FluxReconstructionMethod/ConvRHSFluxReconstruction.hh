@@ -86,7 +86,7 @@ protected: //functions
   void updateRHSBothSides();
   
   /// add the updates to the wave speed
-  void updateWaveSpeed();
+  virtual void updateWaveSpeed();
   
   /// compute the correction -(FI)divh of a neighbouring cell of the face
   virtual void computeCorrection(CFuint side, std::vector< RealVector >& corrections);

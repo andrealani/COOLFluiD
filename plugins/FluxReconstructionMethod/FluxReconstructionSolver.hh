@@ -243,6 +243,9 @@ private: // data
 
   /// Boolean flag for using subcell finite-volume blending (takes precedence over m_useBlending)
   bool m_useSubcellBlending;
+
+  /// Boolean flag for blending the diffusive terms on the subcells too (needs m_useSubcellBlending)
+  bool m_useSubcellDiffusion;
   
   /// The string for configuration of the m_timeRHSJacob command
   std::string m_timeRHSJacobStr;

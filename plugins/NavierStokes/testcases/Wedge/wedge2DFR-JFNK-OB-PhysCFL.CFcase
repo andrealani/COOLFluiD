@@ -9,8 +9,8 @@
 #
 ################################################################################
 #
-# converged residual on 8 cores
-### Residual = -7.531
+# converged residual on 16 cores
+### Residual = -7.66672
 #
 
 CFEnv.ExceptionLogLevel    = 1000

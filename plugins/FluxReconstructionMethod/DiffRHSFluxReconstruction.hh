@@ -211,7 +211,7 @@ protected: //functions
   void updateWaveSpeed();
   
   /// compute the correction -(FI)divh of a neighbouring cell
-  void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
+  virtual void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
   
   /**
    * compute the wave speed updates for this face

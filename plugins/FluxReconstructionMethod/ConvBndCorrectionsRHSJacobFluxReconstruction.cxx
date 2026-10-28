@@ -306,8 +306,21 @@ void ConvBndCorrectionsRHSJacobFluxReconstruction::computeJacobConvBndCorrection
             acc.addValues(solIdx,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*solIdx]);
             m_solPntUpdated[solIdx] = true;
           }
-        }  
-      } 
+        }
+      }
+
+      // solution points coupled to the perturbed one other than through the flux points of the face
+      if (pertCouplesAllSolPnts())
+      {
+        for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+        {
+          if (!m_solPntUpdated[iSol])
+          {
+            acc.addValues(iSol,m_pertSol,m_pertVar,&m_derivResUpdates[m_nbrEqs*iSol]);
+            m_solPntUpdated[iSol] = true;
+          }
+        }
+      }
 
       // restore physical variable in state
       m_numJacob->restore(pertState[m_pertVar]);

@@ -98,6 +98,17 @@ protected: // functions
   /// compute the total perturbed correction
   virtual void computePertCorrection(std::vector< RealVector >& corrections);
 
+  /**
+   * True when the correction of every solution point of the cell depends on
+   * every solution point, not only through the flux points of the face (for
+   * instance through the cell average in cell-wise order blending). The
+   * Jacobian then gets the entries of all solution points. Default: false.
+   */
+  virtual bool pertCouplesAllSolPnts()
+  {
+    return false;
+  }
+
 protected: // data
   
   /// pointer to the linear system solver

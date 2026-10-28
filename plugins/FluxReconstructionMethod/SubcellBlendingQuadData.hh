@@ -111,6 +111,12 @@ public: // functions
   /// addSubcellResDelta.
   void computeCellNormals(Framework::GeometricEntity* cell);
 
+  /// internal interface normals of the last computeCellNormals call, in the interface order
+  /// of the class comment (normal to ksi first, iIntf = iKsi*n + iEta between iSol and
+  /// iSol + n; then normal to eta, iIntf = (n-1)*n + iKsi*(n-1) + iEta between iSol and iSol + 1,
+  /// n = getNbrSolPnts1D(), iSol = iKsi*n + iEta)
+  const std::vector< RealVector >& getIntfNormals() const { return m_intfNormals; }
+
   /// Read the 1D correction function derivatives gL', gR' at the solution points from the
   /// divergence of the FR correction functions, corrFctDiv[solution point][cell flux point],
   /// and turn the telescoped normals on. Prints a warning and keeps the sampled normals if

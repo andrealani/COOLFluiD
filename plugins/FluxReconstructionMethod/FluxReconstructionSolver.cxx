@@ -54,6 +54,7 @@ void FluxReconstructionSolver::defineConfigOptions(Config::OptionList& options)
   options.addConfigOption< std::string >("TimeRHSJacobCom","Command for the computation of the time discretization contibution to RHS and Jacobian.");
   options.addConfigOption< bool >("UseBlending","Use blending approach for convective terms.");
   options.addConfigOption< bool >("UseSubcellBlending","Use subcell finite-volume blending for the convective terms (quads only). Takes precedence over UseBlending.");
+  options.addConfigOption< bool >("UseSubcellDiffusion","Blend the diffusive terms on the subcells too, with the alpha of UseSubcellBlending (required): appends SubcellBlending to DiffSolveCom and to the diffusive boundary commands (implicit NS commands, e.g. DiffRHSJacobNS with SpaceRHSJacobCom = RHSJacobNS).");
   options.addConfigOption< std::string >("LimiterCom","Command to limit the solution.");
   options.addConfigOption< std::string >("PreProcessCom","Command to preprocess the solution.");
   options.addConfigOption< std::string >("PhysicalityCom","Command to enforce physical soundness of the solution.");
@@ -107,7 +108,10 @@ FluxReconstructionSolver::FluxReconstructionSolver(const std::string& name) :
 
   m_useSubcellBlending = false;
   setParameter("UseSubcellBlending", &m_useSubcellBlending);
-  
+
+  m_useSubcellDiffusion = false;
+  setParameter("UseSubcellDiffusion", &m_useSubcellDiffusion);
+
   m_timeRHSJacobStr = "Null";
   setParameter("TimeRHSJacobCom", &m_timeRHSJacobStr);
   
@@ -223,8 +227,18 @@ void FluxReconstructionSolver::configure ( Config::ConfigArgs& args )
   CFLog(INFO,"FluxReconstruction: convective command " << m_convSolveStr + blendingSuffix << "\n");
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
     args, m_convSolve,m_convSolveStr + blendingSuffix,m_data );
+  // subcell blending of the diffusive terms uses dedicated diffusive commands
+  if (m_useSubcellDiffusion && !m_useSubcellBlending)
+  {
+    throw Common::BadValueException (FromHere(),"FluxReconstructionSolver: UseSubcellDiffusion needs UseSubcellBlending = true.");
+  }
+  const std::string diffSuffix = m_useSubcellDiffusion ? "SubcellBlending" : "";
+  if (m_useSubcellDiffusion)
+  {
+    CFLog(INFO,"FluxReconstruction: diffusive command " << m_diffSolveStr + diffSuffix << "\n");
+  }
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >(
-    args, m_diffSolve,m_diffSolveStr,m_data );
+    args, m_diffSolve,m_diffSolveStr + diffSuffix,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
     args, m_limiter,m_limiterStr,m_data );
   configureCommand< FluxReconstructionSolverData,FluxReconstructionSolverCom::PROVIDER >( 
@@ -409,13 +423,14 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
       
       CFLog(INFO,"FluxReconstruction: Creating diffusive boundary correction command for boundary condition: "
                   << m_bcNameDiffStr[iBc] << "\n");
-      CFLog(INFO,"DiffBndCorrections" << m_spaceRHSJacobStr << "\n");
+      const std::string diffBndCorrectionStr = "DiffBndCorrections" + m_spaceRHSJacobStr + (m_useSubcellDiffusion ? "SubcellBlending" : "");
+      CFLog(INFO,diffBndCorrectionStr << "\n");
       try
       {
         configureCommand<FluxReconstructionSolverCom,
           FluxReconstructionSolverData,
           FluxReconstructionSolverComProvider>
-          (args, m_bcsDiffComs[iBc], "DiffBndCorrections"+m_spaceRHSJacobStr,m_bcNameDiffStr[iBc], m_data);
+          (args, m_bcsDiffComs[iBc], diffBndCorrectionStr,m_bcNameDiffStr[iBc], m_data);
       }
       catch (Common::NoSuchValueException& e)
       {
@@ -425,7 +440,7 @@ void FluxReconstructionSolver::configureBcCommands ( Config::ConfigArgs& args )
         // wall flux without the physics hooks of the model, so refuse it
         if (m_data->getDiffusiveVarStr() != "Null")
         {
-          throw Common::BadValueException (FromHere(),"FluxReconstructionSolver: the diffusive boundary command DiffBndCorrections" + m_spaceRHSJacobStr + " does not exist, and the generic one is not used with a diffusive term. Check SpaceRHSJacobCom.");
+          throw Common::BadValueException (FromHere(),"FluxReconstructionSolver: the diffusive boundary command " + diffBndCorrectionStr + " does not exist, and the generic one is not used with a diffusive term. Check SpaceRHSJacobCom (and UseSubcellDiffusion).");
         }
 
         CFLog(INFO, "Choosing DiffBndCorrectionsRHS instead ...\n");
