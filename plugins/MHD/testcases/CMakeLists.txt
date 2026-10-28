@@ -1,4 +1,3 @@
-cf_add_case( MPI 8 CASEDIR COCONUT/SunToEarthCR2282 PCASE map_steady_fullMHD.CFcase CASEFILES Mesh map.inter MapData )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_Shifted PCASE minimum_original_general.CFcase CASEFILES BCindependent5.CFmesh 2008_lmax25.dat dipole.inter )
@@ -20,6 +19,7 @@ cf_add_case( MPI 8 CASEDIR COCONUT/MHDRotor PCASE MHDRotor_FullE.CFcase CASEFILE
 cf_add_case( MPI 8 CASEDIR COCONUT/OrszagTang PCASE OZ_DecE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 cf_add_case( MPI 8 CASEDIR COCONUT/OrszagTang PCASE OZ_FullE.CFcase CASEFILES Mesh_2x2_200x200_unstr.neu ) 
 cf_add_case( MPI 8 CASEDIR COCONUT/Quadrupole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh quadrupole_axisym.dat map.inter )
+cf_add_case( MPI 8 CASEDIR COCONUT/SunToEarthCR2282 PCASE map_steady_fullMHD.CFcase CASEFILES Mesh map.inter MapData )
 #cf_add_case( MPI default PCASE CoronalExpansion/coronalExpansionFVMMHDProjImpl.CFcase )
 #cf_add_case( MPI default PCASE CoronalExpansion/coronalExpansionFVMMHDProjImplPRIM.CFcase )
 #cf_add_case( MPI default PCASE CoronalExpansion/coronalExpansionFVMMHDProjPolytropicImplPRIM.CFcase )

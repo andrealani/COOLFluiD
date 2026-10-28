@@ -262,7 +262,7 @@ Simulator.SubSystem.StopConditionSubSystemStatus = FlowSubSystemStatus
 Simulator.SubSystem.LinearSystemSolver = PETSC PETSC
 Simulator.SubSystem.LSSNames = FlowLSS EMLSS
 
-Simulator.SubSystem.FlowLSS.Data.PCType = PCASM
+Simulator.SubSystem.FlowLSS.Data.PCType = PCBJACOBI #PCASM
 Simulator.SubSystem.FlowLSS.Data.KSPType = KSPGMRES
 Simulator.SubSystem.FlowLSS.Data.MatOrderingType = MATORDERING_RCM
 Simulator.SubSystem.FlowLSS.Data.MaxIter = 100 #50 #1000 #
