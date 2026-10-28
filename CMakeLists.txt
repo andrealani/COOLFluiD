@@ -469,7 +469,8 @@ LOG ( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++" )
 ##############################################################################
 
 #IF (CF_ENABLE_STATIC)
-SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE  "Full path to coolfluid-solver" INTERNAL )
+#SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE  "Full path to coolfluid-solver" INTERNAL )
+SET ( coolfluid_solver_exe ${COOLFluiD_BINARY_DIR}/apps/Solver/coolfluid-solver CACHE INTERNAL "Full path to coolfluid-solver" )
 MESSAGE ("###### coolfluid_solver_exe is ${coolfluid_solver_exe}")
 MARK_AS_ADVANCED ( coolfluid_solver_exe )
 #ENDIF()

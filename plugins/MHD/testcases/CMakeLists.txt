@@ -1,3 +1,4 @@
+cf_add_case( MPI 8 CASEDIR COCONUT/SunToEarthCR2282 PCASE map_steady_fullMHD.CFcase CASEFILES Mesh map.inter MapData )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole PCASE map_TEST_fullMHD.CFcase CASEFILES BCindependent5.CFmesh dipole.dat map.inter )
 cf_add_case( MPI 8 CASEDIR COCONUT/Dipole_Shifted PCASE minimum_original_general.CFcase CASEFILES BCindependent5.CFmesh 2008_lmax25.dat dipole.inter )

@@ -185,7 +185,7 @@ VEC_EASSIGN_OP_CONST(/=)
   template <typename V1, typename V2>  
   HHOST_DEV void proj(const V1& v1, const V2& v2)
   {
-    assert(v1.size() = v2.size());
+    assert(v1.size() == v2.size());
     T scale = (MathFunctions::innerProd(v1, v2) / v1.sqrNorm());
     *this = v1 * scale;
   }
