@@ -42,6 +42,16 @@ namespace COOLFluiD {
  * term that is the same at every solution point), so the face block is dense;
  * faces with alpha_f = 0 use the FR face Jacobian.
  *
+ * ModeRelaxation (default true) adds at every solution point i of a cell with alpha_K > 0
+ *   R_i^MR = -alpha_K sigma_K |J_i| (U_i - U_bar_K),   sigma_K = ModeRelaxationFactor (2P+1) lambda_K / h_K,
+ * with U_i the solution variables, |J_i| the metric Jacobian at i, U_bar_K the conserved cell
+ * average, P the polynomial order, lambda_K the largest wave speed at U_bar_K and h_K = V_K^(1/d)
+ * the size of the cell of volume V_K in d dimensions; alpha_K sigma_K |J_i| is added to the update
+ * coefficient of i. With alpha_K frozen its Jacobian is
+ *   dR_i^MR/du_k = -alpha_K |J_i| [ sigma_K (delta_ik - w_k) dU/du(u_k) + dsigma_K/du_k (U_i - U_bar_K) ],
+ * u_k the update variables at k, w_k = c_k |J_k| / sum_j c_j |J_j| with c_k the cell-average weights,
+ * dU/du and dsigma_K/du_k by finite differences.
+ *
  * @author Rayan Dhib
  */
 class ConvRHSJacobFluxReconstructionBlending : public ConvRHSJacobFluxReconstruction {
@@ -59,6 +69,12 @@ public: // functions
 
   /// Unsetup private data
   virtual void unsetup();
+
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
+
+  /// Configures the command
+  virtual void configure(Config::ConfigArgs& args);
 
   /// Execute processing actions: residual, then the face and cell Jacobians
   virtual void execute();
@@ -115,6 +131,12 @@ protected: // functions
    */
   void computeFaceJacobBlend(const bool bothSides, const CFuint side);
 
+  /// mode relaxation of the current cell added to the RHS and the update coefficients
+  void addModeRelaxation();
+
+  /// Jacobian of the mode relaxation of the current cell
+  void computeJacobModeRelaxation();
+
 protected: // data
 
   /// socket holding the per-cell blending coefficient
@@ -146,6 +168,37 @@ protected: // data
 
   /// mean correction of one side of the current face, per equation
   RealVector m_meanTerm;
+
+  /// ModeRelaxation option
+  bool m_modeRelax;
+
+  /// ModeRelaxationFactor option
+  CFreal m_modeRelaxFactor;
+
+  /// unit normals over which lambda_K is taken
+  std::vector< RealVector > m_modeRelaxNormals;
+
+  /// mode relaxation term of the current cell per solution point
+  std::vector< RealVector > m_modeRelaxRes;
+
+  /// solution variables U_j of the current cell per solution point
+  std::vector< RealVector > m_modeRelaxSolPnts;
+
+  /// U_bar_K, and U_bar_K with the perturbed solution point
+  RealVector m_modeRelaxAvg;
+  RealVector m_modeRelaxAvgPert;
+
+  /// solution variables of the perturbed solution point
+  RealVector m_modeRelaxSolPert;
+
+  /// sigma_K and its perturbed value (size 1, for the finite difference)
+  RealVector m_modeRelaxSigma;
+  RealVector m_modeRelaxSigmaPert;
+
+  /// dU/du column of the perturbed variable, dsigma_K/du (size 1), and one column of the Jacobian block
+  RealVector m_modeRelaxDeriv;
+  RealVector m_modeRelaxDSigma;
+  RealVector m_modeRelaxCol;
 
 }; // class ConvRHSJacobFluxReconstructionBlending
 

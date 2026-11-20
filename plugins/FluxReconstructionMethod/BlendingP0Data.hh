@@ -41,6 +41,13 @@ namespace COOLFluiD {
  *   sum_j c_j |J_j| U_j / sum_j c_j |J_j|, returned in the update variables
  *   through the physical data: computePhysicalData of the solution variable set,
  *   then computeStateFromPhysicalData of the update variable set.
+ * - Mode relaxation (ModeRelaxation of the blending commands): the term
+ *   -alpha sigma |J_j| (U_j - U_bar) at every solution point j of a blended cell,
+ *   with U_j the solution variables, U_bar their conserved cell average, alpha
+ *   the blending coefficient of the cell, sigma = f (2P+1) lambda / h, f the
+ *   factor, P the polynomial order, lambda the largest |eigenvalue| at U_bar over
+ *   a set of unit normals and h = V^(1/d) the size of the cell of volume V in d
+ *   dimensions. sum_j c_j of the term is zero.
  *
  * @author Rayan Dhib
  */
@@ -90,6 +97,44 @@ public: // functions
   void computeCellAverage(const std::vector< Framework::State* >& states,
                           Framework::DataHandle< CFreal >& volumes,
                           Framework::State& avg);
+
+  /**
+   * Mode relaxation term of one cell, -alpha sigma |J_j| (U_j - U_bar) per solution point j.
+   * @param states   states of the cell (update variables)
+   * @param volumes  metric Jacobian |J_j| per state local ID
+   * @param alpha    blending coefficient of the cell
+   * @param factor   factor f of sigma = f (2P+1) lambda / h
+   * @param order    polynomial order P
+   * @param h        cell size
+   * @param normals  unit normals over which lambda is the largest |eigenvalue|
+   * @param res      output, the term per solution point in solution variables
+   * @return alpha sigma
+   */
+  CFreal computeModeRelaxation(const std::vector< Framework::State* >& states,
+                               Framework::DataHandle< CFreal >& volumes,
+                               const CFreal alpha,
+                               const CFreal factor,
+                               const CFuint order,
+                               const CFreal h,
+                               const std::vector< RealVector >& normals,
+                               std::vector< RealVector >& res);
+
+  /**
+   * sigma = factor (2P+1) lambda / h of the mode relaxation.
+   * @param solAvg   average of the solution variables, U_bar
+   * @param factor   factor f
+   * @param order    polynomial order P
+   * @param h        cell size
+   * @param normals  unit normals over which lambda is the largest |eigenvalue| at U_bar
+   */
+  CFreal computeModeRelaxationSigma(const RealVector& solAvg,
+                                    const CFreal factor,
+                                    const CFuint order,
+                                    const CFreal h,
+                                    const std::vector< RealVector >& normals);
+
+  /// unit normals of the mode relaxation: the axes and the diagonals (2D: 4, 3D: 7)
+  static void setModeRelaxationNormals(const CFuint dim, std::vector< RealVector >& normals);
 
 private: // data
 

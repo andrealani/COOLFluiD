@@ -128,5 +128,116 @@ void BlendingP0Data::computeCellAverage(const vector< State* >& states,
 
 //////////////////////////////////////////////////////////////////////////////
 
+CFreal BlendingP0Data::computeModeRelaxation(const vector< State* >& states,
+                                             DataHandle< CFreal >& volumes,
+                                             const CFreal alpha,
+                                             const CFreal factor,
+                                             const CFuint order,
+                                             const CFreal h,
+                                             const vector< RealVector >& normals,
+                                             vector< RealVector >& res)
+{
+  cf_assert(states.size() == m_nbrSolPnts);
+  cf_assert(res.size() == m_nbrSolPnts);
+
+  // conserved average U_bar of the solution variables
+  *m_solAvg = 0.0;
+  CFreal wSum = 0.0;
+  for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+  {
+    // transform() returns a buffer overwritten by the next call, so use it straight away
+    const State* const solState = m_updateToSol->transform(states[j]);
+    const CFreal w = m_c[j]*volumes[states[j]->getLocalID()];
+    wSum += w;
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      (*m_solAvg)[iEq] += w*(*solState)[iEq];
+    }
+  }
+
+  cf_assert(wSum > 0.0);
+  *m_solAvg /= wSum;
+
+  const CFreal sigma = computeModeRelaxationSigma(*m_solAvg, factor, order, h, normals);
+
+  // -alpha sigma |J_j| (U_j - U_bar)
+  for (CFuint j = 0; j < m_nbrSolPnts; ++j)
+  {
+    const State* const solState = m_updateToSol->transform(states[j]);
+    const CFreal f = alpha*sigma*volumes[states[j]->getLocalID()];
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      res[j][iEq] = -f*((*solState)[iEq] - (*m_solAvg)[iEq]);
+    }
+  }
+
+  return alpha*sigma;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+CFreal BlendingP0Data::computeModeRelaxationSigma(const RealVector& solAvg,
+                                                  const CFreal factor,
+                                                  const CFuint order,
+                                                  const CFreal h,
+                                                  const vector< RealVector >& normals)
+{
+  // largest |eigenvalue| lambda at U_bar over the normals; m_solAvg holds U_bar as a state for the physical data
+  if (&solAvg != m_solAvg)
+  {
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      (*m_solAvg)[iEq] = solAvg[iEq];
+    }
+  }
+  m_solutionVar->computePhysicalData(*m_solAvg, m_pData);
+
+  CFreal lambda = 0.0;
+  for (CFuint i = 0; i < normals.size(); ++i)
+  {
+    lambda = std::max(lambda, m_updateVar->getMaxAbsEigenValue(m_pData, normals[i]));
+  }
+
+  return factor*(2.0*order + 1.0)*lambda/h;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void BlendingP0Data::setModeRelaxationNormals(const CFuint dim, vector< RealVector >& normals)
+{
+  normals.clear();
+
+  for (CFuint iDim = 0; iDim < dim; ++iDim)
+  {
+    RealVector n(dim);
+    n = 0.0;
+    n[iDim] = 1.0;
+    normals.push_back(n);
+  }
+
+  if (dim == 2)
+  {
+    const CFreal s = 1.0/std::sqrt(2.0);
+    RealVector n(2);
+    n[0] = s; n[1] = s;
+    normals.push_back(n);
+    n[0] = s; n[1] = -s;
+    normals.push_back(n);
+  }
+  else if (dim == 3)
+  {
+    const CFreal s = 1.0/std::sqrt(3.0);
+    const CFreal signs[4][2] = {{1.0, 1.0}, {1.0, -1.0}, {-1.0, 1.0}, {-1.0, -1.0}};
+    for (CFuint i = 0; i < 4; ++i)
+    {
+      RealVector n(3);
+      n[0] = s; n[1] = signs[i][0]*s; n[2] = signs[i][1]*s;
+      normals.push_back(n);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
   }  // namespace FluxReconstructionMethod
 }  // namespace COOLFluiD

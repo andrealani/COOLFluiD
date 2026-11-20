@@ -10,6 +10,7 @@
 #include "Framework/CFSide.hh"
 #include "Framework/MeshData.hh"
 #include "Framework/PhysicalModel.hh"
+#include "Framework/VarSetTransformer.hh"
 
 #include "FluxReconstructionMethod/FluxReconstruction.hh"
 #include "FluxReconstructionMethod/FluxReconstructionElementData.hh"
@@ -44,8 +45,49 @@ ConvRHSJacobFluxReconstructionBlending::ConvRHSJacobFluxReconstructionBlending(c
   m_currCellAlpha(0.0),
   m_flxPntFluxP0(),
   m_flxPntFluxP0Backup(),
-  m_meanTerm()
+  m_meanTerm(),
+  m_modeRelax(),
+  m_modeRelaxFactor(),
+  m_modeRelaxNormals(),
+  m_modeRelaxRes(),
+  m_modeRelaxSolPnts(),
+  m_modeRelaxAvg(),
+  m_modeRelaxAvgPert(),
+  m_modeRelaxSolPert(),
+  m_modeRelaxSigma(),
+  m_modeRelaxSigmaPert(),
+  m_modeRelaxDeriv(),
+  m_modeRelaxDSigma(),
+  m_modeRelaxCol()
 {
+  addConfigOptionsTo(this);
+
+  m_modeRelax = true;
+  setParameter("ModeRelaxation", &m_modeRelax);
+
+  m_modeRelaxFactor = 0.25;
+  setParameter("ModeRelaxationFactor", &m_modeRelaxFactor);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSJacobFluxReconstructionBlending::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("ModeRelaxation",
+    "Relax the solution points of a blended cell toward the cell average at the rate "
+    "alpha ModeRelaxationFactor (2P+1) lambda / h, with lambda the largest wave speed at the "
+    "cell average and h the cell size; the cell average is unchanged (default true). "
+    "For steady cases with the assembled Jacobian: set OrderBlending.FreezeAlphaStallWindow, "
+    "otherwise from ModeRelaxationFactor 0.5 a moving alpha can lock Newton into a period-2 cycle.");
+  options.addConfigOption< CFreal >("ModeRelaxationFactor",
+    "Factor of the rate of ModeRelaxation (default 0.25).");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSJacobFluxReconstructionBlending::configure(Config::ConfigArgs& args)
+{
+  ConvRHSJacobFluxReconstruction::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -217,6 +259,9 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
       {
         computeDivDiscontFlx(m_divContFlx);
         updateRHS();
+
+        // mode relaxation, kept out of m_divContFlx, the unperturbed value of the volume Jacobian
+        if (m_modeRelax && m_currCellAlpha > 0.0) addModeRelaxation();
       }
 
       // if there is a diffusive term, compute the gradients
@@ -225,10 +270,12 @@ void ConvRHSJacobFluxReconstructionBlending::execute()
         computeGradients();
       }
 
-      // volume Jacobian: (1 - alpha_K) times the FR one, same sparsity
+      // volume Jacobian: (1 - alpha_K) times the FR one, same sparsity, plus the mode relaxation
       if (getMethodData().doComputeJacobian() && (*m_cellStates)[0]->isParUpdatable())
       {
         computeJacobConvCorrection();
+
+        if (m_modeRelax && m_currCellAlpha > 0.0) computeJacobModeRelaxation();
       }
 
       //release the GeometricEntity
@@ -515,6 +562,114 @@ void ConvRHSJacobFluxReconstructionBlending::computeFaceJacobBlend(const bool bo
 
 //////////////////////////////////////////////////////////////////////////////
 
+void ConvRHSJacobFluxReconstructionBlending::addModeRelaxation()
+{
+  DataHandle< CFreal > rhs = socket_rhs.getDataHandle();
+  DataHandle< CFreal > volumes = socket_volumes.getDataHandle();
+  DataHandle< CFreal > updateCoeff = socket_updateCoeff.getDataHandle();
+
+  const CFreal resFactor = getMethodData().getResFactor();
+
+  const CFreal h = std::pow(m_cell->computeVolume(), 1.0/m_dim);
+  const CFreal rate = m_p0Data.computeModeRelaxation(*m_cellStates, volumes, m_currCellAlpha, m_modeRelaxFactor,
+                                                     m_order, h, m_modeRelaxNormals, m_modeRelaxRes);
+
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+    const CFuint resID = m_nbrEqs*stateID;
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      rhs[resID+iVar] += resFactor*m_modeRelaxRes[iSol][iVar];
+    }
+
+    updateCoeff[stateID] += rate*volumes[stateID];
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSJacobFluxReconstructionBlending::computeJacobModeRelaxation()
+{
+  // blocks -resFactor dR_i^MR/du_k (the sign convention of the finite-difference blocks of this command),
+  // dR_i^MR/du_k = -alpha_K |J_i| [sigma_K (delta_ik - w_k) dU/du(u_k) + dsigma_K/du_k (U_i - U_bar_K)]
+  const CFreal resFactor = getMethodData().getResFactor();
+  const CFreal alpha = m_currCellAlpha;
+
+  DataHandle< CFreal > volumes = socket_volumes.getDataHandle();
+  SafePtr< VarSetTransformer > updateToSol = getMethodData().getUpdateToSolutionVecTrans();
+
+  BlockAccumulator& acc = *m_acc;
+
+  // U_j, the conserved average U_bar_K and sigma_K
+  CFreal wSum = 0.0;
+  m_modeRelaxAvg = 0.0;
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    const CFuint stateID = (*m_cellStates)[iSol]->getLocalID();
+    acc.setRowColIndex(iSol, stateID);
+
+    // the transform returns a buffer overwritten by the next call, so copy it
+    m_modeRelaxSolPnts[iSol] = *updateToSol->transform((*m_cellStates)[iSol]);
+
+    const CFreal w = m_p0Data.getCellAvgCoef(iSol)*volumes[stateID];
+    wSum += w;
+    for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+    {
+      m_modeRelaxAvg[iEq] += w*m_modeRelaxSolPnts[iSol][iEq];
+    }
+  }
+  m_modeRelaxAvg /= wSum;
+
+  const CFreal h = std::pow(m_cell->computeVolume(), 1.0/m_dim);
+  m_modeRelaxSigma[0] = m_p0Data.computeModeRelaxationSigma(m_modeRelaxAvg, m_modeRelaxFactor, m_order, h,
+                                                            m_modeRelaxNormals);
+
+  for (CFuint kSol = 0; kSol < m_nbrSolPnts; ++kSol)
+  {
+    State& pertState = *(*m_cellStates)[kSol];
+    const CFreal wk = m_p0Data.getCellAvgCoef(kSol)*volumes[pertState.getLocalID()]/wSum;
+
+    for (CFuint iVar = 0; iVar < m_nbrEqs; ++iVar)
+    {
+      // dU/du column and dsigma_K/du of variable iVar of solution point k
+      m_numJacob->perturb(iVar, pertState[iVar]);
+      m_modeRelaxSolPert = *updateToSol->transform(&pertState);
+      for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+      {
+        m_modeRelaxAvgPert[iEq] = m_modeRelaxAvg[iEq] + wk*(m_modeRelaxSolPert[iEq] - m_modeRelaxSolPnts[kSol][iEq]);
+      }
+      m_modeRelaxSigmaPert[0] = m_p0Data.computeModeRelaxationSigma(m_modeRelaxAvgPert, m_modeRelaxFactor, m_order, h,
+                                                                    m_modeRelaxNormals);
+      m_numJacob->computeDerivative(m_modeRelaxSolPnts[kSol], m_modeRelaxSolPert, m_modeRelaxDeriv);
+      m_numJacob->computeDerivative(m_modeRelaxSigma, m_modeRelaxSigmaPert, m_modeRelaxDSigma);
+      m_numJacob->restore(pertState[iVar]);
+
+      for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+      {
+        const CFreal delta = (iSol == kSol) ? 1.0 : 0.0;
+        const CFreal factor = resFactor*alpha*volumes[(*m_cellStates)[iSol]->getLocalID()];
+        const CFreal factorU = factor*m_modeRelaxSigma[0]*(delta - wk);
+        const CFreal factorS = factor*m_modeRelaxDSigma[0];
+        for (CFuint iEq = 0; iEq < m_nbrEqs; ++iEq)
+        {
+          m_modeRelaxCol[iEq] = factorU*m_modeRelaxDeriv[iEq]
+                              + factorS*(m_modeRelaxSolPnts[iSol][iEq] - m_modeRelaxAvg[iEq]);
+        }
+        acc.addValues(iSol, kSol, iVar, &m_modeRelaxCol[0]);
+      }
+    }
+  }
+
+  // add the values to the jacobian matrix (or direct element blocks)
+  getMethodData().assembleJacobBlock(acc, m_cell->getID());
+
+  // reset to zero the entries in the block accumulator
+  acc.reset();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ConvRHSJacobFluxReconstructionBlending::computeDivDiscontFlx(vector< RealVector >& residuals)
 {
   // FR volume term -div(F_D) + div(h F_D); the P0 part has no volume term
@@ -633,6 +788,31 @@ void ConvRHSJacobFluxReconstructionBlending::setup()
   }
   m_cellAvgBackup.resize(m_nbrEqs);
   m_meanTerm.resize(m_nbrEqs);
+
+  BlendingP0Data::setModeRelaxationNormals(m_dim, m_modeRelaxNormals);
+  m_modeRelaxRes.resize(m_nbrSolPnts);
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_modeRelaxRes[iSol].resize(m_nbrEqs);
+  }
+  m_modeRelaxSolPnts.resize(m_nbrSolPnts);
+  for (CFuint iSol = 0; iSol < m_nbrSolPnts; ++iSol)
+  {
+    m_modeRelaxSolPnts[iSol].resize(m_nbrEqs);
+  }
+  m_modeRelaxAvg.resize(m_nbrEqs);
+  m_modeRelaxAvgPert.resize(m_nbrEqs);
+  m_modeRelaxSolPert.resize(m_nbrEqs);
+  m_modeRelaxSigma.resize(1);
+  m_modeRelaxSigmaPert.resize(1);
+  m_modeRelaxDeriv.resize(m_nbrEqs);
+  m_modeRelaxDSigma.resize(1);
+  m_modeRelaxCol.resize(m_nbrEqs);
+
+  if (m_modeRelax)
+  {
+    CFLog(INFO, "ConvRHSJacobFluxReconstructionBlending: ModeRelaxation on, ModeRelaxationFactor = " << m_modeRelaxFactor << "\n");
+  }
 
   // m_nbrFaceFlxPnts is the largest number of flux points of a face here (prisms)
   m_flxPntFluxP0.resize(m_nbrFaceFlxPnts);

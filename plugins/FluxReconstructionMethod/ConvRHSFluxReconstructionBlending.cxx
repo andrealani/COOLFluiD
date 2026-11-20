@@ -37,8 +37,38 @@ ConvRHSFluxReconstructionBlending::ConvRHSFluxReconstructionBlending(const std::
   m_faceAvgsDone(false),
   m_currFaceAlphaF(0.0),
   m_currCellAlpha(0.0),
-  m_flxPntFluxP0()
+  m_flxPntFluxP0(),
+  m_modeRelax(),
+  m_modeRelaxFactor(),
+  m_modeRelaxNormals(),
+  m_modeRelaxRes()
 {
+  addConfigOptionsTo(this);
+
+  m_modeRelax = true;
+  setParameter("ModeRelaxation", &m_modeRelax);
+
+  m_modeRelaxFactor = 0.25;
+  setParameter("ModeRelaxationFactor", &m_modeRelaxFactor);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSFluxReconstructionBlending::defineConfigOptions(Config::OptionList& options)
+{
+  options.addConfigOption< bool >("ModeRelaxation",
+    "Relax the solution points of a blended cell toward the cell average at the rate "
+    "alpha ModeRelaxationFactor (2P+1) lambda / h, with lambda the largest wave speed at the "
+    "cell average and h the cell size; the cell average is unchanged (default true).");
+  options.addConfigOption< CFreal >("ModeRelaxationFactor",
+    "Factor of the rate of ModeRelaxation (default 0.25).");
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ConvRHSFluxReconstructionBlending::configure(Config::ConfigArgs& args)
+{
+  ConvRHSFluxReconstruction::configure(args);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -159,6 +189,24 @@ void ConvRHSFluxReconstructionBlending::computeDivDiscontFlx(vector< RealVector 
   {
     residuals[iSolPnt] *= oneMinusAlpha;
   }
+
+  if (!m_modeRelax) return;
+
+  // mode relaxation -alpha_K sigma_K |J_i| (U_i - U_bar_K), and alpha_K sigma_K |J_i| in the update coefficient
+  DataHandle< CFreal > volumes = socket_volumes.getDataHandle();
+  DataHandle< CFreal > updateCoeff = socket_updateCoeff.getDataHandle();
+
+  const CFreal h = std::pow(m_cell->computeVolume(), 1.0/m_dim);
+  const CFreal rate = m_p0Data.computeModeRelaxation(*m_cellStates, volumes, alpha, m_modeRelaxFactor, m_order, h,
+                                                     m_modeRelaxNormals, m_modeRelaxRes);
+
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  {
+    residuals[iSolPnt] += m_modeRelaxRes[iSolPnt];
+
+    const CFuint stateID = (*m_cellStates)[iSolPnt]->getLocalID();
+    updateCoeff[stateID] += rate*volumes[stateID];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -255,6 +303,18 @@ void ConvRHSFluxReconstructionBlending::setup()
   for (CFuint iFlxPnt = 0; iFlxPnt < m_nbrFaceFlxPnts; ++iFlxPnt)
   {
     m_flxPntFluxP0[iFlxPnt].resize(m_nbrEqs);
+  }
+
+  BlendingP0Data::setModeRelaxationNormals(m_dim, m_modeRelaxNormals);
+  m_modeRelaxRes.resize(m_nbrSolPnts);
+  for (CFuint iSolPnt = 0; iSolPnt < m_nbrSolPnts; ++iSolPnt)
+  {
+    m_modeRelaxRes[iSolPnt].resize(m_nbrEqs);
+  }
+
+  if (m_modeRelax)
+  {
+    CFLog(INFO, "ConvRHSFluxReconstructionBlending: ModeRelaxation on, ModeRelaxationFactor = " << m_modeRelaxFactor << "\n");
   }
 }
 

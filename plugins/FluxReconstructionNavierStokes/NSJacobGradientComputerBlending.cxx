@@ -37,7 +37,6 @@ NSJacobGradientComputerBlendingTurbProvider("ConvRHSJacobTurbBlending");
 NSJacobGradientComputerBlending::NSJacobGradientComputerBlending(const std::string& name) :
   ConvRHSJacobFluxReconstructionBlending(name)
 {
-  addConfigOptionsTo(this);
 }
 
 //////////////////////////////////////////////////////////////////////////////

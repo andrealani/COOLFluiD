@@ -43,6 +43,14 @@ namespace COOLFluiD {
  * alpha = 0 everywhere is plain FR. Boundary faces use the FR boundary flux
  * (ConvBndCorrectionsRHSFluxReconstructionBlending).
  *
+ * ModeRelaxation (default true) adds at every solution point i of a cell with alpha_K > 0
+ *   -alpha_K sigma_K |J_i| (U_i - U_bar_K),   sigma_K = ModeRelaxationFactor (2P+1) lambda_K / h_K,
+ * with U_i the solution variables, |J_i| the metric Jacobian at i, U_bar_K the conserved cell
+ * average, P the polynomial order, lambda_K the largest wave speed at U_bar_K and h_K = V_K^(1/d)
+ * the size of the cell of volume V_K in d dimensions. It relaxes the solution points toward the
+ * cell average, which the low-order part does not change, and leaves the cell average unchanged.
+ * alpha_K sigma_K |J_i| is added to the update coefficient of i.
+ *
  * @author Rayan Dhib
  */
 class ConvRHSFluxReconstructionBlending : public ConvRHSFluxReconstruction {
@@ -61,6 +69,12 @@ public: // functions
   /// Unsetup private data
   virtual void unsetup();
 
+  /// Defines the Config Options of this class
+  static void defineConfigOptions(Config::OptionList& options);
+
+  /// Configures the command
+  virtual void configure(Config::ConfigArgs& args);
+
   /// Returns the DataSocket's that this command needs as sinks
   std::vector< Common::SafePtr< Framework::BaseDataSocketSink > > needsSockets();
 
@@ -72,7 +86,7 @@ protected: // functions
   /// FR face correction scaled by (1 - alpha_K) plus the low-order part of the face
   virtual void computeCorrection(CFuint side, std::vector< RealVector >& corrections);
 
-  /// FR volume term scaled by (1 - alpha)
+  /// FR volume term scaled by (1 - alpha), plus the mode relaxation when ModeRelaxation is on
   virtual void computeDivDiscontFlx(std::vector< RealVector >& residuals);
 
   /// flux projection vectors and alpha of the current cell
@@ -116,6 +130,18 @@ protected: // data
 
   /// P0 flux F* of the cell averages in the flux points of the current face
   std::vector< RealVector > m_flxPntFluxP0;
+
+  /// ModeRelaxation option
+  bool m_modeRelax;
+
+  /// ModeRelaxationFactor option
+  CFreal m_modeRelaxFactor;
+
+  /// unit normals over which lambda_K is taken
+  std::vector< RealVector > m_modeRelaxNormals;
+
+  /// mode relaxation term of the current cell per solution point
+  std::vector< RealVector > m_modeRelaxRes;
 
 }; // class ConvRHSFluxReconstructionBlending
 
